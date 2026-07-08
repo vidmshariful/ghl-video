@@ -2,7 +2,6 @@ import Link from "next/link";
 import { Logo } from "@/components/Logo";
 import {
   site,
-  nav,
   cta,
   entityLine,
   disclaimer,

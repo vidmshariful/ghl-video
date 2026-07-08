@@ -30,11 +30,37 @@ export const namedClients = [
 /* Navigation and fixed CTA vocabulary                                  */
 /* ------------------------------------------------------------------ */
 
-export const nav = [
-  { label: "Premade", href: "/premade/" },
-  { label: "Custom", href: "/custom/" },
-  { label: "Editing", href: "/editing/" },
-  { label: "About", href: "/about/" },
+/* Services mega menu rows; posters reuse the media set */
+export const navServices = [
+  {
+    name: "Premade Videos",
+    line: "Branded HighLevel videos in 5 to 7 days",
+    href: "/premade/",
+    accent: "gold",
+    posterKey: "sampleC",
+  },
+  {
+    name: "Custom Production",
+    line: "Scripted and produced for your ICP",
+    href: "/custom/",
+    accent: "green",
+    posterKey: "featured",
+  },
+  {
+    name: "Video Editing",
+    line: "Monthly editing for weekly publishers",
+    href: "/editing/",
+    accent: "blue",
+    posterKey: "sampleB",
+  },
+] as const;
+
+export const navLinks = [
+  { label: "Our Work", href: "/work/" },
+  { label: "About Us", href: "/about/" },
+  { label: "Free Resources", href: "/resources/" },
+  /* articles arrive from the HighLevel blog API; prerendered at build */
+  { label: "Knowledge Hub", href: "/blog/" },
 ] as const;
 
 /* CTA labels are fixed: never "Get Started" or "Learn More". */
