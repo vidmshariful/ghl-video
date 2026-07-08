@@ -52,7 +52,7 @@ export function Hero() {
   });
 
   return (
-    <section className="relative pt-28 pb-14 md:pt-32">
+    <section className="relative overflow-x-clip pt-28 pb-14 md:pt-32">
       {/* ambient: one gold and one green field behind the hero card */}
       <div
         aria-hidden="true"

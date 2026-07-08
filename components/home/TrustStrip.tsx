@@ -30,7 +30,7 @@ const audienceMarks = [
 export function TrustStrip() {
   return (
     <section className="border-y border-hair">
-      <div className="shell grid items-center gap-8 py-8 md:grid-cols-[1fr_auto] md:gap-14">
+      <div className="shell grid grid-cols-1 items-center gap-8 py-8 md:grid-cols-[1fr_auto] md:gap-14">
         <Marquee>
           {namedClients.map((c, i) => (
             <span key={c.company} className="flex items-center gap-14">
@@ -40,7 +40,7 @@ export function TrustStrip() {
           ))}
         </Marquee>
 
-        <div className="flex items-baseline gap-10 font-mono">
+        <div className="flex flex-wrap items-baseline gap-x-10 gap-y-3 font-mono">
           <p className="flex items-baseline gap-2.5">
             <Stat
               value={clients}
