@@ -86,6 +86,14 @@ export function ClosingCta() {
           </RevealItem>
         </Reveal>
       </div>
+
+      {/* the brand moment before the footer */}
+      <p
+        aria-hidden="true"
+        className="pointer-events-none select-none whitespace-nowrap text-center font-display text-[13vw] font-bold leading-[0.8] tracking-tight text-ink opacity-[0.04]"
+      >
+        GHL VIDEO
+      </p>
     </section>
   );
 }

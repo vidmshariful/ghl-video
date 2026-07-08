@@ -3,6 +3,7 @@ import { Space_Grotesk, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { PageFrame } from "@/components/PageFrame";
 import { site } from "@/lib/site";
 
 const grotesk = Space_Grotesk({
@@ -40,8 +41,9 @@ export default function RootLayout({
       className={`${grotesk.variable} ${inter.variable} ${jetbrains.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
+        <PageFrame />
         <Header />
-        <main className="flex-1">{children}</main>
+        <main className="relative z-10 flex-1">{children}</main>
         <Footer />
       </body>
     </html>

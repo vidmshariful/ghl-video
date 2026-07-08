@@ -177,40 +177,125 @@ export const legalLinks = [
 /* TODO: replace with the real Google reviews URL (Shariful will send). */
 export const googleReviewsUrl = "#";
 
+/* NOTE (per Shariful): the homepage shows NO prices for any service.
+ * Pricing lives on the service pages. Premade pricing is also moving
+ * off a single flat figure; final premade price model pending. */
 export const home = {
   hero: {
     eyebrow: "The HighLevel-only video studio",
     headline: "Video built for",
     headlineAccent: "HighLevel SaaS.",
     lede: "Premade videos when speed matters, custom production when it has to be yours, and monthly editing for creators who publish every week.",
-    signal: "Premade from $495",
+    checklist: [
+      "White label from frame one",
+      "In-house HighLevel team",
+      "Delivered in days",
+    ],
   },
 
-  bento: {
-    eyebrow: "Three ways in",
-    headline: "Pick your speed.",
-    premade: {
-      label: "Premade",
-      title: "Branded HighLevel videos. $495 per video, flat.",
-      body: "Pick from ten titles. Each one customized with your logo, your dashboard theme, and your voiceover. Delivered in 5 to 7 days.",
-      linkLabel: "See premade videos",
-      href: "/premade/",
-    },
-    custom: {
-      label: "Custom",
-      title: "Built from scratch for your platform.",
-      body: "Scripted and produced for your ICP, with published starting prices.",
-      linkLabel: "See formats and pricing",
-      href: "/custom/",
-    },
-    editing: {
-      label: "Editing for creators",
-      title: "Your in-house HighLevel editor, on a monthly plan.",
-      body: "Long-form and short-form, edited by a team that knows the ecosystem.",
-      priceLine: "Plans from $595/mo",
-      linkLabel: "See editing plans",
-      href: "/editing/",
-    },
+  services: {
+    chip: "Services",
+    headline: "Three ways to",
+    accent: "ship video.",
+    intro:
+      "Move fast with premade, go bespoke with custom, stay consistent with editing.",
+    panels: [
+      {
+        name: "Premade Videos",
+        title: "Branded HighLevel videos, ready in days.",
+        body: "Pick from the launch set. Each video is customized with your logo, your dashboard theme, and your voiceover, then delivered in 5 to 7 days.",
+        checklist: [
+          "Your branding on every frame",
+          "Dashboard theme matched to your SaaS",
+          "Professional voiceover included",
+          "Full commercial rights",
+        ],
+        linkLabel: "See premade videos",
+        href: "/premade/",
+        accent: "gold",
+        mediaKey: "sampleC",
+      },
+      {
+        name: "Custom Production",
+        title: "Built from scratch for your platform.",
+        body: "Scripted, voiced, and animated for your ICP. Any language, any accent, produced by an in-house team that already knows HighLevel.",
+        checklist: [
+          "Ads and promo",
+          "Explainer",
+          "Demo",
+          "Onboarding series",
+        ],
+        linkLabel: "See custom production",
+        href: "/custom/",
+        accent: "green",
+        mediaKey: "featured",
+      },
+      {
+        name: "Video Editing",
+        title: "Your in-house HighLevel editor, on a monthly plan.",
+        body: "For creators who publish every week. Send footage, get it back edited by a team that knows the ecosystem, publish on schedule.",
+        checklist: [
+          "No contracts",
+          "Unlimited revisions",
+          "HighLevel-fluent editing team",
+        ],
+        linkLabel: "See video editing",
+        href: "/editing/",
+        accent: "blue",
+        mediaKey: "sampleB",
+      },
+    ],
+  },
+
+  manifesto: {
+    statement: "Video is not a creative expense.",
+    body: "It is sales infrastructure: a sales multiplier, a churn reducer, an authority builder, and a differentiation moat. Most resellers sell with amateur demos that quietly cap their close rate. That is the bottleneck we exist to remove.",
+  },
+
+  /* PLACEHOLDERS: photo slots and the non-founder role cards are
+   * stand-ins for the real team; Shariful replaces before launch. */
+  team: {
+    chip: "The team",
+    headline: "Full time, in house,",
+    accent: "not outsourced.",
+    intro:
+      "The same people work on your videos every time. That is what keeps quality and turnaround consistent.",
+    members: [
+      { name: "Shariful Islam", role: "Founder", photo: null as string | null },
+      { name: null as string | null, role: "Creative Direction", photo: null as string | null },
+      { name: null as string | null, role: "Script and Voice", photo: null as string | null },
+      { name: null as string | null, role: "Animation", photo: null as string | null },
+      { name: null as string | null, role: "Edit Team", photo: null as string | null },
+      { name: null as string | null, role: "Client Success", photo: null as string | null },
+    ],
+  },
+
+  faq: {
+    chip: "FAQ",
+    headline: "Asked before",
+    accent: "every order.",
+    items: [
+      {
+        q: "Is everything really white label?",
+        a: "Yes. Your logo, your dashboard theme, your voiceover. Nothing in the video points back to us, and full commercial rights are included.",
+      },
+      {
+        q: "Do we have to explain HighLevel to you?",
+        a: "No. We only work in the HighLevel ecosystem, so you skip the platform briefing entirely and go straight to output.",
+      },
+      {
+        q: "How fast is delivery?",
+        a: "Premade videos arrive in 5 to 7 days after you submit your branding. Custom timelines are scoped up front, in days and weeks, not months.",
+      },
+      {
+        q: "How does the editing subscription work?",
+        a: "Send footage, get it back edited, publish. Monthly plans with no contracts and unlimited revisions, edited by a HighLevel-fluent team.",
+      },
+      {
+        q: "What happens after I book a call?",
+        a: "We map what you need on the call, you submit your branding, and delivery starts from there. Scope is confirmed before any work begins.",
+      },
+    ],
   },
 
   work: {
@@ -224,6 +309,8 @@ export const home = {
         poster: posters.featured,
         client: "NeoLuxLabs",
         format: "Onboarding Series",
+        /* skip the placeholder clip's white title-card intro */
+        startAt: 40,
       },
       {
         src: clips.sampleA,

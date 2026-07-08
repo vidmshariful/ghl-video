@@ -136,6 +136,18 @@ body::after {
   padding-block: clamp(5rem, 8vw, 7.5rem);
 }
 
+/* blueprint hatch: sparse diagonal texture for divider strips */
+@utility hatch {
+  background-image: repeating-linear-gradient(
+    135deg,
+    var(--hair) 0,
+    var(--hair) 1px,
+    transparent 1px,
+    transparent 8px
+  );
+  opacity: 0.5;
+}
+
 /* glass-like card ground: faint top light over the surface tone */
 @utility card-glass {
   background:

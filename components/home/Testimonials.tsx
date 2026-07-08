@@ -1,6 +1,6 @@
 import { Avatar } from "@/components/Avatar";
-import { Eyebrow } from "@/components/Eyebrow";
 import { MediaFrame } from "@/components/MediaFrame";
+import { SectionChip } from "@/components/SectionChip";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { SectionGlow } from "@/components/SectionGlow";
 import { home } from "@/lib/site";
@@ -22,7 +22,7 @@ export function Testimonials() {
       <div className="shell relative">
         <Reveal className="grid items-center gap-10 lg:grid-cols-12">
           <RevealItem className="lg:col-span-8">
-            <Eyebrow accent="gold">Proof</Eyebrow>
+            <SectionChip index={6} label="Proof" />
             <blockquote className="mt-8">
               <p className="max-w-[30ch] font-display text-[clamp(1.5rem,3vw,2.375rem)] font-semibold leading-[1.25] tracking-tight text-ink">
                 {lead.quote}

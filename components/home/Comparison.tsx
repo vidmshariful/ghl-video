@@ -1,5 +1,5 @@
-import { Eyebrow } from "@/components/Eyebrow";
 import { Reveal, RevealItem } from "@/components/Reveal";
+import { SectionChip } from "@/components/SectionChip";
 import { SectionGlow } from "@/components/SectionGlow";
 import { home } from "@/lib/site";
 
@@ -18,8 +18,8 @@ export function Comparison() {
       <div className="shell relative">
         <Reveal>
           <RevealItem>
-            <Eyebrow accent="gold">{comparison.eyebrow}</Eyebrow>
-            <h2 className="mt-4 max-w-[22ch] font-display text-h2 text-ink">
+            <SectionChip index={4} label={comparison.eyebrow} />
+            <h2 className="mt-6 max-w-[22ch] font-display text-h2 text-ink">
               {comparison.headline}
             </h2>
             <p className="mt-4 max-w-[52ch] text-lede text-muted">

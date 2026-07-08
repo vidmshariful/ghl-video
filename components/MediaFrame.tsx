@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useReducedMotion } from "framer-motion";
 
 /*
@@ -24,6 +24,8 @@ export function MediaFrame({
   label = "video preview",
   caption,
   interactive = true,
+  autoplay = false,
+  startAt = 0,
   rounded = "rounded-media",
   className = "",
 }: {
@@ -32,6 +34,11 @@ export function MediaFrame({
   label?: string;
   caption?: { title: string; sub: string };
   interactive?: boolean;
+  /* muted ambient playback (hero panel); reduced motion gets the poster */
+  autoplay?: boolean;
+  /* skip a clip's intro segment (placeholder clips carry title cards);
+   * looping returns to this offset, not zero */
+  startAt?: number;
   rounded?: string;
   className?: string;
 }) {
@@ -39,8 +46,23 @@ export function MediaFrame({
   const [playing, setPlaying] = useState(false);
   const reduced = useReducedMotion();
 
-  const play = () => ref.current?.play().catch(() => {});
+  const play = () => {
+    const v = ref.current;
+    if (!v) return;
+    if (startAt > 0 && v.currentTime < startAt) v.currentTime = startAt;
+    v.play().catch(() => {});
+  };
   const pause = () => ref.current?.pause();
+
+  useEffect(() => {
+    if (!autoplay) return;
+    if (reduced) {
+      ref.current?.pause();
+      return;
+    }
+    play();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoplay, reduced]);
 
   return (
     <figure
@@ -53,21 +75,30 @@ export function MediaFrame({
         src={src}
         poster={poster ?? undefined}
         muted
-        loop
+        loop={startAt === 0}
         playsInline
-        preload="none"
+        preload={autoplay ? "auto" : "none"}
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
+        onEnded={
+          startAt > 0
+            ? (e) => {
+                e.currentTarget.currentTime = startAt;
+                e.currentTarget.play().catch(() => {});
+              }
+            : undefined
+        }
         className={`absolute inset-0 h-full w-full object-cover brightness-[0.85] saturate-[0.8] transition-transform duration-[1400ms] ease-out ${
           playing && !reduced ? "scale-[1.03]" : "scale-100"
         }`}
       />
 
-      {/* unified grade, lifts while playing */}
+      {/* unified grade; lifts as a hover reward, stays put on ambient
+          autoplay so the hero never blazes */}
       <div
         aria-hidden="true"
         className={`absolute inset-0 transition-opacity duration-500 ${
-          playing ? "opacity-35" : "opacity-100"
+          playing && !autoplay ? "opacity-35" : "opacity-100"
         }`}
       >
         <div className="absolute inset-0 bg-canvas/45" />

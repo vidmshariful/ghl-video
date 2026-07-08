@@ -1,64 +1,13 @@
 "use client";
 
-import { useRef } from "react";
-import {
-  motion,
-  useReducedMotion,
-  useScroll,
-  useTransform,
-} from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { Button } from "@/components/Button";
-import { Eyebrow } from "@/components/Eyebrow";
 import { MediaFrame } from "@/components/MediaFrame";
+import { Panel } from "@/components/Panel";
+import { SectionChip } from "@/components/SectionChip";
 import { home, cta } from "@/lib/site";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
-
-/*
- * Abstract atmosphere, not a literal video: the signature gold-to-
- * green glow as a soft gradient field on near-black, vignetted for
- * depth, with slow drift plus a gentle scroll parallax. The headline
- * owns the frame. Video-first lives in the Work section and the
- * premade grid, where the media is framed and graded.
- */
-function GlowField() {
-  const reduced = useReducedMotion();
-  const ref = useRef<HTMLDivElement>(null);
-  const { scrollY } = useScroll();
-  /* layers drift apart as you scroll: nearer glows move more */
-  const yGold = useTransform(scrollY, [0, 900], [0, 150]);
-  const yGreen = useTransform(scrollY, [0, 900], [0, 70]);
-  const yBlue = useTransform(scrollY, [0, 900], [0, 210]);
-
-  /* parallax lives on the wrapper, drift keyframes on the child:
-   * both write transform, so they must not share an element */
-  return (
-    <div ref={ref} aria-hidden="true" className="absolute inset-0 bg-[#05060A]">
-      <motion.div
-        style={reduced ? undefined : { y: yGold }}
-        className="absolute -left-[14%] top-[26%] h-[85%] w-[62%]"
-      >
-        <div className="drift-a h-full w-full rounded-full bg-gold opacity-[0.16] blur-[130px]" />
-      </motion.div>
-      <motion.div
-        style={reduced ? undefined : { y: yGreen }}
-        className="absolute -right-[10%] -top-[22%] h-[85%] w-[62%]"
-      >
-        <div className="drift-b h-full w-full rounded-full bg-green opacity-[0.12] blur-[140px]" />
-      </motion.div>
-      <motion.div
-        style={reduced ? undefined : { y: yBlue }}
-        className="absolute bottom-[-25%] left-[38%] h-[55%] w-[40%]"
-      >
-        <div className="drift-c h-full w-full rounded-full bg-blue opacity-[0.06] blur-[120px]" />
-      </motion.div>
-      {/* vignette: edges fall away so the field reads deep, not flat */}
-      <div className="absolute inset-0 bg-[radial-gradient(120%_90%_at_38%_28%,transparent_38%,rgba(5,6,10,0.82)_100%)]" />
-      {/* settle into the trust strip below */}
-      <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-canvas to-transparent" />
-    </div>
-  );
-}
 
 /* One orchestrated reveal on load, under 900ms, then the page is calm. */
 function HeadlineLine({
@@ -85,47 +34,17 @@ function HeadlineLine({
   );
 }
 
-/* The hero's visual anchor: real work in the site's own frames, offset
- * and slightly rotated, drifting on scroll. No stock, no raw footage;
- * the studio's product counterweights the left-heavy headline. */
-function WorkStack() {
-  const reduced = useReducedMotion();
-  const { scrollY } = useScroll();
-  const y = useTransform(scrollY, [0, 700], [0, 90]);
-  const [, second, third] = home.work.pieces;
-
-  return (
-    <motion.div
-      initial={reduced ? false : { opacity: 0, x: 28 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.8, delay: 0.5, ease: EASE }}
-      style={reduced ? undefined : { y }}
-      className="pointer-events-none absolute right-[2%] top-1/2 hidden w-[22rem] -translate-y-1/2 lg:block xl:w-[24rem]"
-    >
-      <div className="pointer-events-auto rotate-2">
-        <MediaFrame
-          src={second.src}
-          poster={second.poster}
-          label={`${second.client}, ${second.format}`}
-          caption={{ title: second.client, sub: second.format }}
-          interactive={false}
-        />
-      </div>
-      <div className="pointer-events-auto mt-5 w-[18rem] -translate-x-8 -rotate-1 xl:w-[20rem]">
-        <MediaFrame
-          src={third.src}
-          poster={third.poster}
-          label={`${third.client}, ${third.format}`}
-          caption={{ title: third.client, sub: third.format }}
-          interactive={false}
-        />
-      </div>
-    </motion.div>
-  );
-}
-
+/*
+ * Blueprint hero: one bounded two-panel card inside the page frame.
+ * Copy panel left (chip, headline, lede, CTAs, checklist strip), the
+ * work playing right, graded through MediaFrame, with a hatched
+ * gutter between. The signature gradient lives on the accent line.
+ */
 export function Hero() {
   const reduced = useReducedMotion();
+  const { work } = home;
+  const featured = work.pieces[0];
+
   const fadeUp = (delay: number) => ({
     initial: reduced ? false : { opacity: 0, y: 12 },
     animate: { opacity: 1, y: 0 },
@@ -133,49 +52,112 @@ export function Hero() {
   });
 
   return (
-    <section className="relative flex min-h-[100svh] items-center overflow-hidden">
-      <GlowField />
-      <WorkStack />
+    <section className="relative pt-28 pb-14 md:pt-32">
+      {/* ambient: one gold and one green field behind the hero card */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -left-40 top-6 h-[30rem] w-[46rem]"
+        style={{
+          background:
+            "radial-gradient(closest-side, rgba(252,192,0,0.09), transparent 72%)",
+        }}
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -right-40 -top-24 h-[32rem] w-[48rem]"
+        style={{
+          background:
+            "radial-gradient(closest-side, rgba(0,204,0,0.09), transparent 72%)",
+        }}
+      />
 
-      <div className="shell relative pt-32 pb-24">
-        <div className="max-w-4xl">
-          <motion.div {...fadeUp(0.05)}>
-            <Eyebrow accent="gold">{home.hero.eyebrow}</Eyebrow>
-          </motion.div>
+      <div className="shell relative">
+        <Panel className="overflow-hidden">
+          <div className="grid lg:grid-cols-[1fr_auto_1.05fr]">
+            {/* copy panel */}
+            <div className="flex flex-col p-8 md:p-12 lg:p-14">
+              <motion.div {...fadeUp(0.05)}>
+                <SectionChip index={1} label={home.hero.eyebrow} />
+              </motion.div>
 
-          <h1 className="mt-5 font-display text-hero text-ink">
-            <HeadlineLine delay={0.12}>{home.hero.headline}</HeadlineLine>
-            <HeadlineLine delay={0.21} className="text-gradient">
-              {home.hero.headlineAccent}
-            </HeadlineLine>
-          </h1>
+              <h1 className="mt-8 font-display text-[clamp(2.5rem,5vw,4.25rem)] font-bold leading-[0.98] tracking-[-0.035em] text-ink">
+                <HeadlineLine delay={0.12}>{home.hero.headline}</HeadlineLine>
+                <HeadlineLine delay={0.21} className="text-gradient">
+                  {home.hero.headlineAccent}
+                </HeadlineLine>
+              </h1>
 
-          <motion.p
-            {...fadeUp(0.45)}
-            className="mt-6 max-w-[44ch] text-lede text-muted"
-          >
-            {home.hero.lede}
-          </motion.p>
+              <motion.p
+                {...fadeUp(0.45)}
+                className="mt-6 max-w-[44ch] text-lede text-muted"
+              >
+                {home.hero.lede}
+              </motion.p>
 
-          <motion.div
-            {...fadeUp(0.57)}
-            className="mt-9 flex flex-wrap items-center gap-4"
-          >
-            <Button href={cta.bookACall.href} variant="primary">
-              {cta.bookACall.label}
-            </Button>
-            <Button href={cta.seePremade.href} variant="ghost">
-              {cta.seePremade.label}
-            </Button>
-          </motion.div>
+              <motion.div
+                {...fadeUp(0.57)}
+                className="mt-9 flex flex-wrap items-center gap-4"
+              >
+                <Button href={cta.bookACall.href} variant="primary">
+                  {cta.bookACall.label}
+                </Button>
+                <Button href={cta.seePremade.href} variant="ghost">
+                  {cta.seePremade.label}
+                </Button>
+              </motion.div>
 
-          <motion.p
-            {...fadeUp(0.69)}
-            className="mt-8 font-mono text-label uppercase text-gold"
-          >
-            {home.hero.signal}
-          </motion.p>
-        </div>
+              {/* checklist strip anchors the panel bottom */}
+              <motion.div {...fadeUp(0.69)} className="mt-auto pt-10">
+                <ul className="flex flex-wrap gap-x-8 gap-y-2.5 border-t border-hair pt-5">
+                  {home.hero.checklist.map((item) => (
+                    <li
+                      key={item}
+                      className="flex items-center gap-2.5 font-mono text-label uppercase text-muted"
+                    >
+                      <svg
+                        viewBox="0 0 12 12"
+                        className="h-2.5 w-2.5"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="M2 6.2 4.8 9 10 3.4"
+                          fill="none"
+                          stroke="#00CC00"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </motion.div>
+            </div>
+
+            {/* hatched gutter, the drafting-table seam */}
+            <div className="hatch hidden w-6 border-x border-hair lg:block" />
+
+            {/* the work, playing */}
+            <motion.div
+              className="relative min-h-[16rem] p-3 lg:min-h-[30rem]"
+              initial={reduced ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.8, delay: 0.35, ease: EASE }}
+            >
+              <MediaFrame
+                src={featured.src}
+                poster={featured.poster}
+                label={`${featured.client}, ${featured.format}`}
+                caption={{ title: featured.client, sub: featured.format }}
+                autoplay
+                startAt={"startAt" in featured ? featured.startAt : 0}
+                interactive={false}
+                className="!absolute inset-3 h-auto !aspect-auto"
+              />
+            </motion.div>
+          </div>
+        </Panel>
       </div>
     </section>
   );

@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { Eyebrow } from "@/components/Eyebrow";
 import { MediaFrame } from "@/components/MediaFrame";
+import { SectionChip } from "@/components/SectionChip";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { SectionGlow } from "@/components/SectionGlow";
 import { home } from "@/lib/site";
@@ -18,8 +18,8 @@ export function ShowreelMoment() {
       <div className="shell relative">
         <Reveal>
           <RevealItem>
-            <Eyebrow accent="green">{home.work.eyebrow}</Eyebrow>
-            <h2 className="mt-4 max-w-[14ch] font-display text-h2 text-ink">
+            <SectionChip index={3} label={home.work.eyebrow} accent="green" />
+            <h2 className="mt-6 max-w-[14ch] font-display text-h2 text-ink">
               Recent work.
             </h2>
           </RevealItem>
@@ -32,6 +32,7 @@ export function ShowreelMoment() {
               poster={featured.poster}
               label={`${featured.client}, ${featured.format}`}
               caption={{ title: featured.client, sub: featured.format }}
+              startAt={"startAt" in featured ? featured.startAt : 0}
               rounded="rounded-card"
             />
           </RevealItem>
