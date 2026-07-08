@@ -39,7 +39,9 @@
 
   --font-display: var(--font-grotesk);
   --font-sans: var(--font-inter);
-  --font-mono: var(--font-jetbrains);
+  /* two-typeface system: the utility/label voice (font-mono usage
+     sites) renders in Inter per client direction */
+  --font-mono: var(--font-inter);
 
   /* two radii only, plus pills */
   --radius-card: 16px;
@@ -148,17 +150,11 @@ body::after {
   opacity: 0.5;
 }
 
-/* glass-like card ground: faint top light over the surface tone */
+/* card ground: pure dark gradient, lighter crown falling to near
+   canvas, with a whisper of top-edge light */
 @utility card-glass {
-  background:
-    linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.04),
-      rgba(255, 255, 255, 0.012) 45%,
-      rgba(255, 255, 255, 0) 72%
-    ),
-    var(--surface);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  background: linear-gradient(180deg, #16181f 0%, #101218 48%, #0b0c11 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 /* marquee */
