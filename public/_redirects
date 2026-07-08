@@ -1,0 +1,4 @@
+# Cloudflare Pages redirect file: 301s from the old WordPress URLs.
+# BLOCKED ON INPUT: need the old site URL inventory (or its sitemap)
+# before cutover. Format, one per line:
+#   /old-path/  /new-path/  301
