@@ -47,6 +47,34 @@ export const cta = {
 } as const;
 
 /* ------------------------------------------------------------------ */
+/* Media assets                                                         */
+/* ------------------------------------------------------------------ */
+
+/* Placeholder clips on the LeadConnector CDN. Finals swap in here with
+ * no layout change. NOTE: clips 3 and 4 are heavy masters (220MB and
+ * 611MB); fine as hover-streamed placeholders, but compress the finals
+ * before launch. */
+export const clips = {
+  reel: "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a09af05dbe569a25d999f9f.mp4",
+  featured:
+    "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/69abf862b003fa1d8009b203.mp4",
+  sampleA:
+    "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/69ac030ab003fa4f250a8483.mp4",
+  sampleB:
+    "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/69a5aa2c753f15417fa8fbe1.mp4",
+  sampleC:
+    "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6984930e1dfc023b2d7fb5b4.mp4",
+} as const;
+
+export const posters = {
+  reel: "/posters/clip-1.jpg",
+  featured: "/posters/clip-2.jpg",
+  sampleA: "/posters/clip-3.jpg",
+  sampleB: "/posters/clip-4.jpg",
+  sampleC: "/posters/clip-5.jpg",
+} as const;
+
+/* ------------------------------------------------------------------ */
 /* Services and pricing (locked)                                        */
 /* ------------------------------------------------------------------ */
 
@@ -63,17 +91,24 @@ export type PremadeVideo = {
 };
 
 /* 10 placeholders. The real titles, previews, and SKUs drop in later
- * with no layout change. */
+ * with no layout change. Previews cycle the three sample clips. */
 export const premadeVideos: PremadeVideo[] = Array.from({ length: 10 }).map(
-  (_, i) => ({
-    slug: `video-${i + 1}`,
-    title: `Premade Video ${i + 1}`,
-    purpose: "One line on what this video is for",
-    price: premadePrice,
-    preview: null,
-    poster: null,
-    orderUrl: `https://order.ghlvideo.com/video-${i + 1}`,
-  }),
+  (_, i) => {
+    const cycle = [
+      { preview: clips.sampleA, poster: posters.sampleA },
+      { preview: clips.sampleB, poster: posters.sampleB },
+      { preview: clips.sampleC, poster: posters.sampleC },
+    ][i % 3];
+    return {
+      slug: `video-${i + 1}`,
+      title: `Premade Video ${i + 1}`,
+      purpose: "One line on what this video is for",
+      price: premadePrice,
+      preview: cycle.preview,
+      poster: cycle.poster,
+      orderUrl: `https://order.ghlvideo.com/video-${i + 1}`,
+    };
+  },
 );
 
 export const customFormats = [
@@ -137,11 +172,12 @@ export const legalLinks = [
 /* Homepage content                                                     */
 /* ------------------------------------------------------------------ */
 
+/* TODO: replace with the real Google reviews URL (Shariful will send). */
+export const googleReviewsUrl = "#";
+
 export const showreel = {
-  /* Fill src and poster when the real reel is delivered. Until then the
-   * hero renders the ambient placeholder and everything else is final. */
-  src: null as string | null,
-  poster: null as string | null,
+  src: clips.reel as string | null,
+  poster: posters.reel as string | null,
   /* Drives the "now playing" caption. Placeholder pairings until the
    * real reel segment list lands. */
   segments: [
@@ -188,40 +224,70 @@ export const home = {
     },
   },
 
-  featuredWork: {
+  work: {
     eyebrow: "The work",
-    /* Spec values are placeholders until the real featured piece is
-     * chosen. Swap here only. */
-    client: "NeoLuxLabs",
-    format: "Onboarding Series",
-    whiteLabel: "From frame one",
-    src: null as string | null,
-    poster: null as string | null,
+    /* One featured piece plus two supporting clips, all hover-play.
+     * Client and format captions are placeholders until the real
+     * featured set is chosen. Swap here only. */
+    pieces: [
+      {
+        src: clips.featured,
+        poster: posters.featured,
+        client: "NeoLuxLabs",
+        format: "Onboarding Series",
+      },
+      {
+        src: clips.sampleA,
+        poster: posters.sampleA,
+        client: "Emma.io",
+        format: "Platform Demo",
+      },
+      {
+        src: clips.sampleB,
+        poster: posters.sampleB,
+        client: "AI Clinic Assist",
+        format: "Explainer",
+      },
+    ],
   },
 
-  why: {
-    eyebrow: "Why GHL Video",
-    headline: "You built on HighLevel. So did we.",
-    points: [
+  comparison: {
+    eyebrow: "Head to head",
+    headline: "Why HighLevel founders pick GHL Video.",
+    intro:
+      "The difference between a generalist vendor and a team that lives in your platform.",
+    othersLabel: "Everyone else",
+    usLabel: "GHL Video",
+    rows: [
       {
-        lead: "HighLevel only.",
-        rest: "You never explain your own platform to us.",
+        label: "Focus",
+        others: "Video for anyone",
+        us: "Only HighLevel, since day one",
       },
       {
-        lead: "In-house team.",
-        rest: "Full-time creatives, nothing outsourced or subcontracted.",
+        label: "Speed",
+        others: "4 to 8 weeks",
+        us: "5 to 7 days on premade",
       },
       {
-        lead: "Published pricing.",
-        rest: "Every price on the page, no hidden quotes.",
+        label: "Pricing",
+        others: "Surprise invoices",
+        us: "Published, fixed pricing",
       },
       {
-        lead: "White label.",
-        rest: "Your brand from the first frame, nothing points back to us.",
+        label: "Delivery",
+        others: "Outsourced, no accountability",
+        us: "In-house team, one point of contact",
       },
       {
-        lead: "Days, not months.",
-        rest: "Premade delivers in 5 to 7 days. Custom moves just as deliberately.",
+        label: "Branding",
+        others: "Generic templates",
+        us: "White-label from the first frame",
+      },
+      {
+        label: "The platform",
+        others: "You explain it to them",
+        us: "They already know HighLevel",
       },
     ],
   },
@@ -247,7 +313,9 @@ export const home = {
 
   /* DRAFT COPY: these quotes are written in-voice as placeholders and
    * must be replaced with real client words before launch. Flagged to
-   * Shariful. The names, roles, and companies are locked and real. */
+   * Shariful. The names, roles, and companies are locked and real.
+   * photo: null renders the initials avatar; drop a headshot path in
+   * (e.g. "/people/dominic.jpg") to swap. */
   testimonials: [
     {
       quote:
@@ -255,6 +323,7 @@ export const home = {
       name: "Dominic Bavaro",
       role: "CEO",
       company: "Emma.io",
+      photo: null as string | null,
       lead: true,
       draft: true,
     },
@@ -264,6 +333,7 @@ export const home = {
       name: "Ryan Maule",
       role: "CEO",
       company: "AI Clinic Assist",
+      photo: null as string | null,
       lead: false,
       draft: true,
     },
@@ -273,10 +343,20 @@ export const home = {
       name: "David Allen Neron",
       role: "CEO",
       company: "NeoLuxLabs",
+      photo: null as string | null,
       lead: false,
       draft: true,
     },
   ],
+
+  /* DRAFT: Shariful sends the final line and headshot. photo: null
+   * renders the initials avatar. */
+  founder: {
+    name: "Shariful Islam",
+    role: "Founder, GHL Video",
+    photo: null as string | null,
+    line: "Every HighLevel reseller I met was selling a serious platform with videos that undersold it. GHL Video exists to close that gap, with one team that never has to be taught the product.",
+  },
 
   closing: {
     headline: "Stop selling with",

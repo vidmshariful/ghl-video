@@ -1,37 +1,27 @@
 import { Marquee } from "@/components/Marquee";
 import { Stat } from "@/components/Stat";
-import { namedClients, clients, rating } from "@/lib/site";
+import { namedClients, clients, rating, googleReviewsUrl } from "@/lib/site";
 
-/* Styled text wordmarks for the three named clients. Neutral skeleton
- * marks hold space for the logos pending rights confirmation. */
+/* Clean text wordmarks for the named clients until logo rights are
+ * confirmed. The rating links out to Google reviews. */
 function Wordmark({ name }: { name: string }) {
   return (
-    <span className="whitespace-nowrap font-display text-lg font-semibold tracking-tight text-dim transition-colors hover:text-muted">
+    <span className="whitespace-nowrap font-display text-lg font-semibold tracking-tight text-dim">
       {name}
     </span>
   );
 }
 
-function SkeletonMark({ w }: { w: string }) {
-  return (
-    <span
-      aria-hidden="true"
-      className={`block h-4 ${w} rounded-full bg-hair/80`}
-    />
-  );
-}
-
 export function TrustStrip() {
+  /* two passes of the three names so the loop has enough track */
+  const marks = [...namedClients, ...namedClients];
   return (
     <section className="border-y border-hair">
       <div className="shell grid items-center gap-8 py-8 md:grid-cols-[1fr_auto] md:gap-14">
         <Marquee>
-          <Wordmark name={namedClients[0].company} />
-          <SkeletonMark w="w-24" />
-          <Wordmark name={namedClients[1].company} />
-          <SkeletonMark w="w-32" />
-          <Wordmark name={namedClients[2].company} />
-          <SkeletonMark w="w-20" />
+          {marks.map((c, i) => (
+            <Wordmark key={`${c.company}-${i}`} name={c.company} />
+          ))}
         </Marquee>
 
         <div className="flex items-baseline gap-10 font-mono">
@@ -47,14 +37,19 @@ export function TrustStrip() {
               teams served
             </span>
           </p>
-          <p className="flex items-baseline gap-2.5">
-            <span className="text-[1.75rem] font-bold text-gold">{rating}</span>
-            <span className="text-label uppercase text-dim">
-              client
-              <br />
-              rating
+          <a
+            href={googleReviewsUrl}
+            className="group flex items-baseline gap-2.5"
+          >
+            <span className="text-[1.75rem] font-bold text-gold underline-offset-4 group-hover:underline">
+              {rating}
             </span>
-          </p>
+            <span className="text-label uppercase text-dim group-hover:text-muted">
+              client rating
+              <br />
+              on Google
+            </span>
+          </a>
         </div>
       </div>
     </section>

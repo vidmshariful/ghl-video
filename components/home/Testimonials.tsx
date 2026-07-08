@@ -1,3 +1,4 @@
+import { Avatar } from "@/components/Avatar";
 import { Eyebrow } from "@/components/Eyebrow";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { home } from "@/lib/site";
@@ -24,12 +25,15 @@ export function Testimonials() {
               <p className="max-w-[30ch] font-display text-[clamp(1.5rem,3vw,2.375rem)] font-semibold leading-[1.25] tracking-tight text-ink">
                 {lead.quote}
               </p>
-              <footer className="mt-6 font-mono text-sm">
-                <span className="text-ink">{lead.name}</span>
-                <span className="text-dim">
-                  {" "}
-                  / {lead.role}, {lead.company}
-                </span>
+              <footer className="mt-7 flex items-center gap-4">
+                <Avatar name={lead.name} photo={lead.photo} size="lg" />
+                <p className="font-mono text-sm">
+                  <span className="text-ink">{lead.name}</span>
+                  <span className="text-dim">
+                    {" "}
+                    / {lead.role}, {lead.company}
+                  </span>
+                </p>
               </footer>
             </blockquote>
           </RevealItem>
@@ -40,12 +44,15 @@ export function Testimonials() {
             <RevealItem key={t.name}>
               <blockquote className="flex h-full flex-col rounded-card border border-hair bg-surface p-7">
                 <p className="text-sm leading-relaxed text-muted">{t.quote}</p>
-                <footer className="mt-5 pt-2 font-mono text-xs">
-                  <span className="text-ink">{t.name}</span>
-                  <span className="text-dim">
-                    {" "}
-                    / {t.role}, {t.company}
-                  </span>
+                <footer className="mt-5 flex items-center gap-3 pt-2">
+                  <Avatar name={t.name} photo={t.photo} size="md" />
+                  <p className="font-mono text-xs">
+                    <span className="text-ink">{t.name}</span>
+                    <span className="text-dim">
+                      {" "}
+                      / {t.role}, {t.company}
+                    </span>
+                  </p>
                 </footer>
               </blockquote>
             </RevealItem>

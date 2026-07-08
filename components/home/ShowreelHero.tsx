@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Button } from "@/components/Button";
 import { Eyebrow } from "@/components/Eyebrow";
@@ -71,6 +71,20 @@ function HeadlineLine({
 
 export function ShowreelHero() {
   const reduced = useReducedMotion();
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  /* The static export bakes `autoplay` into the HTML, so the reel
+   * starts before hydration. For reduced-motion users nothing would
+   * ever stop it (toggling the attribute after playback starts does
+   * not pause), so pause explicitly and rewind to the poster frame. */
+  useEffect(() => {
+    const v = videoRef.current;
+    if (reduced && v) {
+      v.pause();
+      v.currentTime = 0;
+    }
+  }, [reduced]);
+
   const fadeUp = (delay: number) => ({
     initial: reduced ? false : { opacity: 0, y: 12 },
     animate: { opacity: 1, y: 0 },
@@ -81,11 +95,13 @@ export function ShowreelHero() {
     <section className="relative flex min-h-[92svh] items-center overflow-hidden">
       {/* the reel. Swaps from placeholder to <video> when assets land. */}
       {showreel.src ? (
+        /* graded down hard so the type always wins over bright footage */
         <video
-          className="absolute inset-0 h-full w-full object-cover"
+          ref={videoRef}
+          className="absolute inset-0 h-full w-full object-cover brightness-[0.45] saturate-[0.75]"
           src={showreel.src}
           poster={showreel.poster ?? undefined}
-          autoPlay={!reduced}
+          autoPlay
           muted
           loop
           playsInline
@@ -96,9 +112,12 @@ export function ShowreelHero() {
       )}
 
       {/* scrim: heavier on the left where the type sits, fades to canvas
-          at the bottom so the next section joins seamlessly */}
-      <div className="absolute inset-0 bg-gradient-to-r from-canvas/90 via-canvas/60 to-canvas/20" />
-      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-canvas to-transparent" />
+          at the bottom so the next section joins seamlessly. Small
+          screens get an extra flat dim: the type sits over the whole
+          frame there, so bright footage needs settling */}
+      <div className="absolute inset-0 bg-gradient-to-r from-canvas/90 via-canvas/60 to-canvas/25" />
+      <div className="absolute inset-0 bg-canvas/55 md:hidden" />
+      <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-canvas via-canvas/70 to-transparent" />
 
       <div className="shell relative pt-32 pb-24">
         <div className="max-w-4xl">

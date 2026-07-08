@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { Eyebrow } from "@/components/Eyebrow";
+import { HoverClip } from "@/components/HoverClip";
 import { Reveal, RevealItem } from "@/components/Reveal";
-import { home } from "@/lib/site";
+import { home, premadeVideos } from "@/lib/site";
 
 /*
  * The routing block. Asymmetric on purpose: Premade (acquisition) takes
@@ -39,31 +40,25 @@ function ArrowLink({
   );
 }
 
-/* Quiet placeholder thumbnails inside the premade cell. Real posters
- * replace these via lib/site.ts with no layout change. */
+/* Live thumbnails inside the premade cell: the sample clips, poster
+ * when idle, playing on hover. Driven from lib/site.ts. */
 function PosterStrip() {
+  const strip = premadeVideos.slice(0, 3);
   return (
-    <div aria-hidden="true" className="mt-8 grid grid-cols-3 gap-3">
-      {[0, 1, 2].map((i) => (
-        <div
-          key={i}
-          className="relative flex aspect-video items-center justify-center overflow-hidden rounded-media border border-hair bg-[#05060A]"
-        >
-          <div
-            className={`absolute rounded-full opacity-[0.16] blur-2xl ${
-              i === 0
-                ? "left-[-20%] top-[-30%] h-[130%] w-[90%] bg-gold"
-                : i === 1
-                  ? "right-[-15%] top-[10%] h-[125%] w-[85%] bg-green"
-                  : "left-[20%] bottom-[-35%] h-[125%] w-[80%] bg-blue"
-            }`}
+    <div className="mt-8 grid grid-cols-3 gap-3">
+      {strip.map((v) =>
+        v.preview ? (
+          /* decorative inside the routing Link: hover-play only, the
+             click belongs to the card's navigation */
+          <HoverClip
+            key={v.slug}
+            src={v.preview}
+            poster={v.poster}
+            interactive={false}
+            className="aspect-video"
           />
-          {/* play affordance so the tiles read as video slots */}
-          <svg viewBox="0 0 16 16" className="relative h-3.5 w-3.5 opacity-40">
-            <path d="M3 1.8v12.4L14 8 3 1.8Z" fill="#EEF0F6" />
-          </svg>
-        </div>
-      ))}
+        ) : null,
+      )}
     </div>
   );
 }
