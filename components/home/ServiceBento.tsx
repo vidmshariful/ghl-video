@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { Eyebrow } from "@/components/Eyebrow";
-import { HoverClip } from "@/components/HoverClip";
+import { MediaFrame } from "@/components/MediaFrame";
 import { Reveal, RevealItem } from "@/components/Reveal";
+import { SectionGlow } from "@/components/SectionGlow";
 import { home, premadeVideos } from "@/lib/site";
 
 /*
@@ -50,12 +51,11 @@ function PosterStrip() {
         v.preview ? (
           /* decorative inside the routing Link: hover-play only, the
              click belongs to the card's navigation */
-          <HoverClip
+          <MediaFrame
             key={v.slug}
             src={v.preview}
             poster={v.poster}
             interactive={false}
-            className="aspect-video"
           />
         ) : null,
       )}
@@ -66,8 +66,9 @@ function PosterStrip() {
 export function ServiceBento() {
   const { bento } = home;
   return (
-    <section className="section-pad">
-      <div className="shell">
+    <section className="relative overflow-hidden section-pad">
+      <SectionGlow accent="green" position="right" />
+      <div className="shell relative">
         <Reveal>
           <RevealItem>
             <Eyebrow accent="green">{bento.eyebrow}</Eyebrow>
@@ -82,7 +83,7 @@ export function ServiceBento() {
           <RevealItem className="lg:col-span-7">
             <Link
               href={bento.premade.href}
-              className="group flex h-full flex-col rounded-card border border-hair bg-surface p-8 transition-colors duration-200 hover:border-gold/40 md:p-10"
+              className="group flex h-full flex-col rounded-card border border-hair card-glass p-8 transition-colors duration-200 hover:border-gold/40 md:p-10"
             >
               <Eyebrow accent="gold">{bento.premade.label}</Eyebrow>
               <h3 className="mt-4 max-w-[20ch] font-display text-h3 text-ink">
@@ -106,7 +107,7 @@ export function ServiceBento() {
           <RevealItem className="lg:col-span-5">
             <Link
               href={bento.custom.href}
-              className="group flex h-full flex-col rounded-card border border-hair bg-surface p-8 transition-colors duration-200 hover:border-green/40 md:p-10"
+              className="group flex h-full flex-col rounded-card border border-hair card-glass p-8 transition-colors duration-200 hover:border-green/40 md:p-10"
             >
               <Eyebrow accent="green">{bento.custom.label}</Eyebrow>
               <h3 className="mt-4 max-w-[18ch] font-display text-h3 text-ink">
@@ -134,7 +135,7 @@ export function ServiceBento() {
           <RevealItem className="lg:col-span-12">
             <Link
               href={bento.editing.href}
-              className="group grid items-center gap-6 rounded-card border border-hair bg-surface p-8 transition-colors duration-200 hover:border-blue/40 md:grid-cols-[1fr_auto_auto] md:gap-10 md:p-10"
+              className="group grid items-center gap-6 rounded-card border border-hair card-glass p-8 transition-colors duration-200 hover:border-blue/40 md:grid-cols-[1fr_auto_auto] md:gap-10 md:p-10"
             >
               <div>
                 <Eyebrow accent="blue">{bento.editing.label}</Eyebrow>

@@ -131,9 +131,22 @@ body::after {
   background-image: var(--brand-gradient);
 }
 
-/* section rhythm */
+/* section rhythm: confident, not cavernous */
 @utility section-pad {
-  padding-block: clamp(6rem, 11vw, 9.5rem);
+  padding-block: clamp(5rem, 8vw, 7.5rem);
+}
+
+/* glass-like card ground: faint top light over the surface tone */
+@utility card-glass {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.04),
+      rgba(255, 255, 255, 0.012) 45%,
+      rgba(255, 255, 255, 0) 72%
+    ),
+    var(--surface);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 /* marquee */

@@ -42,7 +42,7 @@ export function Testimonials() {
         <Reveal className="mt-14 grid gap-4 md:grid-cols-2 lg:max-w-4xl">
           {rest.map((t) => (
             <RevealItem key={t.name}>
-              <blockquote className="flex h-full flex-col rounded-card border border-hair bg-surface p-7">
+              <blockquote className="flex h-full flex-col rounded-card border border-hair card-glass p-7">
                 <p className="text-sm leading-relaxed text-muted">{t.quote}</p>
                 <footer className="mt-5 flex items-center gap-3 pt-2">
                   <Avatar name={t.name} photo={t.photo} size="md" />

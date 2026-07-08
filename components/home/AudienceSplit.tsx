@@ -21,7 +21,7 @@ export function AudienceSplit() {
 
         <Reveal className="mt-8 grid gap-4 lg:grid-cols-12">
           <RevealItem className="lg:col-span-7">
-            <div className="h-full overflow-hidden rounded-card border border-hair bg-surface">
+            <div className="h-full overflow-hidden rounded-card border border-hair card-glass">
               <div className="h-[3px] bg-brand-gradient" />
               <div className="p-8 md:p-10">
                 <Eyebrow accent="gold">{audiences.resellers.label}</Eyebrow>
@@ -53,7 +53,7 @@ export function AudienceSplit() {
           </RevealItem>
 
           <RevealItem className="lg:col-span-5">
-            <div className="h-full overflow-hidden rounded-card border border-hair bg-surface">
+            <div className="h-full overflow-hidden rounded-card border border-hair card-glass">
               <div className="h-[3px] bg-blue" />
               <div className="p-8 md:p-10">
                 <Eyebrow accent="blue">{audiences.creators.label}</Eyebrow>

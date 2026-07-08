@@ -55,6 +55,8 @@ export const cta = {
  * 611MB); fine as hover-streamed placeholders, but compress the finals
  * before launch. */
 export const clips = {
+  /* reel is unwired for now: the hero is an abstract atmosphere until
+   * a real showreel exists (client call, this pass) */
   reel: "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a09af05dbe569a25d999f9f.mp4",
   featured:
     "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/69abf862b003fa1d8009b203.mp4",
@@ -174,18 +176,6 @@ export const legalLinks = [
 
 /* TODO: replace with the real Google reviews URL (Shariful will send). */
 export const googleReviewsUrl = "#";
-
-export const showreel = {
-  src: clips.reel as string | null,
-  poster: posters.reel as string | null,
-  /* Drives the "now playing" caption. Placeholder pairings until the
-   * real reel segment list lands. */
-  segments: [
-    { format: "Onboarding Series", client: "NeoLuxLabs" },
-    { format: "Platform Demo", client: "Emma.io" },
-    { format: "Explainer", client: "AI Clinic Assist" },
-  ],
-};
 
 export const home = {
   hero: {

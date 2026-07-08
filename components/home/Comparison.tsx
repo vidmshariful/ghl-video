@@ -1,5 +1,6 @@
 import { Eyebrow } from "@/components/Eyebrow";
 import { Reveal, RevealItem } from "@/components/Reveal";
+import { SectionGlow } from "@/components/SectionGlow";
 import { home } from "@/lib/site";
 
 /*
@@ -12,8 +13,9 @@ import { home } from "@/lib/site";
 export function Comparison() {
   const { comparison } = home;
   return (
-    <section className="section-pad border-t border-hair">
-      <div className="shell">
+    <section className="relative overflow-hidden section-pad border-t border-hair">
+      <SectionGlow accent="gold" position="left" />
+      <div className="shell relative">
         <Reveal>
           <RevealItem>
             <Eyebrow accent="gold">{comparison.eyebrow}</Eyebrow>

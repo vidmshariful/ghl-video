@@ -39,7 +39,7 @@ function MagneticCta() {
     >
       <Link
         href={cta.bookACall.href}
-        className="inline-flex items-center rounded-full bg-brand-gradient px-5 py-2.5 text-sm font-semibold text-[#08090D] shadow-[0_0_24px_rgba(0,204,0,0.35)] transition-all duration-200 hover:shadow-[0_0_36px_rgba(0,204,0,0.5)] hover:brightness-[1.06] active:scale-[0.98]"
+        className="inline-flex items-center rounded-full bg-brand-gradient px-5 py-2.5 text-sm font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_24px_rgba(0,204,0,0.35)] transition-all duration-200 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.4),0_0_38px_rgba(0,204,0,0.5)] hover:brightness-[1.07] active:scale-[0.98]"
       >
         {cta.bookACall.label}
       </Link>
