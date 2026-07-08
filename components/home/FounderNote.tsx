@@ -13,7 +13,9 @@ export function FounderNote() {
     <section className="border-t border-hair">
       <div className="shell py-16 md:py-20">
         <Reveal>
-          <RevealItem className="flex max-w-2xl items-start gap-5">
+          {/* right-of-center: one of the page's two deliberate
+              counterweights to the left-set rhythm */}
+          <RevealItem className="flex max-w-2xl items-start gap-5 lg:ml-auto lg:mr-[6%]">
             <Avatar name={founder.name} photo={founder.photo} size="lg" />
             <div>
               <p className="text-[1.0625rem] leading-relaxed text-ink">

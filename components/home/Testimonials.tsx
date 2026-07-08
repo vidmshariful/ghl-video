@@ -1,6 +1,8 @@
 import { Avatar } from "@/components/Avatar";
 import { Eyebrow } from "@/components/Eyebrow";
+import { MediaFrame } from "@/components/MediaFrame";
 import { Reveal, RevealItem } from "@/components/Reveal";
+import { SectionGlow } from "@/components/SectionGlow";
 import { home } from "@/lib/site";
 
 /*
@@ -11,17 +13,17 @@ import { home } from "@/lib/site";
 export function Testimonials() {
   const lead = home.testimonials.find((t) => t.lead)!;
   const rest = home.testimonials.filter((t) => !t.lead);
+  /* the lead client's own piece beside their words, when we have it */
+  const leadWork = home.work.pieces.find((p) => p.client === lead.company);
 
   return (
-    <section className="section-pad border-t border-hair">
-      <div className="shell">
-        <Reveal>
-          <RevealItem>
+    <section className="relative overflow-hidden section-pad border-t border-hair">
+      <SectionGlow accent="gold" position="left" />
+      <div className="shell relative">
+        <Reveal className="grid items-center gap-10 lg:grid-cols-12">
+          <RevealItem className="lg:col-span-8">
             <Eyebrow accent="gold">Proof</Eyebrow>
-          </RevealItem>
-
-          <RevealItem className="mt-8">
-            <blockquote>
+            <blockquote className="mt-8">
               <p className="max-w-[30ch] font-display text-[clamp(1.5rem,3vw,2.375rem)] font-semibold leading-[1.25] tracking-tight text-ink">
                 {lead.quote}
               </p>
@@ -37,6 +39,16 @@ export function Testimonials() {
               </footer>
             </blockquote>
           </RevealItem>
+          {leadWork && (
+            <RevealItem className="hidden lg:col-span-4 lg:block">
+              <MediaFrame
+                src={leadWork.src}
+                poster={leadWork.poster}
+                label={`${leadWork.client}, ${leadWork.format}`}
+                caption={{ title: leadWork.client, sub: leadWork.format }}
+              />
+            </RevealItem>
+          )}
         </Reveal>
 
         <Reveal className="mt-14 grid gap-4 md:grid-cols-2 lg:max-w-4xl">

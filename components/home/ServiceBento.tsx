@@ -3,7 +3,7 @@ import { Eyebrow } from "@/components/Eyebrow";
 import { MediaFrame } from "@/components/MediaFrame";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { SectionGlow } from "@/components/SectionGlow";
-import { home, premadeVideos } from "@/lib/site";
+import { home, premadeVideos, customFormats } from "@/lib/site";
 
 /*
  * The routing block. Asymmetric on purpose: Premade (acquisition) takes
@@ -116,11 +116,21 @@ export function ServiceBento() {
               <p className="mt-3 text-sm leading-relaxed text-muted">
                 {bento.custom.body}
               </p>
-              {/* prices are always gold, site-wide */}
-              <p className="mt-auto pt-8 font-mono text-price text-gold">
-                {bento.custom.priceLine}
-              </p>
-              <div className="mt-4">
+              {/* the four formats as a spec list; prices always gold */}
+              <ul className="mt-auto pt-6">
+                {customFormats.map((f) => (
+                  <li
+                    key={f.name}
+                    className="flex items-baseline justify-between gap-4 border-t border-hair py-2.5 first:border-t-0"
+                  >
+                    <span className="text-sm text-muted">{f.name}</span>
+                    <span className="whitespace-nowrap font-mono text-sm text-gold">
+                      from ${f.from.toLocaleString("en-US")}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-6">
                 <ArrowLink
                   href={bento.custom.href}
                   label={bento.custom.linkLabel}

@@ -3,7 +3,12 @@
 import { animate, useInView, useReducedMotion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 
-/* Counts up once on first view. Static under reduced motion. */
+/*
+ * Server-renders the FINAL value so no visitor, crawler, screenshot,
+ * or reduced-motion user ever sees "0+". The count-up is a pure
+ * enhancement: on first view it dips to ~85% and settles, so every
+ * intermediate frame still reads credible.
+ */
 export function Stat({
   value,
   suffix = "",
@@ -16,16 +21,12 @@ export function Stat({
   const ref = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true, margin: "-40px" });
   const reduced = useReducedMotion();
-  const [display, setDisplay] = useState(reduced ? value : 0);
+  const [display, setDisplay] = useState(value);
 
   useEffect(() => {
-    if (!inView) return;
-    if (reduced) {
-      setDisplay(value);
-      return;
-    }
-    const controls = animate(0, value, {
-      duration: 1.2,
+    if (!inView || reduced) return;
+    const controls = animate(Math.round(value * 0.85), value, {
+      duration: 1.1,
       ease: [0.22, 1, 0.36, 1],
       onUpdate: (v) => setDisplay(Math.round(v)),
     });

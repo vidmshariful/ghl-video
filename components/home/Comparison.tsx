@@ -31,9 +31,10 @@ export function Comparison() {
         <Reveal className="mt-14">
           {/* column headers */}
           <RevealItem>
-            {/* desktop */}
+            {/* desktop: both value columns left-aligned on the page
+                grid, mono labels as the center spine */}
             <div className="hidden grid-cols-[1fr_11rem_1fr] items-baseline gap-6 border-b border-hair pb-4 md:grid">
-              <p className="text-right font-mono text-label uppercase text-dim">
+              <p className="font-mono text-label uppercase text-dim">
                 {comparison.othersLabel}
               </p>
               <span />
@@ -56,9 +57,7 @@ export function Comparison() {
             <RevealItem key={row.label} className="border-b border-hair">
               {/* desktop: others / label / us */}
               <div className="hidden grid-cols-[1fr_11rem_1fr] items-baseline gap-6 py-5 md:grid">
-                <p className="text-right text-[0.9375rem] text-muted">
-                  {row.others}
-                </p>
+                <p className="text-[0.9375rem] text-muted">{row.others}</p>
                 <p className="text-center font-mono text-label uppercase text-dim">
                   {row.label}
                 </p>

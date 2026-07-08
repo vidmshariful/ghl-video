@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Eyebrow } from "@/components/Eyebrow";
 import { Reveal, RevealItem } from "@/components/Reveal";
+import { SectionGlow } from "@/components/SectionGlow";
 import { home } from "@/lib/site";
 
 /*
@@ -11,15 +12,19 @@ import { home } from "@/lib/site";
 export function AudienceSplit() {
   const { audiences } = home;
   return (
-    <section className="section-pad pt-0">
-      <div className="shell">
+    <section className="relative overflow-hidden section-pad pt-0">
+      <SectionGlow accent="blue" position="right" />
+      <div className="shell relative">
         <Reveal>
           <RevealItem>
             <Eyebrow accent="muted">{audiences.eyebrow}</Eyebrow>
+            <h2 className="mt-4 max-w-[16ch] font-display text-h2 text-ink">
+              Which one are you?
+            </h2>
           </RevealItem>
         </Reveal>
 
-        <Reveal className="mt-8 grid gap-4 lg:grid-cols-12">
+        <Reveal className="mt-10 grid gap-4 lg:grid-cols-12">
           <RevealItem className="lg:col-span-7">
             <div className="h-full overflow-hidden rounded-card border border-hair card-glass">
               <div className="h-[3px] bg-brand-gradient" />

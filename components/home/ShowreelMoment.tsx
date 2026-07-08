@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Eyebrow } from "@/components/Eyebrow";
 import { MediaFrame } from "@/components/MediaFrame";
 import { Reveal, RevealItem } from "@/components/Reveal";
@@ -18,10 +19,13 @@ export function ShowreelMoment() {
         <Reveal>
           <RevealItem>
             <Eyebrow accent="green">{home.work.eyebrow}</Eyebrow>
+            <h2 className="mt-4 max-w-[14ch] font-display text-h2 text-ink">
+              Recent work.
+            </h2>
           </RevealItem>
         </Reveal>
 
-        <Reveal className="mt-6 grid items-start gap-5 lg:grid-cols-12">
+        <Reveal className="mt-10 grid items-start gap-5 lg:grid-cols-12">
           <RevealItem className="lg:col-span-8">
             <MediaFrame
               src={featured.src}
@@ -42,6 +46,23 @@ export function ShowreelMoment() {
                 caption={{ title: piece.client, sub: piece.format }}
               />
             ))}
+          </RevealItem>
+        </Reveal>
+
+        <Reveal className="mt-8">
+          <RevealItem>
+            <Link
+              href="/premade/"
+              className="group inline-flex items-center gap-2 text-sm font-semibold text-green"
+            >
+              See premade videos
+              <span
+                aria-hidden="true"
+                className="transition-transform duration-200 group-hover:translate-x-1"
+              >
+                &rarr;
+              </span>
+            </Link>
           </RevealItem>
         </Reveal>
       </div>

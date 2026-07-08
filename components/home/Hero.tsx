@@ -9,6 +9,7 @@ import {
 } from "framer-motion";
 import { Button } from "@/components/Button";
 import { Eyebrow } from "@/components/Eyebrow";
+import { MediaFrame } from "@/components/MediaFrame";
 import { home, cta } from "@/lib/site";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -84,6 +85,45 @@ function HeadlineLine({
   );
 }
 
+/* The hero's visual anchor: real work in the site's own frames, offset
+ * and slightly rotated, drifting on scroll. No stock, no raw footage;
+ * the studio's product counterweights the left-heavy headline. */
+function WorkStack() {
+  const reduced = useReducedMotion();
+  const { scrollY } = useScroll();
+  const y = useTransform(scrollY, [0, 700], [0, 90]);
+  const [, second, third] = home.work.pieces;
+
+  return (
+    <motion.div
+      initial={reduced ? false : { opacity: 0, x: 28 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.8, delay: 0.5, ease: EASE }}
+      style={reduced ? undefined : { y }}
+      className="pointer-events-none absolute right-[2%] top-1/2 hidden w-[22rem] -translate-y-1/2 lg:block xl:w-[24rem]"
+    >
+      <div className="pointer-events-auto rotate-2">
+        <MediaFrame
+          src={second.src}
+          poster={second.poster}
+          label={`${second.client}, ${second.format}`}
+          caption={{ title: second.client, sub: second.format }}
+          interactive={false}
+        />
+      </div>
+      <div className="pointer-events-auto mt-5 w-[18rem] -translate-x-8 -rotate-1 xl:w-[20rem]">
+        <MediaFrame
+          src={third.src}
+          poster={third.poster}
+          label={`${third.client}, ${third.format}`}
+          caption={{ title: third.client, sub: third.format }}
+          interactive={false}
+        />
+      </div>
+    </motion.div>
+  );
+}
+
 export function Hero() {
   const reduced = useReducedMotion();
   const fadeUp = (delay: number) => ({
@@ -93,8 +133,9 @@ export function Hero() {
   });
 
   return (
-    <section className="relative flex min-h-[92svh] items-center overflow-hidden">
+    <section className="relative flex min-h-[100svh] items-center overflow-hidden">
       <GlowField />
+      <WorkStack />
 
       <div className="shell relative pt-32 pb-24">
         <div className="max-w-4xl">

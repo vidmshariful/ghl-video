@@ -37,9 +37,11 @@ function MagneticCta() {
         y.set(0);
       }}
     >
+      {/* quiet solid: the gradient + glow signature belongs to the
+          hero and closing primaries, not the nav */}
       <Link
         href={cta.bookACall.href}
-        className="inline-flex items-center rounded-full bg-brand-gradient px-5 py-2.5 text-sm font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_24px_rgba(0,204,0,0.35)] transition-all duration-200 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.4),0_0_38px_rgba(0,204,0,0.5)] hover:brightness-[1.07] active:scale-[0.98]"
+        className="inline-flex items-center rounded-full bg-green px-5 py-2.5 text-sm font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
       >
         {cta.bookACall.label}
       </Link>
@@ -70,10 +72,10 @@ export function Header() {
 
   return (
     <header
-      className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${
+      className={`fixed inset-x-0 top-0 z-50 border-b border-hair transition-all duration-300 ${
         scrolled
-          ? "border-b border-hair bg-canvas/85 backdrop-blur-md"
-          : "border-b border-transparent bg-transparent"
+          ? "bg-canvas/85 backdrop-blur-md"
+          : "bg-canvas/40 backdrop-blur-sm"
       }`}
     >
       <div
@@ -113,7 +115,7 @@ export function Header() {
         <div className="flex items-center gap-3 md:hidden">
           <Link
             href={cta.bookACall.href}
-            className="inline-flex items-center whitespace-nowrap rounded-full bg-brand-gradient px-3.5 py-2 text-xs font-semibold text-[#08090D]"
+            className="inline-flex items-center whitespace-nowrap rounded-full bg-green px-3.5 py-2 text-xs font-semibold text-[#08090D]"
           >
             {cta.bookACall.label}
           </Link>

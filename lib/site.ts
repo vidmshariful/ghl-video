@@ -191,16 +191,15 @@ export const home = {
     headline: "Pick your speed.",
     premade: {
       label: "Premade",
-      title: "Branded HighLevel videos, $495 flat.",
-      body: "Ten videos, each customized with your logo, your dashboard theme, and your voiceover. Delivered in 5 to 7 days.",
+      title: "Branded HighLevel videos. $495 per video, flat.",
+      body: "Pick from ten titles. Each one customized with your logo, your dashboard theme, and your voiceover. Delivered in 5 to 7 days.",
       linkLabel: "See premade videos",
       href: "/premade/",
     },
     custom: {
       label: "Custom",
       title: "Built from scratch for your platform.",
-      body: "Ads, explainers, demos, and onboarding series, scripted and produced for your ICP.",
-      priceLine: "From $1,500",
+      body: "Scripted and produced for your ICP, with published starting prices.",
       linkLabel: "See formats and pricing",
       href: "/custom/",
     },
@@ -352,6 +351,12 @@ export const home = {
     headline: "Stop selling with",
     accent: "Loom demos.",
     lede: "Talk to the original HighLevel-only video team about your next launch.",
+    /* a real sequence, so numbering carries information */
+    steps: [
+      { title: "Book", line: "Pick a time that fits." },
+      { title: "Scope", line: "We map your videos on the call." },
+      { title: "Receive", line: "Premade lands in 5 to 7 days." },
+    ],
   },
 } as const;
 
