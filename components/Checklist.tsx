@@ -1,10 +1,18 @@
+const tickColors = {
+  gold: "#FCC000",
+  green: "#00CC00",
+  blue: "#0090FC",
+} as const;
+
 /* Checklist rows: the check is functional (a claim ticked off), not
- * icon decoration. Green check, hairline separators. */
+ * icon decoration. Tick color follows the section's accent. */
 export function Checklist({
   items,
+  accent = "green",
   className = "",
 }: {
   items: readonly string[];
+  accent?: keyof typeof tickColors;
   className?: string;
 }) {
   return (
@@ -22,7 +30,7 @@ export function Checklist({
             <path
               d="M2 6.2 4.8 9 10 3.4"
               fill="none"
-              stroke="#00CC00"
+              stroke={tickColors[accent]}
               strokeWidth="1.8"
               strokeLinecap="round"
               strokeLinejoin="round"

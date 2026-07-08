@@ -21,6 +21,18 @@ const accentText: Record<Exclude<Accent, "muted">, string> = {
   blue: "text-blue",
 };
 
+const crown: Record<string, string> = {
+  gold: "bg-gold",
+  green: "bg-green",
+  blue: "bg-blue",
+};
+
+const hoverBorder: Record<string, string> = {
+  gold: "hover:border-gold/40",
+  green: "hover:border-green/40",
+  blue: "hover:border-blue/40",
+};
+
 export function ServicePanels() {
   const { services } = home;
   return (
@@ -48,6 +60,8 @@ export function ServicePanels() {
                   src={clips[panel.mediaKey as keyof typeof clips]}
                   poster={posters[panel.mediaKey as keyof typeof posters]}
                   label={`${panel.name} sample`}
+                  tint={panel.accent as "gold" | "green" | "blue"}
+                  groupEase
                   className="!absolute inset-3 h-auto !aspect-auto"
                 />
               </div>
@@ -65,7 +79,11 @@ export function ServicePanels() {
                 <p className="mt-4 max-w-[52ch] text-sm leading-relaxed text-muted">
                   {panel.body}
                 </p>
-                <Checklist items={panel.checklist} className="mt-7 max-w-md" />
+                <Checklist
+                  items={panel.checklist}
+                  accent={panel.accent as "gold" | "green" | "blue"}
+                  className="mt-7 max-w-md"
+                />
                 <Link
                   href={panel.href}
                   className={`group mt-8 inline-flex items-center gap-2 text-sm font-semibold ${accentText[panel.accent as keyof typeof accentText]}`}
@@ -83,7 +101,21 @@ export function ServicePanels() {
             return (
               <Reveal key={panel.name}>
                 <RevealItem>
-                  <Panel className="overflow-hidden">
+                  <Panel
+                    className={`group/svc overflow-hidden transition-colors duration-300 ${hoverBorder[panel.accent]}`}
+                  >
+                    {/* the service's accent crown */}
+                    <div
+                      aria-hidden="true"
+                      className={`absolute inset-x-0 top-0 z-10 h-[3px] ${crown[panel.accent]}`}
+                    />
+                    {/* service index within the numbered section */}
+                    <span
+                      aria-hidden="true"
+                      className="absolute right-5 top-4 z-10 font-mono text-[0.6875rem] uppercase tracking-[0.12em] text-dim"
+                    >
+                      S/{String(i + 1).padStart(2, "0")}
+                    </span>
                     <div className="grid lg:grid-cols-2">
                       {i % 2 === 0 ? (
                         <>

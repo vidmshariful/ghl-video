@@ -102,6 +102,8 @@ export function MediaFrame({
   caption,
   interactive = true,
   startAt = 0,
+  tint,
+  groupEase = false,
   rounded = "rounded-media",
   className = "",
 }: {
@@ -114,6 +116,10 @@ export function MediaFrame({
    * (placeholder clips carry title cards); the lightbox always plays
    * from the start */
   startAt?: number;
+  /* accent-tinted grade so a service's media wears its own color */
+  tint?: "gold" | "green" | "blue";
+  /* also ease the grade when an ancestor group/svc container hovers */
+  groupEase?: boolean;
   rounded?: string;
   className?: string;
 }) {
@@ -174,10 +180,24 @@ export function MediaFrame({
           hover affordance */}
       <div
         aria-hidden="true"
-        className="absolute inset-0 transition-opacity duration-500 group-hover/mf:opacity-60"
+        className={`absolute inset-0 transition-opacity duration-500 group-hover/mf:opacity-60 ${
+          groupEase ? "group-hover/svc:opacity-60" : ""
+        }`}
       >
         <div className="absolute inset-0 bg-canvas/45" />
-        <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(252,192,0,0.05),transparent_42%,rgba(0,204,0,0.05))]" />
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              tint === "gold"
+                ? "linear-gradient(135deg, rgba(252,192,0,0.08), transparent 55%)"
+                : tint === "green"
+                  ? "linear-gradient(135deg, rgba(0,204,0,0.08), transparent 55%)"
+                  : tint === "blue"
+                    ? "linear-gradient(135deg, rgba(0,144,252,0.08), transparent 55%)"
+                    : "linear-gradient(135deg, rgba(252,192,0,0.05), transparent 42%, rgba(0,204,0,0.05))",
+          }}
+        />
       </div>
 
       {/* bottom scrim: the frame's caption owns this zone, clip text recedes */}
