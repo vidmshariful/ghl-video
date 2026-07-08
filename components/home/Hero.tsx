@@ -150,7 +150,6 @@ export function Hero() {
                 poster={featured.poster}
                 label={`${featured.client}, ${featured.format}`}
                 caption={{ title: featured.client, sub: featured.format }}
-                autoplay
                 startAt={"startAt" in featured ? featured.startAt : 0}
                 className="!absolute inset-3 h-auto !aspect-auto"
               />

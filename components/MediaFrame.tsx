@@ -12,25 +12,24 @@ import { useReducedMotion } from "framer-motion";
  * text in placeholder clips receding behind the frame's own mono
  * caption, which is always the readable layer.
  *
- * Hover previews the clip muted in place. CLICK (or Enter on the
- * cover button) opens the lightbox: the video pops up centered and
- * autoplays with sound, native controls, Escape or backdrop to close.
- * interactive=false drops the click affordance for frames that live
- * inside a Link. prefers-reduced-motion: hover does nothing; the
- * lightbox still works since it is user-initiated.
+ * Thumbnails autoplay muted whenever they are in the viewport and
+ * pause offscreen. CLICK (or Enter on the cover button) opens the
+ * lightbox: the video pops up centered and autoplays FROM THE START
+ * with sound and native controls; Escape or backdrop closes.
+ * interactive=false drops the click affordance for frames inside a
+ * Link. prefers-reduced-motion: no ambient autoplay (graded poster);
+ * the lightbox still works since it is user-initiated.
  */
 
 function Lightbox({
   src,
   poster,
   label,
-  startAt,
   onClose,
 }: {
   src: string;
   poster: string | null;
   label: string;
-  startAt: number;
   onClose: () => void;
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -42,11 +41,7 @@ function Lightbox({
     document.documentElement.style.overflow = "hidden";
     /* explicit play() inside the click's user-activation window: the
      * autoplay attribute alone will not start unmuted playback */
-    const v = videoRef.current;
-    if (v) {
-      if (startAt > 0) v.currentTime = startAt;
-      v.play().catch(() => {});
-    }
+    videoRef.current?.play().catch(() => {});
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
@@ -56,7 +51,7 @@ function Lightbox({
       document.documentElement.style.overflow = "";
       prev?.focus();
     };
-  }, [onClose, startAt]);
+  }, [onClose]);
 
   return createPortal(
     <div
@@ -106,7 +101,6 @@ export function MediaFrame({
   label = "video preview",
   caption,
   interactive = true,
-  autoplay = false,
   startAt = 0,
   rounded = "rounded-media",
   className = "",
@@ -116,47 +110,46 @@ export function MediaFrame({
   label?: string;
   caption?: { title: string; sub: string };
   interactive?: boolean;
-  /* muted ambient playback (hero panel); reduced motion gets the poster */
-  autoplay?: boolean;
-  /* skip a clip's intro segment (placeholder clips carry title cards);
-   * looping returns to this offset, not zero */
+  /* skip a clip's intro segment on the ambient thumbnail loop
+   * (placeholder clips carry title cards); the lightbox always plays
+   * from the start */
   startAt?: number;
   rounded?: string;
   className?: string;
 }) {
+  const figureRef = useRef<HTMLElement>(null);
   const ref = useRef<HTMLVideoElement>(null);
-  const [playing, setPlaying] = useState(false);
+  const [inView, setInView] = useState(false);
   const [open, setOpen] = useState(false);
   const reduced = useReducedMotion();
 
-  const play = () => {
+  useEffect(() => {
+    const el = figureRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => setInView(entry.isIntersecting),
+      { threshold: 0.2 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  /* ambient playback follows the viewport */
+  useEffect(() => {
     const v = ref.current;
     if (!v) return;
-    if (startAt > 0 && v.currentTime < startAt) v.currentTime = startAt;
-    v.play().catch(() => {});
-  };
-  const pause = () => ref.current?.pause();
-
-  useEffect(() => {
-    if (!autoplay || open) return;
-    if (reduced) {
-      ref.current?.pause();
+    if (reduced || open || !inView) {
+      v.pause();
       return;
     }
-    play();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoplay, reduced, open]);
-
-  const openLightbox = () => {
-    pause();
-    setOpen(true);
-  };
+    if (startAt > 0 && v.currentTime < startAt) v.currentTime = startAt;
+    v.play().catch(() => {});
+  }, [inView, open, reduced, startAt]);
 
   return (
     <figure
+      ref={figureRef}
       className={`group/mf relative aspect-video overflow-hidden border border-hair bg-[#05060A] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] ${rounded} ${className}`}
-      onMouseEnter={reduced || open ? undefined : play}
-      onMouseLeave={reduced ? undefined : pause}
     >
       <video
         ref={ref}
@@ -165,9 +158,7 @@ export function MediaFrame({
         muted
         loop={startAt === 0}
         playsInline
-        preload={autoplay ? "auto" : "none"}
-        onPlay={() => setPlaying(true)}
-        onPause={() => setPlaying(false)}
+        preload="metadata"
         onEnded={
           startAt > 0
             ? (e) => {
@@ -179,13 +170,11 @@ export function MediaFrame({
         className="absolute inset-0 h-full w-full object-cover brightness-[0.85] saturate-[0.8]"
       />
 
-      {/* unified grade; lifts as a hover reward, stays put on ambient
-          autoplay so the hero never blazes */}
+      {/* unified grade, always on for ambient playback; eases as a
+          hover affordance */}
       <div
         aria-hidden="true"
-        className={`absolute inset-0 transition-opacity duration-500 ${
-          playing && !autoplay ? "opacity-35" : "opacity-100"
-        }`}
+        className="absolute inset-0 transition-opacity duration-500 group-hover/mf:opacity-60"
       >
         <div className="absolute inset-0 bg-canvas/45" />
         <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(252,192,0,0.05),transparent_42%,rgba(0,204,0,0.05))]" />
@@ -207,7 +196,7 @@ export function MediaFrame({
       {interactive && (
         <button
           type="button"
-          onClick={openLightbox}
+          onClick={() => setOpen(true)}
           aria-label={`Play: ${label}`}
           aria-haspopup="dialog"
           className="absolute inset-0 z-10 cursor-pointer focus-visible:outline-offset-[-4px]"
@@ -229,7 +218,6 @@ export function MediaFrame({
           src={src}
           poster={poster}
           label={label}
-          startAt={startAt}
           onClose={() => setOpen(false)}
         />
       )}
