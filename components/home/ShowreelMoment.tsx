@@ -13,13 +13,13 @@ import { home } from "@/lib/site";
 export function ShowreelMoment() {
   const [featured, second, third] = home.work.pieces;
   return (
-    <section className="relative overflow-hidden section-pad">
+    <section aria-labelledby="recent-work-heading" className="relative overflow-hidden section-pad">
       <SectionGlow accent="green" position="left" />
       <div className="shell relative">
         <Reveal>
           <RevealItem>
             <SectionChip index={3} label={home.work.eyebrow} accent="green" />
-            <h2 className="mt-6 max-w-[14ch] font-display text-h2 text-ink">
+            <h2 id="recent-work-heading" className="mt-6 max-w-[14ch] font-display text-h2 text-ink">
               Recent work.
             </h2>
           </RevealItem>

@@ -52,13 +52,13 @@ function PhotoSlot({
 export function TeamSection() {
   const { team } = home;
   return (
-    <section className="relative overflow-hidden section-pad border-t border-hair">
+    <section aria-labelledby="team-heading" className="relative overflow-hidden section-pad border-t border-hair">
       <SectionGlow accent="gold" position="right" />
       <div className="shell relative">
         <Reveal>
           <RevealItem>
             <SectionChip index={7} label={team.chip} />
-            <h2 className="mt-6 max-w-[22ch] font-display text-h2 text-ink">
+            <h2 id="team-heading" className="mt-6 max-w-[22ch] font-display text-h2 text-ink">
               {team.headline}{" "}
               <span className="text-gold">{team.accent}</span>
             </h2>

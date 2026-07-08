@@ -13,13 +13,13 @@ import { home } from "@/lib/site";
 export function Comparison() {
   const { comparison } = home;
   return (
-    <section className="relative overflow-hidden section-pad border-t border-hair">
+    <section aria-labelledby="comparison-heading" className="relative overflow-hidden section-pad border-t border-hair">
       <SectionGlow accent="gold" position="left" />
       <div className="shell relative">
         <Reveal>
           <RevealItem>
             <SectionChip index={4} label={comparison.eyebrow} />
-            <h2 className="mt-6 max-w-[22ch] font-display text-h2 text-ink">
+            <h2 id="comparison-heading" className="mt-6 max-w-[22ch] font-display text-h2 text-ink">
               {comparison.headline}
             </h2>
             <p className="mt-4 max-w-[52ch] text-lede text-muted">

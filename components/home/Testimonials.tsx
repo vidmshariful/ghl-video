@@ -18,14 +18,14 @@ const spans: Record<string, string> = {
 export function Testimonials() {
   const { reviews } = home;
   return (
-    <section className="relative overflow-hidden section-pad border-t border-hair">
+    <section aria-labelledby="reviews-heading" className="relative overflow-hidden section-pad border-t border-hair">
       <SectionGlow accent="gold" position="left" />
       <div className="shell relative">
         <Reveal>
           <RevealItem className="flex flex-wrap items-end justify-between gap-6">
             <div>
               <SectionChip index={6} label={reviews.chip} />
-              <h2 className="mt-6 max-w-[20ch] font-display text-h2 text-ink">
+              <h2 id="reviews-heading" className="mt-6 max-w-[20ch] font-display text-h2 text-ink">
                 {reviews.headline}{" "}
                 <span className="text-gold">{reviews.accent}</span>
               </h2>

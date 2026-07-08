@@ -11,7 +11,7 @@ import { home } from "@/lib/site";
 export function FounderNote() {
   const { founder } = home;
   return (
-    <section className="border-t border-hair">
+    <section aria-label="Founder note" className="border-t border-hair">
       <div className="shell py-16 md:py-20">
         <Reveal>
           <RevealItem className="mb-8">

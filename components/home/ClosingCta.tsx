@@ -11,7 +11,7 @@ import { home, cta } from "@/lib/site";
  */
 export function ClosingCta() {
   return (
-    <section className="relative overflow-hidden border-t border-hair">
+    <section aria-labelledby="closing-heading" className="relative overflow-hidden border-t border-hair">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute -top-24 left-[8%] h-[26rem] w-[36rem]"
@@ -33,7 +33,7 @@ export function ClosingCta() {
         <Reveal className="grid items-center gap-12 lg:grid-cols-12">
           <RevealItem className="lg:col-span-7">
             <SectionChip index={10} label="Next step" accent="green" />
-            <h2 className="mt-6 max-w-[16ch] font-display text-h2 text-ink">
+            <h2 id="closing-heading" className="mt-6 max-w-[16ch] font-display text-h2 text-ink">
               {home.closing.headline}{" "}
               <span className="text-gold">{home.closing.accent}</span>
             </h2>

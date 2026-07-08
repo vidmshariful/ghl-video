@@ -10,12 +10,12 @@ import { home, cta } from "@/lib/site";
 export function Faq() {
   const { faq } = home;
   return (
-    <section className="section-pad border-t border-hair">
+    <section aria-labelledby="faq-heading" className="section-pad border-t border-hair">
       <div className="shell">
         <Reveal className="text-center">
           <RevealItem>
             <SectionChip index={8} label={faq.chip} />
-            <h2 className="mx-auto mt-6 max-w-[18ch] font-display text-h2 text-ink">
+            <h2 id="faq-heading" className="mx-auto mt-6 max-w-[18ch] font-display text-h2 text-ink">
               {faq.headline}{" "}
               <span className="text-gold">{faq.accent}</span>
             </h2>

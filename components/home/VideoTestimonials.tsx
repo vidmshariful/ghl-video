@@ -12,13 +12,13 @@ import { home } from "@/lib/site";
 export function VideoTestimonials() {
   const vt = home.videoTestimonials;
   return (
-    <section className="relative overflow-hidden section-pad border-t border-hair">
+    <section aria-labelledby="client-stories-heading" className="relative overflow-hidden section-pad border-t border-hair">
       <SectionGlow accent="green" position="left" />
       <div className="shell relative">
         <Reveal>
           <RevealItem>
             <SectionChip index={5} label={vt.chip} accent="green" />
-            <h2 className="mt-6 max-w-[18ch] font-display text-h2 text-ink">
+            <h2 id="client-stories-heading" className="mt-6 max-w-[18ch] font-display text-h2 text-ink">
               {vt.headline}{" "}
               <span className="text-green">{vt.accent}</span>
             </h2>

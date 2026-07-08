@@ -36,13 +36,13 @@ const hoverBorder: Record<string, string> = {
 export function ServicePanels() {
   const { services } = home;
   return (
-    <section className="relative overflow-hidden section-pad">
+    <section aria-labelledby="services-heading" className="relative overflow-hidden section-pad">
       <SectionGlow accent="green" position="right" />
       <div className="shell relative">
         <Reveal className="text-center">
           <RevealItem>
             <SectionChip index={2} label={services.chip} accent="green" />
-            <h2 className="mx-auto mt-6 max-w-[18ch] font-display text-h2 text-ink">
+            <h2 id="services-heading" className="mx-auto mt-6 max-w-[18ch] font-display text-h2 text-ink">
               {services.headline}{" "}
               <span className="text-green">{services.accent}</span>
             </h2>
