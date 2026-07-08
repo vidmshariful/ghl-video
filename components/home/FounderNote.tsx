@@ -1,4 +1,5 @@
 import { Panel } from "@/components/Panel";
+import { DrawnBorder } from "@/components/DrawnBorder";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { SectionChip } from "@/components/SectionChip";
 import { home } from "@/lib/site";
@@ -11,7 +12,8 @@ import { home } from "@/lib/site";
 export function FounderNote() {
   const { founder } = home;
   return (
-    <section aria-label="Founder note" className="border-t border-hair">
+    <section data-bp-idx="9" aria-label="Founder note" className="relative">
+      <DrawnBorder />
       <div className="shell py-16 md:py-20">
         <Reveal>
           <RevealItem className="mb-8">

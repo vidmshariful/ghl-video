@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DrawnBorder } from "@/components/DrawnBorder";
 import { Button } from "@/components/Button";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { SectionChip } from "@/components/SectionChip";
@@ -11,7 +12,8 @@ import { home, cta } from "@/lib/site";
  */
 export function ClosingCta() {
   return (
-    <section aria-labelledby="closing-heading" className="relative overflow-hidden border-t border-hair">
+    <section data-bp-idx="10" aria-labelledby="closing-heading" className="relative overflow-hidden">
+      <DrawnBorder />
       <div
         aria-hidden="true"
         className="pointer-events-none absolute -top-24 left-[8%] h-[26rem] w-[36rem]"

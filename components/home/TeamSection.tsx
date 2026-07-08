@@ -1,4 +1,5 @@
 import { Reveal, RevealItem } from "@/components/Reveal";
+import { DrawnBorder } from "@/components/DrawnBorder";
 import { SectionChip } from "@/components/SectionChip";
 import { SectionGlow } from "@/components/SectionGlow";
 import { home } from "@/lib/site";
@@ -14,13 +15,13 @@ function PhotoSlot({
   photo: string | null;
 }) {
   return (
-    <div className="relative flex aspect-[4/5] items-end overflow-hidden rounded-media border border-hair bg-[#0B0D14]">
+    <div className="group relative flex aspect-[4/5] items-end overflow-hidden rounded-media border border-hair bg-[#0B0D14]">
       {photo ? (
         // eslint-disable-next-line @next/next/no-img-element -- static export
         <img
           src={photo}
           alt={name ?? role}
-          className="absolute inset-0 h-full w-full object-cover object-top"
+          className="absolute inset-0 h-full w-full object-cover object-top saturate-[0.65] transition-all duration-500 group-hover:scale-[1.03] group-hover:saturate-100"
         />
       ) : (
         <>
@@ -52,7 +53,8 @@ function PhotoSlot({
 export function TeamSection() {
   const { team } = home;
   return (
-    <section aria-labelledby="team-heading" className="relative overflow-hidden section-pad border-t border-hair">
+    <section data-bp-idx="7" aria-labelledby="team-heading" className="relative overflow-hidden section-pad">
+      <DrawnBorder />
       <SectionGlow accent="gold" position="right" />
       <div className="shell relative">
         <Reveal>

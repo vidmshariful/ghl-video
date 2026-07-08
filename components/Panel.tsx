@@ -1,20 +1,29 @@
-import type { ReactNode } from "react";
+"use client";
 
-/* Corner registration tick, the blueprint detail on major panels. */
-function Tick({ pos }: { pos: string }) {
+import type { ReactNode } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+
+/* Corner registration ticks pop in as the panel reveals, like a
+ * plotter placing marks. */
+function Tick({ pos, delay }: { pos: string; delay: number }) {
+  const reduced = useReducedMotion();
   return (
-    <span
+    <motion.span
       aria-hidden="true"
-      className={`absolute ${pos} font-mono text-[0.625rem] leading-none text-dim/70`}
+      className={`bp-anim absolute ${pos} font-mono text-[0.625rem] leading-none text-dim/70`}
+      initial={reduced ? false : { opacity: 0, scale: 0.4 }}
+      whileInView={{ opacity: 1, scale: 1 }}
+      viewport={{ once: true, margin: "-60px" }}
+      transition={{ duration: 0.3, delay, ease: [0.22, 1, 0.36, 1] }}
     >
       +
-    </span>
+    </motion.span>
   );
 }
 
 /*
- * Bounded section panel: hairline border, glass ground, corner ticks.
- * The page is built from these so nothing floats on a void.
+ * Bounded section panel: hairline border, dark gradient ground, corner
+ * ticks. The page is built from these so nothing floats on a void.
  */
 export function Panel({
   children,
@@ -31,10 +40,10 @@ export function Panel({
     >
       {ticks && (
         <>
-          <Tick pos="-left-1 -top-1.5" />
-          <Tick pos="-right-1 -top-1.5" />
-          <Tick pos="-left-1 -bottom-1.5" />
-          <Tick pos="-right-1 -bottom-1.5" />
+          <Tick pos="-left-1 -top-1.5" delay={0.1} />
+          <Tick pos="-right-1 -top-1.5" delay={0.16} />
+          <Tick pos="-right-1 -bottom-1.5" delay={0.22} />
+          <Tick pos="-left-1 -bottom-1.5" delay={0.28} />
         </>
       )}
       {children}

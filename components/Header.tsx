@@ -197,7 +197,7 @@ function ServicesMenu({ pathname }: { pathname: string | null }) {
                       <img
                         src={posters[s.posterKey as keyof typeof posters]}
                         alt=""
-                        className="w-24 shrink-0 rounded-[4px] border border-hair object-cover brightness-[0.75] saturate-[0.8] [aspect-ratio:16/9]"
+                        className="w-24 shrink-0 rounded-[4px] border border-hair object-cover brightness-[0.75] saturate-[0.8] transition-transform duration-300 [aspect-ratio:16/9] group-hover:scale-105"
                       />
                       <span
                         aria-hidden="true"

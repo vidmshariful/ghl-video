@@ -28,6 +28,7 @@ export function Checklist({
             aria-hidden="true"
           >
             <path
+              className="tick-path"
               d="M2 6.2 4.8 9 10 3.4"
               fill="none"
               stroke={tickColors[accent]}

@@ -36,7 +36,7 @@ const hoverBorder: Record<string, string> = {
 export function ServicePanels() {
   const { services } = home;
   return (
-    <section aria-labelledby="services-heading" className="relative overflow-hidden section-pad">
+    <section data-bp-idx="2" aria-labelledby="services-heading" className="relative overflow-hidden section-pad">
       <SectionGlow accent="green" position="right" />
       <div className="shell relative">
         <Reveal className="text-center">
@@ -108,7 +108,7 @@ export function ServicePanels() {
                     {/* the service's accent crown */}
                     <div
                       aria-hidden="true"
-                      className={`absolute inset-x-0 top-0 z-10 h-[3px] ${crown[panel.accent]}`}
+                      className={`absolute inset-x-0 top-0 z-10 h-[3px] transition-[filter] duration-300 group-hover/svc:brightness-125 ${crown[panel.accent]}`}
                     />
                     {/* service index within the numbered section */}
                     <span

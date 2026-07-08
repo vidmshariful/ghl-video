@@ -4,6 +4,7 @@ import "./globals.css";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { PageFrame } from "@/components/PageFrame";
+import { ScrollRuler } from "@/components/ScrollRuler";
 import { site } from "@/lib/site";
 
 const grotesk = Space_Grotesk({
@@ -43,6 +44,7 @@ export default function RootLayout({
           Skip to content
         </a>
         <PageFrame />
+        <ScrollRuler />
         <Header />
         <main id="main" className="relative z-10 flex-1">
           {children}

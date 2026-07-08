@@ -53,7 +53,7 @@ export function Hero() {
   });
 
   return (
-    <section className="relative overflow-x-clip pt-28 pb-14 md:pt-32">
+    <section data-bp-idx="1" className="relative overflow-x-clip pt-28 pb-14 md:pt-32">
       {/* ambient: one gold and one green field behind the hero card */}
       <div
         aria-hidden="true"
@@ -74,6 +74,29 @@ export function Hero() {
 
       <div className="shell relative">
         <Panel className="overflow-hidden">
+          {/* a light traces the panel border as the page drafts itself */}
+          {!reduced && (
+            <svg
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 z-20 h-full w-full"
+              fill="none"
+            >
+              <motion.rect
+                x="0.5"
+                y="0.5"
+                rx="16"
+                style={{ width: "calc(100% - 1px)", height: "calc(100% - 1px)" }}
+                stroke="#3A4157"
+                strokeWidth="1"
+                initial={{ pathLength: 0, opacity: 1 }}
+                animate={{ pathLength: 1, opacity: [1, 1, 0] }}
+                transition={{
+                  pathLength: { delay: 0.15, duration: 1, ease: "easeInOut" },
+                  opacity: { delay: 0.15, duration: 2, times: [0, 0.6, 1] },
+                }}
+              />
+            </svg>
+          )}
           <div className="grid lg:grid-cols-[1fr_auto_1.05fr]">
             {/* copy panel */}
             <div className="flex flex-col p-8 md:p-12 lg:p-14">

@@ -1,4 +1,5 @@
 import { Avatar } from "@/components/Avatar";
+import { DrawnBorder } from "@/components/DrawnBorder";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { SectionChip } from "@/components/SectionChip";
 import { SectionGlow } from "@/components/SectionGlow";
@@ -18,7 +19,8 @@ const spans: Record<string, string> = {
 export function Testimonials() {
   const { reviews } = home;
   return (
-    <section aria-labelledby="reviews-heading" className="relative overflow-hidden section-pad border-t border-hair">
+    <section data-bp-idx="6" aria-labelledby="reviews-heading" className="relative overflow-hidden section-pad">
+      <DrawnBorder />
       <SectionGlow accent="gold" position="left" />
       <div className="shell relative">
         <Reveal>
@@ -53,7 +55,7 @@ export function Testimonials() {
         <Reveal className="mt-12 grid gap-4 md:grid-cols-12">
           {reviews.items.map((review) => (
             <RevealItem key={review.name} className={spans[review.size]}>
-              <blockquote className="flex h-full flex-col rounded-card border border-hair card-glass p-7">
+              <blockquote className="group flex h-full flex-col rounded-card border border-hair card-glass p-7 transition-colors duration-300 hover:border-gold/30">
                 <p
                   className={`leading-relaxed ${
                     review.size === "lg"
@@ -64,7 +66,9 @@ export function Testimonials() {
                   {review.quote}
                 </p>
                 <footer className="mt-6 flex items-center gap-3 pt-2">
-                  <Avatar name={review.name} photo={null} size="md" />
+                  <span className="inline-flex rounded-full transition-shadow duration-300 group-hover:shadow-[0_0_0_1px_rgba(252,192,0,0.45)]">
+                    <Avatar name={review.name} photo={null} size="md" />
+                  </span>
                   <p>
                     <span className="block text-sm font-medium text-ink">
                       {review.name}

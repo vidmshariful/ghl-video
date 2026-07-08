@@ -1,4 +1,5 @@
 import { MediaFrame } from "@/components/MediaFrame";
+import { DrawnBorder } from "@/components/DrawnBorder";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { SectionChip } from "@/components/SectionChip";
 import { SectionGlow } from "@/components/SectionGlow";
@@ -12,7 +13,8 @@ import { home } from "@/lib/site";
 export function VideoTestimonials() {
   const vt = home.videoTestimonials;
   return (
-    <section aria-labelledby="client-stories-heading" className="relative overflow-hidden section-pad border-t border-hair">
+    <section data-bp-idx="5" aria-labelledby="client-stories-heading" className="relative overflow-hidden section-pad">
+      <DrawnBorder />
       <SectionGlow accent="green" position="left" />
       <div className="shell relative">
         <Reveal>

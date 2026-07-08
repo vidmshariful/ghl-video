@@ -1,4 +1,5 @@
 import { Button } from "@/components/Button";
+import { DrawnBorder } from "@/components/DrawnBorder";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { SectionChip } from "@/components/SectionChip";
 import { home, cta } from "@/lib/site";
@@ -10,7 +11,8 @@ import { home, cta } from "@/lib/site";
 export function Faq() {
   const { faq } = home;
   return (
-    <section aria-labelledby="faq-heading" className="section-pad border-t border-hair">
+    <section data-bp-idx="8" aria-labelledby="faq-heading" className="relative section-pad">
+      <DrawnBorder />
       <div className="shell">
         <Reveal className="text-center">
           <RevealItem>

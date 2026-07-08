@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
+import { Watermark } from "@/components/Watermark";
 import {
   site,
   cta,
@@ -121,14 +122,7 @@ export function Footer() {
       </div>
 
       {/* the brand moment: a full-width grid cell closing the page */}
-      <div className="border-t border-hair">
-        <p
-          aria-hidden="true"
-          className="pointer-events-none select-none overflow-hidden whitespace-nowrap py-4 text-center font-display text-[12.5vw] font-bold leading-[0.85] tracking-tight text-ink opacity-[0.05]"
-        >
-          GHL VIDEO
-        </p>
-      </div>
+      <Watermark />
     </footer>
   );
 }

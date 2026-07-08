@@ -13,7 +13,7 @@ import { home } from "@/lib/site";
 export function ShowreelMoment() {
   const [featured, second, third] = home.work.pieces;
   return (
-    <section aria-labelledby="recent-work-heading" className="relative overflow-hidden section-pad">
+    <section data-bp-idx="3" aria-labelledby="recent-work-heading" className="relative overflow-hidden section-pad">
       <SectionGlow accent="green" position="left" />
       <div className="shell relative">
         <Reveal>

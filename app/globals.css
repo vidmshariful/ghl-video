@@ -232,8 +232,66 @@ body::after {
 
 /* print and PDF capture: scroll reveals must never hide content */
 @media print {
-  .reveal-i {
+  .reveal-i,
+  .bp-anim {
     opacity: 1 !important;
     transform: none !important;
+  }
+}
+
+/* FAQ accordion: animated open where supported, instant elsewhere */
+:root {
+  interpolate-size: allow-keywords;
+}
+
+details::details-content {
+  block-size: 0;
+  overflow: clip;
+  transition:
+    block-size 0.3s ease,
+    content-visibility 0.3s allow-discrete;
+}
+
+details[open]::details-content {
+  block-size: auto;
+}
+
+/* checklist ticks redraw, staggered, when their service panel hovers */
+.tick-path {
+  stroke-dasharray: 20;
+}
+
+@keyframes tick-draw {
+  from {
+    stroke-dashoffset: 20;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.group\/svc:hover .tick-path {
+  animation: tick-draw 0.35s ease forwards;
+}
+
+.group\/svc:hover li:nth-child(2) .tick-path {
+  animation-delay: 0.05s;
+}
+
+.group\/svc:hover li:nth-child(3) .tick-path {
+  animation-delay: 0.1s;
+}
+
+.group\/svc:hover li:nth-child(4) .tick-path {
+  animation-delay: 0.15s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .group\/svc:hover .tick-path {
+    animation: none;
+  }
+
+  details::details-content {
+    transition: none;
   }
 }

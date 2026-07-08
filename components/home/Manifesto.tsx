@@ -1,4 +1,5 @@
 import { Button } from "@/components/Button";
+import { DrawnBorder } from "@/components/DrawnBorder";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { home, cta } from "@/lib/site";
 
@@ -9,7 +10,8 @@ import { home, cta } from "@/lib/site";
 export function Manifesto() {
   const { manifesto } = home;
   return (
-    <section className="border-t border-hair">
+    <section className="relative">
+      <DrawnBorder />
       <div className="shell py-20 text-center md:py-24">
         <Reveal>
           <RevealItem>
