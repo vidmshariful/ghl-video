@@ -13,7 +13,7 @@ export function Faq() {
       <div className="shell">
         <Reveal className="text-center">
           <RevealItem>
-            <SectionChip index={7} label={faq.chip} />
+            <SectionChip index={8} label={faq.chip} />
             <h2 className="mx-auto mt-6 max-w-[18ch] font-display text-h2 text-ink">
               {faq.headline}{" "}
               <span className="text-gold">{faq.accent}</span>

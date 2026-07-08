@@ -248,8 +248,8 @@ export const home = {
   },
 
   manifesto: {
-    statement: "Video is not a creative expense.",
-    body: "It is sales infrastructure: a sales multiplier, a churn reducer, an authority builder, and a differentiation moat. Most resellers sell with amateur demos that quietly cap their close rate. That is the bottleneck we exist to remove.",
+    statement:
+      "Your prospects judge your SaaS before they ever try it. A Loom demo and a DIY explainer tell them everything they need to know, and not in your favor.",
   },
 
   /* PLACEHOLDERS: photo slots and the non-founder role cards are
@@ -267,6 +267,34 @@ export const home = {
       { name: null as string | null, role: "Animation", photo: null as string | null },
       { name: null as string | null, role: "Edit Team", photo: null as string | null },
       { name: null as string | null, role: "Client Success", photo: null as string | null },
+    ],
+  },
+
+  /* PLACEHOLDER clips: real client testimonial videos replace these
+   * (names and companies are the locked real clients). */
+  videoTestimonials: {
+    chip: "Client stories",
+    headline: "Founders,",
+    accent: "on camera.",
+    items: [
+      {
+        name: "Dominic Bavaro",
+        company: "Emma.io",
+        src: clips.sampleB,
+        poster: posters.sampleB,
+      },
+      {
+        name: "Ryan Maule",
+        company: "AI Clinic Assist",
+        src: clips.sampleA,
+        poster: posters.sampleA,
+      },
+      {
+        name: "David Allen Neron",
+        company: "NeoLuxLabs",
+        src: clips.sampleC,
+        poster: posters.sampleC,
+      },
     ],
   },
 

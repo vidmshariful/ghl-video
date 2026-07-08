@@ -5,6 +5,7 @@ import { Manifesto } from "@/components/home/Manifesto";
 import { ShowreelMoment } from "@/components/home/ShowreelMoment";
 import { Comparison } from "@/components/home/Comparison";
 import { TeamSection } from "@/components/home/TeamSection";
+import { VideoTestimonials } from "@/components/home/VideoTestimonials";
 import { Testimonials } from "@/components/home/Testimonials";
 import { Faq } from "@/components/home/Faq";
 import { FounderNote } from "@/components/home/FounderNote";
@@ -20,6 +21,7 @@ export default function Home() {
       <ShowreelMoment />
       <Comparison />
       <TeamSection />
+      <VideoTestimonials />
       <Testimonials />
       <Faq />
       <FounderNote />

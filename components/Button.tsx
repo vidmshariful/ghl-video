@@ -34,7 +34,8 @@ export function Button({
   external?: boolean;
   className?: string;
 }) {
-  const cls = `inline-flex items-center justify-center gap-2 rounded-full font-sans font-semibold transition-all duration-200 active:scale-[0.98] ${variants[variant]} ${sizes[size]} ${className}`;
+  /* 3px corners: buttons sit square in the blueprint grid */
+  const cls = `inline-flex items-center justify-center gap-2 rounded-[3px] font-sans font-semibold transition-all duration-200 active:scale-[0.98] ${variants[variant]} ${sizes[size]} ${className}`;
 
   if (external) {
     return (

@@ -152,7 +152,6 @@ export function Hero() {
                 caption={{ title: featured.client, sub: featured.format }}
                 autoplay
                 startAt={"startAt" in featured ? featured.startAt : 0}
-                interactive={false}
                 className="!absolute inset-3 h-auto !aspect-auto"
               />
             </motion.div>
