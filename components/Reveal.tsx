@@ -51,7 +51,7 @@ export function RevealItem({
     },
   };
   return (
-    <motion.div className={className} variants={item}>
+    <motion.div className={`reveal-i ${className}`} variants={item}>
       {children}
     </motion.div>
   );

@@ -1,14 +1,14 @@
+import { Panel } from "@/components/Panel";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { SectionChip } from "@/components/SectionChip";
 import { SectionGlow } from "@/components/SectionGlow";
 import { home } from "@/lib/site";
 
 /*
- * Head-to-head contrast in the hairline editorial style: no checkmark
- * table, no icons. Desktop puts the shared mono label down the middle,
- * everyone-else right-aligned and muted on the left, GHL Video in ink
- * on the right. Gold leads the section. Mobile stacks each row under
- * its label in two columns.
+ * Head-to-head inside one bounded panel: label spine on the left,
+ * Everyone-else column muted, the GHL Video column carried on a faint
+ * gold wash so the winner reads at a glance. The whole table reveals
+ * as ONE group so fast scrollers and print never see missing rows.
  */
 export function Comparison() {
   const { comparison } = home;
@@ -26,57 +26,54 @@ export function Comparison() {
               {comparison.intro}
             </p>
           </RevealItem>
-        </Reveal>
 
-        <Reveal className="mt-14">
-          {/* column headers */}
-          <RevealItem>
-            {/* desktop: both value columns left-aligned on the page
-                grid, mono labels as the center spine */}
-            <div className="hidden grid-cols-[1fr_11rem_1fr] items-baseline gap-6 border-b border-hair pb-4 md:grid">
-              <p className="font-mono text-label uppercase text-dim">
-                {comparison.othersLabel}
-              </p>
-              <span />
-              <p className="font-mono text-label uppercase text-gold">
-                {comparison.usLabel}
-              </p>
-            </div>
-            {/* mobile */}
-            <div className="grid grid-cols-2 gap-4 border-b border-hair pb-4 md:hidden">
-              <p className="font-mono text-label uppercase text-dim">
-                {comparison.othersLabel}
-              </p>
-              <p className="font-mono text-label uppercase text-gold">
-                {comparison.usLabel}
-              </p>
-            </div>
-          </RevealItem>
-
-          {comparison.rows.map((row) => (
-            <RevealItem key={row.label} className="border-b border-hair">
-              {/* desktop: others / label / us */}
-              <div className="hidden grid-cols-[1fr_11rem_1fr] items-baseline gap-6 py-5 md:grid">
-                <p className="text-[0.9375rem] text-muted">{row.others}</p>
-                <p className="text-center font-mono text-label uppercase text-dim">
-                  {row.label}
+          <RevealItem className="mt-12">
+            <Panel className="overflow-hidden">
+              {/* header row */}
+              <div className="hidden grid-cols-[9rem_1fr_1fr] border-b border-hair md:grid">
+                <span />
+                <p className="px-6 py-4 font-mono text-label uppercase text-dim">
+                  {comparison.othersLabel}
                 </p>
-                <p className="text-[0.9375rem] font-medium text-ink">
-                  {row.us}
+                <p className="border-l border-hair bg-gold/[0.04] px-6 py-4 font-mono text-label uppercase text-gold">
+                  {comparison.usLabel}
                 </p>
               </div>
-              {/* mobile: label above, two columns under */}
-              <div className="py-5 md:hidden">
-                <p className="font-mono text-label uppercase text-dim">
-                  {row.label}
-                </p>
-                <div className="mt-2 grid grid-cols-2 gap-4">
-                  <p className="text-sm text-muted">{row.others}</p>
-                  <p className="text-sm font-medium text-ink">{row.us}</p>
+
+              {comparison.rows.map((row, i) => (
+                <div key={row.label}>
+                  {/* desktop */}
+                  <div
+                    className={`hidden grid-cols-[9rem_1fr_1fr] md:grid ${
+                      i > 0 ? "border-t border-hair" : ""
+                    }`}
+                  >
+                    <p className="px-5 py-5 font-mono text-label uppercase text-dim">
+                      {row.label}
+                    </p>
+                    <p className="px-6 py-5 text-[0.9375rem] text-muted">
+                      {row.others}
+                    </p>
+                    <p className="border-l border-hair bg-gold/[0.04] px-6 py-5 text-[0.9375rem] font-medium text-ink">
+                      {row.us}
+                    </p>
+                  </div>
+                  {/* mobile */}
+                  <div
+                    className={`px-5 py-5 md:hidden ${i > 0 ? "border-t border-hair" : ""}`}
+                  >
+                    <p className="font-mono text-label uppercase text-dim">
+                      {row.label}
+                    </p>
+                    <div className="mt-2.5 grid grid-cols-2 gap-4">
+                      <p className="text-sm text-muted">{row.others}</p>
+                      <p className="text-sm font-medium text-ink">{row.us}</p>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </RevealItem>
-          ))}
+              ))}
+            </Panel>
+          </RevealItem>
         </Reveal>
       </div>
     </section>

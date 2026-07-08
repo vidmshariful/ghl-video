@@ -200,8 +200,9 @@ export const legalLinks = [
 /* Homepage content                                                     */
 /* ------------------------------------------------------------------ */
 
-/* TODO: replace with the real Google reviews URL (Shariful will send). */
-export const googleReviewsUrl = "#";
+/* The live Google reviews for GHL Video (5.00, 17 reviews). */
+export const googleReviewsUrl =
+  "https://www.google.com/search?q=ghl+video#lrd=0x3755c3a3394f03b9:0x1f310bcbd31aa084,1";
 
 /* Trust bar logo wall: the three named clients are real; the rest are
  * PLACEHOLDER marks until Shariful clears the real client logos. */
@@ -223,14 +224,12 @@ export const home = {
     headline: "Video built for",
     headlineAccent: "HighLevel SaaS.",
     lede: "Premade videos when speed matters, custom production when it has to be yours, and monthly editing for creators who publish every week.",
-    /* DRAFT quote and placeholder photo slot; real client words and
-     * headshot before launch */
+    /* REAL Google review, quoted verbatim */
     testimonial: {
       quote:
-        "Every video came back branded like we made it in-house. Our demos finally match the price we charge.",
+        "Great quality and quick turnaround! Will definitely work with again!",
       name: "Ryan Maule",
-      role: "CEO",
-      company: "AI Clinic Assist",
+      source: "Google review",
       photo: null as string | null,
     },
   },
@@ -294,8 +293,7 @@ export const home = {
       "Your prospects judge your SaaS before they ever try it. A Loom demo and a DIY explainer tell them everything they need to know, and not in your favor.",
   },
 
-  /* PLACEHOLDERS: photo slots and the non-founder role cards are
-   * stand-ins for the real team; Shariful replaces before launch. */
+  /* The real team, photos from the live site */
   team: {
     chip: "The team",
     headline: "Full time, in house,",
@@ -303,12 +301,10 @@ export const home = {
     intro:
       "The same people work on your videos every time. That is what keeps quality and turnaround consistent.",
     members: [
-      { name: "Shariful Islam", role: "Founder", photo: null as string | null },
-      { name: null as string | null, role: "Creative Direction", photo: null as string | null },
-      { name: null as string | null, role: "Script and Voice", photo: null as string | null },
-      { name: null as string | null, role: "Animation", photo: null as string | null },
-      { name: null as string | null, role: "Edit Team", photo: null as string | null },
-      { name: null as string | null, role: "Client Success", photo: null as string | null },
+      { name: "Shariful Islam", role: "Founder & CEO", photo: "/people/shariful.jpg" as string | null },
+      { name: "Mostafa Afzal", role: "COO", photo: "/people/mostafa.jpg" as string | null },
+      { name: "Tanvir Prince", role: "Executive Producer", photo: "/people/tanvir.jpg" as string | null },
+      { name: "Dillon Strickland", role: "Sales Director", photo: "/people/dillon.jpg" as string | null },
     ],
   },
 
@@ -457,50 +453,51 @@ export const home = {
     },
   },
 
-  /* DRAFT COPY: these quotes are written in-voice as placeholders and
-   * must be replaced with real client words before launch. Flagged to
-   * Shariful. The names, roles, and companies are locked and real.
-   * photo: null renders the initials avatar; drop a headshot path in
-   * (e.g. "/people/dominic.jpg") to swap. */
-  testimonials: [
-    {
-      quote:
-        "They already knew the platform, so we skipped the briefing and went straight to output. The videos sell Emma better than our old demos ever did.",
-      name: "Dominic Bavaro",
-      role: "CEO",
-      company: "Emma.io",
-      photo: null as string | null,
-      lead: true,
-      draft: true,
-    },
-    {
-      quote:
-        "Every video came back branded like we made it in-house. Our demos finally match the price we charge.",
-      name: "Ryan Maule",
-      role: "CEO",
-      company: "AI Clinic Assist",
-      photo: null as string | null,
-      lead: false,
-      draft: true,
-    },
-    {
-      quote:
-        "Fast, on brand, and zero hand-holding. The first vendor we have not had to manage.",
-      name: "David Allen Neron",
-      role: "CEO",
-      company: "NeoLuxLabs",
-      photo: null as string | null,
-      lead: false,
-      draft: true,
-    },
-  ],
+  /* REAL Google reviews, quoted verbatim from the 5.00-rated profile.
+   * size drives the bento span. */
+  reviews: {
+    chip: "Proof",
+    headline: "Rated 5.0 by",
+    accent: "HighLevel founders.",
+    ratingLine: "17 reviews on Google, every one of them five stars.",
+    items: [
+      {
+        quote:
+          "Outstanding video quality and an extremely smooth and pleasant customer experience. Tanvir and the team went way beyond our expectations to deliver some of the best white label GHL content we've ever seen.",
+        name: "Ben Gallagher",
+        size: "lg",
+      },
+      {
+        quote:
+          "I had a great experience working with GHL Video. They are very accommodating and willing to work with you on your needs to make sure you're totally happy with the results and all of the details. Would highly recommend using them to do your videos!",
+        name: "Nick Demyanovich",
+        size: "md",
+      },
+      {
+        quote:
+          "These quality social ad videos and fast turnaround times are well worth it and works great for setting demo appointments.",
+        name: "Marketing Baristas",
+        size: "sm",
+      },
+      {
+        quote:
+          "Super easy process, great pricing, and top-tier videos. GHL Video delivers every time!",
+        name: "Kiwanna Clark",
+        size: "sm",
+      },
+      {
+        quote: "Best WL SaaS video. A++ Quality.",
+        name: "Dillon Paul",
+        size: "sm",
+      },
+    ],
+  },
 
-  /* DRAFT: Shariful sends the final line and headshot. photo: null
-   * renders the initials avatar. */
+  /* DRAFT line (Shariful sends the final wording); photo is real */
   founder: {
     name: "Shariful Islam",
-    role: "Founder, GHL Video",
-    photo: null as string | null,
+    role: "Founder & CEO, GHL Video",
+    photo: "/people/shariful.jpg" as string | null,
     line: "Every HighLevel reseller I met was selling a serious platform with videos that undersold it. GHL Video exists to close that gap, with one team that never has to be taught the product.",
   },
 

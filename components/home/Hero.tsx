@@ -122,8 +122,8 @@ export function Hero() {
                       {home.hero.testimonial.quote}
                     </p>
                     <p className="mt-2 font-mono text-[0.6875rem] uppercase tracking-[0.12em] text-dim">
-                      {home.hero.testimonial.name}, {home.hero.testimonial.role}
-                      , {home.hero.testimonial.company}
+                      {home.hero.testimonial.name} /{" "}
+                      {home.hero.testimonial.source}
                     </p>
                   </div>
                 </div>

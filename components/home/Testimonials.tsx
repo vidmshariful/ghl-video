@@ -1,68 +1,76 @@
 import { Avatar } from "@/components/Avatar";
-import { MediaFrame } from "@/components/MediaFrame";
-import { SectionChip } from "@/components/SectionChip";
 import { Reveal, RevealItem } from "@/components/Reveal";
+import { SectionChip } from "@/components/SectionChip";
 import { SectionGlow } from "@/components/SectionGlow";
-import { home } from "@/lib/site";
+import { home, googleReviewsUrl } from "@/lib/site";
 
 /*
- * One lead pull-quote at display size, two supporting quotes below.
- * Uneven weight on purpose. Quote copy is DRAFT until real client
- * words are approved (flagged in lib/site.ts).
+ * Real Google reviews, verbatim, in a bento: one wide lead card, one
+ * medium, three small. Every word is a client's own. The header links
+ * to the live Google profile.
  */
-export function Testimonials() {
-  const lead = home.testimonials.find((t) => t.lead)!;
-  const rest = home.testimonials.filter((t) => !t.lead);
-  /* the lead client's own piece beside their words, when we have it */
-  const leadWork = home.work.pieces.find((p) => p.client === lead.company);
+const spans: Record<string, string> = {
+  lg: "md:col-span-7",
+  md: "md:col-span-5",
+  sm: "md:col-span-4",
+};
 
+export function Testimonials() {
+  const { reviews } = home;
   return (
     <section className="relative overflow-hidden section-pad border-t border-hair">
       <SectionGlow accent="gold" position="left" />
       <div className="shell relative">
-        <Reveal className="grid items-center gap-10 lg:grid-cols-12">
-          <RevealItem className="lg:col-span-8">
-            <SectionChip index={7} label="Proof" />
-            <blockquote className="mt-8">
-              <p className="max-w-[30ch] font-display text-[clamp(1.5rem,3vw,2.375rem)] font-semibold leading-[1.25] tracking-tight text-ink">
-                {lead.quote}
+        <Reveal>
+          <RevealItem className="flex flex-wrap items-end justify-between gap-6">
+            <div>
+              <SectionChip index={7} label={reviews.chip} />
+              <h2 className="mt-6 max-w-[20ch] font-display text-h2 text-ink">
+                {reviews.headline}{" "}
+                <span className="text-gold">{reviews.accent}</span>
+              </h2>
+              <p className="mt-4 max-w-[52ch] text-lede text-muted">
+                {reviews.ratingLine}
               </p>
-              <footer className="mt-7 flex items-center gap-4">
-                <Avatar name={lead.name} photo={lead.photo} size="lg" />
-                <p className="font-mono text-sm">
-                  <span className="text-ink">{lead.name}</span>
-                  <span className="text-dim">
-                    {" "}
-                    / {lead.role}, {lead.company}
-                  </span>
-                </p>
-              </footer>
-            </blockquote>
+            </div>
+            <a
+              href={googleReviewsUrl}
+              target="_blank"
+              rel="noopener"
+              className="group inline-flex items-center gap-2 text-sm font-semibold text-gold"
+            >
+              Read all 17 reviews on Google
+              <span
+                aria-hidden="true"
+                className="transition-transform duration-200 group-hover:translate-x-1"
+              >
+                &rarr;
+              </span>
+            </a>
           </RevealItem>
-          {leadWork && (
-            <RevealItem className="hidden lg:col-span-4 lg:block">
-              <MediaFrame
-                src={leadWork.src}
-                poster={leadWork.poster}
-                label={`${leadWork.client}, ${leadWork.format}`}
-                caption={{ title: leadWork.client, sub: leadWork.format }}
-              />
-            </RevealItem>
-          )}
         </Reveal>
 
-        <Reveal className="mt-14 grid gap-4 md:grid-cols-2 lg:max-w-4xl">
-          {rest.map((t) => (
-            <RevealItem key={t.name}>
+        <Reveal className="mt-12 grid gap-4 md:grid-cols-12">
+          {reviews.items.map((review) => (
+            <RevealItem key={review.name} className={spans[review.size]}>
               <blockquote className="flex h-full flex-col rounded-card border border-hair card-glass p-7">
-                <p className="text-sm leading-relaxed text-muted">{t.quote}</p>
-                <footer className="mt-5 flex items-center gap-3 pt-2">
-                  <Avatar name={t.name} photo={t.photo} size="md" />
-                  <p className="font-mono text-xs">
-                    <span className="text-ink">{t.name}</span>
-                    <span className="text-dim">
-                      {" "}
-                      / {t.role}, {t.company}
+                <p
+                  className={`leading-relaxed ${
+                    review.size === "lg"
+                      ? "font-display text-[1.25rem] font-semibold tracking-tight text-ink"
+                      : "text-sm text-muted"
+                  }`}
+                >
+                  {review.quote}
+                </p>
+                <footer className="mt-6 flex items-center gap-3 pt-2">
+                  <Avatar name={review.name} photo={null} size="md" />
+                  <p>
+                    <span className="block text-sm font-medium text-ink">
+                      {review.name}
+                    </span>
+                    <span className="block font-mono text-[0.6875rem] uppercase tracking-[0.12em] text-dim">
+                      Google review
                     </span>
                   </p>
                 </footer>

@@ -1,11 +1,11 @@
-import { Avatar } from "@/components/Avatar";
+import { Panel } from "@/components/Panel";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { home } from "@/lib/site";
 
 /*
- * Small human moment before the closing CTA: face, two sentences in
- * the founder voice, mono attribution. Photo and final line come from
- * lib/site.ts (drafts until Shariful sends the real ones).
+ * The founder, face and voice, in a bounded panel: photo left with a
+ * gold crown line, statement at display scale right. The line is a
+ * DRAFT until Shariful sends the final wording.
  */
 export function FounderNote() {
   const { founder } = home;
@@ -13,19 +13,33 @@ export function FounderNote() {
     <section className="border-t border-hair">
       <div className="shell py-16 md:py-20">
         <Reveal>
-          {/* right-of-center: one of the page's two deliberate
-              counterweights to the left-set rhythm */}
-          <RevealItem className="flex max-w-2xl items-start gap-5 lg:ml-auto lg:mr-[6%]">
-            <Avatar name={founder.name} photo={founder.photo} size="lg" />
-            <div>
-              <p className="text-[1.0625rem] leading-relaxed text-ink">
-                {founder.line}
-              </p>
-              <p className="mt-4 font-mono text-sm">
-                <span className="text-ink">{founder.name}</span>
-                <span className="text-dim"> / {founder.role}</span>
-              </p>
-            </div>
+          <RevealItem>
+            <Panel className="overflow-hidden">
+              <div className="grid md:grid-cols-[16rem_1fr]">
+                <div className="relative">
+                  <div aria-hidden="true" className="absolute inset-x-0 top-0 z-10 h-[3px] bg-brand-gradient" />
+                  {founder.photo ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- static export
+                    <img
+                      src={founder.photo}
+                      alt={founder.name}
+                      className="h-56 w-full object-cover object-top md:h-full"
+                    />
+                  ) : (
+                    <div className="h-56 w-full bg-card md:h-full" />
+                  )}
+                </div>
+                <div className="flex flex-col justify-center p-8 md:p-12">
+                  <p className="max-w-[44ch] font-display text-[clamp(1.25rem,2vw,1.625rem)] font-semibold leading-[1.35] tracking-tight text-ink">
+                    {founder.line}
+                  </p>
+                  <p className="mt-6 font-mono text-label uppercase">
+                    <span className="text-ink">{founder.name}</span>
+                    <span className="text-dim"> / {founder.role}</span>
+                  </p>
+                </div>
+              </div>
+            </Panel>
           </RevealItem>
         </Reveal>
       </div>

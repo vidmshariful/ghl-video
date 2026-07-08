@@ -229,3 +229,11 @@ body::after {
     animation: none;
   }
 }
+
+/* print and PDF capture: scroll reveals must never hide content */
+@media print {
+  .reveal-i {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
