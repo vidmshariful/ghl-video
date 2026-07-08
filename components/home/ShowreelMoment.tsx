@@ -33,6 +33,7 @@ export function ShowreelMoment() {
               label={`${featured.client}, ${featured.format}`}
               caption={{ title: featured.client, sub: featured.format }}
               startAt={"startAt" in featured ? featured.startAt : 0}
+              endAt={"endAt" in featured ? featured.endAt : undefined}
               rounded="rounded-card"
             />
           </RevealItem>
@@ -53,10 +54,10 @@ export function ShowreelMoment() {
         <Reveal className="mt-8">
           <RevealItem>
             <Link
-              href="/premade/"
+              href="/work/"
               className="group inline-flex items-center gap-2 text-sm font-semibold text-green"
             >
-              See premade videos
+              See all work
               <span
                 aria-hidden="true"
                 className="transition-transform duration-200 group-hover:translate-x-1"

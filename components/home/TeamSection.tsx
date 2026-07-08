@@ -57,7 +57,7 @@ export function TeamSection() {
       <div className="shell relative">
         <Reveal>
           <RevealItem>
-            <SectionChip index={5} label={team.chip} />
+            <SectionChip index={7} label={team.chip} />
             <h2 className="mt-6 max-w-[22ch] font-display text-h2 text-ink">
               {team.headline}{" "}
               <span className="text-gold">{team.accent}</span>

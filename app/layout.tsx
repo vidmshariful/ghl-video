@@ -36,9 +36,17 @@ export default function RootLayout({
       className={`${grotesk.variable} ${inter.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[110] focus:rounded-[3px] focus:bg-green focus:px-4 focus:py-2.5 focus:text-sm focus:font-semibold focus:text-[#08090D]"
+        >
+          Skip to content
+        </a>
         <PageFrame />
         <Header />
-        <main className="relative z-10 flex-1">{children}</main>
+        <main id="main" className="relative z-10 flex-1">
+          {children}
+        </main>
         <Footer />
       </body>
     </html>

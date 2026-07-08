@@ -102,6 +102,15 @@ export const posters = {
   sampleC: "/posters/clip-5.jpg",
 } as const;
 
+/* Curated ambient-loop windows per clip: every frame that plays a clip
+ * loops inside its window, so title cards and blank intros never show.
+ * The lightbox always plays the full clip from the start. */
+export const clipWindows: Partial<
+  Record<keyof typeof clips, { startAt: number; endAt?: number }>
+> = {
+  featured: { startAt: 12, endAt: 30 },
+};
+
 /* ------------------------------------------------------------------ */
 /* Services and pricing (locked)                                        */
 /* ------------------------------------------------------------------ */
@@ -375,8 +384,9 @@ export const home = {
         poster: posters.featured,
         client: "NeoLuxLabs",
         format: "Onboarding Series",
-        /* skip the placeholder clip's white title-card intro */
-        startAt: 40,
+        /* ambient loop window comes from clipWindows.featured */
+        startAt: clipWindows.featured!.startAt,
+        endAt: clipWindows.featured!.endAt,
       },
       {
         src: clips.sampleA,

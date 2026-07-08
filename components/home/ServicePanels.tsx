@@ -5,7 +5,7 @@ import { Panel } from "@/components/Panel";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { SectionChip } from "@/components/SectionChip";
 import { SectionGlow } from "@/components/SectionGlow";
-import { home, clips, posters } from "@/lib/site";
+import { home, clips, posters, clipWindows } from "@/lib/site";
 import type { Accent } from "@/components/Eyebrow";
 
 /*
@@ -62,6 +62,7 @@ export function ServicePanels() {
                   label={`${panel.name} sample`}
                   tint={panel.accent as "gold" | "green" | "blue"}
                   groupEase
+                  {...(clipWindows[panel.mediaKey as keyof typeof clips] ?? {})}
                   className="!absolute inset-3 h-auto !aspect-auto"
                 />
               </div>

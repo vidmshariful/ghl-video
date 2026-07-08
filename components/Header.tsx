@@ -284,7 +284,7 @@ export function Header() {
         <div className="flex items-center gap-3 md:hidden">
           <Link
             href={cta.bookACall.href}
-            className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-[3px] bg-green px-3.5 py-2 text-xs font-semibold text-[#08090D]"
+            className="inline-flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-[3px] bg-green px-4 text-xs font-semibold text-[#08090D]"
           >
             {cta.bookACall.label}
             <span aria-hidden="true">&rarr;</span>
@@ -294,7 +294,7 @@ export function Header() {
             aria-expanded={open}
             aria-label={open ? "Close menu" : "Open menu"}
             onClick={() => setOpen(!open)}
-            className="flex h-9 w-9 shrink-0 flex-col items-center justify-center gap-[5px] rounded-[3px] border border-hair"
+            className="flex h-11 w-11 shrink-0 flex-col items-center justify-center gap-[5px] rounded-[3px] border border-hair"
           >
             <span
               className={`h-px w-4 bg-ink transition-transform duration-200 ${open ? "translate-y-[3px] rotate-45" : ""}`}

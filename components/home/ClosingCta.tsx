@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { Button } from "@/components/Button";
 import { Reveal, RevealItem } from "@/components/Reveal";
+import { SectionChip } from "@/components/SectionChip";
 import { home, cta } from "@/lib/site";
 
 /*
@@ -30,7 +32,8 @@ export function ClosingCta() {
       <div className="shell section-pad relative">
         <Reveal className="grid items-center gap-12 lg:grid-cols-12">
           <RevealItem className="lg:col-span-7">
-            <h2 className="max-w-[16ch] font-display text-h2 text-ink">
+            <SectionChip index={10} label="Next step" accent="green" />
+            <h2 className="mt-6 max-w-[16ch] font-display text-h2 text-ink">
               {home.closing.headline}{" "}
               <span className="text-gold">{home.closing.accent}</span>
             </h2>
@@ -67,6 +70,22 @@ export function ClosingCta() {
                 </li>
               ))}
             </ol>
+            {/* the second audience gets its own exit */}
+            <p className="mt-6 border-t border-hair pt-5 pl-8 text-sm text-muted">
+              Publishing weekly?{" "}
+              <Link
+                href="/editing/"
+                className="group inline-flex items-center gap-1.5 font-semibold text-blue"
+              >
+                See video editing
+                <span
+                  aria-hidden="true"
+                  className="transition-transform duration-200 group-hover:translate-x-1"
+                >
+                  &rarr;
+                </span>
+              </Link>
+            </p>
           </RevealItem>
         </Reveal>
       </div>

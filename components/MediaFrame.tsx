@@ -44,6 +44,20 @@ function Lightbox({
     videoRef.current?.play().catch(() => {});
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
+      /* trap Tab inside the dialog: it has exactly two focusable
+       * elements, the close button and the video */
+      if (e.key === "Tab") {
+        const stops = [closeRef.current, videoRef.current].filter(
+          Boolean,
+        ) as HTMLElement[];
+        if (!stops.length) return;
+        const idx = stops.indexOf(document.activeElement as HTMLElement);
+        e.preventDefault();
+        const next = e.shiftKey
+          ? stops[(idx - 1 + stops.length) % stops.length]
+          : stops[(idx + 1) % stops.length];
+        next.focus();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => {
@@ -102,6 +116,7 @@ export function MediaFrame({
   caption,
   interactive = true,
   startAt = 0,
+  endAt,
   tint,
   groupEase = false,
   rounded = "rounded-media",
@@ -112,10 +127,11 @@ export function MediaFrame({
   label?: string;
   caption?: { title: string; sub: string };
   interactive?: boolean;
-  /* skip a clip's intro segment on the ambient thumbnail loop
-   * (placeholder clips carry title cards); the lightbox always plays
-   * from the start */
+  /* ambient loop window: skip a clip's intro and loop back before its
+   * tail (placeholder clips carry title cards); the lightbox always
+   * plays the full clip from the start */
   startAt?: number;
+  endAt?: number;
   /* accent-tinted grade so a service's media wears its own color */
   tint?: "gold" | "green" | "blue";
   /* also ease the grade when an ancestor group/svc container hovers */
@@ -140,11 +156,15 @@ export function MediaFrame({
     return () => io.disconnect();
   }, []);
 
-  /* ambient playback follows the viewport */
+  /* ambient playback follows the viewport; Save-Data users get the
+   * graded poster with tap-to-popup, like reduced motion already does */
   useEffect(() => {
     const v = ref.current;
     if (!v) return;
-    if (reduced || open || !inView) {
+    const saveData =
+      (navigator as { connection?: { saveData?: boolean } }).connection
+        ?.saveData === true;
+    if (reduced || saveData || open || !inView) {
       v.pause();
       return;
     }
@@ -162,9 +182,17 @@ export function MediaFrame({
         src={src}
         poster={poster ?? undefined}
         muted
-        loop={startAt === 0}
+        loop={startAt === 0 && endAt === undefined}
         playsInline
         preload="metadata"
+        onTimeUpdate={
+          endAt !== undefined
+            ? (e) => {
+                if (e.currentTarget.currentTime >= endAt)
+                  e.currentTarget.currentTime = startAt;
+              }
+            : undefined
+        }
         onEnded={
           startAt > 0
             ? (e) => {

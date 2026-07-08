@@ -29,6 +29,15 @@ export function Comparison() {
 
           <RevealItem className="mt-12">
             <Panel className="overflow-hidden">
+              {/* mobile header row so the two columns stay labeled */}
+              <div className="grid grid-cols-2 gap-4 border-b border-hair px-5 py-4 md:hidden">
+                <p className="font-mono text-label uppercase text-dim">
+                  {comparison.othersLabel}
+                </p>
+                <p className="font-mono text-label uppercase text-gold">
+                  {comparison.usLabel}
+                </p>
+              </div>
               {/* header row */}
               <div className="hidden grid-cols-[9rem_1fr_1fr] border-b border-hair md:grid">
                 <span />
@@ -67,7 +76,9 @@ export function Comparison() {
                     </p>
                     <div className="mt-2.5 grid grid-cols-2 gap-4">
                       <p className="text-sm text-muted">{row.others}</p>
-                      <p className="text-sm font-medium text-ink">{row.us}</p>
+                      <p className="-mx-2 -my-1 rounded-[4px] bg-gold/[0.05] px-2 py-1 text-sm font-medium text-ink">
+                        {row.us}
+                      </p>
                     </div>
                   </div>
                 </div>

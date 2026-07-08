@@ -20,9 +20,9 @@ export default function Home() {
       <Manifesto />
       <ShowreelMoment />
       <Comparison />
-      <TeamSection />
       <VideoTestimonials />
       <Testimonials />
+      <TeamSection />
       <Faq />
       <FounderNote />
       <ClosingCta />

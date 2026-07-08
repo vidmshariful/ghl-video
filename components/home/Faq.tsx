@@ -1,6 +1,7 @@
+import { Button } from "@/components/Button";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { SectionChip } from "@/components/SectionChip";
-import { home } from "@/lib/site";
+import { home, cta } from "@/lib/site";
 
 /*
  * Editorial FAQ: native details/summary accordions in bounded panels,
@@ -42,6 +43,18 @@ export function Faq() {
               </details>
             </RevealItem>
           ))}
+        </Reveal>
+
+        {/* the objection loop just closed; the action sits right here */}
+        <Reveal className="mx-auto mt-12 max-w-3xl text-center">
+          <RevealItem>
+            <p className="text-lede text-muted">The call answers the rest.</p>
+            <div className="mt-6 flex justify-center">
+              <Button href={cta.bookACall.href} variant="primary">
+                {cta.bookACall.label}
+              </Button>
+            </div>
+          </RevealItem>
         </Reveal>
       </div>
     </section>

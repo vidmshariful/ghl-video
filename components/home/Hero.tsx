@@ -108,8 +108,10 @@ export function Hero() {
               </motion.div>
 
               {/* client voice anchors the panel bottom: photo slot,
-                  hairline divider, two-line quote */}
-              <motion.div {...fadeUp(0.69)} className="mt-auto pt-10">
+                  hairline divider, two-line quote. Desktop only; on
+                  mobile it re-renders after the media so the moving
+                  work appears right after the CTAs */}
+              <motion.div {...fadeUp(0.69)} className="mt-auto hidden pt-10 lg:block">
                 <div className="flex items-center gap-5 border-t border-hair pt-6">
                   <Avatar
                     name={home.hero.testimonial.name}
@@ -146,8 +148,30 @@ export function Hero() {
                 label={`${featured.client}, ${featured.format}`}
                 caption={{ title: featured.client, sub: featured.format }}
                 startAt={"startAt" in featured ? featured.startAt : 0}
+                endAt={"endAt" in featured ? featured.endAt : undefined}
                 className="!absolute inset-3 h-auto !aspect-auto"
               />
+            </motion.div>
+
+            {/* mobile-only client voice, after the media */}
+            <motion.div {...fadeUp(0.69)} className="px-8 pb-8 lg:hidden">
+              <div className="flex items-center gap-5 border-t border-hair pt-6">
+                <Avatar
+                  name={home.hero.testimonial.name}
+                  photo={home.hero.testimonial.photo}
+                  size="lg"
+                />
+                <div aria-hidden="true" className="h-12 w-px shrink-0 bg-hair" />
+                <div>
+                  <p className="max-w-[46ch] text-sm leading-relaxed text-muted">
+                    {home.hero.testimonial.quote}
+                  </p>
+                  <p className="mt-2 font-mono text-[0.6875rem] uppercase tracking-[0.12em] text-dim">
+                    {home.hero.testimonial.name} /{" "}
+                    {home.hero.testimonial.source}
+                  </p>
+                </div>
+              </div>
             </motion.div>
           </div>
         </Panel>

@@ -24,7 +24,7 @@ export function Testimonials() {
         <Reveal>
           <RevealItem className="flex flex-wrap items-end justify-between gap-6">
             <div>
-              <SectionChip index={7} label={reviews.chip} />
+              <SectionChip index={6} label={reviews.chip} />
               <h2 className="mt-6 max-w-[20ch] font-display text-h2 text-ink">
                 {reviews.headline}{" "}
                 <span className="text-gold">{reviews.accent}</span>

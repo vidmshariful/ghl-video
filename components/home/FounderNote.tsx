@@ -1,5 +1,6 @@
 import { Panel } from "@/components/Panel";
 import { Reveal, RevealItem } from "@/components/Reveal";
+import { SectionChip } from "@/components/SectionChip";
 import { home } from "@/lib/site";
 
 /*
@@ -13,6 +14,9 @@ export function FounderNote() {
     <section className="border-t border-hair">
       <div className="shell py-16 md:py-20">
         <Reveal>
+          <RevealItem className="mb-8">
+            <SectionChip index={9} label="Founder" />
+          </RevealItem>
           <RevealItem>
             <Panel className="overflow-hidden">
               <div className="grid md:grid-cols-[16rem_1fr]">
