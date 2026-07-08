@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
+import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/Button";
 import { MediaFrame } from "@/components/MediaFrame";
 import { Panel } from "@/components/Panel";
@@ -106,32 +107,26 @@ export function Hero() {
                 </Button>
               </motion.div>
 
-              {/* checklist strip anchors the panel bottom */}
+              {/* client voice anchors the panel bottom: photo slot,
+                  hairline divider, two-line quote */}
               <motion.div {...fadeUp(0.69)} className="mt-auto pt-10">
-                <ul className="flex flex-wrap gap-x-8 gap-y-2.5 border-t border-hair pt-5">
-                  {home.hero.checklist.map((item) => (
-                    <li
-                      key={item}
-                      className="flex items-center gap-2.5 font-mono text-label uppercase text-muted"
-                    >
-                      <svg
-                        viewBox="0 0 12 12"
-                        className="h-2.5 w-2.5"
-                        aria-hidden="true"
-                      >
-                        <path
-                          d="M2 6.2 4.8 9 10 3.4"
-                          fill="none"
-                          stroke="#00CC00"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                      {item}
-                    </li>
-                  ))}
-                </ul>
+                <div className="flex items-center gap-5 border-t border-hair pt-6">
+                  <Avatar
+                    name={home.hero.testimonial.name}
+                    photo={home.hero.testimonial.photo}
+                    size="lg"
+                  />
+                  <div aria-hidden="true" className="h-12 w-px shrink-0 bg-hair" />
+                  <div>
+                    <p className="max-w-[46ch] text-sm leading-relaxed text-muted">
+                      {home.hero.testimonial.quote}
+                    </p>
+                    <p className="mt-2 font-mono text-[0.6875rem] uppercase tracking-[0.12em] text-dim">
+                      {home.hero.testimonial.name}, {home.hero.testimonial.role}
+                      , {home.hero.testimonial.company}
+                    </p>
+                  </div>
+                </div>
               </motion.div>
             </div>
 

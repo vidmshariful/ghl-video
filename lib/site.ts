@@ -177,6 +177,17 @@ export const legalLinks = [
 /* TODO: replace with the real Google reviews URL (Shariful will send). */
 export const googleReviewsUrl = "#";
 
+/* Trust bar logo wall: the three named clients are real; the rest are
+ * PLACEHOLDER marks until Shariful clears the real client logos. */
+export const trustLogos = [
+  { name: "Emma.io", placeholder: false },
+  { name: "Brightstack", placeholder: true },
+  { name: "AI Clinic Assist", placeholder: false },
+  { name: "Cloudpeak", placeholder: true },
+  { name: "NeoLuxLabs", placeholder: false },
+  { name: "Loopwise", placeholder: true },
+] as const;
+
 /* NOTE (per Shariful): the homepage shows NO prices for any service.
  * Pricing lives on the service pages. Premade pricing is also moving
  * off a single flat figure; final premade price model pending. */
@@ -186,11 +197,16 @@ export const home = {
     headline: "Video built for",
     headlineAccent: "HighLevel SaaS.",
     lede: "Premade videos when speed matters, custom production when it has to be yours, and monthly editing for creators who publish every week.",
-    checklist: [
-      "White label from frame one",
-      "In-house HighLevel team",
-      "Delivered in days",
-    ],
+    /* DRAFT quote and placeholder photo slot; real client words and
+     * headshot before launch */
+    testimonial: {
+      quote:
+        "Every video came back branded like we made it in-house. Our demos finally match the price we charge.",
+      name: "Ryan Maule",
+      role: "CEO",
+      company: "AI Clinic Assist",
+      photo: null as string | null,
+    },
   },
 
   services: {

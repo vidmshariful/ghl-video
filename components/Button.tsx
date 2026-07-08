@@ -35,18 +35,30 @@ export function Button({
   className?: string;
 }) {
   /* 3px corners: buttons sit square in the blueprint grid */
-  const cls = `inline-flex items-center justify-center gap-2 rounded-[3px] font-sans font-semibold transition-all duration-200 active:scale-[0.98] ${variants[variant]} ${sizes[size]} ${className}`;
+  const cls = `group inline-flex items-center justify-center gap-2.5 rounded-[3px] font-sans font-semibold transition-all duration-200 active:scale-[0.98] ${variants[variant]} ${sizes[size]} ${className}`;
+
+  /* every button carries the arrow */
+  const arrow = (
+    <span
+      aria-hidden="true"
+      className="transition-transform duration-200 group-hover:translate-x-0.5"
+    >
+      &rarr;
+    </span>
+  );
 
   if (external) {
     return (
       <a href={href} className={cls} target="_blank" rel="noopener">
         {children}
+        {arrow}
       </a>
     );
   }
   return (
     <Link href={href} className={cls}>
       {children}
+      {arrow}
     </Link>
   );
 }

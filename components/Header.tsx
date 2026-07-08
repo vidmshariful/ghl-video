@@ -41,9 +41,15 @@ function MagneticCta() {
           hero and closing primaries, not the nav */}
       <Link
         href={cta.bookACall.href}
-        className="inline-flex items-center rounded-[3px] bg-green px-5 py-2.5 text-sm font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
+        className="group inline-flex items-center gap-2 rounded-[3px] bg-green px-5 py-2.5 text-sm font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
       >
         {cta.bookACall.label}
+        <span
+          aria-hidden="true"
+          className="transition-transform duration-200 group-hover:translate-x-0.5"
+        >
+          &rarr;
+        </span>
       </Link>
     </motion.div>
   );
@@ -115,9 +121,10 @@ export function Header() {
         <div className="flex items-center gap-3 md:hidden">
           <Link
             href={cta.bookACall.href}
-            className="inline-flex items-center whitespace-nowrap rounded-[3px] bg-green px-3.5 py-2 text-xs font-semibold text-[#08090D]"
+            className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-[3px] bg-green px-3.5 py-2 text-xs font-semibold text-[#08090D]"
           >
             {cta.bookACall.label}
+            <span aria-hidden="true">&rarr;</span>
           </Link>
           <button
             type="button"

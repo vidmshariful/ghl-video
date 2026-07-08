@@ -1,70 +1,95 @@
 import { Marquee } from "@/components/Marquee";
 import { Stat } from "@/components/Stat";
-import { namedClients, clients, rating, googleReviewsUrl } from "@/lib/site";
+import { trustLogos, clients, rating, googleReviewsUrl } from "@/lib/site";
 
-/* Clean text wordmarks for the named clients until logo rights are
- * confirmed, interleaved with neutral audience labels so no client
- * name repeats. The rating links out to Google reviews. */
-function Wordmark({ name }: { name: string }) {
+/*
+ * Structured trust bar: a bracketed purpose cap, the logo marquee, and
+ * two stat cells separated by hairlines, all reading as blueprint
+ * cells rather than floating items. Placeholder marks fill the wall
+ * until the real client logos are cleared (flagged in lib/site.ts).
+ */
+
+/* small geometric mark so placeholder wordmarks read as logos */
+function Mark({ variant }: { variant: number }) {
+  const shapes = [
+    <rect key="r" x="1.5" y="1.5" width="9" height="9" rx="2" />,
+    <circle key="c" cx="6" cy="6" r="4.75" />,
+    <path key="t" d="M6 1.5 10.75 10.5H1.25Z" />,
+  ];
   return (
-    <span className="whitespace-nowrap font-display text-lg font-semibold tracking-tight text-dim">
+    <svg
+      viewBox="0 0 12 12"
+      className="h-2.5 w-2.5 fill-dim/70"
+      aria-hidden="true"
+    >
+      {shapes[variant % shapes.length]}
+    </svg>
+  );
+}
+
+function Wordmark({ name, index }: { name: string; index: number }) {
+  return (
+    <span className="flex items-center gap-2.5 whitespace-nowrap font-display text-lg font-semibold tracking-tight text-dim">
+      <Mark variant={index} />
       {name}
     </span>
   );
 }
 
-function AudienceMark({ label }: { label: string }) {
+function StatCell({
+  value,
+  lines,
+  countUp = false,
+  linked = false,
+}: {
+  value: string;
+  lines: [string, string];
+  countUp?: boolean;
+  /* renders hover affordances for a wrapping anchor's group scope */
+  linked?: boolean;
+}) {
+  const valueCls = `font-mono text-[1.75rem] font-bold leading-none text-gold ${
+    linked ? "underline-offset-4 group-hover:underline" : ""
+  }`;
   return (
-    <span className="whitespace-nowrap font-mono text-label uppercase text-muted">
-      {label}
+    <span className="flex items-center gap-3.5">
+      {countUp ? (
+        <Stat value={clients} suffix="+" className={valueCls} />
+      ) : (
+        <span className={valueCls}>{value}</span>
+      )}
+      <span
+        className={`font-mono text-label uppercase text-dim ${linked ? "group-hover:text-muted" : ""}`}
+      >
+        <span className="block">{lines[0]}</span>
+        <span className="block">{lines[1]}</span>
+      </span>
     </span>
   );
 }
 
-const audienceMarks = [
-  "SaaS resellers",
-  "Agency owners",
-  "HighLevel creators",
-];
-
 export function TrustStrip() {
   return (
     <section className="border-y border-hair">
-      <div className="shell grid grid-cols-1 items-center gap-8 py-8 md:grid-cols-[1fr_auto] md:gap-14">
+      <div className="shell grid grid-cols-1 items-center gap-x-8 gap-y-6 py-7 lg:grid-cols-[auto_1fr_auto]">
+        {/* purpose cap in the chip bracket language */}
+        <p className="font-mono text-label uppercase text-dim">
+          [ <span className="text-muted">Trusted by</span> ]
+        </p>
+
         <Marquee>
-          {namedClients.map((c, i) => (
-            <span key={c.company} className="flex items-center gap-14">
-              <Wordmark name={c.company} />
-              <AudienceMark label={audienceMarks[i]} />
-            </span>
+          {trustLogos.map((logo, i) => (
+            <Wordmark key={logo.name} name={logo.name} index={i} />
           ))}
         </Marquee>
 
-        <div className="flex flex-wrap items-baseline gap-x-10 gap-y-3 font-mono">
-          <p className="flex items-baseline gap-2.5">
-            <Stat
-              value={clients}
-              suffix="+"
-              className="text-[1.75rem] font-bold text-gold"
-            />
-            <span className="text-label uppercase text-dim">
-              HighLevel SaaS
-              <br />
-              teams served
-            </span>
-          </p>
-          <a
-            href={googleReviewsUrl}
-            className="group flex items-baseline gap-2.5"
-          >
-            <span className="text-[1.75rem] font-bold text-gold underline-offset-4 group-hover:underline">
-              {rating}
-            </span>
-            <span className="text-label uppercase text-dim group-hover:text-muted">
-              client rating
-              <br />
-              on Google
-            </span>
+        {/* stat cells, hairline-separated, centered as units; wraps
+            below ~360px so narrow phones never overflow */}
+        <div className="flex flex-wrap items-center gap-x-7 gap-y-4 lg:border-l lg:border-hair lg:pl-10">
+          <StatCell value="800+" lines={["HighLevel SaaS", "teams served"]} countUp />
+          <span aria-hidden="true" className="hidden h-10 w-px shrink-0 bg-hair sm:block" />
+          <a href={googleReviewsUrl} className="group">
+            <StatCell value={rating} lines={["Client rating", "on Google"]} linked />
           </a>
         </div>
       </div>
