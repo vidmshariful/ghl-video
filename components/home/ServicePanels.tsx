@@ -54,8 +54,13 @@ export function ServicePanels() {
 
         <div className="mt-14 flex flex-col gap-6">
           {services.panels.map((panel, i) => {
+            /* media and copy are DIRECT grid children so both stretch
+               to the row height; sides alternate via order utilities */
+            const flip = i % 2 === 1;
             const media = (
-              <div className="relative min-h-[15rem] p-3 lg:min-h-0">
+              <div
+                className={`relative min-h-[15rem] p-3 lg:min-h-0 ${flip ? "lg:order-1" : ""}`}
+              >
                 <MediaFrame
                   src={clips[panel.mediaKey as keyof typeof clips]}
                   poster={posters[panel.mediaKey as keyof typeof posters]}
@@ -68,7 +73,7 @@ export function ServicePanels() {
               </div>
             );
             const copy = (
-              <div className="p-8 md:p-12">
+              <div className={`p-8 md:p-12 ${flip ? "lg:order-2" : ""}`}>
                 <p
                   className={`font-mono text-label uppercase ${accentText[panel.accent as keyof typeof accentText]}`}
                 >
@@ -118,17 +123,8 @@ export function ServicePanels() {
                       S/{String(i + 1).padStart(2, "0")}
                     </span>
                     <div className="grid lg:grid-cols-2">
-                      {i % 2 === 0 ? (
-                        <>
-                          {copy}
-                          {media}
-                        </>
-                      ) : (
-                        <>
-                          <div className="order-2 lg:order-1">{media}</div>
-                          <div className="order-1 lg:order-2">{copy}</div>
-                        </>
-                      )}
+                      {copy}
+                      {media}
                     </div>
                   </Panel>
                 </RevealItem>

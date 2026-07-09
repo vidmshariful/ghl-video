@@ -45,9 +45,9 @@ export function ScrollRuler() {
     >
       <motion.div
         style={{ top }}
-        className="absolute right-0 flex -translate-y-1/2 items-center gap-2"
+        className="absolute right-0 flex -translate-y-1/2 items-center gap-2 whitespace-nowrap"
       >
-        <span className="font-mono text-[0.625rem] tracking-[0.12em] text-dim">
+        <span className="whitespace-nowrap font-mono text-[0.625rem] tracking-[0.12em] text-dim">
           [ <span className="text-green">{String(idx).padStart(2, "0")}</span> ]
         </span>
         <span className="h-px w-3 bg-green" />
