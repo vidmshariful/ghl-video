@@ -48,7 +48,7 @@ function StatCell({
   /* renders hover affordances for a wrapping anchor's group scope */
   linked?: boolean;
 }) {
-  const valueCls = `font-mono text-[1.75rem] font-bold leading-none text-gold ${
+  const valueCls = `font-mono text-[1.75rem] font-bold leading-none text-gold [font-variant-numeric:tabular-nums] ${
     linked ? "underline-offset-4 group-hover:underline" : ""
   }`;
   return (

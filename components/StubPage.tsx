@@ -27,7 +27,7 @@ export function StubPage({
             </span>
             <span className="text-muted">This page is being built</span>
           </p>
-          <h1 className="mt-7 font-display text-[clamp(2rem,4vw,3rem)] font-bold leading-[1.02] tracking-[-0.03em] text-ink">
+          <h1 className="mt-7 font-display text-[clamp(2rem,4vw,3rem)] font-semibold leading-[1.02] tracking-[-0.025em] text-ink">
             {title}
           </h1>
           <p className="mt-5 max-w-[52ch] text-lede text-muted">{note}</p>

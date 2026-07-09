@@ -35,7 +35,7 @@ function PhotoSlot({
                 "linear-gradient(160deg, rgba(252,192,0,0.08), rgba(0,0,0,0) 45%, rgba(0,204,0,0.08))",
             }}
           />
-          <span className="absolute right-3 top-3 font-mono text-[0.625rem] uppercase tracking-[0.14em] text-dim">
+          <span className="absolute right-3 top-3 font-mono text-label uppercase text-dim">
             Photo slot
           </span>
         </>
@@ -44,7 +44,7 @@ function PhotoSlot({
         <p className="font-display text-sm font-semibold text-ink">
           {name ?? "To be announced"}
         </p>
-        <p className="mt-0.5 min-h-[2.1em] font-mono text-[0.6875rem] uppercase tracking-[0.12em] text-muted">
+        <p className="mt-0.5 min-h-[2.8em] font-mono text-label uppercase text-muted">
           {role}
         </p>
       </div>

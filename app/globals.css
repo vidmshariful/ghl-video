@@ -37,30 +37,33 @@
   --color-dim: var(--dim);
   --color-error: var(--error);
 
-  --font-display: var(--font-grotesk);
-  --font-sans: var(--font-inter);
+  --font-display: var(--font-heading);
+  --font-sans: var(--font-body);
   /* two-typeface system: the utility/label voice (font-mono usage
-     sites) renders in Inter per client direction */
-  --font-mono: var(--font-inter);
+     sites) renders in the body face per client direction */
+  --font-mono: var(--font-body);
 
   /* two radii only, plus pills */
   --radius-card: 16px;
   --radius-media: 12px;
 
-  /* type scale: intentional jumps, hero dramatically above everything */
-  --text-hero: clamp(2.75rem, 7.5vw, 6.75rem);
-  --text-hero--line-height: 0.95;
-  --text-hero--letter-spacing: -0.045em;
-  --text-hero--font-weight: 700;
+  /* type scale: intentional jumps, hero dramatically above everything.
+     Tracking tuned for Archivo (wider, larger x-height than the old
+     Space Grotesk; the reference sites run about -0.03em at display
+     sizes) */
+  --text-hero: clamp(2.5rem, 5vw, 4.25rem);
+  --text-hero--line-height: 0.98;
+  --text-hero--letter-spacing: -0.035em;
+  --text-hero--font-weight: 600;
 
   --text-h2: clamp(2rem, 4vw, 3.25rem);
-  --text-h2--line-height: 1.04;
-  --text-h2--letter-spacing: -0.03em;
-  --text-h2--font-weight: 700;
+  --text-h2--line-height: 1.06;
+  --text-h2--letter-spacing: -0.025em;
+  --text-h2--font-weight: 600;
 
   --text-h3: clamp(1.25rem, 1.8vw, 1.625rem);
   --text-h3--line-height: 1.2;
-  --text-h3--letter-spacing: -0.02em;
+  --text-h3--letter-spacing: -0.015em;
   --text-h3--font-weight: 600;
 
   --text-lede: 1.125rem;
@@ -98,7 +101,7 @@
 body {
   background: var(--canvas);
   color: var(--text);
-  font-family: var(--font-inter), system-ui, sans-serif;
+  font-family: var(--font-body), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   /* decorative bleeds must never widen the page; clip (not hidden)
      keeps position: sticky working */
@@ -116,10 +119,16 @@ body::after {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-/* display headings never strand a single word on their last line */
+/* display headings never strand a single word on their last line,
+   and paragraphs avoid one-word orphans where the engine supports it */
 h1,
-h2 {
+h2,
+h3 {
   text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
 }
 
 ::selection {
@@ -146,6 +155,10 @@ h2 {
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
+  /* wrapped accent phrases: each line carries the full gold-to-green
+     run instead of restarting mid-gradient */
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
 }
 
 @utility bg-brand-gradient {
@@ -304,13 +317,6 @@ h2 {
   .drift-c {
     animation: none;
   }
-}
-
-/* font-lab only: per-candidate optical tuning on display elements */
-.font-lab-tuned h1,
-.font-lab-tuned h2 {
-  letter-spacing: var(--lab-ls, inherit);
-  font-weight: var(--lab-fw, inherit);
 }
 
 /* print and PDF capture: scroll reveals must never hide content */

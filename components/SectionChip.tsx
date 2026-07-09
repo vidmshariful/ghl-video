@@ -37,7 +37,7 @@ export function SectionChip({
         </span>{" "}
         ]
       </span>
-      <span className="text-muted">{label}</span>
+      <span className="text-muted [text-wrap:balance]">{label}</span>
     </motion.p>
   );
 }

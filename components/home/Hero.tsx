@@ -24,12 +24,16 @@ function HeadlineLine({
   return (
     <span className="block overflow-hidden pb-[0.08em]">
       <motion.span
-        className={`block ${className}`}
+        className="block"
         initial={reduced ? false : { y: "108%" }}
         animate={{ y: 0 }}
         transition={{ duration: 0.7, delay, ease: EASE }}
       >
-        {children}
+        {/* gradient and clip live on an INLINE box: when the accent
+            phrase wraps on small screens, box-decoration-break gives
+            each line the full gold-to-green run instead of a block
+            background that leaves the second line stuck in gold */}
+        <span className={className}>{children}</span>
       </motion.span>
     </span>
   );
@@ -104,7 +108,7 @@ export function Hero() {
                 <SectionChip index={1} label={home.hero.eyebrow} />
               </motion.div>
 
-              <h1 className="mt-8 font-display text-[clamp(2.5rem,5vw,4.25rem)] font-bold leading-[0.98] tracking-[-0.035em] text-ink">
+              <h1 className="mt-8 font-display text-hero text-ink">
                 <HeadlineLine delay={0.12}>{home.hero.headline}</HeadlineLine>
                 <HeadlineLine delay={0.21} className="text-gradient">
                   {home.hero.headlineAccent}
@@ -146,7 +150,7 @@ export function Hero() {
                     <p className="max-w-[46ch] text-sm leading-relaxed text-muted">
                       {home.hero.testimonial.quote}
                     </p>
-                    <p className="mt-2 font-mono text-[0.6875rem] uppercase tracking-[0.12em] text-dim">
+                    <p className="mt-2 font-mono text-label uppercase text-dim">
                       {home.hero.testimonial.name} /{" "}
                       {home.hero.testimonial.source}
                     </p>
@@ -189,7 +193,7 @@ export function Hero() {
                   <p className="max-w-[46ch] text-sm leading-relaxed text-muted">
                     {home.hero.testimonial.quote}
                   </p>
-                  <p className="mt-2 font-mono text-[0.6875rem] uppercase tracking-[0.12em] text-dim">
+                  <p className="mt-2 font-mono text-label uppercase text-dim">
                     {home.hero.testimonial.name} /{" "}
                     {home.hero.testimonial.source}
                   </p>

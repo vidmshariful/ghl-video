@@ -39,7 +39,7 @@ export function Faq() {
                 className="group border-b border-hair first:border-t"
               >
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-7 [&::-webkit-details-marker]:hidden">
-                  <span className="font-display text-[1.1875rem] font-semibold text-ink">
+                  <span className="font-display text-[1.1875rem] font-semibold text-ink [text-wrap:balance]">
                     {item.q}
                   </span>
                   <svg

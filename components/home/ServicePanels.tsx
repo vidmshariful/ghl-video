@@ -119,7 +119,7 @@ export function ServicePanels() {
                       {/* service index within the numbered section */}
                       <span
                         aria-hidden="true"
-                        className="absolute right-5 top-4 z-10 font-mono text-[0.6875rem] uppercase tracking-[0.12em] text-dim"
+                        className="absolute right-5 top-4 z-10 font-mono text-label uppercase text-dim"
                       >
                         S/{String(i + 1).padStart(2, "0")}
                       </span>

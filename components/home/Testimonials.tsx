@@ -42,7 +42,7 @@ function ReviewCard({ quote, name }: { quote: string; name: string }) {
           <span className="block text-[0.9375rem] font-medium text-ink">
             {name}
           </span>
-          <span className="block font-mono text-[0.6875rem] uppercase tracking-[0.12em] text-dim">
+          <span className="block font-mono text-label uppercase text-dim">
             Google review
           </span>
         </p>

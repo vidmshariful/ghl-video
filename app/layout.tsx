@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, Inter } from "next/font/google";
+import { Archivo } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -7,14 +8,21 @@ import { PageFrame } from "@/components/PageFrame";
 import { ScrollRuler } from "@/components/ScrollRuler";
 import { site } from "@/lib/site";
 
-const grotesk = Space_Grotesk({
-  variable: "--font-grotesk",
+/* Client-picked pairing: Archivo carries the headlines, Raveo Display
+ * (Jakub Foglar, SIL OFL 1.1) carries body and labels. */
+const archivo = Archivo({
+  variable: "--font-heading",
   subsets: ["latin"],
 });
 
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
+const raveo = localFont({
+  variable: "--font-body",
+  src: [
+    { path: "./fonts/RaveoDisplay-Regular.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/RaveoDisplay-Medium.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/RaveoDisplay-SemiBold.woff2", weight: "600", style: "normal" },
+    { path: "./fonts/RaveoDisplay-Bold.woff2", weight: "700", style: "normal" },
+  ],
 });
 
 export const metadata: Metadata = {
@@ -34,7 +42,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${grotesk.variable} ${inter.variable} h-full antialiased`}
+      className={`${archivo.variable} ${raveo.variable} h-full antialiased`}
     >
       <head>
         {/* the hero panel's poster is the first meaningful paint */}

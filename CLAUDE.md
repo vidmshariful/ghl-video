@@ -115,11 +115,10 @@ Pulled pixel-exact from the logo. These do not change.
 }
 ```
 
-Typography (self-host with next/font):
+Typography (self-host with next/font; updated July 2026 by client direction, superseding the original Space Grotesk / Inter / JetBrains Mono spec):
 
-- **Display: Space Grotesk** (600 to 700). Big, tight tracking, headlines that fill the viewport.
-- **Body: Inter** (400 to 600).
-- **Utility: JetBrains Mono** (500 to 700) for labels, prices, stats, and spec-sheet detail.
+- **Display: Archivo** (600). Big, tight tracking, headlines that fill the viewport. Google Fonts.
+- **Body and labels: Raveo Display** (400 to 700), by Jakub Foglar, SIL OFL 1.1, self-hosted in `app/fonts/`. Two typefaces only; the utility/label voice is Raveo Display with wide letter-spacing, not a mono face.
 
 Type scale: set a real scale with intentional jumps, not a flat ramp. The hero headline should be dramatically larger than everything else. Use tight negative letter-spacing on display sizes.
 
