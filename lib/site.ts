@@ -560,3 +560,388 @@ export const home = {
 } as const;
 
 export const footerBlurb = "Video built for HighLevel SaaS. Fast, custom, done.";
+
+/* ------------------------------------------------------------------ */
+/* Inner-page content                                                   */
+/* ------------------------------------------------------------------ */
+
+/* NOTE: premade pricing is per SKU (premadeVideos[].price). The launch
+ * set ships at $495 each; Shariful's final price model may raise some
+ * SKUs, so every card and CTA reads its own price from the config. */
+export const pages = {
+  premade: {
+    hero: {
+      chip: "Premade Videos",
+      headline: "Professional HighLevel videos,",
+      accent: "branded to your SaaS.",
+      lede: "Pick from the launch set. We rebrand every frame to your platform: your logo, your dashboard theme, your voiceover. Delivered in 5 to 7 days.",
+      priceSignal: "From $495 per video",
+    },
+    grid: {
+      chip: "The launch set",
+      headline: "Ten videos,",
+      accent: "ready to carry your brand.",
+      intro:
+        "Every preview below is the actual video. What changes is the branding: yours replaces ours on every frame.",
+    },
+    included: {
+      chip: "What's included",
+      headline: "Every premade ships",
+      accent: "complete.",
+      items: [
+        "Your logo and brand colors on every frame",
+        "Dashboard theme matched to your SaaS",
+        "Professional voiceover in your choice of accent",
+        "Full commercial rights, no attribution",
+        "Delivered in 5 to 7 days, ready to publish",
+      ],
+    },
+    how: {
+      chip: "How it works",
+      headline: "Order today,",
+      accent: "publish next week.",
+      steps: [
+        {
+          title: "Order",
+          line: "Pick the video and check out. Two clicks, no call required.",
+        },
+        {
+          title: "Submit branding",
+          line: "Send your logo, colors, and dashboard theme through the onboarding form.",
+        },
+        {
+          title: "Receive",
+          line: "Your branded video lands in 5 to 7 days with full commercial rights.",
+        },
+      ],
+    },
+    faq: {
+      chip: "FAQ",
+      headline: "Asked before",
+      accent: "every order.",
+      items: [
+        {
+          q: "Is the video really mine to use anywhere?",
+          a: "Yes. Every premade ships with full commercial rights. Run it as an ad, embed it on your site, use it in onboarding. No attribution, no license tiers.",
+        },
+        {
+          q: "How custom does a premade get?",
+          a: "Your logo, your brand colors, your dashboard theme, and your voiceover. The structure and script stay fixed, which is exactly why it ships in days instead of weeks.",
+        },
+        {
+          q: "What if I need a different script or format?",
+          a: "That is custom production. Starting prices are published on the custom page, and a quote takes one short form.",
+        },
+        {
+          q: "How do I send my branding?",
+          a: "After checkout you get a short onboarding form: logo, colors, dashboard theme, and voiceover preference. Five minutes, then we take over.",
+        },
+        {
+          q: "What does delivery look like?",
+          a: "A download link with the final video in full resolution, plus the versions you need for ads and social. Delivered in 5 to 7 days from receiving your branding.",
+        },
+      ],
+    },
+  },
+
+  custom: {
+    hero: {
+      chip: "Custom Production",
+      headline: "Custom video, built from scratch",
+      accent: "for your platform and your ICP.",
+      lede: "Scripted, voiced, and produced by an in-house team that already knows HighLevel. You explain your positioning once; we handle everything from script to final cut.",
+    },
+    formats: {
+      chip: "The formats",
+      headline: "Four formats,",
+      accent: "published starting prices.",
+      intro:
+        "Every project is quoted exactly before production starts. These are the floors, not estimates.",
+      items: [
+        {
+          name: "Ads / Promo",
+          from: 1500,
+          line: "Short, punchy, conversion-first. Built to stop the scroll and sell the click.",
+          mediaKey: "sampleC",
+        },
+        {
+          name: "Explainer",
+          from: 2500,
+          line: "Your positioning in 60 to 90 seconds. The video that does the first sales call for you.",
+          mediaKey: "featured",
+        },
+        {
+          name: "Demo",
+          from: 3500,
+          line: "Your actual platform, captured and narrated so prospects see the product win.",
+          mediaKey: "sampleA",
+        },
+        {
+          name: "Onboarding Series",
+          from: 5000,
+          line: "A full walkthrough series that cuts support tickets and activates new users.",
+          mediaKey: "sampleB",
+        },
+      ],
+    },
+    pricing: {
+      chip: "How pricing works",
+      headline: "No estimates.",
+      accent: "A fixed quote before we start.",
+      points: [
+        {
+          title: "Published floors",
+          line: "The starting prices above are real. No call required to learn the number.",
+        },
+        {
+          title: "Exact quote in 24 hours",
+          line: "Send the short quote form and we reply with a fixed price within a day.",
+        },
+        {
+          title: "Locked before production",
+          line: "The quote you approve is the price you pay. Scope changes are priced before work continues, never after.",
+        },
+      ],
+    },
+    process: {
+      chip: "The process",
+      headline: "Six steps,",
+      accent: "no surprises.",
+      steps: [
+        {
+          title: "Scope",
+          line: "Quote form or a call. We map the goal, the audience, and the format.",
+        },
+        {
+          title: "Script",
+          line: "We write it in your voice. You approve every word before anything moves.",
+        },
+        {
+          title: "Voice and style",
+          line: "Voiceover casting in any language or accent, plus the visual direction.",
+        },
+        {
+          title: "Production",
+          line: "The in-house team builds the video. No handoffs to strangers.",
+        },
+        {
+          title: "Review",
+          line: "You give notes, we revise. The video ships when you say it ships.",
+        },
+        {
+          title: "Delivery",
+          line: "Final cuts in every format you need, with full commercial rights.",
+        },
+      ],
+    },
+    capabilities: [
+      {
+        title: "Any language, any accent",
+        line: "Voiceover casting across markets, so your video sells wherever your SaaS does.",
+      },
+      {
+        title: "In-house studio",
+        line: "Script, design, animation, and edit under one roof. Nothing is outsourced.",
+      },
+      {
+        title: "HighLevel fluency",
+        line: "You never explain what a snapshot or a subaccount is. We already know.",
+      },
+    ],
+    fit: {
+      chip: "Fit",
+      headline: "Built for some teams,",
+      accent: "not for all.",
+      forItems: [
+        "HighLevel SaaS resellers with real positioning to communicate",
+        "Agencies packaging HighLevel for a niche",
+        "Platforms that need demo and onboarding coverage",
+        "Founders who want video that matches the product's ambition",
+      ],
+      notItems: [
+        "One-off personal projects outside the HighLevel ecosystem",
+        "Same-week turnarounds. Custom takes the time it takes",
+        "Teams shopping on price alone. Premade exists for that",
+      ],
+    },
+  },
+
+  quote: {
+    chip: "Quote request",
+    headline: "Tell us about",
+    accent: "your project.",
+    lede: "Five fields, no budget sliders. A human reads it and replies with a fixed quote within 24 hours.",
+    /* LeadConnector form replaces this at launch; the interim form
+     * opens a prefilled email to hi@ghlvideo.com so nothing dead-ends */
+    fields: {
+      name: "Your name",
+      email: "Email",
+      company: "Company or SaaS",
+      type: "Video type",
+      details: "What are we making?",
+    },
+    types: ["Ads / Promo", "Explainer", "Demo", "Onboarding Series", "Not sure yet"],
+    confirmation: "Request sent. We reply within 24 hours.",
+    fallback: "Prefer to talk it through?",
+  },
+
+  editing: {
+    hero: {
+      chip: "Video Editing",
+      headline: "Your in-house HighLevel editor,",
+      accent: "on a monthly plan.",
+      lede: "For creators who publish every week. Send raw footage, get back edits from a team that knows the ecosystem, and never miss a publishing schedule again.",
+    },
+    plans: {
+      chip: "The plans",
+      headline: "Pick your",
+      accent: "monthly capacity.",
+      featuredLabel: "Most chosen",
+    },
+    samples: {
+      chip: "The difference",
+      headline: "Same footage,",
+      accent: "different weight.",
+      intro:
+        "Raw talking-head footage in, publish-ready content out. Hooks, cuts, captions, and pacing handled.",
+      before: { label: "Before", sub: "Raw footage" },
+      after: { label: "After", sub: "Published edit" },
+    },
+    fit: {
+      chip: "Fit",
+      headline: "Made for people",
+      accent: "who publish.",
+      forItems: [
+        "HighLevel creators publishing weekly",
+        "Coaches and educators turning calls into content",
+        "Founders building an audience alongside the product",
+        "Agencies producing client content at volume",
+      ],
+      notItems: [
+        "One-off edits. The plans are monthly capacity",
+        "Same-day turnarounds on every video",
+        "Full production from scratch. That is custom",
+      ],
+    },
+    how: {
+      chip: "How it works",
+      headline: "Send footage,",
+      accent: "get content.",
+      steps: [
+        {
+          title: "Send",
+          line: "Drop raw footage in your shared folder with a note on what you want.",
+        },
+        {
+          title: "We edit",
+          line: "Hooks, cuts, captions, b-roll, and pacing by a HighLevel-fluent editor.",
+        },
+        {
+          title: "You publish",
+          line: "Review, request unlimited revisions, publish on schedule.",
+        },
+      ],
+    },
+    faq: {
+      chip: "FAQ",
+      headline: "Asked before",
+      accent: "every subscription.",
+      items: [
+        {
+          q: "What counts as long-form and short-form?",
+          a: "Long-form is up to 15 minutes: YouTube videos, trainings, webinar cuts. Short-form is under 60 seconds: Reels, Shorts, TikTok. Your plan sets the monthly count of each.",
+        },
+        {
+          q: "How fast do edits come back?",
+          a: "Standard turnaround is 2 to 3 business days per video. Scale subscribers sit in the priority queue and go first.",
+        },
+        {
+          q: "What does unlimited revisions actually mean?",
+          a: "You ask, we revise, until you approve it. Every plan, every video, no revision caps and no upcharges.",
+        },
+        {
+          q: "Can I cancel anytime?",
+          a: "Yes. No contracts on any plan. You keep everything already delivered.",
+        },
+        {
+          q: "Do you know HighLevel content or just editing?",
+          a: "Both. The team edits HighLevel content daily, so funnels, snapshots, and dashboards get captioned correctly without you writing a glossary.",
+        },
+      ],
+    },
+  },
+
+  about: {
+    hero: {
+      chip: "About",
+      headline: "The original",
+      accent: "HighLevel-only video studio.",
+      lede: "One niche, one stack, 800+ HighLevel teams served. This page is the why.",
+    },
+    story: {
+      chip: "The category",
+      headline: "Why HighLevel-only",
+      accent: "is the moat.",
+      paragraphs: [
+        "A generalist studio learns your product on your budget. Every hour they spend understanding what a snapshot is, you pay for. We made the opposite bet: one ecosystem, learned once, compounding across every project since.",
+        "That bet changed the economics. Premade videos exist because the platform is the same under every brand, so the production can be shared and the price can drop. Custom work starts at the interesting part, your positioning, instead of the basics. Editing gets captions right the first time.",
+        "The result is a studio where the client never teaches the vendor. You talk about your market and your angle. We already speak the rest.",
+      ],
+    },
+    founder: {
+      chip: "Founder",
+      /* DRAFT: same standing note as the homepage founder line */
+      quote:
+        "Video is not marketing decoration. For a SaaS reseller it is sales infrastructure: the demo that runs while you sleep, the onboarding that scales without headcount. That is the standard we build to.",
+    },
+    clients: {
+      chip: "Clients",
+      headline: "Trusted by the founders",
+      accent: "building on HighLevel.",
+    },
+    entity: {
+      chip: "The company",
+      headline: "One studio,",
+      accent: "openly built.",
+      lines: [
+        "GHL Video is a brand of Vidiosa LLC, alongside growX and socialX.",
+        "GHL Video is not affiliated with or endorsed by GoHighLevel Inc. We build for the ecosystem as an independent studio.",
+      ],
+    },
+  },
+
+  contact: {
+    hero: {
+      chip: "Contact",
+      headline: "Book the call.",
+      accent: "Leave with a plan.",
+      lede: "Fifteen minutes. You talk through what you sell and what you need; you leave with the right format and the real price.",
+    },
+    callPoints: [
+      { title: "Show up", line: "No prep needed. Bring your SaaS and your goal." },
+      { title: "Scope", line: "We map the format that fits: premade, custom, or editing." },
+      { title: "Decide", line: "You get the price on the call. No follow-up sequence." },
+    ],
+    booking: {
+      chip: "Pick a time",
+      /* LeadConnector calendar embed replaces this slot at launch */
+      note: "The booking calendar connects here at launch.",
+    },
+    fallback: {
+      headline: "Not a call person?",
+      line: "Email works. A human replies within 24 hours.",
+    },
+  },
+
+  work: {
+    hero: {
+      chip: "Our work",
+      headline: "Made for platforms",
+      accent: "like yours.",
+      lede: "A slice of recent work across premade, custom, and editing. Every piece below plays; click any frame for the full cut.",
+    },
+    /* PLACEHOLDER set: the same five CDN clips as the homepage. The
+     * full portfolio drops in here when Shariful sends the final list. */
+    note: "The full portfolio is being migrated. These pieces are the current sample set.",
+  },
+} as const;

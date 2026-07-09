@@ -52,16 +52,20 @@ function PhotoSlot({
   );
 }
 
-export function TeamSection() {
+export function TeamSection({ index = 7 }: { index?: number }) {
   const { team } = home;
   return (
-    <section data-bp-idx="7" aria-labelledby="team-heading" className="relative overflow-hidden section-pad">
+    <section
+      data-bp-idx={index}
+      aria-labelledby="team-heading"
+      className="relative overflow-hidden section-pad"
+    >
       <DrawnBorder />
       <SectionGlow accent="gold" position="right" />
       <div className="shell relative">
         <Reveal>
           <RevealItem>
-            <SectionChip index={7} label={team.chip} />
+            <SectionChip index={index} label={team.chip} />
             <h2 id="team-heading" className="mt-6 max-w-[22ch] font-display text-h2 text-ink">
               {team.headline}{" "}
               <span className="text-gold">{team.accent}</span>

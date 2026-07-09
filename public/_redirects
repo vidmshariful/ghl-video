@@ -1,4 +1,11 @@
-# Cloudflare Pages redirect file: 301s from the old WordPress URLs.
-# BLOCKED ON INPUT: need the old site URL inventory (or its sitemap)
-# before cutover. Format, one per line:
-#   /old-path/  /new-path/  301
+# Cloudflare Pages redirect map (301s from the old WordPress URLs).
+# PARTIAL: these are the URLs verified live today. Shariful's full old
+# URL list extends this file before cutover.
+/privacy-policy/ /legal/privacy/ 301
+/privacy-policy /legal/privacy/ 301
+/terms-and-conditions/ /legal/terms/ 301
+/terms-and-conditions /legal/terms/ 301
+/terms/ /legal/terms/ 301
+/refund-policy/ /legal/refund/ 301
+/refund-policy /legal/refund/ 301
+/refund/ /legal/refund/ 301
