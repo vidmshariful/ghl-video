@@ -199,6 +199,18 @@ export const otherBrands = [
   { name: "socialX", url: "https://socialx.studio", domain: "socialx.studio" },
 ] as const;
 
+/* Social profiles from the live site. TODO: LinkedIn URL pending from
+ * Shariful (no profile found on the current site). */
+export const socials = [
+  {
+    name: "YouTube",
+    href: "https://www.youtube.com/@ghlvideo_white-labeled",
+  },
+  { name: "Facebook", href: "https://www.facebook.com/ghlvideo" },
+  { name: "Instagram", href: "https://www.instagram.com/ghlvideo" },
+  { name: "LinkedIn", href: "#" },
+] as const;
+
 export const legalLinks = [
   { label: "Privacy", href: "/legal/privacy/" },
   { label: "Terms", href: "/legal/terms/" },
