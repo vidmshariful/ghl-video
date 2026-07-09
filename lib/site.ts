@@ -118,10 +118,22 @@ export const clipWindows: Partial<
 
 export const premadePrice = 495; // flat, every premade video
 
+/* The premade catalog spans four video types; the grid filters on
+ * them. Locked list per Shariful: Explainer, Demo, Ads / Promo,
+ * Animated GIF. */
+export const premadeTypes = [
+  "Explainer",
+  "Demo",
+  "Ads / Promo",
+  "Animated GIF",
+] as const;
+export type PremadeType = (typeof premadeTypes)[number];
+
 export type PremadeVideo = {
   slug: string;
   title: string;
   purpose: string;
+  type: PremadeType;
   price: number;
   preview: string | null; // mp4 path when the real previews land
   poster: string | null;
@@ -141,6 +153,8 @@ export const premadeVideos: PremadeVideo[] = Array.from({ length: 10 }).map(
       slug: `video-${i + 1}`,
       title: `Premade Video ${i + 1}`,
       purpose: "One line on what this video is for",
+      /* placeholder spread across the four types */
+      type: premadeTypes[i % premadeTypes.length],
       price: premadePrice,
       preview: cycle.preview,
       poster: cycle.poster,

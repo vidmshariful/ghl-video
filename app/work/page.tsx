@@ -127,6 +127,7 @@ export default function WorkPage() {
                 linkLabel: "See premade videos",
                 href: "/premade/",
                 accent: "gold",
+                icon: "monitor-play",
               },
               {
                 eyebrow: "Custom Production",
@@ -134,6 +135,7 @@ export default function WorkPage() {
                 linkLabel: "See custom production",
                 href: "/custom/",
                 accent: "green",
+                icon: "clapperboard",
               },
             ]}
           />

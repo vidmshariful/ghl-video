@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
+import { CellGrid } from "@/components/CellGrid";
 import { DrawnBorder } from "@/components/DrawnBorder";
 import { EmbedSlot } from "@/components/EmbedSlot";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { SectionChip } from "@/components/SectionChip";
 import { SectionGlow } from "@/components/SectionGlow";
-import { StepFlow } from "@/components/StepFlow";
 import { ProofStrip } from "@/components/pages/ProofStrip";
 import { cta, pages, site } from "@/lib/site";
+
+const callIcons = ["calendar-check", "crosshair", "badge-check"] as const;
 
 export const metadata: Metadata = {
   title: "Contact and Book a Call",
@@ -37,7 +39,11 @@ export default function ContactPage() {
             </RevealItem>
           </Reveal>
           <div className="mt-12">
-            <StepFlow steps={p.callPoints} accent="green" />
+            <CellGrid
+              items={p.callPoints.map((s, i) => ({ ...s, icon: callIcons[i] }))}
+              accent="green"
+              numbered
+            />
           </div>
         </div>
       </section>
@@ -58,9 +64,9 @@ export default function ContactPage() {
               </RevealItem>
             </Reveal>
 
-            <Reveal className="grid gap-6">
-              <RevealItem>
-                <div className="rounded-card border border-hair card-glass p-7 md:p-8">
+            <Reveal className="grid gap-px self-start overflow-hidden rounded-card border border-hair bg-hair">
+              <RevealItem className="h-full">
+                <div data-cell className="h-full bg-canvas p-7 transition-colors duration-300 hover:bg-surface md:p-8">
                   <p className="font-mono text-label uppercase text-green">
                     [ Email us ]
                   </p>
@@ -79,8 +85,8 @@ export default function ContactPage() {
                   </a>
                 </div>
               </RevealItem>
-              <RevealItem>
-                <div className="rounded-card border border-hair card-glass p-7 md:p-8">
+              <RevealItem className="h-full">
+                <div data-cell className="h-full bg-canvas p-7 transition-colors duration-300 hover:bg-surface md:p-8">
                   <p className="font-mono text-label uppercase text-muted">
                     [ Custom project? ]
                   </p>

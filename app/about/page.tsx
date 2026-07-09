@@ -173,7 +173,7 @@ export default function AboutPage() {
           />
           <Reveal className="mt-10">
             <RevealItem>
-              <Panel ticks={false} className="p-7 md:p-8">
+              <div className="rounded-card border border-hair bg-canvas p-7 md:p-8">
                 <p className="max-w-[62ch] text-lede text-muted">
                   {p.entity.lines[0]}
                 </p>
@@ -197,7 +197,7 @@ export default function AboutPage() {
                 <p className="mt-6 border-t border-hair pt-5 text-sm text-dim">
                   {disclaimer}
                 </p>
-              </Panel>
+              </div>
             </RevealItem>
           </Reveal>
         </div>

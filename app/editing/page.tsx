@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
 import { Button } from "@/components/Button";
-import { Checklist } from "@/components/Checklist";
+import { CellGrid, FitSplit } from "@/components/CellGrid";
 import { DrawnBorder } from "@/components/DrawnBorder";
 import { FaqList } from "@/components/FaqList";
 import { MediaFrame } from "@/components/MediaFrame";
-import { Panel } from "@/components/Panel";
 import { PricingTier } from "@/components/PricingTier";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { SectionGlow } from "@/components/SectionGlow";
 import { SectionHead } from "@/components/SectionHead";
-import { StepFlow } from "@/components/StepFlow";
 import { PageHero } from "@/components/pages/PageHero";
 import { ProofStrip } from "@/components/pages/ProofStrip";
+
+const howIcons = ["upload", "scissors", "send"] as const;
 import {
   clips,
   clipWindows,
@@ -135,42 +135,13 @@ export default function EditingPage() {
             accent={p.fit.accent}
             accentColor="blue"
           />
-          <Reveal className="mt-12 grid gap-6 md:grid-cols-2">
-            <RevealItem>
-              <Panel ticks={false} className="h-full p-7 md:p-8">
-                <p className="font-mono text-label uppercase text-blue">
-                  Built for
-                </p>
-                <Checklist
-                  items={p.fit.forItems}
-                  accent="blue"
-                  className="mt-4"
-                />
-              </Panel>
-            </RevealItem>
-            <RevealItem>
-              <Panel ticks={false} className="h-full p-7 md:p-8">
-                <p className="font-mono text-label uppercase text-dim">
-                  Not for
-                </p>
-                <ul className="mt-4">
-                  {p.fit.notItems.map((item) => (
-                    <li
-                      key={item}
-                      className="flex items-center gap-3 border-t border-hair py-3 first:border-t-0"
-                    >
-                      <span aria-hidden="true" className="font-mono text-dim">
-                        &times;
-                      </span>
-                      <span className="text-[0.9375rem] text-muted">
-                        {item}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </Panel>
-            </RevealItem>
-          </Reveal>
+          <div className="mt-12">
+            <FitSplit
+              forItems={p.fit.forItems}
+              notItems={p.fit.notItems}
+              accent="blue"
+            />
+          </div>
         </div>
       </section>
 
@@ -186,7 +157,11 @@ export default function EditingPage() {
             accentColor="blue"
           />
           <div className="mt-12">
-            <StepFlow steps={p.how.steps} accent="blue" />
+            <CellGrid
+              items={p.how.steps.map((s, i) => ({ ...s, icon: howIcons[i] }))}
+              accent="blue"
+              numbered
+            />
           </div>
         </div>
       </section>

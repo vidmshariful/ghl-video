@@ -1,24 +1,25 @@
 import type { Metadata } from "next";
 import { Button } from "@/components/Button";
+import { CellGrid } from "@/components/CellGrid";
 import { Checklist } from "@/components/Checklist";
 import { DrawnBorder } from "@/components/DrawnBorder";
 import { FaqList } from "@/components/FaqList";
-import { Panel } from "@/components/Panel";
+import { PremadeGrid } from "@/components/PremadeGrid";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { SectionGlow } from "@/components/SectionGlow";
 import { SectionHead } from "@/components/SectionHead";
-import { StepFlow } from "@/components/StepFlow";
-import { VideoCard } from "@/components/VideoCard";
 import { CrossSell } from "@/components/pages/CrossSell";
 import { PageHero } from "@/components/pages/PageHero";
 import { ProofStrip } from "@/components/pages/ProofStrip";
-import { cta, pages, premadeVideos } from "@/lib/site";
+import { cta, pages } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Premade Videos",
   description:
-    "Professional HighLevel videos branded to your SaaS: your logo, your dashboard theme, your voiceover. Delivered in 5 to 7 days with full commercial rights.",
+    "Professional HighLevel videos branded to your SaaS: explainers, demos, ads, and animated GIFs. Your logo, your dashboard theme, your voiceover. Delivered in 5 to 7 days.",
 };
+
+const howIcons = ["mouse-click", "palette", "package-check"] as const;
 
 export default function PremadePage() {
   const p = pages.premade;
@@ -55,17 +56,14 @@ export default function PremadePage() {
             accentColor="gold"
             intro={p.grid.intro}
           />
-          <Reveal className="mt-12 grid gap-6 lg:grid-cols-2">
-            {premadeVideos.map((video) => (
-              <RevealItem key={video.slug}>
-                <VideoCard video={video} />
-              </RevealItem>
-            ))}
-          </Reveal>
+          <div className="mt-12">
+            <PremadeGrid />
+          </div>
         </div>
       </section>
 
-      {/* what's included */}
+      {/* what's included: hairline checklist against the section head,
+          no card ground */}
       <section data-bp-idx="3" className="relative section-pad">
         <DrawnBorder />
         <div className="shell">
@@ -79,16 +77,18 @@ export default function PremadePage() {
             />
             <Reveal>
               <RevealItem>
-                <Panel ticks={false} className="p-7 md:p-8">
-                  <Checklist items={p.included.items} accent="gold" />
-                </Panel>
+                <Checklist
+                  items={p.included.items}
+                  accent="gold"
+                  className="border-b border-hair"
+                />
               </RevealItem>
             </Reveal>
           </div>
         </div>
       </section>
 
-      {/* how it works */}
+      {/* how it works: ruled cells, drawn icons, real sequence */}
       <section data-bp-idx="4" className="relative section-pad">
         <DrawnBorder />
         <div className="shell">
@@ -100,7 +100,11 @@ export default function PremadePage() {
             accentColor="gold"
           />
           <div className="mt-12">
-            <StepFlow steps={p.how.steps} accent="gold" />
+            <CellGrid
+              items={p.how.steps.map((s, i) => ({ ...s, icon: howIcons[i] }))}
+              accent="gold"
+              numbered
+            />
           </div>
         </div>
       </section>
@@ -125,6 +129,7 @@ export default function PremadePage() {
                   linkLabel: "See custom production",
                   href: "/custom/",
                   accent: "green",
+                  icon: "clapperboard",
                 },
                 {
                   eyebrow: "Video Editing",
@@ -132,6 +137,7 @@ export default function PremadePage() {
                   linkLabel: "See video editing",
                   href: "/editing/",
                   accent: "blue",
+                  icon: "scissors",
                 },
               ]}
             />

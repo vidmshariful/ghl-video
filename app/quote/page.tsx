@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Button } from "@/components/Button";
-import { Panel } from "@/components/Panel";
 import { QuoteForm } from "@/components/QuoteForm";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { SectionChip } from "@/components/SectionChip";
@@ -35,9 +34,9 @@ export default function QuotePage() {
 
           <Reveal className="mt-12">
             <RevealItem>
-              <Panel className="p-7 md:p-10">
+              <div className="rounded-card border border-hair bg-canvas p-7 md:p-10">
                 <QuoteForm />
-              </Panel>
+              </div>
             </RevealItem>
           </Reveal>
 

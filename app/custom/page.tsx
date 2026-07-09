@@ -1,16 +1,18 @@
 import type { Metadata } from "next";
 import { Button } from "@/components/Button";
-import { Checklist } from "@/components/Checklist";
+import { CellGrid, FitSplit } from "@/components/CellGrid";
 import { DrawnBorder } from "@/components/DrawnBorder";
 import { MediaFrame } from "@/components/MediaFrame";
-import { Panel } from "@/components/Panel";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { SectionGlow } from "@/components/SectionGlow";
 import { SectionHead } from "@/components/SectionHead";
-import { StepFlow } from "@/components/StepFlow";
 import { PageHero } from "@/components/pages/PageHero";
 import { ProofStrip } from "@/components/pages/ProofStrip";
 import { clips, clipWindows, cta, pages, posters } from "@/lib/site";
+
+const pricingIcons = ["tags", "clock", "lock"] as const;
+const processIcons = ["crosshair", "pen-line", "mic", "clapperboard", "message", "package-check"] as const;
+const capabilityIcons = ["globe", "building", "zap"] as const;
 
 export const metadata: Metadata = {
   title: "Custom Production",
@@ -47,13 +49,16 @@ export default function CustomPage() {
             accentColor="green"
             intro={p.formats.intro}
           />
-          <Reveal className="mt-12 grid gap-6 md:grid-cols-2">
+          <Reveal className="mt-12 grid gap-px overflow-hidden rounded-card border border-hair bg-hair md:grid-cols-2">
             {p.formats.items.map((f) => {
               const key = f.mediaKey as keyof typeof clips;
               const win = clipWindows[key];
               return (
-                <RevealItem key={f.name}>
-                  <Panel ticks={false} className="h-full overflow-hidden p-3">
+                <RevealItem key={f.name} className="h-full">
+                  <div
+                    data-cell
+                    className="group/cell flex h-full flex-col bg-canvas p-6 transition-colors duration-300 hover:bg-surface md:p-7"
+                  >
                     {/* PLACEHOLDER sample: real format samples swap in */}
                     <MediaFrame
                       src={clips[key]}
@@ -63,16 +68,16 @@ export default function CustomPage() {
                       tint="green"
                       {...(win ? { startAt: win.startAt, endAt: win.endAt } : {})}
                     />
-                    <div className="flex flex-wrap items-baseline justify-between gap-3 px-4 pt-5">
+                    <div className="flex flex-wrap items-baseline justify-between gap-3 pt-6">
                       <h3 className="font-display text-h3 text-ink">{f.name}</h3>
                       <p className="font-mono text-price text-gold [font-variant-numeric:tabular-nums]">
                         from ${f.from.toLocaleString("en-US")}
                       </p>
                     </div>
-                    <p className="max-w-[46ch] px-4 pb-4 pt-2 text-[0.9375rem] text-muted">
+                    <p className="max-w-[46ch] pt-2 text-[0.9375rem] text-muted">
                       {f.line}
                     </p>
-                  </Panel>
+                  </div>
                 </RevealItem>
               );
             })}
@@ -92,10 +97,10 @@ export default function CustomPage() {
             accentColor="green"
           />
           <div className="mt-12">
-            <StepFlow
-              steps={p.pricing.points.map((x) => ({
-                title: x.title,
-                line: x.line,
+            <CellGrid
+              items={p.pricing.points.map((x, i) => ({
+                ...x,
+                icon: pricingIcons[i],
               }))}
               accent="green"
             />
@@ -115,7 +120,14 @@ export default function CustomPage() {
             accentColor="green"
           />
           <div className="mt-12">
-            <StepFlow steps={p.process.steps} accent="green" />
+            <CellGrid
+              items={p.process.steps.map((s, i) => ({
+                ...s,
+                icon: processIcons[i],
+              }))}
+              accent="green"
+              numbered
+            />
           </div>
         </div>
       </section>
@@ -124,20 +136,13 @@ export default function CustomPage() {
       <section data-bp-idx="5" className="relative section-pad">
         <DrawnBorder />
         <div className="shell">
-          <Reveal className="grid gap-5 md:grid-cols-3">
-            {p.capabilities.map((c) => (
-              <RevealItem key={c.title}>
-                <Panel ticks={false} className="h-full p-7">
-                  <h3 className="font-display text-[1.125rem] font-semibold tracking-[-0.01em] text-ink">
-                    {c.title}
-                  </h3>
-                  <p className="mt-2.5 text-[0.9375rem] leading-relaxed text-muted">
-                    {c.line}
-                  </p>
-                </Panel>
-              </RevealItem>
-            ))}
-          </Reveal>
+          <CellGrid
+            items={p.capabilities.map((c, i) => ({
+              ...c,
+              icon: capabilityIcons[i],
+            }))}
+            accent="green"
+          />
         </div>
       </section>
 
@@ -152,42 +157,13 @@ export default function CustomPage() {
             accent={p.fit.accent}
             accentColor="green"
           />
-          <Reveal className="mt-12 grid gap-6 md:grid-cols-2">
-            <RevealItem>
-              <Panel ticks={false} className="h-full p-7 md:p-8">
-                <p className="font-mono text-label uppercase text-green">
-                  Built for
-                </p>
-                <Checklist
-                  items={p.fit.forItems}
-                  accent="green"
-                  className="mt-4"
-                />
-              </Panel>
-            </RevealItem>
-            <RevealItem>
-              <Panel ticks={false} className="h-full p-7 md:p-8">
-                <p className="font-mono text-label uppercase text-dim">
-                  Not for
-                </p>
-                <ul className="mt-4">
-                  {p.fit.notItems.map((item) => (
-                    <li
-                      key={item}
-                      className="flex items-center gap-3 border-t border-hair py-3 first:border-t-0"
-                    >
-                      <span aria-hidden="true" className="font-mono text-dim">
-                        &times;
-                      </span>
-                      <span className="text-[0.9375rem] text-muted">
-                        {item}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </Panel>
-            </RevealItem>
-          </Reveal>
+          <div className="mt-12">
+            <FitSplit
+              forItems={p.fit.forItems}
+              notItems={p.fit.notItems}
+              accent="green"
+            />
+          </div>
         </div>
       </section>
 

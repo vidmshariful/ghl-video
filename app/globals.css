@@ -226,6 +226,23 @@ p {
   animation: sheen-slide 1.1s linear infinite;
 }
 
+/* stroke-draw icons: every shape carries pathLength=1 (set by
+   DrawnIcon), so one dasharray rule draws any lucide glyph; the
+   wrapper's --dash variable moves 1 -> 0 when the icon enters the
+   viewport or its cell is hovered */
+.drawn-icon svg :is(path, line, polyline, polygon, circle, rect) {
+  stroke-dasharray: 1;
+  stroke-dashoffset: var(--dash, 0);
+  transition: stroke-dashoffset 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drawn-icon svg :is(path, line, polyline, polygon, circle, rect) {
+    stroke-dashoffset: 0;
+    transition: none;
+  }
+}
+
 /* vertical review feed: scrolls up forever, pauses on hover */
 @keyframes marquee-up {
   to {
