@@ -46,6 +46,9 @@ export function ShowreelMoment() {
                 poster={piece.poster}
                 label={`${piece.client}, ${piece.format}`}
                 caption={{ title: piece.client, sub: piece.format }}
+                {...("startAt" in piece
+                  ? { startAt: piece.startAt, endAt: piece.endAt }
+                  : {})}
               />
             ))}
           </RevealItem>

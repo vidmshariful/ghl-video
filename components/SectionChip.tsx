@@ -4,66 +4,40 @@ import { motion, useReducedMotion } from "framer-motion";
 
 export type ChipAccent = "gold" | "green" | "blue";
 
-const accents: Record<ChipAccent, string> = {
-  gold: "text-gold",
-  green: "text-green",
-  blue: "text-blue",
-};
-
-const EASE = [0.22, 1, 0.36, 1] as const;
-
 /*
- * Bracketed section index chip: wayfinding through the page, a real
- * sequence, so the numbering carries information. On first view the
- * brackets slide open and the label prints between them.
+ * Bracketed section index chip. Brackets and number are STATIC in the
+ * markup (never a broken intermediate state for fast scrollers,
+ * crawlers, or captures); the only animation is a gentle settle of
+ * the whole chip from 40% opacity. Index numbers are always gold, the
+ * blueprint ink, so no section ever reads single-accent because of
+ * its chip; section accents live in headings, links, and cards.
  */
 export function SectionChip({
   index,
   label,
-  accent = "gold",
 }: {
   index: number;
   label: string;
+  /* kept for call-site compatibility; numbers render gold regardless */
   accent?: ChipAccent;
 }) {
   const reduced = useReducedMotion();
-  const bracket = (glyph: string, from: number) => (
-    <motion.span
-      aria-hidden="true"
-      className="bp-anim text-dim"
-      initial={reduced ? false : { x: from }}
-      whileInView={{ x: 0 }}
-      viewport={{ once: true, margin: "-60px" }}
-      transition={{ duration: 0.45, ease: EASE }}
-    >
-      {glyph}
-    </motion.span>
-  );
-
   return (
-    <p className="inline-flex items-center gap-3 rounded-full border border-hair bg-surface px-4 py-2 font-mono text-label uppercase">
-      <span className="inline-flex items-center gap-1.5">
-        {bracket("[", 10)}
-        <motion.span
-          className={`bp-anim ${accents[accent]}`}
-          initial={reduced ? false : { opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true, margin: "-60px" }}
-          transition={{ duration: 0.35, delay: 0.18, ease: EASE }}
-        >
+    <motion.p
+      initial={reduced ? false : { opacity: 0.4 }}
+      whileInView={{ opacity: 1 }}
+      viewport={{ once: true, margin: "-60px" }}
+      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+      className="inline-flex items-center gap-3 rounded-full border border-hair bg-surface px-4 py-2 font-mono text-label uppercase"
+    >
+      <span className="whitespace-nowrap text-dim">
+        [{" "}
+        <span className="text-gold [font-variant-numeric:tabular-nums]">
           {String(index).padStart(2, "0")}
-        </motion.span>
-        {bracket("]", -10)}
+        </span>{" "}
+        ]
       </span>
-      <motion.span
-        className="bp-anim text-muted"
-        initial={reduced ? false : { opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true, margin: "-60px" }}
-        transition={{ duration: 0.35, delay: 0.28, ease: EASE }}
-      >
-        {label}
-      </motion.span>
-    </p>
+      <span className="text-muted">{label}</span>
+    </motion.p>
   );
 }

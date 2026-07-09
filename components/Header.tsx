@@ -196,6 +196,8 @@ function ServicesMenu({ pathname }: { pathname: string | null }) {
                       {/* eslint-disable-next-line @next/next/no-img-element -- static export */}
                       <img
                         src={posters[s.posterKey as keyof typeof posters]}
+                        width={1280}
+                        height={720}
                         alt=""
                         className="w-24 shrink-0 rounded-[4px] border border-hair object-cover brightness-[0.75] saturate-[0.8] transition-transform duration-300 [aspect-ratio:16/9] group-hover:scale-105"
                       />

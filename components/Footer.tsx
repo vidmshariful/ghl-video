@@ -30,7 +30,7 @@ function Column({
 }) {
   return (
     <div>
-      <h2 className="font-mono text-label uppercase text-dim">{heading}</h2>
+      <h2 className="font-mono text-label uppercase text-muted">{heading}</h2>
       <ul className="mt-4 flex flex-col gap-2.5">
         {links.map((l) => (
           <li key={l.href + l.label}>
@@ -54,7 +54,7 @@ export function Footer() {
         <div className="col-span-2 md:col-span-1">
           <Logo className="h-6" />
           <p className="mt-4 max-w-[26ch] text-sm text-muted">{footerBlurb}</p>
-          <p className="mt-3 font-mono text-xs text-dim">{entityLine}</p>
+          <p className="mt-3 font-mono text-xs text-muted">{entityLine}</p>
         </div>
 
         <Column
@@ -75,7 +75,7 @@ export function Footer() {
         />
 
         <div>
-          <h2 className="font-mono text-label uppercase text-dim">
+          <h2 className="font-mono text-label uppercase text-muted">
             Our Other Brands
           </h2>
           <ul className="mt-4 flex flex-col gap-2.5">
@@ -88,7 +88,7 @@ export function Footer() {
                   className="group inline-flex items-baseline gap-2 text-sm text-muted transition-colors hover:text-ink"
                 >
                   {brand.name}
-                  <span className="font-mono text-xs text-dim group-hover:text-muted">
+                  <span className="font-mono text-xs text-muted group-hover:text-ink">
                     {brand.domain}
                   </span>
                 </a>

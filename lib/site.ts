@@ -108,7 +108,8 @@ export const posters = {
 export const clipWindows: Partial<
   Record<keyof typeof clips, { startAt: number; endAt?: number }>
 > = {
-  featured: { startAt: 12, endAt: 30 },
+  featured: { startAt: 45, endAt: 53.5 },
+  sampleA: { startAt: 73, endAt: 76 },
 };
 
 /* ------------------------------------------------------------------ */
@@ -339,20 +340,24 @@ export const home = {
       {
         name: "Dominic Bavaro",
         company: "Emma.io",
-        src: clips.sampleB,
-        poster: posters.sampleB,
+        src: clips.sampleA,
+        poster: posters.sampleA,
+        startAt: clipWindows.sampleA!.startAt,
+        endAt: clipWindows.sampleA!.endAt,
       },
       {
         name: "Ryan Maule",
         company: "AI Clinic Assist",
-        src: clips.sampleA,
-        poster: posters.sampleA,
+        src: clips.sampleB,
+        poster: posters.sampleB,
       },
       {
         name: "David Allen Neron",
         company: "NeoLuxLabs",
-        src: clips.sampleC,
-        poster: posters.sampleC,
+        src: clips.featured,
+        poster: posters.featured,
+        startAt: clipWindows.featured!.startAt,
+        endAt: clipWindows.featured!.endAt,
       },
     ],
   },
@@ -405,6 +410,8 @@ export const home = {
         poster: posters.sampleA,
         client: "Emma.io",
         format: "Platform Demo",
+        startAt: clipWindows.sampleA!.startAt,
+        endAt: clipWindows.sampleA!.endAt,
       },
       {
         src: clips.sampleB,
@@ -534,7 +541,7 @@ export const home = {
   /* DRAFT line (Shariful sends the final wording); photo is real */
   founder: {
     name: "Shariful Islam",
-    role: "Founder & CEO, GHL Video",
+    role: "Founder & CEO, GHL\u00A0Video",
     photo: "/people/shariful.jpg" as string | null,
     line: "Every HighLevel reseller I met was selling a serious platform with videos that undersold it. GHL Video exists to close that gap, with one team that never has to be taught the product.",
   },

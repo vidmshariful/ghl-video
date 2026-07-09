@@ -28,6 +28,8 @@ export function FounderNote() {
                     // eslint-disable-next-line @next/next/no-img-element -- static export
                     <img
                       src={founder.photo}
+                      width={500}
+                      height={600}
                       alt={founder.name}
                       className="h-56 w-full object-cover object-top md:h-full"
                     />

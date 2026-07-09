@@ -15,7 +15,7 @@ import { home, cta, googleReviewsUrl } from "@/lib/site";
 
 function Stars() {
   return (
-    <span className="flex gap-1" aria-label="Five star review">
+    <span className="flex gap-1" role="img" aria-label="Five star review">
       {[0, 1, 2, 3, 4].map((i) => (
         <svg
           key={i}

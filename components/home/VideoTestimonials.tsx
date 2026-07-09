@@ -35,6 +35,9 @@ export function VideoTestimonials() {
                 poster={item.poster}
                 label={`Testimonial from ${item.name}, ${item.company}`}
                 caption={{ title: item.name, sub: item.company }}
+                {...("startAt" in item
+                  ? { startAt: item.startAt, endAt: item.endAt }
+                  : {})}
               />
             </RevealItem>
           ))}

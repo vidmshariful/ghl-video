@@ -20,8 +20,10 @@ function PhotoSlot({
         // eslint-disable-next-line @next/next/no-img-element -- static export
         <img
           src={photo}
+          width={500}
+          height={600}
           alt={name ?? role}
-          className="absolute inset-0 h-full w-full object-cover object-top saturate-[0.65] transition-all duration-500 group-hover:scale-[1.03] group-hover:saturate-100"
+          className="absolute inset-0 h-full w-full object-cover object-top grayscale transition-all duration-500 group-hover:scale-[1.03] group-hover:grayscale-0"
         />
       ) : (
         <>
@@ -42,7 +44,7 @@ function PhotoSlot({
         <p className="font-display text-sm font-semibold text-ink">
           {name ?? "To be announced"}
         </p>
-        <p className="mt-0.5 font-mono text-[0.6875rem] uppercase tracking-[0.12em] text-muted">
+        <p className="mt-0.5 min-h-[2.1em] font-mono text-[0.6875rem] uppercase tracking-[0.12em] text-muted">
           {role}
         </p>
       </div>

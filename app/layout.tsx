@@ -36,6 +36,10 @@ export default function RootLayout({
       lang="en"
       className={`${grotesk.variable} ${inter.variable} h-full antialiased`}
     >
+      <head>
+        {/* the hero panel's poster is the first meaningful paint */}
+        <link rel="preload" as="image" href="/posters/clip-2.jpg" />
+      </head>
       <body className="flex min-h-full flex-col">
         <a
           href="#main"

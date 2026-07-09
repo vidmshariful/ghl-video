@@ -64,6 +64,8 @@ export function Watermark() {
           {/* eslint-disable-next-line @next/next/no-img-element -- static export */}
           <img
             src="/watermark.png"
+            width={2157}
+            height={266}
             alt=""
             aria-hidden="true"
             className="pointer-events-none block w-full select-none"

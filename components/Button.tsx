@@ -35,7 +35,7 @@ export function Button({
   className?: string;
 }) {
   /* 3px corners: buttons sit square in the blueprint grid */
-  const cls = `group relative inline-flex items-center justify-center gap-2.5 overflow-hidden whitespace-nowrap rounded-[3px] font-sans font-semibold transition-all duration-200 active:scale-[0.98] ${variants[variant]} ${sizes[size]} ${className}`;
+  const cls = `group relative inline-flex items-center justify-center gap-2.5 overflow-hidden whitespace-nowrap max-sm:w-full rounded-[3px] font-sans font-semibold transition-all duration-200 active:scale-[0.98] ${variants[variant]} ${sizes[size]} ${className}`;
 
   /* every button carries the arrow */
   const arrow = (
