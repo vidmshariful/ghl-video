@@ -35,7 +35,7 @@ export function Button({
   className?: string;
 }) {
   /* 3px corners: buttons sit square in the blueprint grid */
-  const cls = `group inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-[3px] font-sans font-semibold transition-all duration-200 active:scale-[0.98] ${variants[variant]} ${sizes[size]} ${className}`;
+  const cls = `group relative inline-flex items-center justify-center gap-2.5 overflow-hidden whitespace-nowrap rounded-[3px] font-sans font-semibold transition-all duration-200 active:scale-[0.98] ${variants[variant]} ${sizes[size]} ${className}`;
 
   /* every button carries the arrow */
   const arrow = (
@@ -47,9 +47,19 @@ export function Button({
     </span>
   );
 
+  /* primary: animated sheen sweeps across the gradient on hover */
+  const sheen =
+    variant === "primary" ? (
+      <span
+        aria-hidden="true"
+        className="btn-sheen pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+      />
+    ) : null;
+
   if (external) {
     return (
       <a href={href} className={cls} target="_blank" rel="noopener">
+        {sheen}
         {children}
         {arrow}
       </a>
@@ -57,6 +67,7 @@ export function Button({
   }
   return (
     <Link href={href} className={cls}>
+      {sheen}
       {children}
       {arrow}
     </Link>

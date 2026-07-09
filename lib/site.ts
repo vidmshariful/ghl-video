@@ -500,6 +500,22 @@ export const home = {
         name: "Dillon Paul",
         size: "sm",
       },
+      {
+        quote: "Very good videos, fast delivery and very professional",
+        name: "QuantumStack Ltd",
+        size: "sm",
+      },
+      {
+        quote:
+          "Great quality and quick turnaround! Will definitely work with again!",
+        name: "Ryan Maule",
+        size: "sm",
+      },
+      {
+        quote: "Great Service; thank-you Tanvir",
+        name: "Robert Rushing",
+        size: "sm",
+      },
     ],
   },
 

@@ -175,7 +175,7 @@ export function MediaFrame({
   return (
     <figure
       ref={figureRef}
-      className={`group/mf relative aspect-video overflow-hidden border border-hair bg-[#05060A] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] ${rounded} ${className}`}
+      className={`group/mf relative aspect-video overflow-hidden border border-hair bg-[#030303] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] ${rounded} ${className}`}
     >
       <video
         ref={ref}
@@ -231,7 +231,7 @@ export function MediaFrame({
       {/* bottom scrim: the frame's caption owns this zone, clip text recedes */}
       <div
         aria-hidden="true"
-        className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-[#05060A]/90 via-[#05060A]/40 to-transparent"
+        className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-[#030303]/90 via-[#030303]/40 to-transparent"
       />
 
       {caption && (

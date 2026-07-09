@@ -21,12 +21,6 @@ const accentText: Record<Exclude<Accent, "muted">, string> = {
   blue: "text-blue",
 };
 
-const crown: Record<string, string> = {
-  gold: "bg-gold",
-  green: "bg-green",
-  blue: "bg-blue",
-};
-
 const hoverBorder: Record<string, string> = {
   gold: "hover:border-gold/40",
   green: "hover:border-green/40",
@@ -36,7 +30,7 @@ const hoverBorder: Record<string, string> = {
 export function ServicePanels() {
   const { services } = home;
   return (
-    <section data-bp-idx="2" aria-labelledby="services-heading" className="relative overflow-hidden section-pad">
+    <section data-bp-idx="2" aria-labelledby="services-heading" className="relative overflow-x-clip section-pad">
       <SectionGlow accent="green" position="right" />
       <div className="shell relative">
         <Reveal className="text-center">
@@ -52,6 +46,8 @@ export function ServicePanels() {
           </RevealItem>
         </Reveal>
 
+        {/* the cards stack: each pins below the header and the next
+            slides over it, previous crowns peeking above */}
         <div className="mt-14 flex flex-col gap-6">
           {services.panels.map((panel, i) => {
             /* media and copy are DIRECT grid children so both stretch
@@ -82,7 +78,7 @@ export function ServicePanels() {
                 <h3 className="mt-4 max-w-[24ch] font-display text-[clamp(1.5rem,2.4vw,2rem)] font-semibold leading-tight tracking-tight text-ink">
                   {panel.title}
                 </h3>
-                <p className="mt-4 max-w-[52ch] text-sm leading-relaxed text-muted">
+                <p className="mt-4 max-w-[52ch] text-[0.9375rem] leading-relaxed text-muted">
                   {panel.body}
                 </p>
                 <Checklist
@@ -105,30 +101,36 @@ export function ServicePanels() {
               </div>
             );
             return (
-              <Reveal key={panel.name}>
-                <RevealItem>
-                  <Panel
-                    className={`group/svc overflow-hidden transition-colors duration-300 ${hoverBorder[panel.accent]}`}
-                  >
-                    {/* the service's accent crown */}
-                    <div
-                      aria-hidden="true"
-                      className={`absolute inset-x-0 top-0 z-10 h-[3px] transition-[filter] duration-300 group-hover/svc:brightness-125 ${crown[panel.accent]}`}
-                    />
-                    {/* service index within the numbered section */}
-                    <span
-                      aria-hidden="true"
-                      className="absolute right-5 top-4 z-10 font-mono text-[0.6875rem] uppercase tracking-[0.12em] text-dim"
+              <div
+                key={panel.name}
+                className="lg:sticky"
+                style={{ top: `${88 + i * 28}px` }}
+              >
+                <Reveal>
+                  <RevealItem>
+                    <Panel
+                      className={`group/svc overflow-hidden transition-colors duration-300 ${hoverBorder[panel.accent]}`}
                     >
-                      S/{String(i + 1).padStart(2, "0")}
-                    </span>
-                    <div className="grid lg:grid-cols-2">
-                      {copy}
-                      {media}
-                    </div>
-                  </Panel>
-                </RevealItem>
-              </Reveal>
+                      {/* the signature, moving: animated gradient hairline */}
+                      <div
+                        aria-hidden="true"
+                        className="grad-line absolute inset-x-0 top-0 z-10 h-px"
+                      />
+                      {/* service index within the numbered section */}
+                      <span
+                        aria-hidden="true"
+                        className="absolute right-5 top-4 z-10 font-mono text-[0.6875rem] uppercase tracking-[0.12em] text-dim"
+                      >
+                        S/{String(i + 1).padStart(2, "0")}
+                      </span>
+                      <div className="grid lg:grid-cols-2">
+                        {copy}
+                        {media}
+                      </div>
+                    </Panel>
+                  </RevealItem>
+                </Reveal>
+              </div>
             );
           })}
         </div>

@@ -37,7 +37,7 @@ export function Checklist({
               strokeLinejoin="round"
             />
           </svg>
-          <span className="text-sm text-muted">{item}</span>
+          <span className="text-[0.9375rem] text-muted">{item}</span>
         </li>
       ))}
     </ul>

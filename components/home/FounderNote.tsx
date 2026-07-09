@@ -23,7 +23,7 @@ export function FounderNote() {
             <Panel className="overflow-hidden">
               <div className="grid md:grid-cols-[16rem_1fr]">
                 <div className="relative">
-                  <div aria-hidden="true" className="absolute inset-x-0 top-0 z-10 h-[3px] bg-brand-gradient" />
+                  <div aria-hidden="true" className="grad-line absolute inset-x-0 top-0 z-10 h-px" />
                   {founder.photo ? (
                     // eslint-disable-next-line @next/next/no-img-element -- static export
                     <img

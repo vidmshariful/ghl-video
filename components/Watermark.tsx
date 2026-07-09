@@ -23,13 +23,31 @@ export function Watermark() {
 
   return (
     <div ref={ref} className="overflow-hidden border-t border-hair">
-      <motion.p
+      {/* SVG textLength pins the mark to the exact section width */}
+      <motion.div
         aria-hidden="true"
         style={reduced ? undefined : { y }}
-        className="pointer-events-none select-none whitespace-nowrap py-4 text-center font-display text-[12.5vw] font-bold leading-[0.85] tracking-tight text-ink opacity-[0.05]"
+        className="pointer-events-none select-none px-3 py-5"
       >
-        GHL VIDEO
-      </motion.p>
+        <svg viewBox="0 0 1000 128" className="block w-full">
+          <text
+            x="500"
+            y="104"
+            textAnchor="middle"
+            textLength="996"
+            lengthAdjust="spacingAndGlyphs"
+            className="fill-ink opacity-[0.07]"
+            style={{
+              fontFamily: "var(--font-inter), system-ui, sans-serif",
+              fontWeight: 900,
+              fontSize: "124px",
+              letterSpacing: "-0.03em",
+            }}
+          >
+            GHL VIDEO
+          </text>
+        </svg>
+      </motion.div>
     </div>
   );
 }

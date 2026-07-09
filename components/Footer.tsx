@@ -49,7 +49,7 @@ function Column({
 
 export function Footer() {
   return (
-    <footer className="border-t border-hair bg-[#05060A]">
+    <footer className="border-t border-hair bg-[#050505]">
       <div className="shell grid grid-cols-2 gap-x-8 gap-y-12 py-16 md:grid-cols-[1.4fr_1fr_1fr_1fr_1fr]">
         <div className="col-span-2 md:col-span-1">
           <Logo className="h-6" />
