@@ -85,9 +85,14 @@
   }
 }
 
-/* readability: the whole rem scale sits on a 17px base */
-html {
-  font-size: 106.25%;
+/* Fluid root scale: the whole design is rem-based, so this single
+   value sets the site's visual zoom. Laptops (~1440px) render at
+   ~15.3px, the client-approved density; larger screens grow gently to
+   a 17px cap. Mobile keeps the browser default for readability. */
+@media (min-width: 1024px) {
+  html {
+    font-size: clamp(14px, 9.5px + 0.4vw, 17px);
+  }
 }
 
 body {
