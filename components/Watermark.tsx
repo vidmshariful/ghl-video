@@ -57,10 +57,6 @@ export function Watermark() {
           style={reduced ? undefined : { y }}
           className="relative rounded-card border border-hair"
         >
-          <div
-            aria-hidden="true"
-            className="grad-line absolute inset-x-0 top-0 h-px"
-          />
           <Tick pos="-left-1 -top-1.5" />
           <Tick pos="-right-1 -top-1.5" />
           <Tick pos="-left-1 -bottom-1.5" />
