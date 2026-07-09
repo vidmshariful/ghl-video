@@ -45,6 +45,8 @@ export default function EditingPage() {
         </Button>
       </PageHero>
 
+      {/* light zone: the plans */}
+      <div className="theme-light">
       {/* plans */}
       <section
         id="plans"
@@ -80,7 +82,9 @@ export default function EditingPage() {
         </div>
       </section>
 
-      {/* before and after */}
+      </div>
+
+      {/* dark interlude: the media pair */}
       <section data-bp-idx="3" className="relative section-pad">
         <DrawnBorder />
         <div className="shell">
@@ -124,6 +128,8 @@ export default function EditingPage() {
         </div>
       </section>
 
+      {/* light zone: fit through FAQ */}
+      <div className="theme-light">
       {/* fit */}
       <section data-bp-idx="4" className="relative section-pad">
         <DrawnBorder />
@@ -196,6 +202,7 @@ export default function EditingPage() {
           </Reveal>
         </div>
       </section>
+      </div>
     </>
   );
 }

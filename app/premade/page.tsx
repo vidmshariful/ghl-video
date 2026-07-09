@@ -46,6 +46,8 @@ export default function PremadePage() {
         </Button>
       </PageHero>
 
+      {/* light zone: the catalog and the spec sections read on paper */}
+      <div className="theme-light">
       {/* the library: packs and the filterable catalog */}
       <section
         id="videos"
@@ -135,6 +137,8 @@ export default function PremadePage() {
           ))}
         </Reveal>
       </RuledSection>
+
+      </div>
 
       {/* keep going: ruled box, two route-out cells */}
       <RuledSection

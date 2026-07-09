@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { Panel } from "@/components/Panel";
 import { SectionChip, type ChipAccent } from "@/components/SectionChip";
 import { SectionGlow } from "@/components/SectionGlow";
 
@@ -9,11 +8,24 @@ const accentText: Record<ChipAccent, string> = {
   blue: "text-blue",
 };
 
+/* Registration mark: a circled dot where the boundary rule crosses
+ * the page-frame verticals, like a plotter aligning the sheet. */
+function Mark({ side }: { side: "left" | "right" }) {
+  return (
+    <span
+      className={`absolute -top-[5px] ${side === "left" ? "-left-[5px]" : "-right-[5px]"} flex h-2.5 w-2.5 items-center justify-center rounded-full border border-hair bg-canvas`}
+    >
+      <span className="h-[3px] w-[3px] rounded-full bg-dim" />
+    </span>
+  );
+}
+
 /*
- * Inner-page hero: one bounded panel under the fixed header, chip,
- * display headline with the page's ledger accent, lede, CTA row.
- * The signature gradient stays reserved for the homepage hero and
- * primary buttons; inner pages lead with their own accent color.
+ * Inner-page hero: not a card. The composition sits open on the dark
+ * canvas inside the page frame (heroes are always dark, client hard
+ * rule), centered, and closes with a boundary: a full-width rule
+ * carrying registration marks at the frame rails, then a hatched
+ * strip that hands off to the next zone.
  */
 export function PageHero({
   chip,
@@ -22,6 +34,7 @@ export function PageHero({
   accentColor,
   lede,
   signal,
+  divider = true,
   children,
 }: {
   chip: string;
@@ -31,38 +44,46 @@ export function PageHero({
   lede: string;
   /* mono meta line, e.g. a price signal */
   signal?: string;
+  /* the hatched hand-off strip below the boundary rule */
+  divider?: boolean;
   /* CTA row */
   children?: ReactNode;
 }) {
   return (
-    <section data-bp-idx="1" className="relative overflow-x-clip pt-28 md:pt-32">
+    <section data-bp-idx="1" className="relative overflow-x-clip pt-36 md:pt-40">
       <SectionGlow accent={accentColor} position="left" />
-      <div className="shell relative">
-        <Panel className="overflow-hidden">
-          {/* centered composition per client direction */}
-          <div className="p-8 text-center md:p-12 lg:p-14">
-            <div className="flex flex-wrap items-center justify-center gap-3">
-              <SectionChip index={1} label={chip} />
-              {signal && (
-                <span className="inline-flex items-center rounded-full border border-hair bg-surface px-4 py-2 font-mono text-label uppercase text-gold">
-                  {signal}
-                </span>
-              )}
-            </div>
-            <h1 className="mx-auto mt-7 max-w-[22ch] font-display text-hero text-ink">
-              {headline}{" "}
-              <span className={accentText[accentColor]}>{accent}</span>
-            </h1>
-            <p className="mx-auto mt-6 max-w-[54ch] text-lede text-muted">
-              {lede}
-            </p>
-            {children && (
-              <div className="mt-9 flex flex-wrap justify-center gap-4">
-                {children}
-              </div>
-            )}
+      <div className="shell relative pb-14 text-center md:pb-16">
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <SectionChip index={1} label={chip} />
+          {signal && (
+            <span className="inline-flex items-center rounded-full border border-hair bg-surface px-4 py-2 font-mono text-label uppercase text-gold">
+              {signal}
+            </span>
+          )}
+        </div>
+        <h1 className="mx-auto mt-8 max-w-[22ch] font-display text-hero text-ink">
+          {headline} <span className={accentText[accentColor]}>{accent}</span>
+        </h1>
+        <p className="mx-auto mt-6 max-w-[54ch] text-lede text-muted">{lede}</p>
+        {children && (
+          <div className="mt-9 flex flex-wrap justify-center gap-4">
+            {children}
           </div>
-        </Panel>
+        )}
+      </div>
+
+      {/* the boundary */}
+      <div aria-hidden="true" className="relative">
+        <div className="h-px w-full bg-hair" />
+        <div className="shell relative">
+          <Mark side="left" />
+          <Mark side="right" />
+        </div>
+        {divider && (
+          <div className="relative h-10 border-b border-hair">
+            <div className="absolute inset-0 hatch" />
+          </div>
+        )}
       </div>
     </section>
   );

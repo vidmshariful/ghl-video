@@ -43,7 +43,8 @@ export default function AboutPage() {
         </Button>
       </PageHero>
 
-      {/* the category story */}
+      {/* light zone: the story */}
+      <div className="theme-light">
       <section data-bp-idx="2" className="relative section-pad">
         <div className="shell">
           <div className="grid items-start gap-12 lg:grid-cols-[1fr_1.1fr]">
@@ -70,7 +71,9 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* founder POV */}
+      </div>
+
+      {/* founder POV: a dark feature moment */}
       <section data-bp-idx="3" className="relative section-pad">
         <DrawnBorder />
         <div className="shell">
@@ -109,7 +112,8 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* the team, in house */}
+      {/* light zone: the people and the proof */}
+      <div className="theme-light">
       <TeamSection index={4} />
 
       {/* clients */}
@@ -159,6 +163,8 @@ export default function AboutPage() {
           </Reveal>
         </div>
       </section>
+
+      </div>
 
       {/* entity, openly */}
       <section data-bp-idx="6" className="relative section-pad">

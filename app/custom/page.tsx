@@ -37,6 +37,8 @@ export default function CustomPage() {
         </Button>
       </PageHero>
 
+      {/* light zone: formats through fit */}
+      <div className="theme-light">
       {/* the four formats */}
       <section data-bp-idx="2" className="relative overflow-x-clip section-pad">
         <SectionGlow accent="green" position="left" />
@@ -166,6 +168,8 @@ export default function CustomPage() {
           </div>
         </div>
       </section>
+
+      </div>
 
       {/* proof + closing */}
       <section data-bp-idx="7" className="relative section-pad">

@@ -19,11 +19,17 @@ export default function Home() {
       <ServicePanels />
       <Manifesto />
       <ShowreelMoment />
-      <Comparison />
+      {/* hybrid theme: proof-and-people band reads on paper; heroes
+          and the footer stay dark (client hard rule) */}
+      <div className="theme-light">
+        <Comparison />
+      </div>
       <VideoTestimonials />
-      <Testimonials />
-      <TeamSection />
-      <Faq />
+      <div className="theme-light">
+        <Testimonials />
+        <TeamSection />
+        <Faq />
+      </div>
       <FounderNote />
       <ClosingCta />
     </>

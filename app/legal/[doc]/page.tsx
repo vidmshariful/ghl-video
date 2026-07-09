@@ -34,11 +34,12 @@ export default async function LegalPage({
   if (!data) notFound();
 
   return (
-    <section data-bp-idx="1" className="relative pt-28 pb-24 md:pt-32">
-      <div className="shell">
-        <div className="mx-auto max-w-3xl">
+    <>
+      {/* the title block stays on the dark ground (hero rule) */}
+      <section data-bp-idx="1" className="relative pt-32 md:pt-36">
+        <div className="shell pb-12 text-center">
           <SectionChip index={1} label="Legal" />
-          <h1 className="mt-7 font-display text-[clamp(2rem,4vw,3rem)] font-semibold leading-[1.02] tracking-[-0.025em] text-ink">
+          <h1 className="mx-auto mt-7 font-display text-[clamp(2rem,4vw,3rem)] font-semibold leading-[1.02] tracking-[-0.025em] text-ink">
             {data.title}
           </h1>
           {data.effective && (
@@ -46,8 +47,16 @@ export default async function LegalPage({
               {data.effective}
             </p>
           )}
+        </div>
+        <div aria-hidden="true" className="h-px w-full bg-hair" />
+      </section>
 
-          <div className="mt-12 grid gap-10 border-t border-hair pt-10">
+      {/* the document reads on paper */}
+      <div className="theme-light">
+        <section className="relative py-16 md:py-20">
+          <div className="shell">
+            <div className="mx-auto max-w-3xl">
+              <div className="grid gap-10">
             {data.sections.map((section, i) => (
               <section key={`${section.h}-${i}`}>
                 {section.h && (
@@ -80,9 +89,11 @@ export default async function LegalPage({
                 </div>
               </section>
             ))}
+              </div>
+            </div>
           </div>
-        </div>
+        </section>
       </div>
-    </section>
+    </>
   );
 }

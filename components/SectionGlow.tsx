@@ -27,7 +27,7 @@ export function SectionGlow({
   return (
     <div
       aria-hidden="true"
-      className={`pointer-events-none absolute h-[36rem] w-[56rem] ${positions[position]}`}
+      className={`section-glow pointer-events-none absolute h-[36rem] w-[56rem] ${positions[position]}`}
       style={{
         background: `radial-gradient(closest-side, ${accents[accent]}, transparent 72%)`,
       }}

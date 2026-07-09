@@ -116,9 +116,9 @@ export default function WorkPage() {
         </div>
       </section>
 
-      <section data-bp-idx="4" className="relative pb-24">
-        <DrawnBorder />
-        <div className="shell pt-16">
+      <div className="theme-light">
+      <section data-bp-idx="4" className="relative py-20">
+        <div className="shell">
           <CrossSell
             items={[
               {
@@ -141,6 +141,7 @@ export default function WorkPage() {
           />
         </div>
       </section>
+      </div>
     </>
   );
 }
