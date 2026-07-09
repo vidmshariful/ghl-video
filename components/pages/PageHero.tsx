@@ -39,8 +39,9 @@ export function PageHero({
       <SectionGlow accent={accentColor} position="left" />
       <div className="shell relative">
         <Panel className="overflow-hidden">
-          <div className="p-8 md:p-12 lg:p-14">
-            <div className="flex flex-wrap items-center gap-3">
+          {/* centered composition per client direction */}
+          <div className="p-8 text-center md:p-12 lg:p-14">
+            <div className="flex flex-wrap items-center justify-center gap-3">
               <SectionChip index={1} label={chip} />
               {signal && (
                 <span className="inline-flex items-center rounded-full border border-hair bg-surface px-4 py-2 font-mono text-label uppercase text-gold">
@@ -48,13 +49,17 @@ export function PageHero({
                 </span>
               )}
             </div>
-            <h1 className="mt-7 max-w-[22ch] font-display text-hero text-ink">
+            <h1 className="mx-auto mt-7 max-w-[22ch] font-display text-hero text-ink">
               {headline}{" "}
               <span className={accentText[accentColor]}>{accent}</span>
             </h1>
-            <p className="mt-6 max-w-[54ch] text-lede text-muted">{lede}</p>
+            <p className="mx-auto mt-6 max-w-[54ch] text-lede text-muted">
+              {lede}
+            </p>
             {children && (
-              <div className="mt-9 flex flex-wrap gap-4">{children}</div>
+              <div className="mt-9 flex flex-wrap justify-center gap-4">
+                {children}
+              </div>
             )}
           </div>
         </Panel>

@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Button } from "@/components/Button";
-import { CellGrid } from "@/components/CellGrid";
-import { Checklist } from "@/components/Checklist";
 import { DrawnBorder } from "@/components/DrawnBorder";
+import { DrawnIcon, type IconName } from "@/components/DrawnIcon";
 import { FaqList } from "@/components/FaqList";
-import { PremadeGrid } from "@/components/PremadeGrid";
+import { PremadeLibrary } from "@/components/PremadeLibrary";
 import { Reveal, RevealItem } from "@/components/Reveal";
+import { RuledSection } from "@/components/RuledSection";
 import { SectionGlow } from "@/components/SectionGlow";
 import { SectionHead } from "@/components/SectionHead";
-import { CrossSell } from "@/components/pages/CrossSell";
 import { PageHero } from "@/components/pages/PageHero";
 import { ProofStrip } from "@/components/pages/ProofStrip";
 import { cta, pages } from "@/lib/site";
@@ -16,10 +16,17 @@ import { cta, pages } from "@/lib/site";
 export const metadata: Metadata = {
   title: "Premade Videos",
   description:
-    "Professional HighLevel videos branded to your SaaS: explainers, demos, ads, and animated GIFs. Your logo, your dashboard theme, your voiceover. Delivered in 5 to 7 days.",
+    "The premade HighLevel video library: explainers, demos, ads, and animated GIFs, plus complete packs. Branded to your SaaS and delivered in 5 to 7 days.",
 };
 
-const howIcons = ["mouse-click", "palette", "package-check"] as const;
+const includedIcons: IconName[] = [
+  "palette",
+  "layout",
+  "mic",
+  "badge-check",
+  "package-check",
+];
+const howIcons: IconName[] = ["mouse-click", "palette", "package-check"];
 
 export default function PremadePage() {
   const p = pages.premade;
@@ -39,11 +46,11 @@ export default function PremadePage() {
         </Button>
       </PageHero>
 
-      {/* the grid: the page's reason to exist */}
+      {/* the library: packs and the filterable catalog */}
       <section
         id="videos"
         data-bp-idx="2"
-        aria-label="The launch set"
+        aria-label="The video library"
         className="relative scroll-mt-24 overflow-x-clip section-pad"
       >
         <SectionGlow accent="gold" position="right" />
@@ -55,95 +62,145 @@ export default function PremadePage() {
             accent={p.grid.accent}
             accentColor="gold"
             intro={p.grid.intro}
+            center
           />
           <div className="mt-12">
-            <PremadeGrid />
+            <PremadeLibrary />
           </div>
         </div>
       </section>
 
-      {/* what's included: hairline checklist against the section head,
-          no card ground */}
-      <section data-bp-idx="3" className="relative section-pad">
-        <DrawnBorder />
-        <div className="shell">
-          <div className="grid items-start gap-12 lg:grid-cols-2">
-            <SectionHead
-              index={3}
-              chip={p.included.chip}
-              headline={p.included.headline}
-              accent={p.included.accent}
-              accentColor="gold"
-            />
-            <Reveal>
-              <RevealItem>
-                <Checklist
-                  items={p.included.items}
-                  accent="gold"
-                  className="border-b border-hair"
-                />
-              </RevealItem>
-            </Reveal>
-          </div>
-        </div>
-      </section>
+      {/* what's included: ruled box, iconed cells */}
+      <RuledSection
+        bpIdx={3}
+        index={3}
+        chip={p.included.chip}
+        headline={p.included.headline}
+        accent={p.included.accent}
+        accentColor="gold"
+      >
+        <Reveal className="grid gap-px bg-hair sm:grid-cols-2 lg:grid-cols-3">
+          {p.included.items.map((item, i) => (
+            <RevealItem key={item} className="h-full">
+              <div
+                data-cell
+                className="group/cell flex h-full flex-col gap-5 bg-canvas p-8 transition-colors duration-300 hover:bg-surface"
+              >
+                <DrawnIcon name={includedIcons[i]} accent="gold" />
+                <p className="max-w-[34ch] text-[0.9375rem] leading-relaxed text-muted">
+                  {item}
+                </p>
+              </div>
+            </RevealItem>
+          ))}
+          {/* the empty cell wears the blueprint hatch */}
+          <RevealItem className="hidden h-full lg:block">
+            <div className="relative h-full min-h-24 bg-canvas">
+              <div className="absolute inset-0 hatch" aria-hidden="true" />
+            </div>
+          </RevealItem>
+        </Reveal>
+      </RuledSection>
 
-      {/* how it works: ruled cells, drawn icons, real sequence */}
-      <section data-bp-idx="4" className="relative section-pad">
-        <DrawnBorder />
-        <div className="shell">
-          <SectionHead
-            index={4}
-            chip={p.how.chip}
-            headline={p.how.headline}
-            accent={p.how.accent}
-            accentColor="gold"
-          />
-          <div className="mt-12">
-            <CellGrid
-              items={p.how.steps.map((s, i) => ({ ...s, icon: howIcons[i] }))}
-              accent="gold"
-              numbered
-            />
-          </div>
-        </div>
-      </section>
+      {/* how it works: ruled box, numbered sequence */}
+      <RuledSection
+        bpIdx={4}
+        index={4}
+        chip={p.how.chip}
+        headline={p.how.headline}
+        accent={p.how.accent}
+        accentColor="gold"
+      >
+        <Reveal className="grid gap-px bg-hair sm:grid-cols-3">
+          {p.how.steps.map((s, i) => (
+            <RevealItem key={s.title} className="h-full">
+              <div
+                data-cell
+                className="group/cell flex h-full flex-col bg-canvas p-8 transition-colors duration-300 hover:bg-surface"
+              >
+                <div className="flex items-start justify-between">
+                  <DrawnIcon name={howIcons[i]} accent="gold" />
+                  <span className="font-mono text-label uppercase text-gold">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                </div>
+                <h3 className="mt-5 font-display text-[1.1875rem] font-semibold tracking-[-0.01em] text-ink">
+                  {s.title}
+                </h3>
+                <p className="mt-2 max-w-[38ch] text-[0.9375rem] leading-relaxed text-muted">
+                  {s.line}
+                </p>
+              </div>
+            </RevealItem>
+          ))}
+        </Reveal>
+      </RuledSection>
 
-      {/* cross-sell */}
-      <section data-bp-idx="5" className="relative section-pad">
-        <DrawnBorder />
-        <div className="shell">
-          <SectionHead
-            index={5}
-            chip="Keep going"
-            headline="Need something"
-            accent="premade can't do?"
-            accentColor="gold"
-          />
-          <div className="mt-10">
-            <CrossSell
-              items={[
-                {
-                  eyebrow: "Custom Production",
-                  line: "Bespoke scripts, your positioning, built from scratch.",
-                  linkLabel: "See custom production",
-                  href: "/custom/",
-                  accent: "green",
-                  icon: "clapperboard",
-                },
-                {
-                  eyebrow: "Video Editing",
-                  line: "Publishing weekly? Put an editor on a monthly plan.",
-                  linkLabel: "See video editing",
-                  href: "/editing/",
-                  accent: "blue",
-                  icon: "scissors",
-                },
-              ]}
-            />
-          </div>
-        </div>
-      </section>
+      {/* keep going: ruled box, two route-out cells */}
+      <RuledSection
+        bpIdx={5}
+        index={5}
+        chip="Keep going"
+        headline="Need something"
+        accent="premade can't do?"
+        accentColor="gold"
+      >
+        <Reveal className="grid gap-px bg-hair md:grid-cols-2">
+          {(
+            [
+              {
+                eyebrow: "Custom Production",
+                line: "Bespoke scripts, your positioning, built from scratch.",
+                linkLabel: "See custom production",
+                href: "/custom/",
+                accentCls: "text-green",
+                icon: "clapperboard" as IconName,
+                iconAccent: "green" as const,
+              },
+              {
+                eyebrow: "Video Editing",
+                line: "Publishing weekly? Put an editor on a monthly plan.",
+                linkLabel: "See video editing",
+                href: "/editing/",
+                accentCls: "text-blue",
+                icon: "scissors" as IconName,
+                iconAccent: "blue" as const,
+              },
+            ] as const
+          ).map((item) => (
+            <RevealItem key={item.href} className="h-full">
+              <Link
+                href={item.href}
+                data-cell
+                className="group flex h-full flex-col bg-canvas p-8 transition-colors duration-300 hover:bg-surface"
+              >
+                <div className="flex items-start justify-between">
+                  <p
+                    className={`font-mono text-label uppercase ${item.accentCls}`}
+                  >
+                    {item.eyebrow}
+                  </p>
+                  <DrawnIcon name={item.icon} accent={item.iconAccent} />
+                </div>
+                <p className="mt-4 max-w-[40ch] flex-1 font-display text-h3 text-ink">
+                  {item.line}
+                </p>
+                <p
+                  className={`mt-6 inline-flex items-center gap-2 text-sm font-semibold ${item.accentCls}`}
+                >
+                  {item.linkLabel}
+                  <span
+                    aria-hidden="true"
+                    className="transition-transform duration-200 group-hover:translate-x-1"
+                  >
+                    &rarr;
+                  </span>
+                </p>
+              </Link>
+            </RevealItem>
+          ))}
+        </Reveal>
+      </RuledSection>
 
       {/* proof + FAQ */}
       <section data-bp-idx="6" className="relative section-pad">

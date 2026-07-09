@@ -26,14 +26,14 @@ export default function ContactPage() {
       >
         <SectionGlow accent="green" position="left" />
         <div className="shell relative">
-          <Reveal>
+          <Reveal className="text-center">
             <RevealItem>
               <SectionChip index={1} label={p.hero.chip} />
-              <h1 className="mt-7 max-w-[20ch] font-display text-hero text-ink">
+              <h1 className="mx-auto mt-7 max-w-[20ch] font-display text-hero text-ink">
                 {p.hero.headline}{" "}
                 <span className="text-green">{p.hero.accent}</span>
               </h1>
-              <p className="mt-6 max-w-[54ch] text-lede text-muted">
+              <p className="mx-auto mt-6 max-w-[54ch] text-lede text-muted">
                 {p.hero.lede}
               </p>
             </RevealItem>

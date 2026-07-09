@@ -22,13 +22,13 @@ export default function QuotePage() {
       <SectionGlow accent="green" position="left" />
       <div className="shell relative">
         <div className="mx-auto max-w-3xl">
-          <Reveal>
+          <Reveal className="text-center">
             <RevealItem>
               <SectionChip index={1} label={q.chip} />
               <h1 className="mt-7 font-display text-hero text-ink">
                 {q.headline} <span className="text-green">{q.accent}</span>
               </h1>
-              <p className="mt-5 max-w-[52ch] text-lede text-muted">{q.lede}</p>
+              <p className="mx-auto mt-5 max-w-[52ch] text-lede text-muted">{q.lede}</p>
             </RevealItem>
           </Reveal>
 
