@@ -14,7 +14,7 @@
   --canvas: #08090d;
   --surface: #111219;
   --card: #161821;
-  --hair: #242736;
+  --hair: #2b2f40;
 
   /* text */
   --text: #eef0f6;
@@ -91,15 +91,29 @@
 /* on paper.                                                            */
 /* ------------------------------------------------------------------ */
 .theme-light {
-  --canvas: #eef0f5;
+  --canvas: #eaedf3;
   --surface: #ffffff;
   --card: #ffffff;
-  --hair: #d7dae3;
+  /* the grid must READ on paper: a full step darker than the ground */
+  --hair: #c0c6d4;
   --text: #0a0b10;
-  --muted: #4a5164;
-  --dim: #8a90a2;
-  background: var(--canvas);
+  --muted: #464c60;
+  --dim: #838aa0;
   color: var(--text);
+  /* crisp seams where a paper zone meets the dark canvas */
+  border-block: 1px solid var(--hair);
+  /* the page-frame rails are fixed BEHIND section backgrounds, so a
+     paper zone must draw its own pair at the same geometry (half of
+     min(100% - 1.5rem, 80.5rem) from center) or the grid vanishes */
+  background-color: var(--canvas);
+  background-image:
+    linear-gradient(var(--hair), var(--hair)),
+    linear-gradient(var(--hair), var(--hair));
+  background-repeat: no-repeat;
+  background-size: 1px 100%;
+  background-position:
+    calc(50% - min(50% - 0.75rem, 40.25rem)) 0,
+    calc(50% + min(50% - 0.75rem, 40.25rem)) 0;
 }
 
 /* legible cuts of the brand hues for text on paper; fills unchanged */

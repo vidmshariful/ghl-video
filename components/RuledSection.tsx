@@ -40,11 +40,11 @@ export function RuledSection({
           {/* the box's rules extend edge to edge */}
           <span
             aria-hidden="true"
-            className="absolute -top-px left-1/2 -z-10 h-px w-screen -translate-x-1/2 bg-hair/60"
+            className="absolute -top-px left-1/2 -z-10 h-px w-screen -translate-x-1/2 bg-hair"
           />
           <span
             aria-hidden="true"
-            className="absolute -bottom-px left-1/2 -z-10 h-px w-screen -translate-x-1/2 bg-hair/60"
+            className="absolute -bottom-px left-1/2 -z-10 h-px w-screen -translate-x-1/2 bg-hair"
           />
           {/* header cell, centered */}
           <Reveal className="border-b border-hair px-6 py-12 text-center md:py-14">

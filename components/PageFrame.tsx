@@ -8,7 +8,7 @@ export function PageFrame() {
   return (
     <div
       aria-hidden="true"
-      className="pointer-events-none fixed inset-y-0 left-1/2 z-0 w-[min(100%-1.5rem,80.5rem)] -translate-x-1/2 border-x border-hair/50"
+      className="pointer-events-none fixed inset-y-0 left-1/2 z-0 w-[min(100%-1.5rem,80.5rem)] -translate-x-1/2 border-x border-hair/70"
     />
   );
 }
