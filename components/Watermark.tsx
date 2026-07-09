@@ -9,9 +9,22 @@ import {
 } from "framer-motion";
 
 /*
- * The giant wordmark closing the page, drifting slightly slower than
- * the scroll so the final moment has depth.
+ * The brand end-cap: the metallic wordmark asset inside a bounded
+ * grid cell (hairline frame, corner ticks, moving gradient hairline),
+ * sitting within the container like every other panel. Drifts
+ * slightly slower than the scroll.
  */
+function Tick({ pos }: { pos: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`absolute ${pos} font-mono text-[0.625rem] leading-none text-dim/70`}
+    >
+      +
+    </span>
+  );
+}
+
 export function Watermark() {
   const ref = useRef<HTMLDivElement>(null);
   const reduced = useReducedMotion();
@@ -19,35 +32,34 @@ export function Watermark() {
     target: ref,
     offset: ["start end", "end end"],
   });
-  const y = useTransform(scrollYProgress, [0, 1], [56, 0]);
+  const y = useTransform(scrollYProgress, [0, 1], [32, 0]);
 
   return (
-    <div ref={ref} className="overflow-hidden border-t border-hair">
-      {/* SVG textLength pins the mark to the exact section width */}
-      <motion.div
-        aria-hidden="true"
-        style={reduced ? undefined : { y }}
-        className="pointer-events-none select-none px-3 py-5"
-      >
-        <svg viewBox="0 0 1000 128" className="block w-full">
-          <text
-            x="500"
-            y="104"
-            textAnchor="middle"
-            textLength="996"
-            lengthAdjust="spacingAndGlyphs"
-            className="fill-ink opacity-[0.07]"
-            style={{
-              fontFamily: "var(--font-inter), system-ui, sans-serif",
-              fontWeight: 900,
-              fontSize: "124px",
-              letterSpacing: "-0.03em",
-            }}
+    <div ref={ref} className="border-t border-hair">
+      <div className="shell py-10 md:py-14">
+        <div className="relative rounded-card border border-hair card-glass overflow-hidden">
+          <div
+            aria-hidden="true"
+            className="grad-line absolute inset-x-0 top-0 h-px"
+          />
+          <Tick pos="-left-1 -top-1.5" />
+          <Tick pos="-right-1 -top-1.5" />
+          <Tick pos="-left-1 -bottom-1.5" />
+          <Tick pos="-right-1 -bottom-1.5" />
+          <motion.div
+            style={reduced ? undefined : { y }}
+            className="px-6 py-8 md:px-12 md:py-12"
           >
-            GHL VIDEO
-          </text>
-        </svg>
-      </motion.div>
+            {/* eslint-disable-next-line @next/next/no-img-element -- static export */}
+            <img
+              src="/watermark.png"
+              alt=""
+              aria-hidden="true"
+              className="pointer-events-none w-full select-none"
+            />
+          </motion.div>
+        </div>
+      </div>
     </div>
   );
 }
