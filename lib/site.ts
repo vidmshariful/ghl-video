@@ -144,6 +144,7 @@ export type PackVideo = {
   title: string;
   type: PremadeType;
   format: string; // Master Explainer | Short Explainer | Platform Demo
+  capability: string; // the feature the video sells; drives the library filter
   src: string | null; // null while in production
   poster: string | null;
   comingSoon?: boolean;
@@ -192,6 +193,7 @@ export const premadePacks: PremadePack[] = [
             title: "All-in-one + AI-First Positioning",
             type: "Explainer",
             format: "Master Explainer",
+            capability: "All-in-one",
             src: aiPackClips.master,
             poster: "/posters/ai-master.jpg",
           },
@@ -206,6 +208,7 @@ export const premadePacks: PremadePack[] = [
             title: "AI Receptionist + Conversational AI",
             type: "Explainer",
             format: "Short Explainer",
+            capability: "AI Receptionist",
             src: aiPackClips.receptionist,
             poster: "/posters/ai-receptionist.jpg",
           },
@@ -213,6 +216,7 @@ export const premadePacks: PremadePack[] = [
             title: "Unified Inbox + Conversational AI",
             type: "Explainer",
             format: "Short Explainer",
+            capability: "Unified Inbox",
             src: aiPackClips.inbox,
             poster: "/posters/ai-inbox.jpg",
           },
@@ -220,6 +224,7 @@ export const premadePacks: PremadePack[] = [
             title: "Reputation Management + Reviews AI",
             type: "Explainer",
             format: "Short Explainer",
+            capability: "Reputation & Reviews",
             src: aiPackClips.reputation,
             poster: "/posters/ai-reputation.jpg",
           },
@@ -227,6 +232,7 @@ export const premadePacks: PremadePack[] = [
             title: "Social Media Planner + Content AI",
             type: "Explainer",
             format: "Short Explainer",
+            capability: "Social & Content",
             src: null,
             poster: null,
             comingSoon: true,
@@ -235,6 +241,7 @@ export const premadePacks: PremadePack[] = [
             title: "AI Website + Funnel Builder",
             type: "Explainer",
             format: "Short Explainer",
+            capability: "Websites & Funnels",
             src: null,
             poster: null,
             comingSoon: true,
@@ -243,6 +250,7 @@ export const premadePacks: PremadePack[] = [
             title: "Ask AI, Your In-Platform Assistant",
             type: "Explainer",
             format: "Short Explainer",
+            capability: "Ask AI",
             src: null,
             poster: null,
             comingSoon: true,
@@ -251,6 +259,7 @@ export const premadePacks: PremadePack[] = [
             title: "Mobile App, Run Your Business From Your Phone",
             type: "Explainer",
             format: "Short Explainer",
+            capability: "Mobile App",
             src: null,
             poster: null,
             comingSoon: true,
@@ -266,6 +275,7 @@ export const premadePacks: PremadePack[] = [
             title: "Lead-to-Close With AI",
             type: "Demo",
             format: "Platform Demo",
+            capability: "Lead-to-close",
             src: null,
             poster: null,
             comingSoon: true,
@@ -276,38 +286,70 @@ export const premadePacks: PremadePack[] = [
   },
 ];
 
-/* The "All videos" browser reads a flat list derived from the one
- * pack, so the catalog and the playlist never drift. */
+/* Individual per-video pricing by type: explainers $495, demo $995.
+ * FLAG: Ads / Promo and Animated GIF prices are placeholder defaults. */
+export const premadeTypePrice: Record<PremadeType, number> = {
+  Explainer: 495,
+  Demo: 995,
+  "Ads / Promo": 495,
+  "Animated GIF": 495,
+};
+
+const slugify = (t: string) =>
+  t
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+
+/* The "All videos" browser reads a flat list aggregated from every
+ * pack, so the catalog and the playlists never drift. Each video is
+ * individually purchasable (price by type) AND bundled in its pack.
+ * Finished videos preview and sell on their own; comingSoon videos
+ * ship with their pack when they release. Per-SKU checkout URLs are
+ * PLACEHOLDERS. */
 export type PremadeVideo = {
   slug: string;
   title: string;
   type: PremadeType;
   format: string;
+  capability: string;
+  price: number;
   preview: string | null;
   poster: string | null;
+  orderUrl: string;
   comingSoon: boolean;
 };
 
-export const premadeVideos: PremadeVideo[] = premadePacks[0].categories.flatMap(
-  (cat) =>
-    cat.videos.map((v) => ({
-      slug: v.title
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)/g, ""),
+export const premadeVideos: PremadeVideo[] = premadePacks
+  .flatMap((pack) => pack.categories.flatMap((c) => c.videos))
+  .reduce<PremadeVideo[]>((acc, v) => {
+    const slug = slugify(v.title);
+    if (acc.some((x) => x.slug === slug)) return acc; // dedupe across packs
+    acc.push({
+      slug,
       title: v.title,
       type: v.type,
       format: v.format,
+      capability: v.capability,
+      price: premadeTypePrice[v.type],
       preview: v.src,
       poster: v.poster,
+      orderUrl: `https://order.ghlvideo.com/${slug}`,
       comingSoon: v.comingSoon ?? false,
-    })),
-);
+    });
+    return acc;
+  }, []);
 
-/* Library sidebar filters, from real pack data. */
+/* Look up a video's individual price and checkout by title (packs use
+ * this to offer the single-video buy alongside the pack). */
+export const premadeBySlugTitle: Record<string, PremadeVideo> =
+  Object.fromEntries(premadeVideos.map((v) => [v.title, v]));
+
+/* Library sidebar filters, computed from the real catalog so they grow
+ * with it. */
 export const premadeFilterGroups = {
-  format: ["Master Explainer", "Short Explainer", "Platform Demo"],
-  availability: ["Available now", "Coming soon"],
+  type: premadeTypes.filter((t) => premadeVideos.some((v) => v.type === t)),
+  capability: [...new Set(premadeVideos.map((v) => v.capability))],
 } as const;
 
 export const customFormats = [
@@ -730,17 +772,17 @@ export const pages = {
   premade: {
     hero: {
       chip: "Premade Videos",
-      headline: "The AI-first video pack,",
-      accent: "branded to your SaaS.",
-      lede: "A complete, white-label video system for AI-first HighLevel resellers. Preview the finished videos, then brand the whole pack to your platform.",
-      priceSignal: "9 videos, $1,495",
+      headline: "Branded HighLevel videos,",
+      accent: "ready when you are.",
+      lede: "Browse the full library. Buy any video on its own, or get a complete pack and save. Every one is white-labeled to your SaaS.",
+      priceSignal: "Videos from $495, packs from $1,495",
     },
     grid: {
-      chip: "The pack",
-      headline: "The AI First",
-      accent: "SaaS video pack.",
+      chip: "The library",
+      headline: "Every video",
+      accent: "and pack, in one place.",
       intro:
-        "Nine outcome-led videos, brand-agnostic and white-label. Preview every finished one below, then brand the whole pack to your SaaS.",
+        "Filter the library on the left, or open a pack to browse it as a playlist. Preview any video, buy it on its own, or get the whole pack.",
     },
     included: {
       chip: "What's included",
@@ -756,12 +798,12 @@ export const pages = {
     },
     how: {
       chip: "How it works",
-      headline: "Get the pack,",
-      accent: "brand it, go live.",
+      headline: "Order today,",
+      accent: "publish this week.",
       steps: [
         {
-          title: "Get the pack",
-          line: "One checkout, no call required. The finished videos are ready to brand immediately.",
+          title: "Order",
+          line: "Pick a single video or a full pack and check out. No call required.",
         },
         {
           title: "Send your brand kit",
