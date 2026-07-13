@@ -14,7 +14,7 @@ export const site = {
   orderBase: "https://order.ghlvideo.com",
   tagline: "Video built for HighLevel SaaS. Fast, custom, done.",
   description:
-    "The specialized video studio built only for the HighLevel ecosystem. Premade videos at $495 flat, custom production with published starting prices, and monthly editing plans.",
+    "The specialized video studio built only for the HighLevel ecosystem. A white-label AI-first video pack for resellers, custom production with published starting prices, and monthly editing plans.",
 };
 
 export const clients = 800; // always rendered as "800+"
@@ -116,11 +116,9 @@ export const clipWindows: Partial<
 /* Services and pricing (locked)                                        */
 /* ------------------------------------------------------------------ */
 
-export const premadePrice = 495; // flat, every premade video
+export const premadePrice = 495; // legacy flat price, kept for reference
 
-/* The premade catalog spans four video types; the grid filters on
- * them. Locked list per Shariful: Explainer, Demo, Ads / Promo,
- * Animated GIF. */
+/* The premade catalog spans four video types; filters use them. */
 export const premadeTypes = [
   "Explainer",
   "Demo",
@@ -129,74 +127,26 @@ export const premadeTypes = [
 ] as const;
 export type PremadeType = (typeof premadeTypes)[number];
 
-/* Library sidebar filter groups. PLACEHOLDER values until Shariful
- * locks the real feature and use-case taxonomy. */
-export const premadeFilterGroups = {
-  feature: [
-    "Missed Call Text Back",
-    "AI Employee",
-    "Reviews & Reputation",
-    "Calendars & Booking",
-    "Funnels & Websites",
-  ],
-  useCase: [
-    "Homepage hero",
-    "Paid ads",
-    "Onboarding",
-    "Help center",
-    "Social content",
-  ],
+/* Real AI First SaaS Pack videos on the LeadConnector CDN. Four are
+ * delivered; five are in production (comingSoon). */
+const aiPackClips = {
+  master:
+    "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a54fdf79c9b37b5fd24a140.mp4",
+  receptionist:
+    "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a54fdf79c9b37b5fd24a12f.mp4",
+  inbox:
+    "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a54fdf79c9b37b5fd24a134.mp4",
+  reputation:
+    "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a54fdf7baf5f6da40a950de.mp4",
 } as const;
 
-export type PremadeVideo = {
-  slug: string;
-  title: string;
-  purpose: string;
-  type: PremadeType;
-  feature: string;
-  useCase: string;
-  price: number;
-  preview: string | null; // mp4 path when the real previews land
-  poster: string | null;
-  orderUrl: string;
-};
-
-/* 10 placeholders. The real titles, previews, and SKUs drop in later
- * with no layout change. Previews cycle the three sample clips. */
-export const premadeVideos: PremadeVideo[] = Array.from({ length: 10 }).map(
-  (_, i) => {
-    const cycle = [
-      { preview: clips.sampleA, poster: posters.sampleA },
-      { preview: clips.sampleB, poster: posters.sampleB },
-      { preview: clips.sampleC, poster: posters.sampleC },
-    ][i % 3];
-    return {
-      slug: `video-${i + 1}`,
-      title: `Premade Video ${i + 1}`,
-      purpose: "One line on what this video is for",
-      /* placeholder spread across the four types and filter values */
-      type: premadeTypes[i % premadeTypes.length],
-      feature: premadeFilterGroups.feature[i % premadeFilterGroups.feature.length],
-      useCase: premadeFilterGroups.useCase[i % premadeFilterGroups.useCase.length],
-      price: premadePrice,
-      preview: cycle.preview,
-      poster: cycle.poster,
-      orderUrl: `https://order.ghlvideo.com/video-${i + 1}`,
-    };
-  },
-);
-
-/* Video packs. The Complete SaaS Video Stack figures are REAL, pulled
- * from the live videostack.ghlvideo.com landing page (53 videos,
- * $1,995, five categories). Its checkout URL is a PLACEHOLDER. The AI
- * First SaaS Pack is announced but unpriced: lineup and price pending
- * from Shariful. Playlist entries are placeholder clips; the two
- * explainer titles are the real ones from the live showcase. */
 export type PackVideo = {
   title: string;
   type: PremadeType;
-  src: string;
+  format: string; // Master Explainer | Short Explainer | Platform Demo
+  src: string | null; // null while in production
   poster: string | null;
+  comingSoon?: boolean;
   startAt?: number;
   endAt?: number;
 };
@@ -214,115 +164,151 @@ export type PremadePack = {
   tagline: string;
   count: number | null;
   price: number | null;
+  anchorPrice?: number | null;
   orderUrl: string | null;
   categories: PackCategory[];
 };
 
-const sampleNote = (t: string, i: number): PackVideo => ({
-  title: t,
-  type: "Explainer",
-  src: [clips.sampleA, clips.sampleB, clips.sampleC][i % 3],
-  poster: [posters.sampleA, posters.sampleB, posters.sampleC][i % 3],
-  ...(i % 3 === 0 ? { startAt: 73, endAt: 76 } : {}),
-});
-
+/* One pack at launch: the AI First SaaS Pack (real). FLAG: the
+ * order.ghlvideo.com checkout URL is a PLACEHOLDER SKU. Five of the
+ * nine videos are in production and marked comingSoon. */
 export const premadePacks: PremadePack[] = [
   {
-    slug: "complete-saas-video-stack",
-    name: "Complete SaaS Video Stack",
+    slug: "ai-first-saas-pack",
+    name: "AI First SaaS Pack",
     tagline:
-      "The exact video system a HighLevel SaaS needs to present, sell, and scale. Every video customized with your logo, your colors, and your SaaS name in the voiceover.",
-    count: 53,
-    price: 1995,
-    orderUrl: "https://order.ghlvideo.com/video-stack",
+      "An AI-first, white-label video system for HighLevel SaaS resellers. Nine outcome-led videos with brand-agnostic scripts, ready to deploy across your whole funnel: homepage, sales pages, ads, email, and demos.",
+    count: 9,
+    price: 1495,
+    anchorPrice: 2495,
+    orderUrl: "https://order.ghlvideo.com/ai-first-saas-pack",
     categories: [
       {
-        name: "Explainer Videos",
-        count: 2,
-        line: "Full-length branded explainers that position your SaaS as the complete business operating system.",
-        videos: [
-          {
-            title: "Complete Overview Explainer Video",
-            type: "Explainer",
-            src: clips.featured,
-            poster: posters.featured,
-            startAt: clipWindows.featured!.startAt,
-            endAt: clipWindows.featured!.endAt,
-          },
-          {
-            title: "Overall Explainer Video",
-            type: "Explainer",
-            src: clips.sampleC,
-            poster: posters.sampleC,
-          },
-        ],
-      },
-      {
-        name: "Demo Videos",
+        name: "Master Explainer",
         count: 1,
-        line: "Replace your live Zoom demos permanently with a high-converting walkthrough.",
+        line: "All-in-one plus AI-first positioning in 90 to 120 seconds. The video that sells your platform before the first call.",
         videos: [
           {
-            title: "Platform Demo Walkthrough",
-            type: "Demo",
-            src: clips.sampleA,
-            poster: posters.sampleA,
-            startAt: 73,
-            endAt: 76,
+            title: "All-in-one + AI-First Positioning",
+            type: "Explainer",
+            format: "Master Explainer",
+            src: aiPackClips.master,
+            poster: "/posters/ai-master.jpg",
           },
         ],
       },
       {
         name: "Short Explainers",
-        count: 20,
-        line: "Short, punchy videos answering specific objections before they become questions.",
+        count: 7,
+        line: "One 60-second explainer per core capability, with AI woven through the how-it-works.",
         videos: [
-          sampleNote("Short Explainer: Missed Call Text Back", 1),
-          sampleNote("Short Explainer: Reviews & Reputation", 2),
-          sampleNote("Short Explainer: Calendars & Booking", 0),
+          {
+            title: "AI Receptionist + Conversational AI",
+            type: "Explainer",
+            format: "Short Explainer",
+            src: aiPackClips.receptionist,
+            poster: "/posters/ai-receptionist.jpg",
+          },
+          {
+            title: "Unified Inbox + Conversational AI",
+            type: "Explainer",
+            format: "Short Explainer",
+            src: aiPackClips.inbox,
+            poster: "/posters/ai-inbox.jpg",
+          },
+          {
+            title: "Reputation Management + Reviews AI",
+            type: "Explainer",
+            format: "Short Explainer",
+            src: aiPackClips.reputation,
+            poster: "/posters/ai-reputation.jpg",
+          },
+          {
+            title: "Social Media Planner + Content AI",
+            type: "Explainer",
+            format: "Short Explainer",
+            src: null,
+            poster: null,
+            comingSoon: true,
+          },
+          {
+            title: "AI Website + Funnel Builder",
+            type: "Explainer",
+            format: "Short Explainer",
+            src: null,
+            poster: null,
+            comingSoon: true,
+          },
+          {
+            title: "Ask AI, Your In-Platform Assistant",
+            type: "Explainer",
+            format: "Short Explainer",
+            src: null,
+            poster: null,
+            comingSoon: true,
+          },
+          {
+            title: "Mobile App, Run Your Business From Your Phone",
+            type: "Explainer",
+            format: "Short Explainer",
+            src: null,
+            poster: null,
+            comingSoon: true,
+          },
         ],
       },
       {
-        name: "Marketing Videos",
-        count: 15,
-        line: "Scroll-stopping ad and social creatives built for HighLevel offers.",
+        name: "Platform Demo",
+        count: 1,
+        line: "A 5-minute lead-to-close walkthrough with AI at every stage of the funnel.",
         videos: [
-          sampleNote("Marketing Video: Lead Follow-up", 2),
-          sampleNote("Marketing Video: Booking Engine", 1),
-        ],
-      },
-      {
-        name: "Feature Animations",
-        count: 15,
-        line: "Dashboard animations that make your platform look like premium software.",
-        videos: [
-          sampleNote("Feature Animation: Dashboard Overview", 0),
-          sampleNote("Feature Animation: Pipeline View", 2),
-        ],
-      },
-    ],
-  },
-  {
-    slug: "ai-first-saas-pack",
-    name: "AI First SaaS Pack",
-    tagline:
-      "The video set for AI-first HighLevel SaaS: AI employee, conversation AI, and automation features, explained and sold. Final lineup and pricing land soon.",
-    count: null,
-    price: null,
-    orderUrl: null,
-    categories: [
-      {
-        name: "AI Feature Explainers",
-        count: null,
-        line: "The AI features your prospects ask about, answered on video.",
-        videos: [
-          sampleNote("AI Employee Explainer", 1),
-          sampleNote("Conversation AI Explainer", 2),
+          {
+            title: "Lead-to-Close With AI",
+            type: "Demo",
+            format: "Platform Demo",
+            src: null,
+            poster: null,
+            comingSoon: true,
+          },
         ],
       },
     ],
   },
 ];
+
+/* The "All videos" browser reads a flat list derived from the one
+ * pack, so the catalog and the playlist never drift. */
+export type PremadeVideo = {
+  slug: string;
+  title: string;
+  type: PremadeType;
+  format: string;
+  preview: string | null;
+  poster: string | null;
+  comingSoon: boolean;
+};
+
+export const premadeVideos: PremadeVideo[] = premadePacks[0].categories.flatMap(
+  (cat) =>
+    cat.videos.map((v) => ({
+      slug: v.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, ""),
+      title: v.title,
+      type: v.type,
+      format: v.format,
+      preview: v.src,
+      poster: v.poster,
+      comingSoon: v.comingSoon ?? false,
+    })),
+);
+
+/* Library sidebar filters, from real pack data. */
+export const premadeFilterGroups = {
+  format: ["Master Explainer", "Short Explainer", "Platform Demo"],
+  availability: ["Available now", "Coming soon"],
+} as const;
 
 export const customFormats = [
   { name: "Ads / Promo", from: 1500, sample: null as string | null },
@@ -740,53 +726,50 @@ export const footerBlurb = "Video built for HighLevel SaaS. Fast, custom, done."
 /* Inner-page content                                                   */
 /* ------------------------------------------------------------------ */
 
-/* NOTE: premade pricing is per SKU (premadeVideos[].price). The launch
- * set ships at $495 each; Shariful's final price model may raise some
- * SKUs, so every card and CTA reads its own price from the config. */
 export const pages = {
   premade: {
     hero: {
       chip: "Premade Videos",
-      headline: "Professional HighLevel videos,",
+      headline: "The AI-first video pack,",
       accent: "branded to your SaaS.",
-      lede: "Pick from the launch set. We rebrand every frame to your platform: your logo, your dashboard theme, your voiceover. Delivered in 5 to 7 days.",
-      priceSignal: "From $495 per video",
+      lede: "A complete, white-label video system for AI-first HighLevel resellers. Preview the finished videos, then brand the whole pack to your platform.",
+      priceSignal: "9 videos, $1,495",
     },
     grid: {
-      chip: "The launch set",
-      headline: "Ten videos,",
-      accent: "ready to carry your brand.",
+      chip: "The pack",
+      headline: "The AI First",
+      accent: "SaaS video pack.",
       intro:
-        "Every preview below is the actual video. What changes is the branding: yours replaces ours on every frame.",
+        "Nine outcome-led videos, brand-agnostic and white-label. Preview every finished one below, then brand the whole pack to your SaaS.",
     },
     included: {
       chip: "What's included",
-      headline: "Every premade ships",
-      accent: "complete.",
+      headline: "Every video ships",
+      accent: "white-label.",
       items: [
         "Your logo and brand colors on every frame",
-        "Dashboard theme matched to your SaaS",
+        "Your dashboard theme and platform screens",
         "Professional voiceover in your choice of accent",
+        "Brand-agnostic scripts, no competitor named",
         "Full commercial rights, no attribution",
-        "Delivered in 5 to 7 days, ready to publish",
       ],
     },
     how: {
       chip: "How it works",
-      headline: "Order today,",
-      accent: "publish next week.",
+      headline: "Get the pack,",
+      accent: "brand it, go live.",
       steps: [
         {
-          title: "Order",
-          line: "Pick the video and check out. Two clicks, no call required.",
+          title: "Get the pack",
+          line: "One checkout, no call required. The finished videos are ready to brand immediately.",
         },
         {
-          title: "Submit branding",
-          line: "Send your logo, colors, and dashboard theme through the onboarding form.",
+          title: "Send your brand kit",
+          line: "Logo, colors, dashboard screens, and voiceover preference through the intake form.",
         },
         {
-          title: "Receive",
-          line: "Your branded video lands in 5 to 7 days with full commercial rights.",
+          title: "Receive and publish",
+          line: "We white-label every video to your SaaS and deliver after a full review round.",
         },
       ],
     },
@@ -800,8 +783,12 @@ export const pages = {
           a: "Yes. Every premade ships with full commercial rights. Run it as an ad, embed it on your site, use it in onboarding. No attribution, no license tiers.",
         },
         {
-          q: "How custom does a premade get?",
-          a: "Your logo, your brand colors, your dashboard theme, and your voiceover. The structure and script stay fixed, which is exactly why it ships in days instead of weeks.",
+          q: "How custom does each video get?",
+          a: "Your logo, your brand colors, your dashboard screens, and your voiceover. The scripts are brand-agnostic by design, so nothing names a competitor and the pack white-labels cleanly for your SaaS.",
+        },
+        {
+          q: "Some videos say coming soon. What does that mean?",
+          a: "Four of the nine videos are finished and previewable today. The other five are in production and roll out to the pack as they release, at no extra cost.",
         },
         {
           q: "What if I need a different script or format?",
@@ -809,11 +796,7 @@ export const pages = {
         },
         {
           q: "How do I send my branding?",
-          a: "After checkout you get a short onboarding form: logo, colors, dashboard theme, and voiceover preference. Five minutes, then we take over.",
-        },
-        {
-          q: "What does delivery look like?",
-          a: "A download link with the final video in full resolution, plus the versions you need for ads and social. Delivered in 5 to 7 days from receiving your branding.",
+          a: "After you order you get a short intake form: logo, colors, dashboard screens, and voiceover preference. Five minutes, then we take over.",
         },
       ],
     },
