@@ -26,6 +26,9 @@ type BrowseVideo = {
   price: number;
   preview: string | null;
   poster: string | null;
+  wistiaId: string | null;
+  subtitle: string | null;
+  packCount: number | null;
   orderUrl: string;
 };
 
@@ -45,6 +48,9 @@ const newReady: BrowseVideo[] = premadeVideos
     price: v.price,
     preview: v.preview,
     poster: v.poster,
+    wistiaId: null,
+    subtitle: null,
+    packCount: null,
     orderUrl: v.orderUrl,
   }));
 
@@ -59,8 +65,11 @@ const oldBrowse: BrowseVideo[] = oldVideos.map((v) => ({
   typeTag: v.type,
   subTag: "Pre-2026",
   price: v.price,
-  preview: v.preview,
+  preview: v.preview ?? null,
   poster: v.poster,
+  wistiaId: v.wistiaId ?? null,
+  subtitle: v.subtitle ?? null,
+  packCount: v.packCount ?? null,
   orderUrl: v.orderUrl,
 }));
 
@@ -146,6 +155,64 @@ function Price({ value }: { value: number }) {
   );
 }
 
+/* A Wistia-hosted classic video: baked poster + play, opens the
+ * lightbox that embeds the real Wistia player on click. */
+function PosterPlay({
+  video,
+  onOpen,
+}: {
+  video: BrowseVideo;
+  onOpen: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-label={`Play: ${video.title}`}
+      aria-haspopup="dialog"
+      className="group/pp relative block aspect-video w-full overflow-hidden border border-hair bg-black focus-visible:outline-offset-[-4px]"
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element -- static export, remote poster */}
+      <img
+        src={video.poster ?? undefined}
+        alt=""
+        loading="lazy"
+        className="h-full w-full object-cover opacity-90 transition duration-300 group-hover/pp:scale-[1.03] group-hover/pp:opacity-100"
+      />
+      <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+      <span className="pointer-events-none absolute left-3 top-3 rounded-[3px] bg-black/55 px-2 py-1 font-mono text-[0.625rem] uppercase tracking-[0.14em] text-[#EEF0F6] backdrop-blur-sm">
+        {video.typeTag}
+      </span>
+      <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-gradient shadow-[0_0_28px_rgba(0,204,0,0.3)] transition-transform duration-300 group-hover/pp:scale-110">
+          <svg viewBox="0 0 24 24" className="ml-0.5 h-5 w-5" aria-hidden="true">
+            <path d="M8 5v14l11-7z" fill="#08090D" />
+          </svg>
+        </span>
+      </span>
+    </button>
+  );
+}
+
+/* Feature animation ships as a bundle, not a single clip: a typographic
+ * pack tile stands in for a preview. */
+function PackTile({ count }: { count: number }) {
+  return (
+    <div className="relative flex aspect-video w-full flex-col items-center justify-center overflow-hidden border border-hair bg-surface">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 hatch opacity-20"
+      />
+      <span className="relative font-mono text-[2.75rem] font-bold leading-none text-gradient [font-variant-numeric:tabular-nums]">
+        {count}
+      </span>
+      <span className="relative mt-2 font-mono text-label uppercase tracking-[0.14em] text-muted">
+        feature animations
+      </span>
+    </div>
+  );
+}
+
 /* ---------------------------------------------------------------- */
 /* Preview lightbox with a single-video buy bar                       */
 /* ---------------------------------------------------------------- */
@@ -204,14 +271,26 @@ function PreviewLightbox({
             />
           </svg>
         </button>
-        <video
-          ref={videoRef}
-          src={video.preview ?? undefined}
-          poster={video.poster ?? undefined}
-          controls
-          playsInline
-          className="aspect-video w-full border border-[#2b2f40] bg-black"
-        />
+        {video.wistiaId ? (
+          <div className="aspect-video w-full border border-[#2b2f40] bg-black">
+            <iframe
+              src={`https://fast.wistia.net/embed/iframe/${video.wistiaId}?autoPlay=true&playerColor=FCC000`}
+              title={video.title}
+              allow="autoplay; fullscreen"
+              allowFullScreen
+              className="h-full w-full"
+            />
+          </div>
+        ) : (
+          <video
+            ref={videoRef}
+            src={video.preview ?? undefined}
+            poster={video.poster ?? undefined}
+            controls
+            playsInline
+            className="aspect-video w-full border border-[#2b2f40] bg-black"
+          />
+        )}
         {/* the buy bar: the preview closes with the action in reach */}
         <div className="flex flex-wrap items-center justify-between gap-4 border border-t-0 border-[#2b2f40] bg-[#111219] px-5 py-4">
           <div>
@@ -358,7 +437,12 @@ function VideoBrowser({
                       transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
                     >
                       <div className="group/card">
-                        {video.preview ? (
+                        {video.wistiaId && video.poster ? (
+                          <PosterPlay
+                            video={video}
+                            onOpen={() => setPreview(video)}
+                          />
+                        ) : video.preview ? (
                           <div className="relative">
                             <MediaFrame
                               src={video.preview}
@@ -377,6 +461,8 @@ function VideoBrowser({
                               className="absolute inset-0 z-10 cursor-pointer focus-visible:outline-offset-[-4px]"
                             />
                           </div>
+                        ) : video.packCount ? (
+                          <PackTile count={video.packCount} />
                         ) : (
                           <div className="flex aspect-video items-center justify-center border border-hair bg-[#030303]">
                             <span className="font-mono text-label uppercase text-dim">
@@ -390,7 +476,7 @@ function VideoBrowser({
                               {video.title}
                             </h3>
                             <p className="mt-0.5 font-mono text-label uppercase text-dim">
-                              {video.typeTag}
+                              {video.subtitle ?? video.typeTag}
                             </p>
                           </div>
                           <div className="flex items-center gap-4">
