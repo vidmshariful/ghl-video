@@ -1746,3 +1746,238 @@ export const oldVideos: OldVideo[] = [
     orderUrl: "https://order.ghlvideo.com/feature-animations-23",
   },
 ];
+
+/* ---------------------------------------------------------------- */
+/* Feature animations: the classic 23-feature library, each rendered
+ * in two versions the old site let buyers toggle between: a clean
+ * "Simplified UI" cut and a "Real UI" cut on the actual dashboard.
+ * Sold only inside the feature-animation bundles, so these are
+ * previews, not single SKUs. mp4 on the LeadConnector CDN. */
+export type FeatureAnimation = {
+  slug: string;
+  name: string;
+  simplified: string;
+  real: string | null;
+  thumbSimplified: string;
+  thumbReal: string;
+};
+
+export const featureAnimations: FeatureAnimation[] = [
+  {
+    slug: "pipeline",
+    name: "Pipeline",
+    simplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/6980d1cd1311f63757bfe3af.mp4",
+    real: null,
+    thumbSimplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/6980d29318ecce54fa2247d1.png",
+    thumbReal: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/6980d3321f68d11d0b1cb40f.png",
+  },
+  {
+    slug: "unified-inbox",
+    name: "Unified Inbox",
+    simplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/6980d4f276757771593abbe3.mp4",
+    real: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/6980d48f18eccecb6122aa58.mp4",
+    thumbSimplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/6980d5e03c458e71fed29594.png",
+    thumbReal: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/6980d58610efd654325a8221.png",
+  },
+  {
+    slug: "2-way-texting",
+    name: "2 Way texting",
+    simplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cb3a11aab9359e91c4b8c.mp4",
+    real: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cb36d6f6d4c0d95529291.mp4",
+    thumbSimplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cb5d90a51c877f5c5c14c.png",
+    thumbReal: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cb43697c0513daac96fc6.png",
+  },
+  {
+    slug: "ai-employee",
+    name: "AI Employee",
+    simplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cb4861aab93b9741c6636.mp4",
+    real: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cb47897c05152c8c97688.mp4",
+    thumbSimplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cb54cd80f5c34a0371d58.png",
+    thumbReal: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cb4cfd80f5c52b637102b.png",
+  },
+  {
+    slug: "workflows-builder",
+    name: "Workflows Builder",
+    simplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cb6542e1faa20cfb5de11.mp4",
+    real: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cb6542e1faa20cfb5de11.mp4",
+    thumbSimplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cb6d5006d90678d003794.png",
+    thumbReal: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cb74a5c1881a164e3bf70.png",
+  },
+  {
+    slug: "calendar-booking",
+    name: "Calendar Booking",
+    simplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cb7ac6f6d4c6423530fa2.mp4",
+    real: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cb7977b02cf824c8b7a76.mp4",
+    thumbSimplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cb87ed80f5c689c3783a2.png",
+    thumbReal: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cb7f56f6d4c28eb531b24.png",
+  },
+  {
+    slug: "call-tracking-and-recording",
+    name: "Call Tracking & Recording",
+    simplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cb9057b02cf37428ba870.mp4",
+    real: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cb8e77b02cf061f8ba474.mp4",
+    thumbSimplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cb9887b02cfb9cb8bbc01.png",
+    thumbReal: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cb93e97c0514677ca0a7d.png",
+  },
+  {
+    slug: "contact-management",
+    name: "Contact Management",
+    simplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cb9ca97c051da48ca22cc.mp4",
+    real: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cb9c26f6d4c806b5357f0.mp4",
+    thumbSimplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cbe2c1aab93057e1dc71f.png",
+    thumbReal: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cbdea6f6d4c3a5053f592.png",
+  },
+  {
+    slug: "content-ai",
+    name: "Content AI",
+    simplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cb9da5c1881aaa8e418f1.mp4",
+    real: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cb9e297c051d921ca26e3.mp4",
+    thumbSimplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cbe70d80f5ced6b3877ed.png",
+    thumbReal: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cbeb2d80f5cdb6e388168.png",
+  },
+  {
+    slug: "conversation-ai",
+    name: "Conversation AI",
+    simplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cb9fb1aab938cb61d1862.mp4",
+    real: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cb9f10a51c81cd6c641d8.mp4",
+    thumbSimplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cbff17b02cfa2508cb7db.png",
+    thumbReal: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cbf7e006d90836c0174a4.png",
+  },
+  {
+    slug: "email-campaign-builder",
+    name: "Email Campaign Builder",
+    simplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cba0c006d90378200a01e.mp4",
+    real: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cba1497c0510fe5ca2cc4.mp4",
+    thumbSimplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cc13e97c051bceecb4a6a.png",
+    thumbReal: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cc0b9006d903cbe01b31e.png",
+  },
+  {
+    slug: "forms-and-surveys",
+    name: "Forms & Surveys",
+    simplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cba451aab9318711d1f78.mp4",
+    real: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cba3cd80f5cae9c37c102.mp4",
+    thumbSimplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cc1f197c051d902cb6d80.png",
+    thumbReal: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cc1b25c188186ace54f6f.png",
+  },
+  {
+    slug: "live-chat-widget",
+    name: "Live Chat Widget",
+    simplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cba707b02cf70298bd69e.mp4",
+    real: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cba66d80f5c236137c699.mp4",
+    thumbSimplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cc27d1aab9322d31e869e.png",
+    thumbReal: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cc31e006d90de1902149b.png",
+  },
+  {
+    slug: "membership",
+    name: "Membership",
+    simplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cbaae97c0511f7eca3eb0.mp4",
+    real: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cba9e97c05194a9ca3cda.mp4",
+    thumbSimplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cc377006d9056830229e0.png",
+    thumbReal: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cc3f21aab93c4f61ec863.png",
+  },
+  {
+    slug: "missed-call-text-back",
+    name: "Missed call text back",
+    simplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cbace2e1faa6f19b67495.mp4",
+    real: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cbade006d9017ab00bb42.mp4",
+    thumbSimplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cc5022e1faa6f64b81f60.png",
+    thumbReal: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cc4441aab9330291ed66b.png",
+  },
+  {
+    slug: "mobile-apps",
+    name: "Mobile Apps",
+    simplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cbb1497c05143bfca4e63.mp4",
+    real: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cbb076f6d4cb87553807e.mp4",
+    thumbSimplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cc53c1aab93afef1efc16.png",
+    thumbReal: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cc58a006d9039e5027a7b.png",
+  },
+  {
+    slug: "payments-and-invoicing",
+    name: "Payments & Invoicing",
+    simplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cbb335c1881336ce44bae.mp4",
+    real: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cbb415c1881d7dfe44d24.mp4",
+    thumbSimplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cc6ad6f6d4c9afe557692.png",
+    thumbReal: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cc65a97c051e4eecc293d.png",
+  },
+  {
+    slug: "power-dialer",
+    name: "Power Dialer",
+    simplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cbbae5c188128dce45bd6.mp4",
+    real: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cbb77ac5927ae624a27b6.mp4",
+    thumbSimplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cc75a0a51c8b37ec875db.png",
+    thumbReal: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cc7a6006d9035bc02d443.png",
+  },
+  {
+    slug: "reporting",
+    name: "Reporting",
+    simplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cbc18d80f5cb2d7380b94.mp4",
+    real: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cbc301aab930c241d6ca0.mp4",
+    thumbSimplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cc8315c1881547de65b01.png",
+    thumbReal: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cc7e9006d9045ed02e055.png",
+  },
+  {
+    slug: "reputation-management",
+    name: "Reputation Management",
+    simplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cbc571aab93674f1d7197.mp4",
+    real: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cbc467b02cf6ede8c214f.mp4",
+    thumbSimplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cc89e006d909d1202faeb.png",
+    thumbReal: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cc8df0beb166f08628698.png",
+  },
+  {
+    slug: "social-media-planner",
+    name: "Social Media Planner",
+    simplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cbcb2ac592732e04a5daf.mp4",
+    real: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cbcbd6f6d4c01c053c789.mp4",
+    thumbSimplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cca03ac592708c74c93e9.png",
+    thumbReal: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cc9415c18812c5de68dfe.png",
+  },
+  {
+    slug: "voice-ai",
+    name: "Voice Ai",
+    simplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cbd056f6d4c8b9153d288.mp4",
+    real: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cbcf56f6d4c2b9a53d0c1.mp4",
+    thumbSimplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690ccbab2e1faa1ff6b92dd6.png",
+    thumbReal: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690ccb560a51c8f279c92212.png",
+  },
+  {
+    slug: "funnel-and-website-builder",
+    name: "Funnel and Website Builder",
+    simplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/6980d76118ecce2bdc235772.mp4",
+    real: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/6980d7871fd8276257bcb944.mp4",
+    thumbSimplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/6980d8aa7675773d563b9c1a.png",
+    thumbReal: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/6980d82918eccee50223866f.png",
+  },
+];
+
+/* ---------------------------------------------------------------- */
+/* The Complete Video Stack: the everything bundle, 53 branded videos
+ * across five formats at one price. A pack tab of its own, sold on
+ * order.ghlvideo.com/highlevel-video-stack. Per-format "value" figures
+ * are the anchor the live sales page frames the $1,995 against. */
+export type StackFormat = {
+  name: string;
+  count: number;
+  value: number;
+  sampleType: OldVideoType;
+};
+
+export const videoStack = {
+  slug: "stack",
+  name: "Complete Video Stack",
+  tagline:
+    "The everything bundle: 53 custom-branded videos across every format your HighLevel SaaS needs, from homepage explainer to feature animations. One order, live in 10 days.",
+  price: 1995,
+  anchorPrice: 55000,
+  totalCount: 53,
+  deliveryDays: 10,
+  orderUrl: "https://order.ghlvideo.com/highlevel-video-stack",
+  preview:
+    "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/69ac022b618c8d761f4a667b.mp4",
+  formats: [
+    { name: "Explainer Videos", count: 2, value: 5000, sampleType: "Explainer" },
+    { name: "Demo Video", count: 1, value: 7000, sampleType: "Demo" },
+    { name: "Short Explainer Videos", count: 20, value: 20000, sampleType: "Short Explainer" },
+    { name: "Marketing Videos", count: 15, value: 15000, sampleType: "Marketing" },
+    { name: "Feature Animations", count: 15, value: 8000, sampleType: "Feature Animation" },
+  ] as StackFormat[],
+};

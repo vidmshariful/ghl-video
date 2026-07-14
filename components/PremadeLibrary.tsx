@@ -7,11 +7,13 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { MediaFrame } from "@/components/MediaFrame";
 import {
   cta,
+  featureAnimations,
   oldVideos,
   oldVideoTypes,
   premadeBySlugTitle,
   premadePacks,
   premadeVideos,
+  videoStack,
   type PackVideo,
   type PremadePack,
 } from "@/lib/site";
@@ -29,6 +31,10 @@ type BrowseVideo = {
   wistiaId: string | null;
   subtitle: string | null;
   packCount: number | null;
+  /* feature animations ship in two cuts and aren't sold on their own */
+  realPreview: string | null;
+  realPoster: string | null;
+  previewOnly: boolean;
   orderUrl: string;
 };
 
@@ -37,6 +43,9 @@ type FilterDef = {
   options: readonly string[];
   on: "typeTag" | "subTag";
 };
+
+/* feature animations exist in two cuts the buyer toggles between */
+type Version = "simplified" | "real";
 
 const newReady: BrowseVideo[] = premadeVideos
   .filter((v) => !v.comingSoon && v.preview)
@@ -51,6 +60,9 @@ const newReady: BrowseVideo[] = premadeVideos
     wistiaId: null,
     subtitle: null,
     packCount: null,
+    realPreview: null,
+    realPoster: null,
+    previewOnly: false,
     orderUrl: v.orderUrl,
   }));
 
@@ -59,7 +71,7 @@ const newGroups: FilterDef[] = [
   { label: "Capability", options: [...new Set(newReady.map((v) => v.subTag))], on: "subTag" },
 ];
 
-const oldBrowse: BrowseVideo[] = oldVideos.map((v) => ({
+const oldClassic: BrowseVideo[] = oldVideos.map((v) => ({
   slug: v.slug,
   title: v.title,
   typeTag: v.type,
@@ -70,8 +82,33 @@ const oldBrowse: BrowseVideo[] = oldVideos.map((v) => ({
   wistiaId: v.wistiaId ?? null,
   subtitle: v.subtitle ?? null,
   packCount: v.packCount ?? null,
+  realPreview: null,
+  realPoster: null,
+  previewOnly: false,
   orderUrl: v.orderUrl,
 }));
+
+/* the 23 feature animations, each a two-cut preview (Simplified / Real
+ * UI). Bundled in the packs, so no single price or checkout. */
+const featureBrowse: BrowseVideo[] = featureAnimations.map((f) => ({
+  slug: `fa-${f.slug}`,
+  title: f.name,
+  typeTag: "Feature Animation",
+  subTag: "Pre-2026",
+  price: 0,
+  preview: f.simplified,
+  poster: f.thumbSimplified,
+  wistiaId: null,
+  subtitle: f.real ? "Simplified and Real UI" : "Simplified UI",
+  packCount: null,
+  realPreview: f.real,
+  realPoster: f.thumbReal,
+  previewOnly: true,
+  orderUrl: "https://order.ghlvideo.com/feature-animations-15",
+}));
+
+/* packs first (buyable), then the feature previews under the same filter */
+const oldBrowse: BrowseVideo[] = [...oldClassic, ...featureBrowse];
 
 const oldGroups: FilterDef[] = [
   { label: "Video type", options: oldVideoTypes, on: "typeTag" },
@@ -213,19 +250,157 @@ function PackTile({ count }: { count: number }) {
   );
 }
 
+/* Simplified UI vs Real UI segmented control, gold accent for the
+ * active cut. Stops propagation so a card toggle never opens the card. */
+function VersionToggle({
+  version,
+  onChange,
+}: {
+  version: Version;
+  onChange: (v: Version) => void;
+}) {
+  const opts: [Version, string][] = [
+    ["simplified", "Simplified UI"],
+    ["real", "Real UI"],
+  ];
+  return (
+    <div
+      role="tablist"
+      aria-label="UI version"
+      className="inline-flex rounded-[3px] border border-hair bg-surface/90 p-0.5 backdrop-blur-sm"
+    >
+      {opts.map(([v, label]) => {
+        const active = version === v;
+        return (
+          <button
+            key={v}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={(e) => {
+              e.stopPropagation();
+              onChange(v);
+            }}
+            className={`rounded-[2px] px-2.5 py-1 font-mono text-[0.6875rem] uppercase tracking-[0.1em] transition-colors ${
+              active
+                ? "bg-gold/15 font-semibold text-gold"
+                : "text-muted hover:text-ink"
+            }`}
+          >
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* One card for every library row. Wistia classics get a poster+play;
+ * mp4 classics get the hover frame; feature animations get a two-cut
+ * toggle and no single price; feature packs get the typographic tile. */
+function LibraryCard({
+  video,
+  onPreview,
+}: {
+  video: BrowseVideo;
+  onPreview: (v: BrowseVideo, version: Version) => void;
+}) {
+  const [version, setVersion] = useState<Version>("simplified");
+  const twoCut = video.previewOnly && video.realPreview;
+  const src =
+    twoCut && version === "real" && video.realPreview
+      ? video.realPreview
+      : video.preview;
+  const poster =
+    twoCut && version === "real" && video.realPoster
+      ? video.realPoster
+      : video.poster;
+
+  return (
+    <div className="group/card">
+      {video.wistiaId && video.poster ? (
+        <PosterPlay video={video} onOpen={() => onPreview(video, "simplified")} />
+      ) : video.preview ? (
+        <div className="relative">
+          <MediaFrame
+            key={version}
+            src={src ?? video.preview}
+            poster={poster}
+            label={video.title}
+            tint="gold"
+            interactive={false}
+            rounded="rounded-none"
+            caption={{ title: video.typeTag, sub: video.subTag }}
+          />
+          {twoCut && (
+            <div className="absolute left-2 top-2 z-20">
+              <VersionToggle version={version} onChange={setVersion} />
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => onPreview(video, version)}
+            aria-label={`Preview: ${video.title}`}
+            aria-haspopup="dialog"
+            className="absolute inset-0 z-10 cursor-pointer focus-visible:outline-offset-[-4px]"
+          />
+        </div>
+      ) : video.packCount ? (
+        <PackTile count={video.packCount} />
+      ) : (
+        <div className="flex aspect-video items-center justify-center border border-hair bg-[#030303]">
+          <span className="font-mono text-label uppercase text-dim">
+            [ Preview coming ]
+          </span>
+        </div>
+      )}
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-hair px-1 pb-4 pt-3.5">
+        <div className="min-w-0">
+          <h3 className="font-display text-[1.0625rem] font-semibold tracking-[-0.01em] text-ink">
+            {video.title}
+          </h3>
+          <p className="mt-0.5 font-mono text-label uppercase text-dim">
+            {video.subtitle ?? video.typeTag}
+          </p>
+        </div>
+        {video.previewOnly ? (
+          <span className="font-mono text-label uppercase text-dim">
+            In every pack
+          </span>
+        ) : (
+          <div className="flex items-center gap-4">
+            <Price value={video.price} />
+            <BuyVideoLink video={video} />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ---------------------------------------------------------------- */
 /* Preview lightbox with a single-video buy bar                       */
 /* ---------------------------------------------------------------- */
 
 function PreviewLightbox({
   video,
+  initialVersion = "simplified",
   onClose,
 }: {
   video: BrowseVideo;
+  initialVersion?: Version;
   onClose: () => void;
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const hasReal = Boolean(video.realPreview);
+  const [version, setVersion] = useState<Version>(
+    hasReal ? initialVersion : "simplified",
+  );
+  const src =
+    version === "real" && video.realPreview ? video.realPreview : video.preview;
+  const poster =
+    version === "real" && video.realPoster ? video.realPoster : video.poster;
 
   useEffect(() => {
     const prev = document.activeElement as HTMLElement | null;
@@ -271,6 +446,11 @@ function PreviewLightbox({
             />
           </svg>
         </button>
+        {hasReal && (
+          <div className="mb-3 flex justify-center">
+            <VersionToggle version={version} onChange={setVersion} />
+          </div>
+        )}
         {video.wistiaId ? (
           <div className="aspect-video w-full border border-[#2b2f40] bg-black">
             <iframe
@@ -283,28 +463,51 @@ function PreviewLightbox({
           </div>
         ) : (
           <video
+            key={src ?? video.slug}
             ref={videoRef}
-            src={video.preview ?? undefined}
-            poster={video.poster ?? undefined}
+            src={src ?? undefined}
+            poster={poster ?? undefined}
             controls
+            autoPlay
             playsInline
             className="aspect-video w-full border border-[#2b2f40] bg-black"
           />
         )}
         {/* the buy bar: the preview closes with the action in reach */}
         <div className="flex flex-wrap items-center justify-between gap-4 border border-t-0 border-[#2b2f40] bg-[#111219] px-5 py-4">
-          <div>
-            <p className="font-display text-[1.0625rem] font-semibold text-[#EEF0F6]">
-              {video.title}
-            </p>
-            <p className="mt-0.5 text-sm text-[#9096A8]">
-              Make it yours, branded to you.{" "}
-              <span className="font-mono font-semibold text-gold">
-                ${video.price.toLocaleString("en-US")} one-time
-              </span>
-            </p>
-          </div>
-          <BuyVideoLink video={video} className="px-6 py-3 text-sm" />
+          {video.previewOnly ? (
+            <>
+              <div>
+                <p className="font-display text-[1.0625rem] font-semibold text-[#EEF0F6]">
+                  {video.title}
+                </p>
+                <p className="mt-0.5 text-sm text-[#9096A8]">
+                  Included in every feature-animation pack, branded to your
+                  platform.
+                </p>
+              </div>
+              <BuyVideoLink
+                video={video}
+                label="See the packs"
+                className="px-6 py-3 text-sm"
+              />
+            </>
+          ) : (
+            <>
+              <div>
+                <p className="font-display text-[1.0625rem] font-semibold text-[#EEF0F6]">
+                  {video.title}
+                </p>
+                <p className="mt-0.5 text-sm text-[#9096A8]">
+                  Make it yours, branded to you.{" "}
+                  <span className="font-mono font-semibold text-gold">
+                    ${video.price.toLocaleString("en-US")} one-time
+                  </span>
+                </p>
+              </div>
+              <BuyVideoLink video={video} className="px-6 py-3 text-sm" />
+            </>
+          )}
         </div>
       </div>
     </div>,
@@ -370,7 +573,10 @@ function VideoBrowser({
 }) {
   const reduced = useReducedMotion();
   const [sel, setSel] = useState<Record<string, string | null>>({});
-  const [preview, setPreview] = useState<BrowseVideo | null>(null);
+  const [preview, setPreview] = useState<{
+    video: BrowseVideo;
+    version: Version;
+  } | null>(null);
 
   const shown = videos.filter((v) =>
     groups.every((g) => !sel[g.label] || v[g.on] === sel[g.label]),
@@ -436,55 +642,12 @@ function VideoBrowser({
                       exit={reduced ? undefined : { opacity: 0, scale: 0.985 }}
                       transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
                     >
-                      <div className="group/card">
-                        {video.wistiaId && video.poster ? (
-                          <PosterPlay
-                            video={video}
-                            onOpen={() => setPreview(video)}
-                          />
-                        ) : video.preview ? (
-                          <div className="relative">
-                            <MediaFrame
-                              src={video.preview}
-                              poster={video.poster}
-                              label={video.title}
-                              tint="gold"
-                              interactive={false}
-                              rounded="rounded-none"
-                              caption={{ title: video.typeTag, sub: video.subTag }}
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setPreview(video)}
-                              aria-label={`Preview: ${video.title}`}
-                              aria-haspopup="dialog"
-                              className="absolute inset-0 z-10 cursor-pointer focus-visible:outline-offset-[-4px]"
-                            />
-                          </div>
-                        ) : video.packCount ? (
-                          <PackTile count={video.packCount} />
-                        ) : (
-                          <div className="flex aspect-video items-center justify-center border border-hair bg-[#030303]">
-                            <span className="font-mono text-label uppercase text-dim">
-                              [ Preview coming ]
-                            </span>
-                          </div>
-                        )}
-                        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-hair px-1 pb-4 pt-3.5">
-                          <div className="min-w-0">
-                            <h3 className="font-display text-[1.0625rem] font-semibold tracking-[-0.01em] text-ink">
-                              {video.title}
-                            </h3>
-                            <p className="mt-0.5 font-mono text-label uppercase text-dim">
-                              {video.subtitle ?? video.typeTag}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <Price value={video.price} />
-                            <BuyVideoLink video={video} />
-                          </div>
-                        </div>
-                      </div>
+                      <LibraryCard
+                        video={video}
+                        onPreview={(v, version) =>
+                          setPreview({ video: v, version })
+                        }
+                      />
                     </motion.div>
                   ))}
                 </AnimatePresence>
@@ -495,7 +658,11 @@ function VideoBrowser({
       </div>
 
       {preview && (
-        <PreviewLightbox video={preview} onClose={() => setPreview(null)} />
+        <PreviewLightbox
+          video={preview.video}
+          initialVersion={preview.version}
+          onClose={() => setPreview(null)}
+        />
       )}
     </div>
   );
@@ -722,6 +889,124 @@ function PackPlaylist({ pack }: { pack: PremadePack }) {
 }
 
 /* ---------------------------------------------------------------- */
+/* Stack view: the everything bundle, sold as one                     */
+/* ---------------------------------------------------------------- */
+
+function VideoStackView() {
+  const s = videoStack;
+  const posterFor = (t: string) =>
+    oldClassic.find((v) => v.typeTag === t && v.poster)?.poster ??
+    featureBrowse.find((v) => v.poster)?.poster ??
+    null;
+
+  return (
+    <div>
+      {/* header band: value anchor + one CTA */}
+      <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-5 border-b border-hair px-5 py-6 md:px-7">
+        <div className="max-w-[60ch]">
+          <p className="font-display text-h3 text-ink">{s.name}</p>
+          <p className="mt-1.5 text-sm leading-relaxed text-muted">
+            {s.tagline}
+          </p>
+        </div>
+        <div className="flex items-center gap-5">
+          <span className="hidden font-mono text-label uppercase text-muted sm:inline">
+            [ {s.totalCount} videos ]
+          </span>
+          <span className="flex items-baseline gap-2">
+            <span className="font-mono text-[0.9375rem] text-dim line-through [font-variant-numeric:tabular-nums]">
+              ${s.anchorPrice.toLocaleString("en-US")}
+            </span>
+            <span className="font-mono text-[1.5rem] font-bold text-gold [font-variant-numeric:tabular-nums]">
+              ${s.price.toLocaleString("en-US")}
+            </span>
+          </span>
+          <a
+            href={s.orderUrl}
+            target="_blank"
+            rel="noopener"
+            className="group inline-flex items-center gap-2 whitespace-nowrap rounded-[3px] bg-brand-gradient px-6 py-3 text-sm font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.28)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98]"
+          >
+            Get the stack
+            <span
+              aria-hidden="true"
+              className="transition-transform duration-200 group-hover:translate-x-0.5"
+            >
+              &rarr;
+            </span>
+          </a>
+        </div>
+      </div>
+
+      {/* body: overview preview + the five formats inside */}
+      <div className="grid lg:grid-cols-[1.35fr_1fr]">
+        <div className="border-b border-hair p-5 md:p-7 lg:border-b-0 lg:border-r">
+          <p className="mb-3 font-mono text-label uppercase text-dim">
+            [ Watch before you buy ]
+          </p>
+          <video
+            src={s.preview}
+            controls
+            playsInline
+            preload="metadata"
+            className="aspect-video w-full border border-hair bg-black"
+          />
+          <p className="mt-3 text-sm text-muted">
+            The complete overview explainer. Every format below, branded to
+            your platform and delivered in {s.deliveryDays} days.
+          </p>
+        </div>
+
+        <div className="p-5 md:p-7">
+          <p className="mb-3 font-mono text-label uppercase text-dim">
+            [ What&rsquo;s inside ]
+          </p>
+          <ul className="grid gap-px overflow-hidden rounded-[3px] border border-hair bg-hair">
+            {s.formats.map((f) => {
+              const poster = posterFor(f.sampleType);
+              return (
+                <li
+                  key={f.name}
+                  className="flex items-center gap-4 bg-canvas p-3.5"
+                >
+                  <span className="relative block h-12 w-20 shrink-0 overflow-hidden rounded-[2px] border border-hair bg-black">
+                    {poster ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- static export, remote poster
+                      <img
+                        src={poster}
+                        alt=""
+                        loading="lazy"
+                        className="h-full w-full object-cover opacity-85"
+                      />
+                    ) : null}
+                    <span className="absolute inset-0 flex items-center justify-center font-mono text-[0.9375rem] font-bold text-gradient [font-variant-numeric:tabular-nums]">
+                      {f.count}
+                    </span>
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-display text-[0.9375rem] font-semibold text-ink">
+                      {f.count}
+                      {"× "}
+                      {f.name}
+                    </span>
+                    <span className="mt-0.5 block font-mono text-[0.625rem] uppercase tracking-[0.14em] text-dim">
+                      value ${f.value.toLocaleString("en-US")}
+                    </span>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+          <p className="mt-4 font-mono text-label uppercase text-dim">
+            {s.totalCount} videos. One order. No contracts.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------- */
 /* The library shell                                                  */
 /* ---------------------------------------------------------------- */
 
@@ -732,6 +1017,7 @@ export function PremadeLibrary() {
   const tabs = [
     { slug: "new", label: "All New Videos", count: newReady.length as number | null },
     ...premadePacks.map((p) => ({ slug: p.slug, label: p.name, count: p.count })),
+    { slug: videoStack.slug, label: videoStack.name, count: videoStack.totalCount as number | null },
     { slug: "old", label: "Classic Library", count: oldBrowse.length as number | null },
   ];
 
@@ -799,6 +1085,8 @@ export function PremadeLibrary() {
       <div className="mt-8 border border-hair bg-canvas">
         {activePack ? (
           <PackPlaylist pack={activePack} />
+        ) : view === videoStack.slug ? (
+          <VideoStackView />
         ) : view === "old" ? (
           <VideoBrowser
             videos={oldBrowse}
