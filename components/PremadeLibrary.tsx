@@ -7,14 +7,66 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { MediaFrame } from "@/components/MediaFrame";
 import {
   cta,
+  oldVideos,
+  oldVideoTypes,
   premadeBySlugTitle,
-  premadeFilterGroups,
   premadePacks,
   premadeVideos,
   type PackVideo,
   type PremadePack,
-  type PremadeVideo,
 } from "@/lib/site";
+
+/* a common shape both the new catalog and the classic library browse
+ * through: a card, a price, a preview, and a real order link */
+type BrowseVideo = {
+  slug: string;
+  title: string;
+  typeTag: string;
+  subTag: string;
+  price: number;
+  preview: string | null;
+  poster: string | null;
+  orderUrl: string;
+};
+
+type FilterDef = {
+  label: string;
+  options: readonly string[];
+  on: "typeTag" | "subTag";
+};
+
+const newReady: BrowseVideo[] = premadeVideos
+  .filter((v) => !v.comingSoon && v.preview)
+  .map((v) => ({
+    slug: v.slug,
+    title: v.title,
+    typeTag: v.type,
+    subTag: v.capability,
+    price: v.price,
+    preview: v.preview,
+    poster: v.poster,
+    orderUrl: v.orderUrl,
+  }));
+
+const newGroups: FilterDef[] = [
+  { label: "Video type", options: [...new Set(newReady.map((v) => v.typeTag))], on: "typeTag" },
+  { label: "Capability", options: [...new Set(newReady.map((v) => v.subTag))], on: "subTag" },
+];
+
+const oldBrowse: BrowseVideo[] = oldVideos.map((v) => ({
+  slug: v.slug,
+  title: v.title,
+  typeTag: v.type,
+  subTag: "Pre-2026",
+  price: v.price,
+  preview: v.preview,
+  poster: v.poster,
+  orderUrl: v.orderUrl,
+}));
+
+const oldGroups: FilterDef[] = [
+  { label: "Video type", options: oldVideoTypes, on: "typeTag" },
+];
 
 /*
  * The premade library: the home for every video and pack. The view
@@ -34,7 +86,7 @@ function BuyVideoLink({
   label = "Buy now",
   className = "",
 }: {
-  video: PremadeVideo;
+  video: { orderUrl: string };
   label?: string;
   className?: string;
 }) {
@@ -102,7 +154,7 @@ function PreviewLightbox({
   video,
   onClose,
 }: {
-  video: PremadeVideo;
+  video: BrowseVideo;
   onClose: () => void;
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -228,135 +280,131 @@ function FilterGroup({
   );
 }
 
-function AllBrowser() {
+function VideoBrowser({
+  videos,
+  groups,
+  note,
+}: {
+  videos: BrowseVideo[];
+  groups: FilterDef[];
+  note?: string;
+}) {
   const reduced = useReducedMotion();
-  const [type, setType] = useState<string | null>(null);
-  const [capability, setCapability] = useState<string | null>(null);
-  const [preview, setPreview] = useState<PremadeVideo | null>(null);
+  const [sel, setSel] = useState<Record<string, string | null>>({});
+  const [preview, setPreview] = useState<BrowseVideo | null>(null);
 
-  const shown = premadeVideos.filter(
-    (v) =>
-      (!type || v.type === type) &&
-      (!capability || v.capability === capability),
+  const shown = videos.filter((v) =>
+    groups.every((g) => !sel[g.label] || v[g.on] === sel[g.label]),
   );
-  const filtered = type || capability;
+  const filtered = groups.some((g) => sel[g.label]);
 
   return (
-    <div className="grid lg:grid-cols-[15.5rem_1fr]">
-      {/* sidebar */}
-      <aside className="border-b border-hair lg:border-b-0 lg:border-r">
-        <FilterGroup
-          label="Video type"
-          options={premadeFilterGroups.type}
-          active={type}
-          onPick={setType}
-        />
-        <FilterGroup
-          label="Capability"
-          options={premadeFilterGroups.capability}
-          active={capability}
-          onPick={setCapability}
-        />
-      </aside>
+    <div>
+      {note && (
+        <p className="border-b border-hair px-5 py-3.5 text-sm text-muted md:px-7">
+          {note}
+        </p>
+      )}
+      <div className="grid lg:grid-cols-[15.5rem_1fr]">
+        {/* sidebar */}
+        <aside className="border-b border-hair lg:border-b-0 lg:border-r">
+          {groups.map((g) => (
+            <FilterGroup
+              key={g.label}
+              label={g.label}
+              options={g.options}
+              active={sel[g.label] ?? null}
+              onPick={(val) => setSel((s) => ({ ...s, [g.label]: val }))}
+            />
+          ))}
+        </aside>
 
-      {/* results */}
-      <div className="flex min-w-0 flex-col">
-        <div className="flex items-center justify-between gap-4 border-b border-hair px-5 py-3">
-          <p className="font-mono text-label uppercase text-muted">
-            {shown.length} {shown.length === 1 ? "video" : "videos"}
-          </p>
-          {filtered && (
-            <button
-              type="button"
-              onClick={() => {
-                setType(null);
-                setCapability(null);
-              }}
-              className="font-mono text-label uppercase text-dim transition-colors hover:text-gold"
-            >
-              [ Clear filters ]
-            </button>
-          )}
-        </div>
-        <div className="max-h-[44rem] overflow-y-auto p-5">
-          {shown.length === 0 ? (
-            <div className="flex h-64 items-center justify-center">
-              <p className="font-mono text-label uppercase text-dim">
-                [ No videos match. Clear a filter. ]
-              </p>
-            </div>
-          ) : (
-            <motion.div
-              layout={!reduced}
-              className="grid gap-x-5 gap-y-8 md:grid-cols-2"
-            >
-              <AnimatePresence mode="popLayout" initial={false}>
-                {shown.map((video) => (
-                  <motion.div
-                    key={video.slug}
-                    layout={!reduced}
-                    initial={reduced ? false : { opacity: 0, scale: 0.985 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={reduced ? undefined : { opacity: 0, scale: 0.985 }}
-                    transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-                  >
-                    <div className="group/card">
-                      {video.comingSoon || !video.preview ? (
-                        <div className="relative flex aspect-video items-center justify-center overflow-hidden border border-hair bg-surface">
-                          <div
-                            aria-hidden="true"
-                            className="absolute inset-0 hatch opacity-40"
-                          />
-                          <span className="relative rounded-full border border-hair bg-canvas px-3 py-1.5 font-mono text-label uppercase text-dim">
-                            Coming soon
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="relative">
-                          <MediaFrame
-                            src={video.preview}
-                            poster={video.poster}
-                            label={video.title}
-                            tint="gold"
-                            interactive={false}
-                            rounded="rounded-none"
-                            caption={{ title: video.type, sub: video.capability }}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setPreview(video)}
-                            aria-label={`Preview: ${video.title}`}
-                            aria-haspopup="dialog"
-                            className="absolute inset-0 z-10 cursor-pointer focus-visible:outline-offset-[-4px]"
-                          />
-                        </div>
-                      )}
-                      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-hair px-1 pb-4 pt-3.5">
-                        <div className="min-w-0">
-                          <h3 className="font-display text-[1.0625rem] font-semibold tracking-[-0.01em] text-ink">
-                            {video.title}
-                          </h3>
-                          <p className="mt-0.5 font-mono text-label uppercase text-dim">
-                            {video.format}
-                          </p>
-                        </div>
-                        {video.comingSoon || !video.preview ? (
-                          <span className="font-mono text-label uppercase text-dim">
-                            In production
-                          </span>
+        {/* results */}
+        <div className="flex min-w-0 flex-col">
+          <div className="flex items-center justify-between gap-4 border-b border-hair px-5 py-3">
+            <p className="font-mono text-label uppercase text-muted">
+              {shown.length} {shown.length === 1 ? "video" : "videos"}
+            </p>
+            {filtered && (
+              <button
+                type="button"
+                onClick={() => setSel({})}
+                className="font-mono text-label uppercase text-dim transition-colors hover:text-gold"
+              >
+                [ Clear filters ]
+              </button>
+            )}
+          </div>
+          <div className="max-h-[44rem] overflow-y-auto p-5">
+            {shown.length === 0 ? (
+              <div className="flex h-64 items-center justify-center">
+                <p className="font-mono text-label uppercase text-dim">
+                  [ No videos match. Clear a filter. ]
+                </p>
+              </div>
+            ) : (
+              <motion.div
+                layout={!reduced}
+                className="grid gap-x-5 gap-y-8 md:grid-cols-2"
+              >
+                <AnimatePresence mode="popLayout" initial={false}>
+                  {shown.map((video) => (
+                    <motion.div
+                      key={video.slug}
+                      layout={!reduced}
+                      initial={reduced ? false : { opacity: 0, scale: 0.985 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={reduced ? undefined : { opacity: 0, scale: 0.985 }}
+                      transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                    >
+                      <div className="group/card">
+                        {video.preview ? (
+                          <div className="relative">
+                            <MediaFrame
+                              src={video.preview}
+                              poster={video.poster}
+                              label={video.title}
+                              tint="gold"
+                              interactive={false}
+                              rounded="rounded-none"
+                              caption={{ title: video.typeTag, sub: video.subTag }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setPreview(video)}
+                              aria-label={`Preview: ${video.title}`}
+                              aria-haspopup="dialog"
+                              className="absolute inset-0 z-10 cursor-pointer focus-visible:outline-offset-[-4px]"
+                            />
+                          </div>
                         ) : (
+                          <div className="flex aspect-video items-center justify-center border border-hair bg-[#030303]">
+                            <span className="font-mono text-label uppercase text-dim">
+                              [ Preview coming ]
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-hair px-1 pb-4 pt-3.5">
+                          <div className="min-w-0">
+                            <h3 className="font-display text-[1.0625rem] font-semibold tracking-[-0.01em] text-ink">
+                              {video.title}
+                            </h3>
+                            <p className="mt-0.5 font-mono text-label uppercase text-dim">
+                              {video.typeTag}
+                            </p>
+                          </div>
                           <div className="flex items-center gap-4">
                             <Price value={video.price} />
                             <BuyVideoLink video={video} />
                           </div>
-                        )}
+                        </div>
                       </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </motion.div>
-          )}
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </motion.div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -592,12 +640,13 @@ function PackPlaylist({ pack }: { pack: PremadePack }) {
 /* ---------------------------------------------------------------- */
 
 export function PremadeLibrary() {
-  const [view, setView] = useState<string>("all");
+  const [view, setView] = useState<string>("new");
   const activePack = premadePacks.find((p) => p.slug === view);
 
   const tabs = [
-    { slug: "all", label: "All videos", count: premadeVideos.length as number | null },
+    { slug: "new", label: "All New Videos", count: newReady.length as number | null },
     ...premadePacks.map((p) => ({ slug: p.slug, label: p.name, count: p.count })),
+    { slug: "old", label: "Classic Library", count: oldBrowse.length as number | null },
   ];
 
   return (
@@ -662,7 +711,17 @@ export function PremadeLibrary() {
 
       {/* the instrument panel: square, hairline-framed */}
       <div className="mt-8 border border-hair bg-canvas">
-        {activePack ? <PackPlaylist pack={activePack} /> : <AllBrowser />}
+        {activePack ? (
+          <PackPlaylist pack={activePack} />
+        ) : view === "old" ? (
+          <VideoBrowser
+            videos={oldBrowse}
+            groups={oldGroups}
+            note="Produced before HighLevel's 2026 refresh. Most still brand cleanly, at the original prices and checkout links."
+          />
+        ) : (
+          <VideoBrowser videos={newReady} groups={newGroups} />
+        )}
       </div>
     </div>
   );
