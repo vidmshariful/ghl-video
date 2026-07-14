@@ -20,7 +20,7 @@ export function EmbedSlot({
       <div className="px-8 py-16 text-center">
         <p className="inline-flex items-center gap-3 rounded-full border border-hair bg-surface px-4 py-2 font-mono text-label uppercase">
           <span className="text-dim">
-            [ <span className="text-green">LeadConnector</span> ]
+            [ <span className="text-gold">LeadConnector</span> ]
           </span>
           <span className="text-muted">{label}</span>
         </p>

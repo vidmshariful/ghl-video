@@ -43,7 +43,7 @@ function BuyVideoLink({
       href={video.orderUrl}
       target="_blank"
       rel="noopener"
-      className={`group/btn inline-flex items-center gap-1.5 whitespace-nowrap rounded-[3px] bg-green px-4 py-2 text-[0.8125rem] font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] transition-all duration-200 hover:brightness-110 active:scale-[0.98] ${className}`}
+      className={`group/btn inline-flex items-center gap-1.5 whitespace-nowrap rounded-[3px] bg-brand-gradient px-4 py-2 text-[0.8125rem] font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] transition-all duration-200 hover:brightness-110 active:scale-[0.98] ${className}`}
     >
       {label}
       <span
@@ -61,7 +61,7 @@ function GetPackLink({ pack }: { pack: PremadePack }) {
     return (
       <Link
         href={cta.bookACall.href}
-        className="group inline-flex items-center gap-2 whitespace-nowrap rounded-[3px] bg-green px-6 py-3 text-sm font-semibold text-[#08090D] transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
+        className="group inline-flex items-center gap-2 whitespace-nowrap rounded-[3px] bg-brand-gradient px-6 py-3 text-sm font-semibold text-[#08090D] transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
       >
         {cta.bookACall.label}
         <span aria-hidden="true">&rarr;</span>
@@ -141,7 +141,7 @@ function PreviewLightbox({
           type="button"
           onClick={onClose}
           aria-label="Close video"
-          className="absolute -top-12 right-0 flex h-10 w-10 items-center justify-center rounded-[3px] border border-[#2b2f40] bg-[#111219] text-[#EEF0F6] transition-colors hover:border-green"
+          className="absolute -top-12 right-0 flex h-10 w-10 items-center justify-center rounded-[3px] border border-[#2b2f40] bg-[#111219] text-[#EEF0F6] transition-colors hover:border-gold"
         >
           <svg viewBox="0 0 12 12" className="h-3.5 w-3.5" aria-hidden="true">
             <path

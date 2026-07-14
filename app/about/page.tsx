@@ -195,7 +195,7 @@ export default function AboutPage() {
                       href={b.url}
                       target="_blank"
                       rel="noopener"
-                      className="inline-flex items-center gap-2 rounded-full border border-hair bg-surface px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-blue/50 hover:text-blue"
+                      className="inline-flex items-center gap-2 rounded-full border border-hair bg-surface px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/50 hover:text-gold"
                     >
                       {b.name}
                       <span aria-hidden="true">&rarr;</span>

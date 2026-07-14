@@ -1,12 +1,6 @@
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { SectionChip, type ChipAccent } from "@/components/SectionChip";
 
-const accentText: Record<ChipAccent, string> = {
-  gold: "text-gold",
-  green: "text-green",
-  blue: "text-blue",
-};
-
 /*
  * The recurring section header: numbered chip, display headline with
  * one accented phrase, optional intro line. One component so every
@@ -39,7 +33,7 @@ export function SectionHead({
           }`}
         >
           {headline}{" "}
-          <span className={accentText[accentColor]}>{accent}</span>
+          <span className="text-gradient">{accent}</span>
         </h2>
         {intro && (
           <p

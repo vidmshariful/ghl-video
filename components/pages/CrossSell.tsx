@@ -5,8 +5,8 @@ import type { ChipAccent } from "@/components/SectionChip";
 
 const accentText: Record<ChipAccent, string> = {
   gold: "text-gold",
-  green: "text-green",
-  blue: "text-blue",
+  green: "text-gold",
+  blue: "text-gold",
 };
 
 /*

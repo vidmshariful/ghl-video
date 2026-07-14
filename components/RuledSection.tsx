@@ -2,12 +2,6 @@ import type { ReactNode } from "react";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { SectionChip, type ChipAccent } from "@/components/SectionChip";
 
-const accentText: Record<ChipAccent, string> = {
-  gold: "text-gold",
-  green: "text-green",
-  blue: "text-blue",
-};
-
 /*
  * Ruled section: a square hairline box whose top and bottom rules run
  * the full viewport width, like a drawing pinned into the page grid.
@@ -52,7 +46,7 @@ export function RuledSection({
               <SectionChip index={index} label={chip} />
               <h2 className="mx-auto mt-6 max-w-[26ch] font-display text-h2 text-ink">
                 {headline}{" "}
-                <span className={accentText[accentColor]}>{accent}</span>
+                <span className="text-gradient">{accent}</span>
               </h2>
               {intro && (
                 <p className="mx-auto mt-5 max-w-[52ch] text-lede text-muted">

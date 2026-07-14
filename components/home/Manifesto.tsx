@@ -32,7 +32,7 @@ export function Manifesto() {
                 <p className="mt-6 max-w-[26ch] font-display text-[clamp(1.5rem,2.9vw,2.375rem)] font-semibold leading-[1.18] tracking-tight text-ink">
                   {before}
                   {idx >= 0 && (
-                    <span className="text-gold">{manifesto.emphasis}</span>
+                    <span className="text-gradient">{manifesto.emphasis}</span>
                   )}
                   {after}
                 </p>
@@ -57,7 +57,7 @@ export function Manifesto() {
                   </p>
                 </div>
                 <div className="flex flex-1 flex-col justify-center bg-canvas p-8 md:p-10">
-                  <p className="font-mono text-label uppercase text-green">
+                  <p className="font-mono text-label uppercase text-gold">
                     What they could see
                   </p>
                   <p className="mt-3 flex items-baseline gap-2.5 text-[0.9375rem] font-medium text-ink">
@@ -69,7 +69,7 @@ export function Manifesto() {
                       <path
                         d="M2 6.2 4.8 9 10 3.4"
                         fill="none"
-                        stroke="#00CC00"
+                        stroke="#FCC000"
                         strokeWidth="1.8"
                         strokeLinecap="round"
                         strokeLinejoin="round"

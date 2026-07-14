@@ -50,7 +50,7 @@ export function ClosingCta() {
                   Publishing weekly?{" "}
                   <Link
                     href="/editing/"
-                    className="group inline-flex items-center gap-1.5 font-semibold text-blue"
+                    className="group inline-flex items-center gap-1.5 font-semibold text-gold"
                   >
                     See video editing
                     <span
@@ -70,7 +70,7 @@ export function ClosingCta() {
                     key={step.title}
                     className="flex flex-1 items-start gap-4 bg-canvas p-6 md:p-8"
                   >
-                    <span className="pt-0.5 font-mono text-label uppercase text-green [font-variant-numeric:tabular-nums]">
+                    <span className="pt-0.5 font-mono text-label uppercase text-gold [font-variant-numeric:tabular-nums]">
                       {String(i + 1).padStart(2, "0")}
                     </span>
                     <div>

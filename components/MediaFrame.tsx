@@ -84,7 +84,7 @@ function Lightbox({
           type="button"
           onClick={onClose}
           aria-label="Close video"
-          className="absolute -top-12 right-0 flex h-10 w-10 items-center justify-center rounded-[3px] border border-hair bg-surface text-ink transition-colors hover:border-green"
+          className="absolute -top-12 right-0 flex h-10 w-10 items-center justify-center rounded-[3px] border border-hair bg-surface text-ink transition-colors hover:border-gold"
         >
           <svg viewBox="0 0 12 12" className="h-3.5 w-3.5" aria-hidden="true">
             <path
@@ -217,13 +217,9 @@ export function MediaFrame({
           className="absolute inset-0"
           style={{
             background:
-              tint === "gold"
+              tint
                 ? "linear-gradient(135deg, rgba(252,192,0,0.08), transparent 55%)"
-                : tint === "green"
-                  ? "linear-gradient(135deg, rgba(0,204,0,0.08), transparent 55%)"
-                  : tint === "blue"
-                    ? "linear-gradient(135deg, rgba(0,144,252,0.08), transparent 55%)"
-                    : "linear-gradient(135deg, rgba(252,192,0,0.05), transparent 42%, rgba(0,204,0,0.05))",
+                : "linear-gradient(135deg, rgba(252,192,0,0.06), transparent 55%)",
           }}
         />
       </div>

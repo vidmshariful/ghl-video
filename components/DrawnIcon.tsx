@@ -54,10 +54,11 @@ const icons = {
 
 export type IconName = keyof typeof icons;
 
+/* one accent: every drawn icon is gold */
 const accentStroke = {
   gold: "text-gold",
-  green: "text-green",
-  blue: "text-blue",
+  green: "text-gold",
+  blue: "text-gold",
 } as const;
 
 /*

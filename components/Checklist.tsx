@@ -1,7 +1,8 @@
+/* one accent: every tick is gold */
 const tickColors = {
   gold: "#FCC000",
-  green: "#00CC00",
-  blue: "#0090FC",
+  green: "#FCC000",
+  blue: "#FCC000",
 } as const;
 
 /* Checklist rows: the check is functional (a claim ticked off), not

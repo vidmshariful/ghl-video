@@ -81,67 +81,10 @@
   --text-label--font-weight: 600;
 }
 
-/* ------------------------------------------------------------------ */
-/* Hybrid theme: light zones                                            */
-/*                                                                      */
-/* The site is dark-first; heroes and the footer are ALWAYS dark        */
-/* (client hard rule). Sections opt into the light look by living      */
-/* inside a .theme-light wrapper, which re-points the surface and      */
-/* text tokens so every component adapts without code changes. Brand   */
-/* FILLS (buttons, gradients) keep the locked bright values; brand     */
-/* TEXT accents shift to darker cuts of the same hues for contrast     */
-/* on paper.                                                            */
-/* ------------------------------------------------------------------ */
-.theme-light {
-  --canvas: #eaedf3;
-  --surface: #ffffff;
-  --card: #ffffff;
-  /* the grid must READ on paper: a full step darker than the ground */
-  --hair: #c0c6d4;
-  --text: #0a0b10;
-  --muted: #464c60;
-  --dim: #838aa0;
-  color: var(--text);
-  /* crisp seams where a paper zone meets the dark canvas */
-  border-block: 1px solid var(--hair);
-  /* the page-frame rails are fixed BEHIND section backgrounds, so a
-     paper zone must draw its own pair at the same geometry (half of
-     min(100% - 1.5rem, 80.5rem) from center) or the grid vanishes */
-  background-color: var(--canvas);
-  background-image:
-    linear-gradient(var(--hair), var(--hair)),
-    linear-gradient(var(--hair), var(--hair));
-  background-repeat: no-repeat;
-  background-size: 1px 100%;
-  background-position:
-    calc(50% - min(50% - 0.75rem, 40.25rem)) 0,
-    calc(50% + min(50% - 0.75rem, 40.25rem)) 0;
-}
-
-/* legible cuts of the brand hues for text on paper; fills unchanged */
-.theme-light :is(.text-gold) {
-  color: #a87e00;
-}
-.theme-light :is(.text-green) {
-  color: #008f00;
-}
-.theme-light :is(.text-blue) {
-  color: #0071c8;
-}
-
-/* the black glass card becomes a white card in light zones */
-.theme-light .card-glass {
-  background: #ffffff;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.8),
-    0 12px 32px rgba(10, 11, 16, 0.07),
-    0 1px 2px rgba(10, 11, 16, 0.05);
-}
-
-/* ambient glows read softer on paper */
-.theme-light .section-glow {
-  opacity: 0.5;
-}
+/* The site is full-dark (client direction, July 2026): a gold-to-green
+   gradient is nearly invisible on white, and the gradient is now the
+   single highlight treatment, so the hybrid light zones were retired.
+   `.theme-light` wrappers left in the markup are inert. */
 
 /* ------------------------------------------------------------------ */
 /* Base                                                                */

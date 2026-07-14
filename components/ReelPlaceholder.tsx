@@ -12,8 +12,8 @@ export function ReelPlaceholder({ className = "" }: { className?: string }) {
       className={`absolute inset-0 overflow-hidden bg-[#05060A] ${className}`}
     >
       <div className="drift-a absolute left-[10%] top-[2%] h-[75%] w-[55%] rounded-full bg-gold opacity-[0.13] blur-[110px]" />
-      <div className="drift-b absolute -right-[5%] top-[10%] h-[85%] w-[60%] rounded-full bg-green opacity-[0.15] blur-[110px]" />
-      <div className="drift-c absolute bottom-[-15%] right-[18%] h-[65%] w-[45%] rounded-full bg-blue opacity-[0.09] blur-[100px]" />
+      <div className="drift-b absolute -right-[5%] top-[10%] h-[85%] w-[60%] rounded-full bg-gold opacity-[0.12] blur-[110px]" />
+      <div className="drift-c absolute bottom-[-15%] right-[18%] h-[65%] w-[45%] rounded-full bg-gold opacity-[0.08] blur-[100px]" />
     </div>
   );
 }

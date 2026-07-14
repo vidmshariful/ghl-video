@@ -17,14 +17,14 @@ import type { Accent } from "@/components/Eyebrow";
 
 const accentText: Record<Exclude<Accent, "muted">, string> = {
   gold: "text-gold",
-  green: "text-green",
-  blue: "text-blue",
+  green: "text-gold",
+  blue: "text-gold",
 };
 
 const hoverBorder: Record<string, string> = {
   gold: "hover:border-gold/40",
-  green: "hover:border-green/40",
-  blue: "hover:border-blue/40",
+  green: "hover:border-gold/40",
+  blue: "hover:border-gold/40",
 };
 
 export function ServicePanels() {
@@ -38,7 +38,7 @@ export function ServicePanels() {
             <SectionChip index={2} label={services.chip} accent="green" />
             <h2 id="services-heading" className="mx-auto mt-6 max-w-[18ch] font-display text-h2 text-ink">
               {services.headline}{" "}
-              <span className="text-green">{services.accent}</span>
+              <span className="text-gradient">{services.accent}</span>
             </h2>
             <p className="mx-auto mt-4 max-w-[52ch] text-lede text-muted">
               {services.intro}

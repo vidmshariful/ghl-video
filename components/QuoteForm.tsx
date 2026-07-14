@@ -10,7 +10,7 @@ import { pages, site } from "@/lib/site";
  * Field set is locked by the plan: name, email, company, type, details.
  */
 const inputCls =
-  "w-full rounded-[3px] border border-hair bg-surface px-4 py-3.5 text-[0.9375rem] text-ink placeholder:text-dim focus:border-green focus:outline-none";
+  "w-full rounded-[3px] border border-hair bg-surface px-4 py-3.5 text-[0.9375rem] text-ink placeholder:text-dim focus:border-gold focus:outline-none";
 
 export function QuoteForm() {
   const q = pages.quote;
@@ -18,7 +18,7 @@ export function QuoteForm() {
 
   if (sent) {
     return (
-      <div className="rounded-[3px] border border-green/40 bg-green/5 px-6 py-8 text-center">
+      <div className="rounded-[3px] border border-gold/40 bg-gold/5 px-6 py-8 text-center">
         <p className="font-display text-h3 text-ink">{q.confirmation}</p>
         <p className="mt-2 text-sm text-muted">
           Your email app has the request; hit send and it is with us.

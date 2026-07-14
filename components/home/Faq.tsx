@@ -27,7 +27,7 @@ export function Faq() {
               id="faq-heading"
               className="mx-auto mt-6 max-w-[18ch] font-display text-h2 text-ink"
             >
-              {faq.headline} <span className="text-gold">{faq.accent}</span>
+              {faq.headline} <span className="text-gradient">{faq.accent}</span>
             </h2>
           </RevealItem>
         </Reveal>

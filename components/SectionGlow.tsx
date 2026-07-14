@@ -6,10 +6,11 @@
  * section must be `relative overflow-hidden`. Purely decorative.
  */
 
+/* one accent: every ambient glow is gold */
 const accents = {
   gold: "rgba(252, 192, 0, 0.10)",
-  green: "rgba(0, 204, 0, 0.10)",
-  blue: "rgba(0, 144, 252, 0.08)",
+  green: "rgba(252, 192, 0, 0.10)",
+  blue: "rgba(252, 192, 0, 0.09)",
 } as const;
 
 const positions = {

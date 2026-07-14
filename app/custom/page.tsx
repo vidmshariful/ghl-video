@@ -182,7 +182,7 @@ export default function CustomPage() {
             <RevealItem>
               <h2 className="mx-auto max-w-[22ch] font-display text-h2 text-ink">
                 One short form. A fixed quote{" "}
-                <span className="text-green">within 24 hours.</span>
+                <span className="text-gradient">within 24 hours.</span>
               </h2>
               <div className="mt-8 flex flex-wrap justify-center gap-4">
                 <Button href={cta.requestQuote.href}>

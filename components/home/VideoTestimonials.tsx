@@ -22,7 +22,7 @@ export function VideoTestimonials() {
             <SectionChip index={5} label={vt.chip} accent="green" />
             <h2 id="client-stories-heading" className="mt-6 max-w-[18ch] font-display text-h2 text-ink">
               {vt.headline}{" "}
-              <span className="text-green">{vt.accent}</span>
+              <span className="text-gradient">{vt.accent}</span>
             </h2>
           </RevealItem>
         </Reveal>

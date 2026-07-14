@@ -107,7 +107,7 @@ export function Testimonials() {
                 className="mt-6 max-w-[16ch] font-display text-h2 text-ink"
               >
                 {reviews.headline}{" "}
-                <span className="text-gold">{reviews.accent}</span>
+                <span className="text-gradient">{reviews.accent}</span>
               </h2>
               <p className="mt-4 max-w-[44ch] text-lede text-muted">
                 {reviews.ratingLine}

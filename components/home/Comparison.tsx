@@ -30,7 +30,7 @@ function Check() {
       <path
         d="M2 6.2 4.8 9 10 3.4"
         fill="none"
-        stroke="#00CC00"
+        stroke="#FCC000"
         strokeWidth="1.8"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -51,7 +51,7 @@ export function Comparison() {
     },
   };
   const us =
-    "flex items-start gap-2 border-l border-green/40 bg-green/[0.06] px-5 py-3.5 text-[0.9375rem] font-medium text-ink";
+    "flex items-start gap-2 border-l border-gold/40 bg-gold/[0.06] px-5 py-3.5 text-[0.9375rem] font-medium text-ink";
   const them =
     "flex items-start gap-2 px-6 py-3.5 text-[0.9375rem] text-dim";
 
@@ -85,7 +85,7 @@ export function Comparison() {
                 <p className="px-5 py-3.5 font-mono text-label uppercase text-dim">
                   {comparison.othersLabel}
                 </p>
-                <p className="border-l border-green/40 border-t-2 border-t-green bg-green/[0.06] px-5 py-3.5 font-mono text-label uppercase text-green">
+                <p className="border-l border-gold/40 border-t-2 border-t-gold bg-gold/[0.06] px-5 py-3.5 font-mono text-label uppercase text-gold">
                   {comparison.usLabel}
                 </p>
               </div>
@@ -95,7 +95,7 @@ export function Comparison() {
                 <p className="px-6 py-3.5 font-mono text-label uppercase text-dim">
                   {comparison.othersLabel}
                 </p>
-                <p className="border-l border-green/40 border-t-2 border-t-green bg-green/[0.06] px-5 py-3.5 font-mono text-label uppercase text-green">
+                <p className="border-l border-gold/40 border-t-2 border-t-gold bg-gold/[0.06] px-5 py-3.5 font-mono text-label uppercase text-gold">
                   {comparison.usLabel}
                 </p>
               </div>
@@ -114,7 +114,7 @@ export function Comparison() {
                         i > 0 ? "border-t border-hair" : ""
                       }`}
                     >
-                      <p className="px-5 py-3.5 font-mono text-label uppercase text-dim transition-colors duration-200 group-hover:text-green">
+                      <p className="px-5 py-3.5 font-mono text-label uppercase text-dim transition-colors duration-200 group-hover:text-gold">
                         {row.label}
                       </p>
                       <p className={them}>
@@ -148,7 +148,7 @@ export function Comparison() {
                           {row.others}
                         </p>
                       </div>
-                      <div className="flex flex-col justify-center border-l border-green/40 bg-green/[0.06] px-5 py-3.5">
+                      <div className="flex flex-col justify-center border-l border-gold/40 bg-gold/[0.06] px-5 py-3.5">
                         <p className="flex items-start gap-1.5 text-sm font-medium text-ink">
                           <Check />
                           {row.us}

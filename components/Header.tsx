@@ -15,8 +15,8 @@ import { navServices, navLinks, cta, posters } from "@/lib/site";
 
 const accentDot: Record<string, string> = {
   gold: "bg-gold",
-  green: "bg-green",
-  blue: "bg-blue",
+  green: "bg-gold",
+  blue: "bg-gold",
 };
 
 /* Nav label in the bracket language: dim mono brackets fade in on
@@ -80,7 +80,7 @@ function MagneticCta() {
     >
       <Link
         href={cta.bookACall.href}
-        className="group inline-flex items-center gap-2 rounded-[3px] bg-green px-5 py-2.5 text-sm font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
+        className="group inline-flex items-center gap-2 rounded-[3px] bg-brand-gradient px-5 py-2.5 text-sm font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
       >
         {cta.bookACall.label}
         <span
@@ -286,7 +286,7 @@ export function Header() {
         <div className="flex items-center gap-3 md:hidden">
           <Link
             href={cta.bookACall.href}
-            className="inline-flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-[3px] bg-green px-4 text-xs font-semibold text-[#08090D]"
+            className="inline-flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-[3px] bg-brand-gradient px-4 text-xs font-semibold text-[#08090D]"
           >
             {cta.bookACall.label}
             <span aria-hidden="true">&rarr;</span>
@@ -353,7 +353,7 @@ export function Header() {
               ))}
               <Link
                 href={cta.bookACall.href}
-                className="border-t border-hair py-4 font-display text-xl font-semibold tracking-tight text-green"
+                className="border-t border-hair py-4 font-display text-xl font-semibold tracking-tight text-gold"
               >
                 {cta.bookACall.label} &rarr;
               </Link>

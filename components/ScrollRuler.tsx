@@ -48,9 +48,9 @@ export function ScrollRuler() {
         className="absolute right-0 flex -translate-y-1/2 items-center gap-2 whitespace-nowrap"
       >
         <span className="whitespace-nowrap font-mono text-[0.625rem] tracking-[0.14em] text-dim">
-          [ <span className="text-green">{String(idx).padStart(2, "0")}</span> ]
+          [ <span className="text-gold">{String(idx).padStart(2, "0")}</span> ]
         </span>
-        <span className="h-px w-3 bg-green" />
+        <span className="h-px w-3 bg-gold" />
       </motion.div>
     </div>
   );

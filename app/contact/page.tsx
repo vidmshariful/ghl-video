@@ -59,7 +59,7 @@ export default function ContactPage() {
                     data-cell
                     className="h-full bg-canvas p-7 transition-colors duration-300 hover:bg-surface md:p-8"
                   >
-                    <p className="font-mono text-label uppercase text-green">
+                    <p className="font-mono text-label uppercase text-gold">
                       [ Email us ]
                     </p>
                     <p className="mt-4 max-w-[38ch] font-display text-h3 text-ink">
@@ -70,7 +70,7 @@ export default function ContactPage() {
                     </p>
                     <a
                       href={`mailto:${site.email}`}
-                      className="mt-6 inline-flex items-center gap-2 font-mono text-[0.9375rem] font-semibold text-blue underline-offset-4 hover:underline"
+                      className="mt-6 inline-flex items-center gap-2 font-mono text-[0.9375rem] font-semibold text-gold underline-offset-4 hover:underline"
                     >
                       {site.email}
                       <span aria-hidden="true">&rarr;</span>
@@ -91,7 +91,7 @@ export default function ContactPage() {
                     </p>
                     <a
                       href={cta.requestQuote.href}
-                      className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-green"
+                      className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-gold"
                     >
                       {cta.requestQuote.label}
                       <span aria-hidden="true">&rarr;</span>

@@ -68,7 +68,7 @@ export function TeamSection({ index = 7 }: { index?: number }) {
             <SectionChip index={index} label={team.chip} />
             <h2 id="team-heading" className="mt-6 max-w-[22ch] font-display text-h2 text-ink">
               {team.headline}{" "}
-              <span className="text-gold">{team.accent}</span>
+              <span className="text-gradient">{team.accent}</span>
             </h2>
             <p className="mt-4 max-w-[52ch] text-lede text-muted">
               {team.intro}

@@ -2,12 +2,6 @@ import type { ReactNode } from "react";
 import { SectionChip, type ChipAccent } from "@/components/SectionChip";
 import { SectionGlow } from "@/components/SectionGlow";
 
-const accentText: Record<ChipAccent, string> = {
-  gold: "text-gold",
-  green: "text-green",
-  blue: "text-blue",
-};
-
 /* Registration mark: a circled dot where the boundary rule crosses
  * the page-frame verticals, like a plotter aligning the sheet. */
 function Mark({ side }: { side: "left" | "right" }) {
@@ -62,7 +56,7 @@ export function PageHero({
           )}
         </div>
         <h1 className="mx-auto mt-8 max-w-[22ch] font-display text-hero text-ink">
-          {headline} <span className={accentText[accentColor]}>{accent}</span>
+          {headline} <span className="text-gradient">{accent}</span>
         </h1>
         <p className="mx-auto mt-6 max-w-[54ch] text-lede text-muted">{lede}</p>
         {children && (

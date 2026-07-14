@@ -4,8 +4,8 @@ import type { ChipAccent } from "@/components/SectionChip";
 
 const accentText: Record<ChipAccent, string> = {
   gold: "text-gold",
-  green: "text-green",
-  blue: "text-blue",
+  green: "text-gold",
+  blue: "text-gold",
 };
 
 /*
@@ -79,9 +79,8 @@ export function FitSplit({
   notItems: readonly string[];
   accent?: ChipAccent;
 }) {
-  const tickColor = { gold: "#FCC000", green: "#00CC00", blue: "#0090FC" }[
-    accent
-  ];
+  const tickColor = "#FCC000";
+  void accent;
   return (
     <Reveal className="grid gap-px overflow-hidden rounded-card border border-hair bg-hair md:grid-cols-2">
       <RevealItem className="h-full">

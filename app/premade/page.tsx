@@ -157,18 +157,18 @@ export default function PremadePage() {
                 line: "Bespoke scripts, your positioning, built from scratch.",
                 linkLabel: "See custom production",
                 href: "/custom/",
-                accentCls: "text-green",
+                accentCls: "text-gold",
                 icon: "clapperboard" as IconName,
-                iconAccent: "green" as const,
+                iconAccent: "gold" as const,
               },
               {
                 eyebrow: "Video Editing",
                 line: "Publishing weekly? Put an editor on a monthly plan.",
                 linkLabel: "See video editing",
                 href: "/editing/",
-                accentCls: "text-blue",
+                accentCls: "text-gold",
                 icon: "scissors" as IconName,
-                iconAccent: "blue" as const,
+                iconAccent: "gold" as const,
               },
             ] as const
           ).map((item) => (
