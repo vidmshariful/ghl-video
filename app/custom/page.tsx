@@ -31,7 +31,9 @@ export default function CustomPage() {
         accentColor="green"
         lede={p.hero.lede}
       >
-        <Button href={cta.requestQuote.href}>{cta.requestQuote.label}</Button>
+        <Button href={cta.requestQuote.href} variant="hero">
+          {cta.requestQuote.label}
+        </Button>
         <Button href={cta.bookACall.href} variant="ghost">
           {cta.bookACall.label}
         </Button>

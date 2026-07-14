@@ -1,15 +1,25 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-type Variant = "primary" | "solid" | "ghost";
+/*
+ * Color discipline (see the color review):
+ * - `primary` is SOLID GREEN. Green is the action color, so this is
+ *   every repeat and utility CTA across the site. The button is always
+ *   learnable because it always looks the same.
+ * - `hero` is the gold-to-green GRADIENT. Rationed to one per page: the
+ *   single most important conversion. That rarity keeps the gradient a
+ *   signature instead of a default.
+ * - `ghost` is the quiet secondary.
+ */
+type Variant = "primary" | "hero" | "ghost";
 type Size = "md" | "lg";
 
 const variants: Record<Variant, string> = {
-  /* gradient primary: near-black text on bright fill, inner top
-     highlight for dimension, glow deepens on hover */
+  /* solid green: the everyday primary action */
   primary:
-    "bg-brand-gradient text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),inset_0_-1px_0_rgba(0,0,0,0.15),0_0_28px_rgba(0,204,0,0.28)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.4),inset_0_-1px_0_rgba(0,0,0,0.15),0_0_44px_rgba(0,204,0,0.45)] hover:brightness-[1.07]",
-  solid: "bg-green text-[#08090D] hover:brightness-[1.08]",
+    "bg-green text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_0_24px_rgba(0,204,0,0.2)] hover:brightness-110",
+  /* the signature gradient: one hero-tier conversion per page */
+  hero: "bg-brand-gradient text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),inset_0_-1px_0_rgba(0,0,0,0.15),0_0_28px_rgba(0,204,0,0.28)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.4),inset_0_-1px_0_rgba(0,0,0,0.15),0_0_44px_rgba(0,204,0,0.45)] hover:brightness-[1.07]",
   ghost:
     "border border-hair text-ink hover:border-blue/60 hover:text-blue bg-transparent",
 };
@@ -47,9 +57,9 @@ export function Button({
     </span>
   );
 
-  /* primary: animated sheen sweeps across the gradient on hover */
+  /* the sheen sweep belongs to the gradient hero button only */
   const sheen =
-    variant === "primary" ? (
+    variant === "hero" ? (
       <span
         aria-hidden="true"
         className="btn-sheen pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"

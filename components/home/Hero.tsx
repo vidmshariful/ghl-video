@@ -126,7 +126,7 @@ export function Hero() {
                 {...fadeUp(0.57)}
                 className="mt-9 flex flex-wrap items-center gap-4"
               >
-                <Button href={cta.bookACall.href} variant="primary">
+                <Button href={cta.bookACall.href} variant="hero">
                   {cta.bookACall.label}
                 </Button>
                 <Button href={cta.seePremade.href} variant="ghost">

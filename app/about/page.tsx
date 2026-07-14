@@ -37,7 +37,9 @@ export default function AboutPage() {
         accentColor="gold"
         lede={p.hero.lede}
       >
-        <Button href={cta.bookACall.href}>{cta.bookACall.label}</Button>
+        <Button href={cta.bookACall.href} variant="hero">
+          {cta.bookACall.label}
+        </Button>
         <Button href={cta.seePremade.href} variant="ghost">
           {cta.seePremade.label}
         </Button>
