@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MediaFrame } from "@/components/MediaFrame";
+import { MediaCard } from "@/components/MediaCard";
 import { SectionChip } from "@/components/SectionChip";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { SectionGlow } from "@/components/SectionGlow";
@@ -7,8 +7,8 @@ import { home } from "@/lib/site";
 
 /*
  * The signature moment: one featured piece at 8 columns, two
- * supporting clips stacked at 4, every frame through MediaFrame so
- * the set reads as one curated wall. Captions live inside the frames.
+ * supporting clips stacked at 4. Each is a MediaCard, so the client
+ * and format read below the frame, not over the footage.
  */
 export function ShowreelMoment() {
   const [featured, second, third] = home.work.pieces;
@@ -27,25 +27,24 @@ export function ShowreelMoment() {
 
         <Reveal className="mt-10 grid items-start gap-5 lg:grid-cols-12">
           <RevealItem className="lg:col-span-8">
-            <MediaFrame
+            <MediaCard
               src={featured.src}
               poster={featured.poster}
-              label={`${featured.client}, ${featured.format}`}
-              caption={{ title: featured.client, sub: featured.format }}
-              startAt={"startAt" in featured ? featured.startAt : 0}
+              title={featured.client}
+              meta={featured.format}
+              startAt={"startAt" in featured ? featured.startAt : undefined}
               endAt={"endAt" in featured ? featured.endAt : undefined}
-              rounded="rounded-card"
             />
           </RevealItem>
 
           <RevealItem className="grid gap-5 sm:grid-cols-2 lg:col-span-4 lg:grid-cols-1">
             {[second, third].map((piece) => (
-              <MediaFrame
+              <MediaCard
                 key={piece.src}
                 src={piece.src}
                 poster={piece.poster}
-                label={`${piece.client}, ${piece.format}`}
-                caption={{ title: piece.client, sub: piece.format }}
+                title={piece.client}
+                meta={piece.format}
                 {...("startAt" in piece
                   ? { startAt: piece.startAt, endAt: piece.endAt }
                   : {})}

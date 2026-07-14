@@ -16,10 +16,11 @@
   --card: #161821;
   --hair: #2b2f40;
 
-  /* text */
+  /* text. dim lifted from #5a6076 for legible mono microlabels on the
+     near-black ground without losing the quiet hierarchy */
   --text: #eef0f6;
   --muted: #9096a8;
-  --dim: #5a6076;
+  --dim: #707791;
 
   --error: #ff6b6b;
 }
@@ -43,9 +44,10 @@
      sites) renders in the body face per client direction */
   --font-mono: var(--font-body);
 
-  /* two radii only, plus pills */
-  --radius-card: 16px;
-  --radius-media: 12px;
+  /* one radius across the system: crisp, blueprint, not generic-SaaS
+     rounded. Pills and avatars stay fully round via explicit classes. */
+  --radius-card: 4px;
+  --radius-media: 4px;
 
   /* type scale: intentional jumps, hero dramatically above everything.
      Tracking tuned for Archivo (wider, larger x-height than the old

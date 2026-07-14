@@ -29,14 +29,18 @@ export function Panel({
   children,
   className = "",
   ticks = true,
+  solid = false,
 }: {
   children: ReactNode;
   className?: string;
   ticks?: boolean;
+  /* solid ground instead of the glass gradient: for feature panels, so
+     elevation stays reserved for the hero and true offers */
+  solid?: boolean;
 }) {
   return (
     <div
-      className={`relative rounded-card border border-hair card-glass ${className}`}
+      className={`relative rounded-card border border-hair ${solid ? "bg-canvas" : "card-glass"} ${className}`}
     >
       {ticks && (
         <>

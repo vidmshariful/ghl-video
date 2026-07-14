@@ -1,4 +1,4 @@
-import { MediaFrame } from "@/components/MediaFrame";
+import { MediaCard } from "@/components/MediaCard";
 import { DrawnBorder } from "@/components/DrawnBorder";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { SectionChip } from "@/components/SectionChip";
@@ -30,11 +30,12 @@ export function VideoTestimonials() {
         <Reveal className="mt-12 grid gap-5 md:grid-cols-3">
           {vt.items.map((item) => (
             <RevealItem key={item.company}>
-              <MediaFrame
+              <MediaCard
                 src={item.src}
                 poster={item.poster}
+                title={item.name}
+                meta={item.company}
                 label={`Testimonial from ${item.name}, ${item.company}`}
-                caption={{ title: item.name, sub: item.company }}
                 {...("startAt" in item
                   ? { startAt: item.startAt, endAt: item.endAt }
                   : {})}

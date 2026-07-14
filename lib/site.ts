@@ -514,8 +514,15 @@ export const home = {
   },
 
   manifesto: {
+    eyebrow: "The problem",
     statement:
       "Your prospects judge your SaaS before they ever try it. A Loom demo and a DIY explainer tell them everything they need to know, and not in your favor.",
+    /* the phrase lifted into gold; must be a substring of statement */
+    emphasis: "before they ever try it",
+    contrast: {
+      bad: "A Loom demo or a DIY explainer",
+      good: "A branded GHL Video",
+    },
   },
 
   /* The real team, photos from the live site */

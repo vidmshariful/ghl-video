@@ -109,6 +109,7 @@ export function ServicePanels() {
                 <Reveal>
                   <RevealItem>
                     <Panel
+                      solid
                       className={`group/svc overflow-hidden transition-colors duration-300 ${hoverBorder[panel.accent]}`}
                     >
                       {/* the signature, moving: animated gradient hairline */}

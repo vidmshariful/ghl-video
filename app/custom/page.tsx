@@ -61,12 +61,12 @@ export default function CustomPage() {
                     data-cell
                     className="group/cell flex h-full flex-col bg-canvas p-6 transition-colors duration-300 hover:bg-surface md:p-7"
                   >
-                    {/* PLACEHOLDER sample: real format samples swap in */}
+                    {/* PLACEHOLDER sample: real format samples swap in.
+                        No in-frame caption: the name and price read below. */}
                     <MediaFrame
                       src={clips[key]}
                       poster={posters[key]}
                       label={`${f.name} sample`}
-                      caption={{ title: f.name, sub: "Sample" }}
                       tint="green"
                       {...(win ? { startAt: win.startAt, endAt: win.endAt } : {})}
                     />

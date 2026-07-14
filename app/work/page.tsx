@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Button } from "@/components/Button";
 import { DrawnBorder } from "@/components/DrawnBorder";
-import { MediaFrame } from "@/components/MediaFrame";
+import { MediaCard } from "@/components/MediaCard";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { SectionGlow } from "@/components/SectionGlow";
 import { CrossSell } from "@/components/pages/CrossSell";
@@ -52,12 +52,11 @@ export default function WorkPage() {
           <Reveal className="grid gap-6">
             {/* featured piece full width, then two-up rows */}
             <RevealItem>
-              <MediaFrame
+              <MediaCard
                 src={clips[pieces[0].key]}
                 poster={posters[pieces[0].key]}
-                label={`${pieces[0].client}, ${pieces[0].format}`}
-                caption={{ title: pieces[0].client, sub: pieces[0].format }}
-                rounded="rounded-card"
+                title={pieces[0].client}
+                meta={pieces[0].format}
                 {...(clipWindows[pieces[0].key]
                   ? {
                       startAt: clipWindows[pieces[0].key]!.startAt,
@@ -68,12 +67,12 @@ export default function WorkPage() {
             </RevealItem>
             <RevealItem className="grid gap-6 md:grid-cols-2">
               {pieces.slice(1).map((piece) => (
-                <MediaFrame
+                <MediaCard
                   key={piece.key}
                   src={clips[piece.key]}
                   poster={posters[piece.key]}
-                  label={`${piece.client}, ${piece.format}`}
-                  caption={{ title: piece.client, sub: piece.format }}
+                  title={piece.client}
+                  meta={piece.format}
                   {...(clipWindows[piece.key]
                     ? {
                         startAt: clipWindows[piece.key]!.startAt,
@@ -101,11 +100,12 @@ export default function WorkPage() {
           <Reveal className="grid gap-6 md:grid-cols-3">
             {home.videoTestimonials.items.map((item) => (
               <RevealItem key={item.name}>
-                <MediaFrame
+                <MediaCard
                   src={item.src}
                   poster={item.poster}
+                  title={item.name}
+                  meta={item.company}
                   label={`Testimonial from ${item.name}, ${item.company}`}
-                  caption={{ title: item.name, sub: item.company }}
                   {...("startAt" in item
                     ? { startAt: item.startAt, endAt: item.endAt }
                     : {})}

@@ -9,17 +9,35 @@ import { SectionGlow } from "@/components/SectionGlow";
 import { home } from "@/lib/site";
 
 /*
- * Head-to-head inside one bounded panel: label spine on the left,
- * Everyone-else column muted, the GHL Video column carried on a faint
- * gold wash so the winner reads at a glance. Rows cascade from a
- * SINGLE trigger (one IntersectionObserver on the panel), so fast
- * scrollers and print never see missing rows; each row highlights and
- * its label turns gold on hover.
+ * Head to head. The GHL Video column has to WIN on sight: a continuous
+ * green edge, a green check on every cell, a faint green tint. The
+ * competitor column is dimmed with a quiet cross. You should read
+ * "us: yes, them: no" before you read a single word. Rows cascade from
+ * ONE trigger so fast scrollers and print never see missing rows.
  */
 const rowsContainer: Variants = {
   hidden: {},
-  show: { transition: { staggerChildren: 0.045, delayChildren: 0.1 } },
+  show: { transition: { staggerChildren: 0.04, delayChildren: 0.1 } },
 };
+
+function Check() {
+  return (
+    <svg
+      viewBox="0 0 12 12"
+      className="mt-[0.35em] h-3 w-3 shrink-0"
+      aria-hidden="true"
+    >
+      <path
+        d="M2 6.2 4.8 9 10 3.4"
+        fill="none"
+        stroke="#00CC00"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
 export function Comparison() {
   const { comparison } = home;
@@ -32,15 +50,27 @@ export function Comparison() {
       transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] },
     },
   };
+  const us =
+    "flex items-start gap-2 border-l border-green/40 bg-green/[0.06] px-5 py-3.5 text-[0.9375rem] font-medium text-ink";
+  const them =
+    "flex items-start gap-2 px-6 py-3.5 text-[0.9375rem] text-dim";
+
   return (
-    <section data-bp-idx="4" aria-labelledby="comparison-heading" className="relative overflow-hidden section-pad">
+    <section
+      data-bp-idx="4"
+      aria-labelledby="comparison-heading"
+      className="relative overflow-hidden section-pad"
+    >
       <DrawnBorder />
-      <SectionGlow accent="gold" position="left" />
+      <SectionGlow accent="green" position="left" />
       <div className="shell relative">
         <Reveal>
           <RevealItem>
-            <SectionChip index={4} label={comparison.eyebrow} />
-            <h2 id="comparison-heading" className="mt-6 max-w-[22ch] font-display text-h2 text-ink">
+            <SectionChip index={4} label={comparison.eyebrow} accent="green" />
+            <h2
+              id="comparison-heading"
+              className="mt-6 max-w-[22ch] font-display text-h2 text-ink"
+            >
               {comparison.headline}
             </h2>
             <p className="mt-4 max-w-[52ch] text-lede text-muted">
@@ -50,22 +80,22 @@ export function Comparison() {
 
           <RevealItem className="mt-12">
             <Panel className="overflow-hidden">
-              {/* mobile header row so the two columns stay labeled */}
-              <div className="grid grid-cols-2 gap-4 border-b border-hair px-5 py-4 md:hidden">
-                <p className="font-mono text-label uppercase text-dim">
+              {/* mobile header row */}
+              <div className="grid grid-cols-2 border-b border-hair md:hidden">
+                <p className="px-5 py-3.5 font-mono text-label uppercase text-dim">
                   {comparison.othersLabel}
                 </p>
-                <p className="font-mono text-label uppercase text-gold">
+                <p className="border-l border-green/40 border-t-2 border-t-green bg-green/[0.06] px-5 py-3.5 font-mono text-label uppercase text-green">
                   {comparison.usLabel}
                 </p>
               </div>
-              {/* header row */}
+              {/* desktop header row with the winning cap on the us column */}
               <div className="hidden grid-cols-[9rem_1fr_1fr] border-b border-hair md:grid">
                 <span />
-                <p className="px-6 py-4 font-mono text-label uppercase text-dim">
+                <p className="px-6 py-3.5 font-mono text-label uppercase text-dim">
                   {comparison.othersLabel}
                 </p>
-                <p className="border-l border-hair bg-gold/[0.04] px-6 py-4 font-mono text-label uppercase text-gold">
+                <p className="border-l border-green/40 border-t-2 border-t-green bg-green/[0.06] px-5 py-3.5 font-mono text-label uppercase text-green">
                   {comparison.usLabel}
                 </p>
               </div>
@@ -77,37 +107,50 @@ export function Comparison() {
                 viewport={{ once: true, margin: "-80px" }}
               >
                 {comparison.rows.map((row, i) => (
-                  <motion.div
-                    key={row.label}
-                    variants={rowV}
-                    className="reveal-i"
-                  >
+                  <motion.div key={row.label} variants={rowV} className="reveal-i">
                     {/* desktop */}
                     <div
-                      className={`group hidden grid-cols-[9rem_1fr_1fr] transition-colors duration-200 hover:bg-white/[0.02] md:grid ${
+                      className={`group hidden grid-cols-[9rem_1fr_1fr] md:grid ${
                         i > 0 ? "border-t border-hair" : ""
                       }`}
                     >
-                      <p className="px-5 py-5 font-mono text-label uppercase text-dim transition-colors duration-200 group-hover:text-gold">
+                      <p className="px-5 py-3.5 font-mono text-label uppercase text-dim transition-colors duration-200 group-hover:text-green">
                         {row.label}
                       </p>
-                      <p className="px-6 py-5 text-[0.9375rem] text-muted">
+                      <p className={them}>
+                        <span
+                          aria-hidden="true"
+                          className="mt-[0.1em] shrink-0 font-mono text-dim"
+                        >
+                          &times;
+                        </span>
                         {row.others}
                       </p>
-                      <p className="border-l border-hair bg-gold/[0.04] px-6 py-5 text-[0.9375rem] font-medium text-ink">
+                      <p className={us}>
+                        <Check />
                         {row.us}
                       </p>
                     </div>
-                    {/* mobile */}
+                    {/* mobile: row label once, then the two values.
+                        Green tint and check mark the winner; no repeated
+                        column label. */}
                     <div
-                      className={`px-5 py-5 md:hidden ${i > 0 ? "border-t border-hair" : ""}`}
+                      className={`grid grid-cols-2 md:hidden ${i > 0 ? "border-t border-hair" : ""}`}
                     >
-                      <p className="font-mono text-label uppercase text-dim">
-                        {row.label}
-                      </p>
-                      <div className="mt-2.5 grid grid-cols-2 gap-4">
-                        <p className="text-sm text-muted">{row.others}</p>
-                        <p className="-mx-2 -my-1 rounded-[4px] bg-gold/[0.05] px-2 py-1 text-sm font-medium text-ink">
+                      <div className="px-5 py-3.5">
+                        <p className="font-mono text-[0.5625rem] uppercase tracking-[0.12em] text-dim">
+                          {row.label}
+                        </p>
+                        <p className="mt-1.5 flex items-start gap-1.5 text-sm text-dim">
+                          <span aria-hidden="true" className="font-mono">
+                            &times;
+                          </span>
+                          {row.others}
+                        </p>
+                      </div>
+                      <div className="flex flex-col justify-center border-l border-green/40 bg-green/[0.06] px-5 py-3.5">
+                        <p className="flex items-start gap-1.5 text-sm font-medium text-ink">
+                          <Check />
                           {row.us}
                         </p>
                       </div>
