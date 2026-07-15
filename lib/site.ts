@@ -320,7 +320,7 @@ export type PremadeVideo = {
   comingSoon: boolean;
 };
 
-export const premadeVideos: PremadeVideo[] = premadePacks
+const packVideos: PremadeVideo[] = premadePacks
   .flatMap((pack) => pack.categories.flatMap((c) => c.videos))
   .reduce<PremadeVideo[]>((acc, v) => {
     const slug = slugify(v.title);
@@ -339,6 +339,27 @@ export const premadeVideos: PremadeVideo[] = premadePacks
     });
     return acc;
   }, []);
+
+/* Standalone new videos not tied to a pack. The HighLevel pitch (its
+ * Complete Brand Customization cut) lives in the new library as well as
+ * the HighLevel x GHL Video collab tab. */
+const standaloneNew: PremadeVideo[] = [
+  {
+    slug: "highlevel-official-full-platform-pitch",
+    title: "HighLevel's Official Full Platform Pitch",
+    type: "Explainer",
+    format: "Full Platform Pitch",
+    capability: "Full platform overview",
+    price: 495,
+    preview:
+      "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a56fa0fbaf5f6da40287c33.mp4",
+    poster: null,
+    orderUrl: "https://order.ghlvideo.com/hl-full-pitch-video",
+    comingSoon: false,
+  },
+];
+
+export const premadeVideos: PremadeVideo[] = [...packVideos, ...standaloneNew];
 
 /* Look up a video's individual price and checkout by title (packs use
  * this to offer the single-video buy alongside the pack). */
