@@ -40,32 +40,30 @@ export function RuledSection({
             aria-hidden="true"
             className="absolute -bottom-px left-1/2 -z-10 h-px w-screen -translate-x-1/2 bg-hair"
           />
-          {/* header cell, centered, with the blueprint hatch filling the
-              dead air either side of the type */}
-          <div className="grid border-b border-hair md:grid-cols-[1fr_minmax(0,42rem)_1fr]">
-            <div
-              aria-hidden="true"
-              className="hatch hidden border-r border-hair md:block"
-            />
-            <Reveal className="px-6 py-12 text-center md:py-14">
-              <RevealItem>
-                <SectionChip index={index} label={chip} />
-                <h2 className="mx-auto mt-6 max-w-[26ch] font-display text-h2 text-ink">
-                  {headline}{" "}
-                  <span className="text-gradient">{accent}</span>
-                </h2>
-                {intro && (
-                  <p className="mx-auto mt-5 max-w-[52ch] text-lede text-muted">
-                    {intro}
-                  </p>
-                )}
-              </RevealItem>
-            </Reveal>
-            <div
-              aria-hidden="true"
-              className="hatch hidden border-l border-hair md:block"
-            />
-          </div>
+          {/* the blueprint hatch fills the gutters out to the frame rails */}
+          <span
+            aria-hidden="true"
+            className="rail-gutter hatch pointer-events-none absolute inset-y-0 right-full mr-px"
+          />
+          <span
+            aria-hidden="true"
+            className="rail-gutter hatch pointer-events-none absolute inset-y-0 left-full ml-px"
+          />
+          {/* header cell, centered */}
+          <Reveal className="border-b border-hair px-6 py-12 text-center md:py-14">
+            <RevealItem>
+              <SectionChip index={index} label={chip} />
+              <h2 className="mx-auto mt-6 max-w-[26ch] font-display text-h2 text-ink">
+                {headline}{" "}
+                <span className="text-gradient">{accent}</span>
+              </h2>
+              {intro && (
+                <p className="mx-auto mt-5 max-w-[52ch] text-lede text-muted">
+                  {intro}
+                </p>
+              )}
+            </RevealItem>
+          </Reveal>
           {children}
         </div>
       </div>

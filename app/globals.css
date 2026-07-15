@@ -177,6 +177,12 @@ p {
   padding-block: clamp(5rem, 8vw, 7.5rem);
 }
 
+/* the narrow strip between a page-frame rail and the shell edge: half
+   the difference between the frame column and the content column */
+@utility rail-gutter {
+  width: calc((min(100vw - 1.5rem, 80.5rem) - min(100vw - 3rem, 77.5rem)) / 2);
+}
+
 /* blueprint hatch: sparse diagonal texture for divider strips */
 @utility hatch {
   background-image: repeating-linear-gradient(
