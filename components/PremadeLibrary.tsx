@@ -10,11 +10,9 @@ import {
   featureAnimations,
   oldVideos,
   oldVideoTypes,
-  premadeBySlugTitle,
   premadePacks,
   premadeVideos,
   videoStack,
-  type PackVideo,
   type PremadePack,
 } from "@/lib/site";
 
@@ -200,36 +198,6 @@ function BuyVideoLink({
       <span
         aria-hidden="true"
         className="transition-transform duration-200 group-hover/btn:translate-x-0.5"
-      >
-        &rarr;
-      </span>
-    </a>
-  );
-}
-
-function GetPackLink({ pack }: { pack: PremadePack }) {
-  if (!pack.price || !pack.orderUrl) {
-    return (
-      <Link
-        href={cta.bookACall.href}
-        className="group inline-flex items-center gap-2 whitespace-nowrap rounded-[3px] bg-brand-gradient px-6 py-3 text-sm font-semibold text-[#08090D] transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
-      >
-        {cta.bookACall.label}
-        <span aria-hidden="true">&rarr;</span>
-      </Link>
-    );
-  }
-  return (
-    <a
-      href={pack.orderUrl}
-      target="_blank"
-      rel="noopener"
-      className="group inline-flex items-center gap-2 whitespace-nowrap rounded-[3px] bg-brand-gradient px-6 py-3 text-sm font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.28)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98]"
-    >
-      Get the pack
-      <span
-        aria-hidden="true"
-        className="transition-transform duration-200 group-hover:translate-x-0.5"
       >
         &rarr;
       </span>
@@ -577,11 +545,13 @@ function FilterGroup({
   options,
   active,
   onPick,
+  countOf,
 }: {
   label: string;
   options: readonly string[];
   active: string | null;
   onPick: (v: string | null) => void;
+  countOf?: (opt: string | null) => number;
 }) {
   return (
     <div className="border-t border-hair px-5 py-5 first:border-t-0">
@@ -589,6 +559,7 @@ function FilterGroup({
       <ul className="mt-3 grid gap-0.5">
         {[null, ...options].map((opt) => {
           const isActive = active === opt;
+          const count = countOf?.(opt);
           return (
             <li key={opt ?? "any"}>
               <button
@@ -605,7 +576,16 @@ function FilterGroup({
                     isActive ? "border-gold bg-gold" : "border-dim"
                   }`}
                 />
-                {opt ?? "Any"}
+                <span className="flex-1">{opt ?? "Any"}</span>
+                {count !== undefined && (
+                  <span
+                    className={`font-mono text-[0.6875rem] [font-variant-numeric:tabular-nums] ${
+                      isActive ? "text-gold/70" : "text-dim"
+                    }`}
+                  >
+                    {count}
+                  </span>
+                )}
               </button>
             </li>
           );
@@ -653,6 +633,11 @@ function VideoBrowser({
               options={g.options}
               active={sel[g.label] ?? null}
               onPick={(val) => setSel((s) => ({ ...s, [g.label]: val }))}
+              countOf={(opt) =>
+                opt === null
+                  ? videos.length
+                  : videos.filter((v) => v[g.on] === opt).length
+              }
             />
           ))}
         </aside>
@@ -717,226 +702,6 @@ function VideoBrowser({
           onClose={() => setPreview(null)}
         />
       )}
-    </div>
-  );
-}
-
-/* ---------------------------------------------------------------- */
-/* Pack view: playlist (pack buy + single-video buy)                  */
-/* ---------------------------------------------------------------- */
-
-function PackPlaylist({ pack }: { pack: PremadePack }) {
-  const [catIdx, setCatIdx] = useState(0);
-  const [vidIdx, setVidIdx] = useState(0);
-  const listRef = useRef<HTMLDivElement>(null);
-  const cat = pack.categories[catIdx];
-  const video: PackVideo | undefined = cat.videos[vidIdx];
-  const single = video ? premadeBySlugTitle[video.title] : undefined;
-
-  const pickCat = (i: number) => {
-    setCatIdx(i);
-    setVidIdx(0);
-  };
-
-  return (
-    <div>
-      {/* pack header band: bundle price + get the pack */}
-      <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-5 border-b border-hair px-5 py-6 md:px-7">
-        <div className="max-w-[58ch]">
-          <p className="font-display text-h3 text-ink">{pack.name}</p>
-          <p className="mt-1.5 text-sm leading-relaxed text-muted">
-            {pack.tagline}
-          </p>
-        </div>
-        <div className="flex items-center gap-5">
-          {pack.count && (
-            <span className="hidden font-mono text-label uppercase text-muted sm:inline">
-              [ {pack.count} videos ]
-            </span>
-          )}
-          <span className="flex items-baseline gap-2">
-            {pack.anchorPrice && (
-              <span className="font-mono text-[0.9375rem] text-dim line-through [font-variant-numeric:tabular-nums]">
-                ${pack.anchorPrice.toLocaleString("en-US")}
-              </span>
-            )}
-            <span className="font-mono text-[1.5rem] font-bold text-gold [font-variant-numeric:tabular-nums]">
-              ${(pack.price ?? 0).toLocaleString("en-US")}
-            </span>
-          </span>
-          <GetPackLink pack={pack} />
-        </div>
-      </div>
-
-      {/* category tabs */}
-      {pack.categories.length > 1 && (
-        <div
-          role="tablist"
-          aria-label="Pack categories"
-          className="flex flex-wrap gap-x-1 gap-y-1 border-b border-hair px-3 py-2.5"
-        >
-          {pack.categories.map((c, i) => (
-            <button
-              key={c.name}
-              type="button"
-              role="tab"
-              aria-selected={i === catIdx}
-              onClick={() => pickCat(i)}
-              className={`flex min-h-10 items-center gap-2 px-3 font-mono text-[0.8125rem] transition-colors ${
-                i === catIdx
-                  ? "font-semibold text-gold"
-                  : "text-muted hover:text-ink"
-              }`}
-            >
-              <span
-                aria-hidden="true"
-                className={i === catIdx ? "text-gold" : "text-dim"}
-              >
-                [
-              </span>
-              {c.name}
-              {c.count !== null && (
-                <span
-                  className={`text-[0.6875rem] ${i === catIdx ? "text-gold/70" : "text-dim"}`}
-                >
-                  {c.count}
-                </span>
-              )}
-              <span
-                aria-hidden="true"
-                className={i === catIdx ? "text-gold" : "text-dim"}
-              >
-                ]
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* category line */}
-      <p className="border-b border-hair px-5 py-3 text-sm text-muted md:px-7">
-        {cat.line}
-      </p>
-
-      {/* playlist: rail + player */}
-      <div className="grid lg:grid-cols-[19rem_1fr]">
-        <div
-          ref={listRef}
-          role="listbox"
-          aria-label="Included videos"
-          aria-activedescendant={`pack-video-${vidIdx}`}
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === "ArrowDown") {
-              e.preventDefault();
-              setVidIdx((v) => Math.min(v + 1, cat.videos.length - 1));
-            }
-            if (e.key === "ArrowUp") {
-              e.preventDefault();
-              setVidIdx((v) => Math.max(v - 1, 0));
-            }
-          }}
-          className="border-b border-hair focus-visible:outline-2 lg:border-b-0 lg:border-r"
-        >
-          <p className="border-b border-hair px-5 py-3 font-mono text-label uppercase text-dim">
-            Included videos{" "}
-            <span className="hidden lg:inline">/ use &uarr; &darr; keys</span>
-          </p>
-          <div className="max-h-[26rem] overflow-y-auto">
-            {cat.videos.map((v, i) => (
-              <button
-                key={v.title}
-                id={`pack-video-${i}`}
-                type="button"
-                role="option"
-                aria-selected={i === vidIdx}
-                onClick={() => setVidIdx(i)}
-                className={`flex w-full items-baseline gap-3 border-b border-hair px-5 py-4 text-left transition-colors last:border-b-0 ${
-                  i === vidIdx
-                    ? "border-l-2 border-l-gold bg-surface"
-                    : "border-l-2 border-l-transparent hover:bg-surface/60"
-                }`}
-              >
-                <span
-                  className={`font-mono text-label [font-variant-numeric:tabular-nums] ${
-                    i === vidIdx ? "text-gold" : "text-dim"
-                  }`}
-                >
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span
-                    className={`block text-[0.875rem] font-medium leading-snug ${
-                      i === vidIdx ? "text-ink" : "text-muted"
-                    }`}
-                  >
-                    {v.title}
-                  </span>
-                  <span className="mt-0.5 block font-mono text-[0.625rem] uppercase tracking-[0.14em] text-dim">
-                    {v.format}
-                  </span>
-                </span>
-                {v.comingSoon && (
-                  <span className="shrink-0 self-center rounded-full border border-hair px-2 py-0.5 font-mono text-[0.5625rem] uppercase tracking-[0.12em] text-dim">
-                    Soon
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="min-w-0 p-5 md:p-7">
-          {video && (video.comingSoon || !video.src) ? (
-            <div className="relative flex aspect-video w-full flex-col items-center justify-center border border-hair bg-surface text-center">
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-0 hatch opacity-30"
-              />
-              <span className="relative rounded-full border border-hair bg-canvas px-4 py-1.5 font-mono text-label uppercase text-dim">
-                In production
-              </span>
-              <p className="relative mt-4 max-w-[36ch] px-6 text-sm text-muted">
-                {video.title} is being produced now and lands in the pack as
-                soon as it releases.
-              </p>
-            </div>
-          ) : video ? (
-            <video
-              key={video.src + video.title}
-              src={video.src ?? undefined}
-              poster={video.poster ?? undefined}
-              controls
-              playsInline
-              preload="metadata"
-              className="aspect-video w-full border border-hair bg-black"
-            />
-          ) : null}
-
-          {video && (
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-t border-hair pt-4">
-              <div className="min-w-0">
-                <p className="font-display text-[1.0625rem] font-semibold text-ink">
-                  {video.title}
-                </p>
-                <p className="mt-0.5 font-mono text-label uppercase text-dim">
-                  Sample branding. Yours carries your SaaS name and colors.
-                </p>
-              </div>
-              {/* single-video buy sits beside the pack: buy one, or bundle */}
-              {single && !video.comingSoon && video.src && (
-                <div className="flex items-center gap-3">
-                  <span className="font-mono text-label uppercase text-dim">
-                    Single
-                  </span>
-                  <Price value={single.price} />
-                  <BuyVideoLink video={single} label="Buy this video" />
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   );
 }
@@ -1008,13 +773,13 @@ function FeatureAnimationView() {
               setIdx((i) => Math.max(i - 1, 0));
             }
           }}
-          className="focus-visible:outline-2"
+          className="flex flex-col focus-visible:outline-2"
         >
-          <p className="border-b border-hair px-5 py-3 font-mono text-label uppercase text-dim">
+          <p className="shrink-0 border-b border-hair px-5 py-3 font-mono text-label uppercase text-dim">
             {featureAnimations.length} animations{" "}
             <span className="hidden lg:inline">/ use &uarr; &darr; keys</span>
           </p>
-          <div className="max-h-[26rem] overflow-y-auto">
+          <div className="max-h-[26rem] flex-1 overflow-y-auto lg:max-h-none lg:min-h-0">
             {featureAnimations.map((f, i) => (
               <button
                 key={f.slug}
@@ -1061,37 +826,9 @@ function FeatureAnimationView() {
           Feature animations are ordered in bundles, not one at a time. Pick the
           pack that covers the features you need.
         </p>
-        <div className="mt-5 grid gap-4 sm:grid-cols-3">
+        <div className="mt-5 grid items-start gap-4 sm:grid-cols-3">
           {featurePacks.map((pack) => (
-            <div
-              key={pack.slug}
-              className="flex flex-col rounded-[3px] border border-hair bg-canvas p-5"
-            >
-              <p className="font-mono text-label uppercase text-dim">
-                {pack.packCount} animations
-              </p>
-              <p className="mt-2 font-mono text-[1.75rem] font-bold leading-none text-gold [font-variant-numeric:tabular-nums]">
-                ${pack.price.toLocaleString("en-US")}
-              </p>
-              <p className="mt-2 flex-1 text-[0.8125rem] leading-relaxed text-muted">
-                {pack.subtitle}
-              </p>
-              <a
-                href={pack.orderUrl}
-                target="_blank"
-                rel="noopener"
-                className="group/btn mt-4 inline-flex items-center justify-center gap-1.5 rounded-[3px] bg-brand-gradient px-4 py-2.5 text-[0.8125rem] font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
-              >
-                Order {pack.packCount}
-                {"× "}
-                <span
-                  aria-hidden="true"
-                  className="transition-transform duration-200 group-hover/btn:translate-x-0.5"
-                >
-                  &rarr;
-                </span>
-              </a>
-            </div>
+            <FeaturePriceCard key={pack.slug} pack={pack} />
           ))}
         </div>
       </div>
@@ -1099,9 +836,307 @@ function FeatureAnimationView() {
   );
 }
 
+/* what every feature-animation order ships with, identical across the
+ * three bundles. Verbatim from the live pricing accordion. */
+const featureIncludes: { text: string; ok: boolean; highlight?: boolean }[] = [
+  { text: "Same video with your logo and brand color", ok: true },
+  { text: "Both realistic and simplified version", ok: true },
+  { text: "Keep or remove the default caption", ok: true },
+  { text: "Add background music, on demand", ok: true },
+  { text: "Delivery in 5 to 7 days", ok: true },
+  {
+    text: "Both old and new UI, released at LevelUp Summit",
+    ok: true,
+    highlight: true,
+  },
+  { text: "No voiceover", ok: false },
+];
+
+function FeaturePriceCard({ pack }: { pack: (typeof featurePacks)[number] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="flex flex-col rounded-[3px] border border-hair bg-canvas p-5">
+      <p className="font-mono text-label uppercase text-dim">
+        {pack.packCount} animations
+      </p>
+      <p className="mt-2 font-mono text-[1.75rem] font-bold leading-none text-gold [font-variant-numeric:tabular-nums]">
+        ${pack.price.toLocaleString("en-US")}
+      </p>
+      <p className="mt-2 text-[0.8125rem] leading-relaxed text-muted">
+        {pack.subtitle}
+      </p>
+      <a
+        href={pack.orderUrl}
+        target="_blank"
+        rel="noopener"
+        className="group/btn mt-4 inline-flex items-center justify-center gap-1.5 rounded-[3px] bg-brand-gradient px-4 py-2.5 text-[0.8125rem] font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
+      >
+        Order {pack.packCount}
+        {"× "}
+        <span
+          aria-hidden="true"
+          className="transition-transform duration-200 group-hover/btn:translate-x-0.5"
+        >
+          &rarr;
+        </span>
+      </a>
+
+      {/* what's included: closed by default, opens on click */}
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="mt-4 flex items-center justify-between gap-2 border-t border-hair pt-4 font-mono text-label uppercase text-muted transition-colors hover:text-gold"
+      >
+        What&rsquo;s included
+        <span
+          aria-hidden="true"
+          className={`text-gold transition-transform duration-200 ${
+            open ? "rotate-180" : ""
+          }`}
+        >
+          &darr;
+        </span>
+      </button>
+      {open && (
+        <ul className="mt-3 grid gap-2">
+          {featureIncludes.map((it) => (
+            <li key={it.text} className="flex items-start gap-2.5 text-[0.8125rem]">
+              <span
+                aria-hidden="true"
+                className={`mt-0.5 shrink-0 ${it.ok ? "text-green" : "text-error"}`}
+              >
+                {it.ok ? (
+                  <svg viewBox="0 0 14 14" className="h-3.5 w-3.5" fill="none">
+                    <path
+                      d="M2.5 7.5l3 3 6-7"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 14 14" className="h-3.5 w-3.5" fill="none">
+                    <path
+                      d="M3.5 3.5l7 7M10.5 3.5l-7 7"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                )}
+              </span>
+              <span
+                className={
+                  it.highlight
+                    ? "font-medium text-gold"
+                    : it.ok
+                      ? "text-muted"
+                      : "text-dim"
+                }
+              >
+                {it.text}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 /* ---------------------------------------------------------------- */
-/* Stack view: the everything bundle, sold as one                     */
+/* Bundle view: details (watch-before + what's inside) then preview   */
 /* ---------------------------------------------------------------- */
+
+type BundleSummaryItem = {
+  name: string;
+  count: number;
+  value?: number | null;
+  poster?: string | null;
+};
+
+/* the team walkthrough lands here; a designed placeholder until it is
+ * shot and dropped in. */
+function ComingSoonVideo() {
+  return (
+    <div className="relative flex aspect-video w-full flex-col items-center justify-center border border-hair bg-surface text-center">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 hatch opacity-30"
+      />
+      <span className="relative flex h-12 w-12 items-center justify-center rounded-full border border-hair bg-canvas">
+        <svg viewBox="0 0 24 24" className="ml-0.5 h-5 w-5 text-gold" aria-hidden="true">
+          <path d="M8 5v14l11-7z" fill="currentColor" />
+        </svg>
+      </span>
+      <span className="relative mt-4 rounded-full border border-hair bg-canvas px-4 py-1.5 font-mono text-label uppercase text-dim">
+        Video coming soon
+      </span>
+      <p className="relative mt-3 max-w-[38ch] px-6 text-sm text-muted">
+        A short walkthrough from our team is being filmed and lands here soon.
+      </p>
+    </div>
+  );
+}
+
+function BundleView({
+  name,
+  tagline,
+  count,
+  price,
+  anchorPrice,
+  orderUrl,
+  ctaLabel,
+  overviewNote,
+  summaryItems,
+  footNote,
+  previewVideos,
+  previewGroups,
+  previewNote,
+}: {
+  name: string;
+  tagline: string;
+  count: number | null;
+  price: number | null;
+  anchorPrice?: number | null;
+  orderUrl: string | null;
+  ctaLabel: string;
+  overviewNote: string;
+  summaryItems: BundleSummaryItem[];
+  footNote?: string | null;
+  previewVideos: BrowseVideo[];
+  previewGroups: FilterDef[];
+  previewNote?: string | null;
+}) {
+  const canOrder = Boolean(price && orderUrl);
+  return (
+    <div>
+      {/* header band: value anchor + one CTA */}
+      <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-5 border-b border-hair px-5 py-6 md:px-7">
+        <div className="max-w-[60ch]">
+          <p className="font-display text-h3 text-ink">{name}</p>
+          <p className="mt-1.5 text-sm leading-relaxed text-muted">{tagline}</p>
+        </div>
+        <div className="flex items-center gap-5">
+          {count !== null && (
+            <span className="hidden font-mono text-label uppercase text-muted sm:inline">
+              [ {count} videos ]
+            </span>
+          )}
+          {canOrder ? (
+            <>
+              <span className="flex items-baseline gap-2">
+                {anchorPrice ? (
+                  <span className="font-mono text-[0.9375rem] text-dim line-through [font-variant-numeric:tabular-nums]">
+                    ${anchorPrice.toLocaleString("en-US")}
+                  </span>
+                ) : null}
+                <span className="font-mono text-[1.5rem] font-bold text-gold [font-variant-numeric:tabular-nums]">
+                  ${(price ?? 0).toLocaleString("en-US")}
+                </span>
+              </span>
+              <a
+                href={orderUrl ?? "#"}
+                target="_blank"
+                rel="noopener"
+                className="group inline-flex items-center gap-2 whitespace-nowrap rounded-[3px] bg-brand-gradient px-6 py-3 text-sm font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.28)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98]"
+              >
+                {ctaLabel}
+                <span
+                  aria-hidden="true"
+                  className="transition-transform duration-200 group-hover:translate-x-0.5"
+                >
+                  &rarr;
+                </span>
+              </a>
+            </>
+          ) : (
+            <Link
+              href={cta.bookACall.href}
+              className="group inline-flex items-center gap-2 whitespace-nowrap rounded-[3px] bg-brand-gradient px-6 py-3 text-sm font-semibold text-[#08090D] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98]"
+            >
+              {cta.bookACall.label}
+              <span aria-hidden="true">&rarr;</span>
+            </Link>
+          )}
+        </div>
+      </div>
+
+      {/* details: watch-before walkthrough + what's inside */}
+      <div className="grid lg:grid-cols-[1.35fr_1fr]">
+        <div className="border-b border-hair p-5 md:p-7 lg:border-b-0 lg:border-r">
+          <p className="mb-3 font-mono text-label uppercase text-dim">
+            [ Watch before you buy ]
+          </p>
+          <ComingSoonVideo />
+          <p className="mt-3 text-sm text-muted">{overviewNote}</p>
+        </div>
+
+        <div className="p-5 md:p-7">
+          <p className="mb-3 font-mono text-label uppercase text-dim">
+            [ What&rsquo;s inside ]
+          </p>
+          <ul className="grid gap-px overflow-hidden rounded-[3px] border border-hair bg-hair">
+            {summaryItems.map((f) => (
+              <li key={f.name} className="flex items-center gap-4 bg-canvas p-3.5">
+                <span className="relative block h-12 w-20 shrink-0 overflow-hidden rounded-[2px] border border-hair bg-black">
+                  {f.poster ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- static export, remote poster
+                    <img
+                      src={f.poster}
+                      alt=""
+                      loading="lazy"
+                      className="h-full w-full object-cover opacity-85"
+                    />
+                  ) : null}
+                  <span className="absolute inset-0 flex items-center justify-center font-mono text-[0.9375rem] font-bold text-gradient [font-variant-numeric:tabular-nums]">
+                    {f.count}
+                  </span>
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-display text-[0.9375rem] font-semibold text-ink">
+                    {f.count}
+                    {"× "}
+                    {f.name}
+                  </span>
+                  {f.value ? (
+                    <span className="mt-0.5 block font-mono text-[0.625rem] uppercase tracking-[0.14em] text-dim">
+                      value ${f.value.toLocaleString("en-US")}
+                    </span>
+                  ) : null}
+                </span>
+              </li>
+            ))}
+          </ul>
+          {footNote && (
+            <p className="mt-4 font-mono text-label uppercase text-dim">
+              {footNote}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* preview: every included video, filterable and previewable */}
+      <div className="border-t border-hair">
+        <div className="px-5 py-6 md:px-7">
+          <p className="font-mono text-label uppercase text-dim">
+            [ Preview the line-up ]
+          </p>
+          {previewNote && (
+            <p className="mt-1 max-w-[72ch] text-sm leading-relaxed text-muted">
+              {previewNote}
+            </p>
+          )}
+        </div>
+        <div className="border-t border-hair">
+          <VideoBrowser videos={previewVideos} groups={previewGroups} />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function VideoStackView() {
   const s = videoStack;
@@ -1111,124 +1146,81 @@ function VideoStackView() {
     null;
 
   return (
-    <div>
-      {/* header band: value anchor + one CTA */}
-      <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-5 border-b border-hair px-5 py-6 md:px-7">
-        <div className="max-w-[60ch]">
-          <p className="font-display text-h3 text-ink">{s.name}</p>
-          <p className="mt-1.5 text-sm leading-relaxed text-muted">
-            {s.tagline}
-          </p>
-        </div>
-        <div className="flex items-center gap-5">
-          <span className="hidden font-mono text-label uppercase text-muted sm:inline">
-            [ {s.totalCount} videos ]
-          </span>
-          <span className="flex items-baseline gap-2">
-            <span className="font-mono text-[0.9375rem] text-dim line-through [font-variant-numeric:tabular-nums]">
-              ${s.anchorPrice.toLocaleString("en-US")}
-            </span>
-            <span className="font-mono text-[1.5rem] font-bold text-gold [font-variant-numeric:tabular-nums]">
-              ${s.price.toLocaleString("en-US")}
-            </span>
-          </span>
-          <a
-            href={s.orderUrl}
-            target="_blank"
-            rel="noopener"
-            className="group inline-flex items-center gap-2 whitespace-nowrap rounded-[3px] bg-brand-gradient px-6 py-3 text-sm font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.28)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98]"
-          >
-            Get the stack
-            <span
-              aria-hidden="true"
-              className="transition-transform duration-200 group-hover:translate-x-0.5"
-            >
-              &rarr;
-            </span>
-          </a>
-        </div>
-      </div>
+    <BundleView
+      name={s.name}
+      tagline={s.tagline}
+      count={s.totalCount}
+      price={s.price}
+      anchorPrice={s.anchorPrice}
+      orderUrl={s.orderUrl}
+      ctaLabel="Get the stack"
+      overviewNote={`A walkthrough of the full stack from our team. Every format below ships branded to your platform, delivered in ${s.deliveryDays} days.`}
+      summaryItems={s.formats.map((f) => ({
+        name: f.name,
+        count: f.count,
+        value: f.value,
+        poster: posterFor(f.sampleType),
+      }))}
+      footNote={`${s.totalCount} videos. One order. No contracts.`}
+      previewVideos={stackPicks}
+      previewGroups={stackGroups}
+      previewNote={stackNote}
+    />
+  );
+}
 
-      {/* body: overview preview + the five formats inside */}
-      <div className="grid lg:grid-cols-[1.35fr_1fr]">
-        <div className="border-b border-hair p-5 md:p-7 lg:border-b-0 lg:border-r">
-          <p className="mb-3 font-mono text-label uppercase text-dim">
-            [ Watch before you buy ]
-          </p>
-          <video
-            src={s.preview}
-            controls
-            playsInline
-            preload="metadata"
-            className="aspect-video w-full border border-hair bg-black"
-          />
-          <p className="mt-3 text-sm text-muted">
-            The complete overview explainer. Every format below, branded to
-            your platform and delivered in {s.deliveryDays} days.
-          </p>
-        </div>
+/* A pack rendered like the stack: details section, then a previewable
+ * line-up of everything inside, grouped by category. */
+function PackBundleView({ pack }: { pack: PremadePack }) {
+  const previewVideos: BrowseVideo[] = pack.categories.flatMap((c) =>
+    c.videos.map((v) => ({
+      slug: `${pack.slug}-${v.title}`,
+      title: v.title,
+      typeTag: c.name,
+      subTag: v.format,
+      price: 0,
+      preview: v.src,
+      poster: v.poster,
+      wistiaId: null,
+      subtitle: v.format,
+      packCount: null,
+      realPreview: null,
+      realPoster: null,
+      previewOnly: true,
+      previewNote: `Included in the ${pack.name}, branded to your platform.`,
+      previewCtaLabel: "Get the pack",
+      orderUrl: pack.orderUrl ?? cta.bookACall.href,
+    })),
+  );
+  const previewGroups: FilterDef[] = [
+    {
+      label: "Category",
+      options: pack.categories.map((c) => c.name),
+      on: "typeTag",
+    },
+  ];
+  const summaryItems: BundleSummaryItem[] = pack.categories.map((c) => ({
+    name: c.name,
+    count: c.count ?? c.videos.length,
+    poster: c.videos.find((v) => v.poster)?.poster ?? null,
+  }));
 
-        <div className="p-5 md:p-7">
-          <p className="mb-3 font-mono text-label uppercase text-dim">
-            [ What&rsquo;s inside ]
-          </p>
-          <ul className="grid gap-px overflow-hidden rounded-[3px] border border-hair bg-hair">
-            {s.formats.map((f) => {
-              const poster = posterFor(f.sampleType);
-              return (
-                <li
-                  key={f.name}
-                  className="flex items-center gap-4 bg-canvas p-3.5"
-                >
-                  <span className="relative block h-12 w-20 shrink-0 overflow-hidden rounded-[2px] border border-hair bg-black">
-                    {poster ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- static export, remote poster
-                      <img
-                        src={poster}
-                        alt=""
-                        loading="lazy"
-                        className="h-full w-full object-cover opacity-85"
-                      />
-                    ) : null}
-                    <span className="absolute inset-0 flex items-center justify-center font-mono text-[0.9375rem] font-bold text-gradient [font-variant-numeric:tabular-nums]">
-                      {f.count}
-                    </span>
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-display text-[0.9375rem] font-semibold text-ink">
-                      {f.count}
-                      {"× "}
-                      {f.name}
-                    </span>
-                    <span className="mt-0.5 block font-mono text-[0.625rem] uppercase tracking-[0.14em] text-dim">
-                      value ${f.value.toLocaleString("en-US")}
-                    </span>
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-          <p className="mt-4 font-mono text-label uppercase text-dim">
-            {s.totalCount} videos. One order. No contracts.
-          </p>
-        </div>
-      </div>
-
-      {/* the pre-decided line-up, previewable video by video */}
-      <div className="border-t border-hair">
-        <div className="px-5 py-6 md:px-7">
-          <p className="font-mono text-label uppercase text-dim">
-            [ Preview the line-up ]
-          </p>
-          <p className="mt-1 max-w-[72ch] text-sm leading-relaxed text-muted">
-            {stackNote}
-          </p>
-        </div>
-        <div className="border-t border-hair">
-          <VideoBrowser videos={stackPicks} groups={stackGroups} />
-        </div>
-      </div>
-    </div>
+  return (
+    <BundleView
+      name={pack.name}
+      tagline={pack.tagline}
+      count={pack.count}
+      price={pack.price}
+      anchorPrice={pack.anchorPrice}
+      orderUrl={pack.orderUrl}
+      ctaLabel="Get the pack"
+      overviewNote="A walkthrough of the pack from our team, branded to your platform. Every video below is included."
+      summaryItems={summaryItems}
+      footNote={pack.count ? `${pack.count} videos. One order.` : null}
+      previewVideos={previewVideos}
+      previewGroups={previewGroups}
+      previewNote="Preview every video in the pack. Finished videos play now; the rest are in production and land as they release."
+    />
   );
 }
 
@@ -1311,7 +1303,7 @@ export function PremadeLibrary() {
       {/* the instrument panel: square, hairline-framed */}
       <div className="mt-8 border border-hair bg-canvas">
         {activePack ? (
-          <PackPlaylist pack={activePack} />
+          <PackBundleView pack={activePack} />
         ) : view === videoStack.slug ? (
           <VideoStackView />
         ) : view === "features" ? (
