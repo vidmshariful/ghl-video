@@ -9,9 +9,10 @@ import { Reveal, RevealItem } from "@/components/Reveal";
 import { RuledSection } from "@/components/RuledSection";
 import { SectionGlow } from "@/components/SectionGlow";
 import { SectionHead } from "@/components/SectionHead";
+import { VideoBundles } from "@/components/VideoBundles";
 import { PageHero } from "@/components/pages/PageHero";
 import { ProofStrip } from "@/components/pages/ProofStrip";
-import { cta, pages } from "@/lib/site";
+import { cta, pages, videoBundleNote } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Premade Videos",
@@ -72,10 +73,33 @@ export default function PremadePage() {
         </div>
       </section>
 
+      {/* build-your-own bundles: pick any videos from the library */}
+      <section
+        data-bp-idx="3"
+        aria-label="Video bundles"
+        className="relative overflow-x-clip section-pad"
+      >
+        <SectionGlow accent="gold" position="left" />
+        <div className="shell relative">
+          <SectionHead
+            index={3}
+            chip="Bundle and save"
+            headline="Build your own"
+            accent="video bundle."
+            accentColor="gold"
+            intro={videoBundleNote}
+            center
+          />
+          <div className="mt-12">
+            <VideoBundles />
+          </div>
+        </div>
+      </section>
+
       {/* what's included: ruled box, iconed cells */}
       <RuledSection
-        bpIdx={3}
-        index={3}
+        bpIdx={4}
+        index={4}
         chip={p.included.chip}
         headline={p.included.headline}
         accent={p.included.accent}
@@ -106,8 +130,8 @@ export default function PremadePage() {
 
       {/* how it works: ruled box, numbered sequence */}
       <RuledSection
-        bpIdx={4}
-        index={4}
+        bpIdx={5}
+        index={5}
         chip={p.how.chip}
         headline={p.how.headline}
         accent={p.how.accent}
@@ -142,8 +166,8 @@ export default function PremadePage() {
 
       {/* keep going: ruled box, two route-out cells */}
       <RuledSection
-        bpIdx={5}
-        index={5}
+        bpIdx={6}
+        index={6}
         chip="Keep going"
         headline="Need something"
         accent="premade can't do?"
@@ -207,13 +231,13 @@ export default function PremadePage() {
       </RuledSection>
 
       {/* proof + FAQ */}
-      <section data-bp-idx="6" className="relative section-pad">
+      <section data-bp-idx="7" className="relative section-pad">
         <DrawnBorder />
         <div className="shell">
           <ProofStrip quote='"Great quality and quick turnaround! Will definitely work with again!" Ryan Maule, Google review' />
           <div className="mt-16">
             <SectionHead
-              index={6}
+              index={7}
               chip={p.faq.chip}
               headline={p.faq.headline}
               accent={p.faq.accent}

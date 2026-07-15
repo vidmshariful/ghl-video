@@ -1961,6 +1961,62 @@ export type StackFormat = {
   sampleType: OldVideoType;
 };
 
+/* ---------------------------------------------------------------- */
+/* Build-your-own bundles: a flat price for a set number of videos the
+ * buyer picks from anywhere in the library, any format. Three tiers,
+ * inspired by the old fixed bundles but mix-and-match. FLAG: prices,
+ * counts, and order SKUs are a design proposal, easy to change. */
+export type VideoBundle = {
+  slug: string;
+  name: string;
+  pick: number; // how many videos the buyer chooses
+  price: number;
+  anchorPrice: number; // typical à la carte value, for the strike-through
+  deliveryDays: number;
+  blurb: string;
+  featured: boolean;
+  orderUrl: string;
+};
+
+export const videoBundles: VideoBundle[] = [
+  {
+    slug: "starter",
+    name: "Starter Bundle",
+    pick: 10,
+    price: 995,
+    anchorPrice: 1950,
+    deliveryDays: 7,
+    blurb: "Cover the essentials and launch fast.",
+    featured: false,
+    orderUrl: "https://order.ghlvideo.com/ghlv-bundle-10",
+  },
+  {
+    slug: "growth",
+    name: "Growth Bundle",
+    pick: 25,
+    price: 1695,
+    anchorPrice: 4875,
+    deliveryDays: 10,
+    blurb: "A full funnel of video. The popular choice.",
+    featured: true,
+    orderUrl: "https://order.ghlvideo.com/ghlv-bundle-25",
+  },
+  {
+    slug: "scale",
+    name: "Scale Bundle",
+    pick: 50,
+    price: 2495,
+    anchorPrice: 9750,
+    deliveryDays: 14,
+    blurb: "Go wide across every format and feature.",
+    featured: false,
+    orderUrl: "https://order.ghlvideo.com/ghlv-bundle-50",
+  },
+];
+
+export const videoBundleNote =
+  "Pick any videos from the full library: explainers, demos, short explainers, marketing videos, and feature animations. Mix formats however you like. Every video is white-labeled to your SaaS.";
+
 export const videoStack = {
   slug: "stack",
   name: "Complete Video Stack",
