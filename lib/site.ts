@@ -461,13 +461,36 @@ export const googleReviewsUrl =
 
 /* Trust bar logo wall: the three named clients are real; the rest are
  * PLACEHOLDER marks until Shariful clears the real client logos. */
-export const trustLogos = [
-  { name: "Emma.io", placeholder: false },
-  { name: "Brightstack", placeholder: true },
-  { name: "AI Clinic Assist", placeholder: false },
-  { name: "Cloudpeak", placeholder: true },
-  { name: "NeoLuxLabs", placeholder: false },
-  { name: "Loopwise", placeholder: true },
+/* Real client logos in public/logos (rendered as uniform silhouettes in
+ * the marquee, full colour on hover). The full set also composes the
+ * client-wall collage on the homepage. */
+export const trustLogos = Array.from(
+  { length: 26 },
+  (_, i) => `/logos/logo-${String(i + 1).padStart(2, "0")}.png`,
+);
+
+/* Three real client videos for the recent-work showreel and Our Work.
+ * FLAG: the client attributions are my best guess (the three lead logos,
+ * in order); confirm the video-to-client mapping and the formats. */
+export const clientWork = [
+  {
+    src: "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a4f8271708c41d4df27eb2e.mp4",
+    poster: null,
+    client: "QuantKey",
+    format: "Explainer",
+  },
+  {
+    src: "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a4f8271708c41d4df27eb29.mp4",
+    poster: null,
+    client: "Leadling",
+    format: "Explainer",
+  },
+  {
+    src: "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a4f8271eada8c1f458e3266.mp4",
+    poster: null,
+    client: "ASA Solutions",
+    format: "Explainer",
+  },
 ] as const;
 
 /* The newest real videos, used as live examples across the site (home
@@ -668,26 +691,26 @@ export const home = {
 
   work: {
     eyebrow: "The work",
-    /* One featured piece plus two supporting clips, all hover-play. Our
-     * newest real videos: the AI-first master and two feature cuts. */
+    /* One featured piece plus two supporting clips, all hover-play.
+     * Real client work. */
     pieces: [
       {
-        src: newSamples[0].src,
-        poster: newSamples[0].poster,
-        client: newSamples[0].title,
-        format: newSamples[0].format,
+        src: clientWork[0].src,
+        poster: clientWork[0].poster,
+        client: clientWork[0].client,
+        format: clientWork[0].format,
       },
       {
-        src: newSamples[1].src,
-        poster: newSamples[1].poster,
-        client: newSamples[1].title,
-        format: newSamples[1].format,
+        src: clientWork[1].src,
+        poster: clientWork[1].poster,
+        client: clientWork[1].client,
+        format: clientWork[1].format,
       },
       {
-        src: newSamples[3].src,
-        poster: newSamples[3].poster,
-        client: newSamples[3].title,
-        format: newSamples[3].format,
+        src: clientWork[2].src,
+        poster: clientWork[2].poster,
+        client: clientWork[2].client,
+        format: clientWork[2].format,
       },
     ],
   },

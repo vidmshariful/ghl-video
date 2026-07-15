@@ -6,7 +6,7 @@ import { Reveal, RevealItem } from "@/components/Reveal";
 import { SectionGlow } from "@/components/SectionGlow";
 import { CrossSell } from "@/components/pages/CrossSell";
 import { PageHero } from "@/components/pages/PageHero";
-import { cta, home, newSamples, pages } from "@/lib/site";
+import { clientWork, cta, home, newSamples, pages } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Our Work",
@@ -14,8 +14,21 @@ export const metadata: Metadata = {
     "Recent video work for HighLevel SaaS teams across premade, custom production, and editing. Every piece plays.",
 };
 
-/* Our newest real videos as the portfolio. Expands as more ship. */
-const pieces = newSamples;
+/* Real client work first, then our newest videos. Expands as more ship. */
+const pieces = [
+  ...clientWork.map((c) => ({
+    src: c.src as string,
+    poster: c.poster as string | null,
+    title: c.client,
+    format: c.format,
+  })),
+  ...newSamples.map((s) => ({
+    src: s.src as string,
+    poster: s.poster as string | null,
+    title: s.title,
+    format: s.format,
+  })),
+];
 
 export default function WorkPage() {
   const p = pages.work;

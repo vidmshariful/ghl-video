@@ -3,6 +3,7 @@ import { TrustStrip } from "@/components/home/TrustStrip";
 import { ServicePanels } from "@/components/home/ServicePanels";
 import { Manifesto } from "@/components/home/Manifesto";
 import { ShowreelMoment } from "@/components/home/ShowreelMoment";
+import { ClientWall } from "@/components/home/ClientWall";
 import { Comparison } from "@/components/home/Comparison";
 import { TeamSection } from "@/components/home/TeamSection";
 import { VideoTestimonials } from "@/components/home/VideoTestimonials";
@@ -19,6 +20,7 @@ export default function Home() {
       <ServicePanels />
       <Manifesto />
       <ShowreelMoment />
+      <ClientWall />
       {/* hybrid theme: proof-and-people band reads on paper; heroes
           and the footer stay dark (client hard rule) */}
       <div className="theme-light">

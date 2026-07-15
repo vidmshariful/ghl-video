@@ -3,36 +3,20 @@ import { Stat } from "@/components/Stat";
 import { trustLogos, clients, rating, googleReviewsUrl } from "@/lib/site";
 
 /*
- * Structured trust bar: a bracketed purpose cap, the logo marquee, and
- * two stat cells separated by hairlines, all reading as blueprint
- * cells rather than floating items. Placeholder marks fill the wall
- * until the real client logos are cleared (flagged in lib/site.ts).
+ * Structured trust bar: a bracketed purpose cap, a marquee of real
+ * client logos, and two stat cells separated by hairlines. Logos ride
+ * as uniform light silhouettes so mixed brand colours read on the dark
+ * ground, and light to full colour on hover.
  */
-
-/* small geometric mark so placeholder wordmarks read as logos */
-function Mark({ variant }: { variant: number }) {
-  const shapes = [
-    <rect key="r" x="1.5" y="1.5" width="9" height="9" rx="2" />,
-    <circle key="c" cx="6" cy="6" r="4.75" />,
-    <path key="t" d="M6 1.5 10.75 10.5H1.25Z" />,
-  ];
+function LogoMark({ src }: { src: string }) {
   return (
-    <svg
-      viewBox="0 0 12 12"
-      className="h-2.5 w-2.5 fill-dim/70"
-      aria-hidden="true"
-    >
-      {shapes[variant % shapes.length]}
-    </svg>
-  );
-}
-
-function Wordmark({ name, index }: { name: string; index: number }) {
-  return (
-    <span className="flex items-center gap-2.5 whitespace-nowrap font-display text-lg font-semibold tracking-tight text-dim">
-      <Mark variant={index} />
-      {name}
-    </span>
+    /* eslint-disable-next-line @next/next/no-img-element -- static export, local asset */
+    <img
+      src={src}
+      alt=""
+      loading="lazy"
+      className="h-6 w-auto max-w-[9rem] shrink-0 object-contain opacity-50 [filter:brightness(0)_invert(1)] transition duration-300 hover:opacity-100 hover:[filter:none]"
+    />
   );
 }
 
@@ -78,8 +62,8 @@ export function TrustStrip() {
         </p>
 
         <Marquee>
-          {trustLogos.map((logo, i) => (
-            <Wordmark key={logo.name} name={logo.name} index={i} />
+          {trustLogos.map((src) => (
+            <LogoMark key={src} src={src} />
           ))}
         </Marquee>
 
