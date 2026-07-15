@@ -43,11 +43,11 @@ export function RuledSection({
           {/* the blueprint hatch fills the gutters out to the frame rails */}
           <span
             aria-hidden="true"
-            className="rail-gutter hatch pointer-events-none absolute inset-y-0 right-full mr-px"
+            className="hatch pointer-events-none absolute inset-y-0 right-full mr-px w-[var(--rail-gutter)]"
           />
           <span
             aria-hidden="true"
-            className="rail-gutter hatch pointer-events-none absolute inset-y-0 left-full ml-px"
+            className="hatch pointer-events-none absolute inset-y-0 left-full ml-px w-[var(--rail-gutter)]"
           />
           {/* header cell, centered */}
           <Reveal className="border-b border-hair px-6 py-12 text-center md:py-14">
