@@ -644,7 +644,7 @@ function VideoBrowser({
 
         {/* results */}
         <div className="flex min-w-0 flex-col">
-          <div className="flex items-center justify-between gap-4 border-b border-hair px-5 py-3">
+          <div className="flex min-h-[3rem] items-center justify-between gap-4 border-b border-hair bg-surface px-5 py-2">
             <p className="font-mono text-label uppercase text-muted">
               {shown.length} {shown.length === 1 ? "video" : "videos"}
             </p>
@@ -733,8 +733,8 @@ function FeatureAnimationView() {
 
       {/* playlist: preview left, list right */}
       <div className="grid lg:grid-cols-[1fr_20rem]">
-        <div className="min-w-0 border-b border-hair p-5 md:p-7 lg:border-b-0 lg:border-r">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0 border-b border-hair lg:border-b-0 lg:border-r">
+          <div className="flex min-h-[3rem] flex-wrap items-center justify-between gap-3 border-b border-hair bg-surface px-5 py-2">
             <p className="font-mono text-label uppercase text-dim">
               [ {feat.name} ]
             </p>
@@ -746,16 +746,18 @@ function FeatureAnimationView() {
               </span>
             )}
           </div>
-          <video
-            key={src}
-            src={src}
-            poster={poster}
-            controls
-            autoPlay
-            muted
-            playsInline
-            className="aspect-video w-full border border-hair bg-black"
-          />
+          <div className="p-5 md:p-7">
+            <video
+              key={src}
+              src={src}
+              poster={poster}
+              controls
+              autoPlay
+              muted
+              playsInline
+              className="aspect-video w-full border border-hair bg-black"
+            />
+          </div>
         </div>
 
         <div
@@ -778,9 +780,11 @@ function FeatureAnimationView() {
           {/* absolute-fill on desktop so the player sets the height and
               the list scrolls inside it, not the other way around */}
           <div className="flex h-full flex-col lg:absolute lg:inset-0">
-          <p className="shrink-0 border-b border-hair px-5 py-3 font-mono text-label uppercase text-dim">
-            {featureAnimations.length} animations{" "}
-            <span className="hidden lg:inline">/ use &uarr; &darr; keys</span>
+          <p className="flex min-h-[3rem] shrink-0 items-center border-b border-hair bg-surface px-5 py-2 font-mono text-label uppercase text-dim">
+            <span>
+              {featureAnimations.length} animations{" "}
+              <span className="hidden lg:inline">/ use &uarr; &darr; keys</span>
+            </span>
           </p>
           <div className="max-h-[26rem] flex-1 overflow-y-auto min-h-0 lg:max-h-none">
             {featureAnimations.map((f, i) => (
