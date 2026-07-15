@@ -48,12 +48,12 @@ export function PricingTier({
         </span>
         <span className="font-mono text-label uppercase text-dim">/ month</span>
       </p>
-      <Checklist items={lines} accent="gold" className="mt-6 flex-1" />
+      <Checklist items={lines} className="mt-6 flex-1" />
       <a
         href={plan.orderUrl}
         target="_blank"
         rel="noopener"
-        className="group mt-7 inline-flex items-center justify-center gap-2 rounded-[3px] bg-brand-gradient px-6 py-3.5 text-body font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.25)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98]"
+        className="group mt-7 inline-flex items-center justify-center gap-2 rounded-[3px] bg-brand-gradient px-6 py-3.5 text-body font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.25)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98]"
       >
         Start editing
         <span

@@ -29,7 +29,6 @@ export default function CustomPage() {
         chip={p.hero.chip}
         headline={p.hero.headline}
         accent={p.hero.accent}
-        accentColor="green"
         lede={p.hero.lede}
       >
         <Button href={cta.requestQuote.href} variant="hero">
@@ -44,14 +43,13 @@ export default function CustomPage() {
       <div className="theme-light">
       {/* the four formats */}
       <section data-bp-idx="2" className="relative overflow-x-clip section-pad">
-        <SectionGlow accent="green" position="left" />
+        <SectionGlow position="left" />
         <div className="shell relative">
           <SectionHead
             index={2}
             chip={p.formats.chip}
             headline={p.formats.headline}
             accent={p.formats.accent}
-            accentColor="green"
             intro={p.formats.intro}
           />
           <Reveal className="mt-12 grid gap-px overflow-hidden rounded-card border border-hair bg-hair md:grid-cols-2">
@@ -70,7 +68,7 @@ export default function CustomPage() {
                       src={clips[key]}
                       poster={posters[key]}
                       label={`${f.name} sample`}
-                      tint="green"
+                      tint
                       {...(win ? { startAt: win.startAt, endAt: win.endAt } : {})}
                     />
                     <div className="flex flex-wrap items-baseline justify-between gap-3 pt-6">
@@ -97,14 +95,12 @@ export default function CustomPage() {
         chip={p.pricing.chip}
         headline={p.pricing.headline}
         accent={p.pricing.accent}
-        accentColor="green"
       >
         <CellGrid
           items={p.pricing.points.map((x, i) => ({
             ...x,
             icon: pricingIcons[i],
           }))}
-          accent="green"
           framed={false}
         />
       </RuledSection>
@@ -116,14 +112,12 @@ export default function CustomPage() {
         chip={p.process.chip}
         headline={p.process.headline}
         accent={p.process.accent}
-        accentColor="green"
       >
         <CellGrid
           items={p.process.steps.map((s, i) => ({
             ...s,
             icon: processIcons[i],
           }))}
-          accent="green"
           numbered
           framed={false}
         />
@@ -138,7 +132,6 @@ export default function CustomPage() {
               ...c,
               icon: capabilityIcons[i],
             }))}
-            accent="green"
           />
         </div>
       </section>
@@ -150,12 +143,10 @@ export default function CustomPage() {
         chip={p.fit.chip}
         headline={p.fit.headline}
         accent={p.fit.accent}
-        accentColor="green"
       >
         <FitSplit
           forItems={p.fit.forItems}
           notItems={p.fit.notItems}
-          accent="green"
           framed={false}
         />
       </RuledSection>

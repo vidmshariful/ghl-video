@@ -54,13 +54,6 @@ const icons = {
 
 export type IconName = keyof typeof icons;
 
-/* one accent: every drawn icon is gold */
-const accentStroke = {
-  gold: "text-gold",
-  green: "text-gold",
-  blue: "text-gold",
-} as const;
-
 /*
  * Stroke-draw icon: the lucide glyph draws itself in when it scrolls
  * into view, like the plotter placing a mark, and redraws when the
@@ -71,11 +64,9 @@ const accentStroke = {
  */
 export function DrawnIcon({
   name,
-  accent = "gold",
   size = 26,
 }: {
   name: IconName;
-  accent?: keyof typeof accentStroke;
   size?: number;
 }) {
   const Icon = icons[name];
@@ -122,7 +113,7 @@ export function DrawnIcon({
   return (
     <span
       ref={ref}
-      className={`drawn-icon inline-flex ${accentStroke[accent]}`}
+      className={"drawn-icon inline-flex text-gold"}
       style={{ "--dash": drawn ? 0 : 1 } as React.CSSProperties}
     >
       <Icon size={size} strokeWidth={1.5} aria-hidden="true" />

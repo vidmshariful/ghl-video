@@ -96,7 +96,7 @@ export function Testimonials() {
       className="relative overflow-hidden section-pad"
     >
       <DrawnBorder />
-      <SectionGlow accent="gold" position="left" />
+      <SectionGlow position="left" />
       <div className="shell relative">
         <div className="grid items-start gap-10 lg:grid-cols-12 lg:gap-12">
           <Reveal className="lg:col-span-5 lg:sticky lg:top-28">

@@ -25,7 +25,6 @@ export default function WorkPage() {
         chip={p.hero.chip}
         headline={p.hero.headline}
         accent={p.hero.accent}
-        accentColor="green"
         lede={p.hero.lede}
       >
         <Button href={cta.bookACall.href} variant="hero">
@@ -37,7 +36,7 @@ export default function WorkPage() {
       </PageHero>
 
       <section data-bp-idx="2" className="relative overflow-x-clip section-pad">
-        <SectionGlow accent="green" position="right" />
+        <SectionGlow position="right" />
         <div className="shell relative">
           <Reveal className="grid gap-6">
             {/* featured piece full width, then two-up rows */}
@@ -101,7 +100,6 @@ export default function WorkPage() {
                 line: "The fastest path from this page to your own video.",
                 linkLabel: "See premade videos",
                 href: "/premade/",
-                accent: "gold",
                 icon: "monitor-play",
               },
               {
@@ -109,7 +107,6 @@ export default function WorkPage() {
                 line: "Something bespoke, scripted for your positioning.",
                 linkLabel: "See custom production",
                 href: "/custom/",
-                accent: "green",
                 icon: "clapperboard",
               },
             ]}

@@ -20,14 +20,14 @@ export function ClosingCta() {
       className="relative overflow-x-clip section-pad"
     >
       <DrawnBorder />
-      <SectionGlow accent="green" position="right" />
+      <SectionGlow position="right" />
       <div className="shell relative">
         <Reveal>
           <RevealItem>
             <div className="grid overflow-hidden rounded-card border border-hair bg-canvas lg:grid-cols-[1.4fr_1fr]">
               {/* the pitch */}
               <div className="p-8 md:p-12 lg:p-14">
-                <SectionChip index={10} label="Next step" accent="green" />
+                <SectionChip index={10} label="Next step" />
                 <h2
                   id="closing-heading"
                   className="mt-6 max-w-[16ch] font-display text-h2 text-ink"

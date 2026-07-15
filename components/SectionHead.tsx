@@ -1,5 +1,5 @@
 import { Reveal, RevealItem } from "@/components/Reveal";
-import { SectionChip, type ChipAccent } from "@/components/SectionChip";
+import { SectionChip } from "@/components/SectionChip";
 
 /*
  * The recurring section header: numbered chip, display headline with
@@ -11,7 +11,6 @@ export function SectionHead({
   chip,
   headline,
   accent,
-  accentColor = "gold",
   intro,
   center = false,
 }: {
@@ -19,7 +18,6 @@ export function SectionHead({
   chip: string;
   headline: string;
   accent: string;
-  accentColor?: ChipAccent;
   intro?: string;
   center?: boolean;
 }) {

@@ -22,7 +22,6 @@ export default function ContactPage() {
         chip={p.hero.chip}
         headline={p.hero.headline}
         accent={p.hero.accent}
-        accentColor="green"
         lede={p.hero.lede}
       />
 
@@ -32,7 +31,6 @@ export default function ContactPage() {
           <div className="shell">
             <CellGrid
               items={p.callPoints.map((s, i) => ({ ...s, icon: callIcons[i] }))}
-              accent="green"
               numbered
             />
           </div>

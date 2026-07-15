@@ -19,7 +19,7 @@ export function Manifesto() {
   return (
     <section className="relative overflow-x-clip section-pad-sm">
       <DrawnBorder />
-      <SectionGlow accent="gold" position="right" />
+      <SectionGlow position="right" />
       <div className="shell relative">
         <Reveal>
           <RevealItem>
@@ -69,7 +69,7 @@ export function Manifesto() {
                       <path
                         d="M2 6.2 4.8 9 10 3.4"
                         fill="none"
-                        stroke="#FCC000"
+                        stroke="var(--gold)"
                         strokeWidth="1.8"
                         strokeLinecap="round"
                         strokeLinejoin="round"

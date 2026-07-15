@@ -61,7 +61,7 @@ export function TeamSection({ index = 7 }: { index?: number }) {
       className="relative overflow-hidden section-pad"
     >
       <DrawnBorder />
-      <SectionGlow accent="gold" position="right" />
+      <SectionGlow position="right" />
       <div className="shell relative">
         <Reveal>
           <RevealItem>

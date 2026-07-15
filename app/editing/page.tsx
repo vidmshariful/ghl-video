@@ -37,7 +37,6 @@ export default function EditingPage() {
         chip={p.hero.chip}
         headline={p.hero.headline}
         accent={p.hero.accent}
-        accentColor="blue"
         lede={p.hero.lede}
       >
         <Button href="#plans">See the plans</Button>
@@ -54,14 +53,13 @@ export default function EditingPage() {
         data-bp-idx="2"
         className="relative scroll-mt-24 overflow-x-clip section-pad"
       >
-        <SectionGlow accent="blue" position="right" />
+        <SectionGlow position="right" />
         <div className="shell relative">
           <SectionHead
             index={2}
             chip={p.plans.chip}
             headline={p.plans.headline}
             accent={p.plans.accent}
-            accentColor="blue"
           />
           <Reveal className="mt-14 grid gap-6 lg:grid-cols-3">
             {editingPlans.map((plan) => (
@@ -94,7 +92,6 @@ export default function EditingPage() {
             chip={p.samples.chip}
             headline={p.samples.headline}
             accent={p.samples.accent}
-            accentColor="blue"
             intro={p.samples.intro}
           />
           {/* PLACEHOLDER pair: real before/after samples swap in */}
@@ -108,7 +105,7 @@ export default function EditingPage() {
                   title: p.samples.before.label,
                   sub: p.samples.before.sub,
                 }}
-                tint="blue"
+                tint
                 startAt={clipWindows.sampleA!.startAt}
                 endAt={clipWindows.sampleA!.endAt}
               />
@@ -122,7 +119,7 @@ export default function EditingPage() {
                   title: p.samples.after.label,
                   sub: p.samples.after.sub,
                 }}
-                tint="blue"
+                tint
               />
             </RevealItem>
           </Reveal>
@@ -138,12 +135,10 @@ export default function EditingPage() {
         chip={p.fit.chip}
         headline={p.fit.headline}
         accent={p.fit.accent}
-        accentColor="blue"
       >
         <FitSplit
           forItems={p.fit.forItems}
           notItems={p.fit.notItems}
-          accent="blue"
           framed={false}
         />
       </RuledSection>
@@ -155,11 +150,9 @@ export default function EditingPage() {
         chip={p.how.chip}
         headline={p.how.headline}
         accent={p.how.accent}
-        accentColor="blue"
       >
         <CellGrid
           items={p.how.steps.map((s, i) => ({ ...s, icon: howIcons[i] }))}
-          accent="blue"
           numbered
           framed={false}
         />
@@ -176,7 +169,6 @@ export default function EditingPage() {
               chip={p.faq.chip}
               headline={p.faq.headline}
               accent={p.faq.accent}
-              accentColor="blue"
               center
             />
           </div>

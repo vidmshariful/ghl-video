@@ -36,21 +36,18 @@ export const navServices = [
     name: "Premade Videos",
     line: "Branded HighLevel videos in 5 to 7 days",
     href: "/premade/",
-    accent: "gold",
     posterKey: "sampleC",
   },
   {
     name: "Custom Production",
     line: "Scripted and produced for your ICP",
     href: "/custom/",
-    accent: "green",
     posterKey: "featured",
   },
   {
     name: "Video Editing",
     line: "Monthly editing for weekly publishers",
     href: "/editing/",
-    accent: "blue",
     posterKey: "sampleB",
   },
 ] as const;
@@ -552,7 +549,6 @@ export const home = {
         ],
         linkLabel: "See premade videos",
         href: "/premade/",
-        accent: "gold",
         mediaKey: "premadeNew",
       },
       {
@@ -567,7 +563,6 @@ export const home = {
         ],
         linkLabel: "See custom production",
         href: "/custom/",
-        accent: "green",
         mediaKey: "featured",
       },
       {
@@ -581,7 +576,6 @@ export const home = {
         ],
         linkLabel: "See video editing",
         href: "/editing/",
-        accent: "blue",
         mediaKey: "sampleB",
       },
     ],

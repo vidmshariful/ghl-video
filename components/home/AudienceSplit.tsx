@@ -13,7 +13,7 @@ export function AudienceSplit() {
   const { audiences } = home;
   return (
     <section className="relative overflow-hidden section-pad pt-0">
-      <SectionGlow accent="blue" position="right" />
+      <SectionGlow position="right" />
       <div className="shell relative">
         <Reveal>
           <RevealItem>

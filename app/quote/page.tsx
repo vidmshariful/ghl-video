@@ -19,7 +19,6 @@ export default function QuotePage() {
         chip={q.chip}
         headline={q.headline}
         accent={q.accent}
-        accentColor="green"
         lede={q.lede}
       />
 

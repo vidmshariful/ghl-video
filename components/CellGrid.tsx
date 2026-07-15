@@ -1,13 +1,5 @@
 import { DrawnIcon, type IconName } from "@/components/DrawnIcon";
 import { Reveal, RevealItem } from "@/components/Reveal";
-import type { ChipAccent } from "@/components/SectionChip";
-
-const accentText: Record<ChipAccent, string> = {
-  gold: "text-gold",
-  green: "text-gold",
-  blue: "text-gold",
-};
-
 /*
  * The ruled grid: one hairline mesh, solid canvas cells, no card
  * gradients. This is the blueprint answer to "three floating cards":
@@ -17,7 +9,6 @@ const accentText: Record<ChipAccent, string> = {
  */
 export function CellGrid({
   items,
-  accent = "gold",
   columns = 3,
   numbered = false,
   framed = true,
@@ -27,7 +18,6 @@ export function CellGrid({
     title: string;
     line: string;
   }[];
-  accent?: ChipAccent;
   columns?: 2 | 3;
   numbered?: boolean;
   /* drop the own frame when the grid sits inside a RuledSection box */
@@ -46,11 +36,9 @@ export function CellGrid({
             className="group/cell flex h-full flex-col bg-canvas p-7 transition-colors duration-300 hover:bg-surface md:p-8"
           >
             <div className="flex items-start justify-between">
-              {item.icon && <DrawnIcon name={item.icon} accent={accent} />}
+              {item.icon && <DrawnIcon name={item.icon} />}
               {numbered && (
-                <span
-                  className={`font-mono text-label uppercase ${accentText[accent]}`}
-                >
+                <span className="font-mono text-label uppercase text-gold">
                   {String(i + 1).padStart(2, "0")}
                 </span>
               )}
@@ -70,23 +58,19 @@ export function CellGrid({
 
 /*
  * Fit split: one ruled frame, two columns sharing a center hairline.
- * Left column ticks in the section accent, right column crosses in
+ * Left column ticks in gold, right column crosses in
  * dim. No card backgrounds; the line does the separating.
  */
 export function FitSplit({
   forItems,
   notItems,
-  accent = "green",
   framed = true,
 }: {
   forItems: readonly string[];
   notItems: readonly string[];
-  accent?: ChipAccent;
   /* drop the own frame when the split sits inside a RuledSection box */
   framed?: boolean;
 }) {
-  const tickColor = "#FCC000";
-  void accent;
   return (
     <Reveal
       className={`grid gap-px bg-hair md:grid-cols-2 ${
@@ -95,9 +79,7 @@ export function FitSplit({
     >
       <RevealItem className="h-full">
         <div className="h-full bg-canvas p-7 md:p-8">
-          <p className={`font-mono text-label uppercase ${accentText[accent]}`}>
-            Built for
-          </p>
+          <p className="font-mono text-label uppercase text-gold">Built for</p>
           <ul className="mt-5">
             {forItems.map((item) => (
               <li
@@ -112,7 +94,7 @@ export function FitSplit({
                   <path
                     d="M2 6.2 4.8 9 10 3.4"
                     fill="none"
-                    stroke={tickColor}
+                    stroke="var(--gold)"
                     strokeWidth="1.8"
                     strokeLinecap="round"
                     strokeLinejoin="round"

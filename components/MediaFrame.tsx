@@ -132,8 +132,8 @@ export function MediaFrame({
    * plays the full clip from the start */
   startAt?: number;
   endAt?: number;
-  /* accent-tinted grade so a service's media wears its own color */
-  tint?: "gold" | "green" | "blue";
+  /* a touch more of the gold grade; every tint is gold */
+  tint?: boolean;
   /* also ease the grade when an ancestor group/svc container hovers */
   groupEase?: boolean;
   rounded?: string;
@@ -212,7 +212,7 @@ export function MediaFrame({
           groupEase ? "group-hover/svc:opacity-60" : ""
         }`}
       >
-        <div className="absolute inset-0 bg-[#08090D]/45" />
+        <div className="absolute inset-0 bg-canvas/45" />
         <div
           className="absolute inset-0"
           style={{
@@ -232,9 +232,9 @@ export function MediaFrame({
 
       {caption && (
         <figcaption className="pointer-events-none absolute bottom-3.5 left-4 z-10 font-mono text-label uppercase">
-          <span className="text-[#EEF0F6]">{caption.title}</span>
+          <span className="text-ink">{caption.title}</span>
           {caption.sub && (
-            <span className="text-[#9096A8]"> / {caption.sub}</span>
+            <span className="text-muted"> / {caption.sub}</span>
           )}
         </figcaption>
       )}
@@ -252,10 +252,10 @@ export function MediaFrame({
       {/* quiet play affordance */}
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute bottom-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-[#242736] bg-[#08090D]/70 opacity-80 backdrop-blur-sm transition-transform duration-300 group-hover/mf:scale-110"
+        className="pointer-events-none absolute bottom-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-[#242736] bg-canvas/70 opacity-80 backdrop-blur-sm transition-transform duration-300 group-hover/mf:scale-110"
       >
         <svg viewBox="0 0 16 16" className="ml-0.5 h-3 w-3">
-          <path d="M3 1.8v12.4L14 8 3 1.8Z" fill="#EEF0F6" />
+          <path d="M3 1.8v12.4L14 8 3 1.8Z" fill="var(--text)" />
         </svg>
       </span>
 

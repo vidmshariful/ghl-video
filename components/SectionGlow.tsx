@@ -6,23 +6,14 @@
  * section must be `relative overflow-hidden`. Purely decorative.
  */
 
-/* one accent: every ambient glow is gold */
-const accents = {
-  gold: "rgba(252, 192, 0, 0.10)",
-  green: "rgba(252, 192, 0, 0.10)",
-  blue: "rgba(252, 192, 0, 0.09)",
-} as const;
-
 const positions = {
   left: "-left-56 -top-56",
   right: "-right-56 -top-56",
 } as const;
 
 export function SectionGlow({
-  accent = "gold",
   position = "left",
 }: {
-  accent?: keyof typeof accents;
   position?: keyof typeof positions;
 }) {
   return (
@@ -30,7 +21,7 @@ export function SectionGlow({
       aria-hidden="true"
       className={`section-glow pointer-events-none absolute h-[36rem] w-[56rem] ${positions[position]}`}
       style={{
-        background: `radial-gradient(closest-side, ${accents[accent]}, transparent 72%)`,
+        background: `radial-gradient(closest-side, var(--glow-gold), transparent 72%)`,
       }}
     />
   );

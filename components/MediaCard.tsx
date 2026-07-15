@@ -30,7 +30,7 @@ export function MediaCard({
   label?: string;
   startAt?: number;
   endAt?: number;
-  tint?: "gold" | "green" | "blue";
+  tint?: boolean;
   /* optional right-aligned control in the footer row */
   action?: ReactNode;
   className?: string;

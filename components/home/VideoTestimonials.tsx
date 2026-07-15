@@ -15,11 +15,11 @@ export function VideoTestimonials() {
   return (
     <section data-bp-idx="5" aria-labelledby="client-stories-heading" className="relative overflow-hidden section-pad">
       <DrawnBorder />
-      <SectionGlow accent="green" position="left" />
+      <SectionGlow position="left" />
       <div className="shell relative">
         <Reveal>
           <RevealItem>
-            <SectionChip index={5} label={vt.chip} accent="green" />
+            <SectionChip index={5} label={vt.chip} />
             <h2 id="client-stories-heading" className="mt-6 max-w-[18ch] font-display text-h2 text-ink">
               {vt.headline}{" "}
               <span className="text-gradient">{vt.accent}</span>

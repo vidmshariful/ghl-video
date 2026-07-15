@@ -194,7 +194,7 @@ function BuyVideoLink({
       href={video.orderUrl}
       target="_blank"
       rel="noopener"
-      className={`tap group/btn inline-flex items-center gap-1.5 whitespace-nowrap rounded-[3px] bg-brand-gradient px-4 py-2 text-body-sm font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] transition-all duration-200 hover:brightness-110 active:scale-[0.98] ${className}`}
+      className={`tap group/btn inline-flex items-center gap-1.5 whitespace-nowrap rounded-[3px] bg-brand-gradient px-4 py-2 text-body-sm font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] transition-all duration-200 hover:brightness-110 active:scale-[0.98] ${className}`}
     >
       {label}
       <span
@@ -241,15 +241,15 @@ function PosterPlay({
       />
       <span className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-[#030303]/90 via-[#030303]/40 to-transparent" />
       <span className="pointer-events-none absolute bottom-3.5 left-4 z-10 font-mono text-label uppercase">
-        <span className="text-[#EEF0F6]">{video.typeTag}</span>
+        <span className="text-ink">{video.typeTag}</span>
         {video.subTag && video.subTag !== "Pre-2026" && (
-          <span className="text-[#9096A8]"> / {video.subTag}</span>
+          <span className="text-muted"> / {video.subTag}</span>
         )}
       </span>
       <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
         <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-gradient shadow-[0_0_28px_rgba(0,204,0,0.3)] transition-transform duration-300 group-hover/pp:scale-110">
           <svg viewBox="0 0 24 24" className="ml-0.5 h-5 w-5" aria-hidden="true">
-            <path d="M8 5v14l11-7z" fill="#08090D" />
+            <path d="M8 5v14l11-7z" fill="var(--canvas)" />
           </svg>
         </span>
       </span>
@@ -358,7 +358,7 @@ function LibraryCard({
             src={src ?? video.preview}
             poster={poster}
             label={video.title}
-            tint="gold"
+            tint
             interactive={false}
             rounded="rounded-none"
             caption={{ title: video.typeTag, sub: video.subTag }}
@@ -460,7 +460,7 @@ function PreviewLightbox({
       role="dialog"
       aria-modal="true"
       aria-label={video.title}
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-[#08090D]/90 p-4 backdrop-blur-md md:p-12"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-canvas/90 p-4 backdrop-blur-md md:p-12"
       onClick={onClose}
     >
       <div
@@ -472,7 +472,7 @@ function PreviewLightbox({
           type="button"
           onClick={onClose}
           aria-label="Close video"
-          className="absolute -top-12 right-0 flex h-10 w-10 items-center justify-center rounded-[3px] border border-[#2b2f40] bg-[#111219] text-[#EEF0F6] transition-colors hover:border-gold"
+          className="absolute -top-12 right-0 flex h-10 w-10 items-center justify-center rounded-[3px] border border-hair bg-[#111219] text-ink transition-colors hover:border-gold"
         >
           <svg viewBox="0 0 12 12" className="h-3.5 w-3.5" aria-hidden="true">
             <path
@@ -489,7 +489,7 @@ function PreviewLightbox({
           </div>
         )}
         {video.wistiaId ? (
-          <div className="aspect-video w-full border border-[#2b2f40] bg-black">
+          <div className="aspect-video w-full border border-hair bg-black">
             <iframe
               src={`https://fast.wistia.net/embed/iframe/${video.wistiaId}?autoPlay=true&playerColor=FCC000`}
               title={video.title}
@@ -507,18 +507,18 @@ function PreviewLightbox({
             controls
             autoPlay
             playsInline
-            className="aspect-video w-full border border-[#2b2f40] bg-black"
+            className="aspect-video w-full border border-hair bg-black"
           />
         )}
         {/* the buy bar: the preview closes with the action in reach */}
-        <div className="flex flex-wrap items-center justify-between gap-4 border border-t-0 border-[#2b2f40] bg-[#111219] px-5 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-4 border border-t-0 border-hair bg-[#111219] px-5 py-4">
           {video.previewOnly ? (
             <>
               <div>
-                <p className="font-display text-h4 font-semibold text-[#EEF0F6]">
+                <p className="font-display text-h4 font-semibold text-ink">
                   {video.title}
                 </p>
-                <p className="mt-0.5 text-body text-[#9096A8]">
+                <p className="mt-0.5 text-body text-muted">
                   {video.previewNote ??
                     "Included in the bundle, branded to your platform."}
                 </p>
@@ -532,10 +532,10 @@ function PreviewLightbox({
           ) : (
             <>
               <div>
-                <p className="font-display text-h4 font-semibold text-[#EEF0F6]">
+                <p className="font-display text-h4 font-semibold text-ink">
                   {video.title}
                 </p>
-                <p className="mt-0.5 text-body text-[#9096A8]">
+                <p className="mt-0.5 text-body text-muted">
                   Make it yours, branded to you.{" "}
                   <span className="font-mono font-semibold text-gold">
                     ${video.price.toLocaleString("en-US")} one-time
@@ -894,7 +894,7 @@ function FeaturePriceCard({ pack }: { pack: (typeof featurePacks)[number] }) {
         href={pack.orderUrl}
         target="_blank"
         rel="noopener"
-        className="group/btn mt-4 inline-flex items-center justify-center gap-1.5 rounded-[3px] bg-brand-gradient px-4 py-2.5 text-body-sm font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
+        className="group/btn mt-4 inline-flex items-center justify-center gap-1.5 rounded-[3px] bg-brand-gradient px-4 py-2.5 text-body-sm font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
       >
         Order {pack.packCount}
         {"× "}
@@ -1066,7 +1066,7 @@ function BundleView({
                 href={orderUrl ?? "#"}
                 target="_blank"
                 rel="noopener"
-                className="group inline-flex items-center gap-2 whitespace-nowrap rounded-[3px] bg-brand-gradient px-6 py-3 text-body font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.28)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98]"
+                className="group inline-flex items-center gap-2 whitespace-nowrap rounded-[3px] bg-brand-gradient px-6 py-3 text-body font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.28)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98]"
               >
                 {ctaLabel}
                 <span
@@ -1080,7 +1080,7 @@ function BundleView({
           ) : (
             <Link
               href={cta.bookACall.href}
-              className="group inline-flex items-center gap-2 whitespace-nowrap rounded-[3px] bg-brand-gradient px-6 py-3 text-body font-semibold text-[#08090D] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98]"
+              className="group inline-flex items-center gap-2 whitespace-nowrap rounded-[3px] bg-brand-gradient px-6 py-3 text-body font-semibold text-canvas transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98]"
             >
               {cta.bookACall.label}
               <span aria-hidden="true">&rarr;</span>
@@ -1283,7 +1283,7 @@ function VersionLightbox({
       role="dialog"
       aria-modal="true"
       aria-label={version.name}
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-[#08090D]/90 p-4 backdrop-blur-md md:p-12"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-canvas/90 p-4 backdrop-blur-md md:p-12"
       onClick={onClose}
     >
       <div className="relative w-full max-w-5xl" onClick={(e) => e.stopPropagation()}>
@@ -1292,14 +1292,14 @@ function VersionLightbox({
           type="button"
           onClick={onClose}
           aria-label="Close preview"
-          className="absolute -top-12 right-0 flex h-10 w-10 items-center justify-center rounded-[3px] border border-[#2b2f40] bg-[#111219] text-[#EEF0F6] transition-colors hover:border-gold"
+          className="absolute -top-12 right-0 flex h-10 w-10 items-center justify-center rounded-[3px] border border-hair bg-[#111219] text-ink transition-colors hover:border-gold"
         >
           <svg viewBox="0 0 12 12" className="h-3.5 w-3.5" aria-hidden="true">
             <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
         </button>
         {version.wistiaId ? (
-          <div className="aspect-video w-full border border-[#2b2f40] bg-black">
+          <div className="aspect-video w-full border border-hair bg-black">
             <iframe
               src={`https://fast.wistia.net/embed/iframe/${version.wistiaId}?autoPlay=true&playerColor=FCC000`}
               title={version.name}
@@ -1309,7 +1309,7 @@ function VersionLightbox({
             />
           </div>
         ) : (
-          <div className="relative flex aspect-video w-full flex-col items-center justify-center border border-[#2b2f40] bg-surface text-center">
+          <div className="relative flex aspect-video w-full flex-col items-center justify-center border border-hair bg-surface text-center">
             <div aria-hidden="true" className="pointer-events-none absolute inset-0 hatch opacity-30" />
             <span className="relative rounded-full border border-hair bg-canvas px-4 py-1.5 font-mono text-label uppercase text-dim">
               Example coming soon
@@ -1321,12 +1321,12 @@ function VersionLightbox({
           </div>
         )}
         {/* buy or download, in reach */}
-        <div className="flex flex-wrap items-center justify-between gap-4 border border-t-0 border-[#2b2f40] bg-[#111219] px-5 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-4 border border-t-0 border-hair bg-[#111219] px-5 py-4">
           <div>
-            <p className="font-display text-h4 font-semibold text-[#EEF0F6]">
+            <p className="font-display text-h4 font-semibold text-ink">
               {version.name}
             </p>
-            <p className="mt-0.5 text-body text-[#9096A8]">
+            <p className="mt-0.5 text-body text-muted">
               {version.note}{" "}
               <span className="font-mono font-semibold text-gold">
                 {free ? "Free" : `$${version.price.toLocaleString("en-US")}`}
@@ -1338,7 +1338,7 @@ function VersionLightbox({
             target="_blank"
             rel="noopener"
             {...(version.cta === "download" ? { download: "" } : {})}
-            className="group inline-flex items-center gap-2 whitespace-nowrap rounded-[3px] bg-brand-gradient px-6 py-3 text-body font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
+            className="group inline-flex items-center gap-2 whitespace-nowrap rounded-[3px] bg-brand-gradient px-6 py-3 text-body font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
           >
             {version.cta === "download" ? "Download free" : "Buy now"}
             <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-0.5">

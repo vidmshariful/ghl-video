@@ -10,6 +10,9 @@
   --green: #00cc00;
   --brand-gradient: linear-gradient(100deg, #fcc000, #00cc00);
 
+  /* the ambient section glow. One accent: every glow is gold. */
+  --glow-gold: rgba(252, 192, 0, 0.1);
+
   /* Two reading measures, and only two. Prose caps had drifted to nine
      values between 26ch and 72ch: at the narrow end they squeezed body
      copy to ~32 characters a line, at the wide end they let it run to

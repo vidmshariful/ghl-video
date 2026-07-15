@@ -12,7 +12,7 @@ type Variant = "primary" | "hero" | "ghost";
 type Size = "md" | "lg";
 
 const gradient =
-  "bg-brand-gradient text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),inset_0_-1px_0_rgba(0,0,0,0.15),0_0_28px_rgba(0,204,0,0.28)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.4),inset_0_-1px_0_rgba(0,0,0,0.15),0_0_44px_rgba(0,204,0,0.45)] hover:brightness-[1.07]";
+  "bg-brand-gradient text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.35),inset_0_-1px_0_rgba(0,0,0,0.15),0_0_28px_rgba(0,204,0,0.28)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.4),inset_0_-1px_0_rgba(0,0,0,0.15),0_0_44px_rgba(0,204,0,0.45)] hover:brightness-[1.07]";
 
 const variants: Record<Variant, string> = {
   primary: gradient,

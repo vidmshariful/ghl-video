@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { SectionChip, type ChipAccent } from "@/components/SectionChip";
+import { SectionChip } from "@/components/SectionChip";
 import { SectionGlow } from "@/components/SectionGlow";
 
 /* Registration mark: a circled dot where the boundary rule crosses
@@ -25,7 +25,6 @@ export function PageHero({
   chip,
   headline,
   accent,
-  accentColor,
   lede,
   signal,
   divider = true,
@@ -34,7 +33,6 @@ export function PageHero({
   chip: string;
   headline: string;
   accent: string;
-  accentColor: ChipAccent;
   lede: string;
   /* mono meta line, e.g. a price signal */
   signal?: string;
@@ -45,7 +43,7 @@ export function PageHero({
 }) {
   return (
     <section data-bp-idx="1" className="relative overflow-x-clip hero-pad">
-      <SectionGlow accent={accentColor} position="left" />
+      <SectionGlow position="left" />
       <div className="shell relative pb-14 text-center md:pb-16">
         <div className="flex flex-wrap items-center justify-center gap-3">
           <SectionChip index={1} label={chip} />

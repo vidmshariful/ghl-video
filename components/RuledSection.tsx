@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Reveal, RevealItem } from "@/components/Reveal";
-import { SectionChip, type ChipAccent } from "@/components/SectionChip";
+import { SectionChip } from "@/components/SectionChip";
 
 /*
  * Ruled section: a square hairline box whose top and bottom rules run
@@ -14,7 +14,6 @@ export function RuledSection({
   chip,
   headline,
   accent,
-  accentColor = "gold",
   intro,
   children,
 }: {
@@ -23,7 +22,6 @@ export function RuledSection({
   chip: string;
   headline: string;
   accent: string;
-  accentColor?: ChipAccent;
   intro?: string;
   children: ReactNode;
 }) {

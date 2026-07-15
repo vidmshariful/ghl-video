@@ -30,7 +30,7 @@ function Check() {
       <path
         d="M2 6.2 4.8 9 10 3.4"
         fill="none"
-        stroke="#FCC000"
+        stroke="var(--gold)"
         strokeWidth="1.8"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -62,11 +62,11 @@ export function Comparison() {
       className="relative overflow-hidden section-pad"
     >
       <DrawnBorder />
-      <SectionGlow accent="green" position="left" />
+      <SectionGlow position="left" />
       <div className="shell relative">
         <Reveal>
           <RevealItem>
-            <SectionChip index={4} label={comparison.eyebrow} accent="green" />
+            <SectionChip index={4} label={comparison.eyebrow} />
             <h2
               id="comparison-heading"
               className="mt-6 max-w-[22ch] font-display text-h2 text-ink"

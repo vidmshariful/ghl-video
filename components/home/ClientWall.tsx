@@ -15,7 +15,7 @@ export function ClientWall() {
       aria-labelledby="clients-heading"
       className="relative overflow-hidden section-pad"
     >
-      <SectionGlow accent="gold" position="right" />
+      <SectionGlow position="right" />
       <div className="shell relative text-center">
         <Reveal>
           <RevealItem>

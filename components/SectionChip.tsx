@@ -2,8 +2,6 @@
 
 import { motion, useReducedMotion } from "framer-motion";
 
-export type ChipAccent = "gold" | "green" | "blue";
-
 /*
  * Bracketed section index chip. Brackets and number are STATIC in the
  * markup (never a broken intermediate state for fast scrollers,
@@ -18,8 +16,6 @@ export function SectionChip({
 }: {
   index: number;
   label: string;
-  /* kept for call-site compatibility; numbers render gold regardless */
-  accent?: ChipAccent;
 }) {
   const reduced = useReducedMotion();
   return (

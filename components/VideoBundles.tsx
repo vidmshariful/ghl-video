@@ -54,7 +54,7 @@ function BundleCard({ tier }: { tier: BundleTier }) {
               <path
                 d="M2 6.2 4.8 9 10 3.4"
                 fill="none"
-                stroke="#FCC000"
+                stroke="var(--gold)"
                 strokeWidth="1.8"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -80,7 +80,7 @@ function BundleCard({ tier }: { tier: BundleTier }) {
         href={tier.orderUrl}
         target="_blank"
         rel="noopener"
-        className="group mt-5 inline-flex items-center justify-center gap-2 rounded-[3px] bg-brand-gradient px-6 py-3.5 text-body font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.25)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98]"
+        className="group mt-5 inline-flex items-center justify-center gap-2 rounded-[3px] bg-brand-gradient px-6 py-3.5 text-body font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.25)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98]"
       >
         Get the bundle
         <span

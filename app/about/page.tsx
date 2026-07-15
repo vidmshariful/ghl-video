@@ -34,7 +34,6 @@ export default function AboutPage() {
         chip={p.hero.chip}
         headline={p.hero.headline}
         accent={p.hero.accent}
-        accentColor="gold"
         lede={p.hero.lede}
       >
         <Button href={cta.bookACall.href} variant="hero">
@@ -55,7 +54,6 @@ export default function AboutPage() {
               chip={p.story.chip}
               headline={p.story.headline}
               accent={p.story.accent}
-              accentColor="gold"
             />
             <Reveal>
               <RevealItem className="grid gap-6">
@@ -127,7 +125,6 @@ export default function AboutPage() {
             chip={p.clients.chip}
             headline={p.clients.headline}
             accent={p.clients.accent}
-            accentColor="gold"
           />
           <Reveal className="mt-12 grid gap-6 lg:grid-cols-[1fr_auto]">
             <RevealItem>
@@ -177,7 +174,6 @@ export default function AboutPage() {
             chip={p.entity.chip}
             headline={p.entity.headline}
             accent={p.entity.accent}
-            accentColor="gold"
           />
           <Reveal className="mt-10">
             <RevealItem>

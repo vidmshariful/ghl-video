@@ -27,7 +27,7 @@ export function FaqList({
               <path
                 d="M1 1l5 5 5-5"
                 fill="none"
-                stroke="#9096A8"
+                stroke="var(--muted)"
                 strokeWidth="1.5"
                 strokeLinecap="round"
               />

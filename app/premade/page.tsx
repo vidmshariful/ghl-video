@@ -37,7 +37,6 @@ export default function PremadePage() {
         chip={p.hero.chip}
         headline={p.hero.headline}
         accent={p.hero.accent}
-        accentColor="gold"
         lede={p.hero.lede}
         signal={p.hero.priceSignal}
       >
@@ -56,14 +55,13 @@ export default function PremadePage() {
         aria-label="The video library"
         className="relative scroll-mt-24 overflow-x-clip section-pad"
       >
-        <SectionGlow accent="gold" position="right" />
+        <SectionGlow position="right" />
         <div className="shell relative">
           <SectionHead
             index={2}
             chip={p.grid.chip}
             headline={p.grid.headline}
             accent={p.grid.accent}
-            accentColor="gold"
             intro={p.grid.intro}
             center
           />
@@ -79,14 +77,13 @@ export default function PremadePage() {
         aria-label="Video bundles"
         className="relative overflow-x-clip section-pad"
       >
-        <SectionGlow accent="gold" position="left" />
+        <SectionGlow position="left" />
         <div className="shell relative">
           <SectionHead
             index={3}
             chip="Bundle and save"
             headline="Bundle up and"
             accent="save more."
-            accentColor="gold"
             intro="Three ways to bundle: our newest releases, the classic library at reduced prices, or a mix of both. Every video white-labeled to your SaaS."
             center
           />
@@ -103,7 +100,6 @@ export default function PremadePage() {
         chip={p.included.chip}
         headline={p.included.headline}
         accent={p.included.accent}
-        accentColor="gold"
       >
         <Reveal className="grid gap-px bg-hair sm:grid-cols-2 lg:grid-cols-3">
           {p.included.items.map((item, i) => (
@@ -112,7 +108,7 @@ export default function PremadePage() {
                 data-cell
                 className="group/cell flex h-full flex-col gap-5 bg-canvas p-8 transition-colors duration-300 hover:bg-surface"
               >
-                <DrawnIcon name={includedIcons[i]} accent="gold" />
+                <DrawnIcon name={includedIcons[i]} />
                 <p className="max-w-[var(--measure-body)] text-body leading-relaxed text-muted">
                   {item}
                 </p>
@@ -135,7 +131,6 @@ export default function PremadePage() {
         chip={p.how.chip}
         headline={p.how.headline}
         accent={p.how.accent}
-        accentColor="gold"
       >
         <Reveal className="grid gap-px bg-hair sm:grid-cols-3">
           {p.how.steps.map((s, i) => (
@@ -145,7 +140,7 @@ export default function PremadePage() {
                 className="group/cell flex h-full flex-col bg-canvas p-8 transition-colors duration-300 hover:bg-surface"
               >
                 <div className="flex items-start justify-between">
-                  <DrawnIcon name={howIcons[i]} accent="gold" />
+                  <DrawnIcon name={howIcons[i]} />
                   <span className="font-mono text-label uppercase text-gold">
                     {String(i + 1).padStart(2, "0")}
                   </span>
@@ -171,7 +166,6 @@ export default function PremadePage() {
         chip="Keep going"
         headline="Need something"
         accent="premade can't do?"
-        accentColor="gold"
       >
         <Reveal className="grid gap-px bg-hair md:grid-cols-2">
           {(
@@ -208,7 +202,7 @@ export default function PremadePage() {
                   >
                     {item.eyebrow}
                   </p>
-                  <DrawnIcon name={item.icon} accent={item.iconAccent} />
+                  <DrawnIcon name={item.icon} />
                 </div>
                 <p className="mt-4 max-w-[40ch] flex-1 font-display text-h3 text-ink">
                   {item.line}
@@ -241,7 +235,6 @@ export default function PremadePage() {
               chip={p.faq.chip}
               headline={p.faq.headline}
               accent={p.faq.accent}
-              accentColor="gold"
               center
             />
           </div>

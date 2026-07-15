@@ -15,27 +15,15 @@ import type { Accent } from "@/components/Eyebrow";
  * route to the service pages.
  */
 
-const accentText: Record<Exclude<Accent, "muted">, string> = {
-  gold: "text-gold",
-  green: "text-gold",
-  blue: "text-gold",
-};
-
-const hoverBorder: Record<string, string> = {
-  gold: "hover:border-gold/40",
-  green: "hover:border-gold/40",
-  blue: "hover:border-gold/40",
-};
-
 export function ServicePanels() {
   const { services } = home;
   return (
     <section data-bp-idx="2" aria-labelledby="services-heading" className="relative overflow-x-clip section-pad">
-      <SectionGlow accent="green" position="right" />
+      <SectionGlow position="right" />
       <div className="shell relative">
         <Reveal className="text-center">
           <RevealItem>
-            <SectionChip index={2} label={services.chip} accent="green" />
+            <SectionChip index={2} label={services.chip} />
             <h2 id="services-heading" className="mx-auto mt-6 max-w-[18ch] font-display text-h2 text-ink">
               {services.headline}{" "}
               <span className="text-gradient">{services.accent}</span>
@@ -61,7 +49,7 @@ export function ServicePanels() {
                   src={clips[panel.mediaKey as keyof typeof clips]}
                   poster={posters[panel.mediaKey as keyof typeof posters]}
                   label={`${panel.name} sample`}
-                  tint={panel.accent as "gold" | "green" | "blue"}
+                  tint
                   groupEase
                   {...(clipWindows[panel.mediaKey as keyof typeof clips] ?? {})}
                   className="!absolute inset-3 h-auto !aspect-auto"
@@ -71,7 +59,7 @@ export function ServicePanels() {
             const copy = (
               <div className={`p-8 md:p-12 ${flip ? "lg:order-2" : ""}`}>
                 <p
-                  className={`font-mono text-label uppercase ${accentText[panel.accent as keyof typeof accentText]}`}
+                  className={"font-mono text-label uppercase text-gold"}
                 >
                   {panel.name}
                 </p>
@@ -83,12 +71,11 @@ export function ServicePanels() {
                 </p>
                 <Checklist
                   items={panel.checklist}
-                  accent={panel.accent as "gold" | "green" | "blue"}
                   className="mt-7 max-w-md"
                 />
                 <Link
                   href={panel.href}
-                  className={`group mt-8 inline-flex items-center gap-2 text-body font-semibold ${accentText[panel.accent as keyof typeof accentText]}`}
+                  className={`group mt-8 inline-flex items-center gap-2 text-body font-semibold text-gold`}
                 >
                   {panel.linkLabel}
                   <span
@@ -110,7 +97,7 @@ export function ServicePanels() {
                   <RevealItem>
                     <Panel
                       solid
-                      className={`group/svc overflow-hidden transition-colors duration-300 ${hoverBorder[panel.accent]}`}
+                      className={`group/svc overflow-hidden transition-colors duration-300 hover:border-gold/40`}
                     >
                       {/* the signature, moving: animated gradient hairline */}
                       <div

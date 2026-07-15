@@ -1,19 +1,10 @@
-/* one accent: every tick is gold */
-const tickColors = {
-  gold: "#FCC000",
-  green: "#FCC000",
-  blue: "#FCC000",
-} as const;
-
 /* Checklist rows: the check is functional (a claim ticked off), not
  * icon decoration. Tick color follows the section's accent. */
 export function Checklist({
   items,
-  accent = "green",
   className = "",
 }: {
   items: readonly string[];
-  accent?: keyof typeof tickColors;
   className?: string;
 }) {
   return (
@@ -32,7 +23,7 @@ export function Checklist({
               className="tick-path"
               d="M2 6.2 4.8 9 10 3.4"
               fill="none"
-              stroke={tickColors[accent]}
+              stroke="var(--gold)"
               strokeWidth="1.8"
               strokeLinecap="round"
               strokeLinejoin="round"
