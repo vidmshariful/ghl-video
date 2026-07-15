@@ -1,68 +1,86 @@
-import { Checklist } from "@/components/Checklist";
-import { Reveal, RevealItem } from "@/components/Reveal";
-import { videoBundles, type VideoBundle } from "@/lib/site";
+"use client";
+
+import { useState } from "react";
+import { bundleCategories, type BundleTier } from "@/lib/site";
 
 /*
- * Build-your-own bundles. Each tier is a flat price for a number of
- * videos the buyer picks from anywhere in the library. Growth carries
- * the featured treatment (gold hairline crown, "Most popular"), matching
- * the editing plan cards. The pick count is the gold hero; the price
- * sits under it with the à-la-carte value struck through.
+ * Video bundles in three flavors: New, Classic, and Mix. A segmented
+ * control switches the category; each tier is a card listing exactly
+ * what it includes, with the source library tagged on every line when a
+ * bundle mixes both. The featured tier carries the gold crown, matching
+ * the editing plan cards. One gradient CTA per card.
  */
-function BundleCard({ bundle }: { bundle: VideoBundle }) {
-  const saved = Math.round((1 - bundle.price / bundle.anchorPrice) * 100);
-  const lines = [
-    `Any ${bundle.pick} videos from the full library`,
-    "Mix explainers, demos, short, marketing, and feature animations",
-    "Every video white-labeled to your SaaS",
-    `Delivery in ${bundle.deliveryDays} days`,
-  ];
+function BundleCard({ tier }: { tier: BundleTier }) {
+  const saved = Math.round((1 - tier.price / tier.anchorPrice) * 100);
+  const mixed = new Set(tier.items.map((i) => i.library)).size > 1;
   return (
     <div
       className={`relative flex h-full flex-col rounded-card border card-glass p-7 md:p-8 ${
-        bundle.featured ? "border-gold/50" : "border-hair"
+        tier.featured ? "border-gold/50" : "border-hair"
       }`}
     >
-      {bundle.featured && (
+      {tier.featured && (
         <span className="absolute -top-3 left-7 inline-flex items-center rounded-full border border-gold/50 bg-canvas px-3 py-1 font-mono text-label uppercase text-gold">
           Most popular
         </span>
       )}
-      <h3 className="font-display text-h3 text-ink">{bundle.name}</h3>
-      <p className="mt-1.5 text-sm text-muted">{bundle.blurb}</p>
-
-      {/* the pick count leads: this is what the tier buys you */}
-      <div className="mt-6 flex items-baseline gap-2.5">
-        <span className="font-mono text-[3rem] font-bold leading-none text-gold [font-variant-numeric:tabular-nums]">
-          {bundle.pick}
-        </span>
-        <span className="font-mono text-label uppercase leading-tight text-muted">
-          videos,
-          <br />
-          your pick
-        </span>
-      </div>
+      <h3 className="font-display text-h3 text-ink">{tier.name}</h3>
 
       {/* price with the à-la-carte value struck through */}
-      <div className="mt-5 flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
-        <span className="font-mono text-[1.5rem] font-bold text-gold [font-variant-numeric:tabular-nums]">
-          ${bundle.price.toLocaleString("en-US")}
+      <div className="mt-4 flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+        <span className="font-mono text-[2.25rem] font-bold leading-none text-gold [font-variant-numeric:tabular-nums]">
+          ${tier.price.toLocaleString("en-US")}
         </span>
         <span className="font-mono text-[0.9375rem] text-dim line-through [font-variant-numeric:tabular-nums]">
-          ${bundle.anchorPrice.toLocaleString("en-US")}
+          ${tier.anchorPrice.toLocaleString("en-US")}
         </span>
         <span className="font-mono text-label uppercase text-muted">
           save {saved}%
         </span>
       </div>
 
-      <Checklist items={lines} accent="gold" className="mt-6 flex-1" />
+      {/* exactly what's included */}
+      <ul className="mt-6 flex-1">
+        {tier.items.map((item) => (
+          <li
+            key={item.label}
+            className="flex items-start gap-3 border-t border-hair py-3 first:border-t-0"
+          >
+            <svg
+              viewBox="0 0 12 12"
+              className="mt-1 h-3 w-3 shrink-0"
+              aria-hidden="true"
+            >
+              <path
+                d="M2 6.2 4.8 9 10 3.4"
+                fill="none"
+                stroke="#FCC000"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <span className="text-[0.9375rem] text-muted">
+              {item.label}
+              {mixed && (
+                <span className="ml-1.5 font-mono text-[0.6875rem] uppercase tracking-[0.08em] text-dim">
+                  [{item.library}]
+                </span>
+              )}
+            </span>
+          </li>
+        ))}
+      </ul>
+
+      <p className="mt-5 font-mono text-label uppercase text-dim">
+        Delivery in {tier.deliveryDays} days
+      </p>
 
       <a
-        href={bundle.orderUrl}
+        href={tier.orderUrl}
         target="_blank"
         rel="noopener"
-        className="group mt-7 inline-flex items-center justify-center gap-2 rounded-[3px] bg-brand-gradient px-6 py-3.5 text-[0.9375rem] font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.25)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98]"
+        className="group mt-5 inline-flex items-center justify-center gap-2 rounded-[3px] bg-brand-gradient px-6 py-3.5 text-[0.9375rem] font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.25)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98]"
       >
         Get the bundle
         <span
@@ -77,13 +95,48 @@ function BundleCard({ bundle }: { bundle: VideoBundle }) {
 }
 
 export function VideoBundles() {
+  const [cat, setCat] = useState(bundleCategories[0].slug);
+  const active =
+    bundleCategories.find((c) => c.slug === cat) ?? bundleCategories[0];
+
   return (
-    <Reveal className="grid items-start gap-6 lg:grid-cols-3">
-      {videoBundles.map((bundle) => (
-        <RevealItem key={bundle.slug} className="h-full">
-          <BundleCard bundle={bundle} />
-        </RevealItem>
-      ))}
-    </Reveal>
+    <div>
+      {/* category switcher */}
+      <div
+        role="tablist"
+        aria-label="Bundle type"
+        className="mx-auto flex w-fit flex-wrap justify-center gap-1 rounded-[4px] border border-hair bg-surface/60 p-1"
+      >
+        {bundleCategories.map((c) => {
+          const isActive = c.slug === active.slug;
+          return (
+            <button
+              key={c.slug}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => setCat(c.slug)}
+              className={`rounded-[3px] px-4 py-2 font-mono text-label uppercase transition-colors ${
+                isActive
+                  ? "bg-gold/15 font-semibold text-gold"
+                  : "text-muted hover:text-ink"
+              }`}
+            >
+              {c.name}
+            </button>
+          );
+        })}
+      </div>
+
+      <p className="mx-auto mt-5 max-w-[56ch] text-center text-[0.9375rem] leading-relaxed text-muted">
+        {active.blurb}
+      </p>
+
+      <div className="mx-auto mt-10 grid max-w-4xl items-start gap-5 sm:grid-cols-2">
+        {active.tiers.map((tier) => (
+          <BundleCard key={tier.slug} tier={tier} />
+        ))}
+      </div>
+    </div>
   );
 }

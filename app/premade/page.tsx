@@ -12,7 +12,7 @@ import { SectionHead } from "@/components/SectionHead";
 import { VideoBundles } from "@/components/VideoBundles";
 import { PageHero } from "@/components/pages/PageHero";
 import { ProofStrip } from "@/components/pages/ProofStrip";
-import { cta, pages, videoBundleNote } from "@/lib/site";
+import { cta, pages } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Premade Videos",
@@ -84,10 +84,10 @@ export default function PremadePage() {
           <SectionHead
             index={3}
             chip="Bundle and save"
-            headline="Build your own"
-            accent="video bundle."
+            headline="Bundle up and"
+            accent="save more."
             accentColor="gold"
-            intro={videoBundleNote}
+            intro="Three ways to bundle: our newest releases, the classic library at reduced prices, or a mix of both. Every video white-labeled to your SaaS."
             center
           />
           <div className="mt-12">

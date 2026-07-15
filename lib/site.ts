@@ -180,8 +180,8 @@ export const premadePacks: PremadePack[] = [
     tagline:
       "An AI-first, white-label video system for HighLevel SaaS resellers. Nine outcome-led videos with brand-agnostic scripts, ready to deploy across your whole funnel: homepage, sales pages, ads, email, and demos.",
     count: 9,
-    price: 1495,
-    anchorPrice: 2495,
+    price: 1995,
+    anchorPrice: 3495,
     orderUrl: "https://order.ghlvideo.com/ai-first-saas-pack",
     categories: [
       {
@@ -1962,67 +1962,221 @@ export type StackFormat = {
 };
 
 /* ---------------------------------------------------------------- */
-/* Build-your-own bundles: a flat price for a set number of videos the
- * buyer picks from anywhere in the library, any format. Three tiers,
- * inspired by the old fixed bundles but mix-and-match. FLAG: prices,
- * counts, and order SKUs are a design proposal, easy to change. */
-export type VideoBundle = {
-  slug: string;
-  name: string;
-  pick: number; // how many videos the buyer chooses
-  price: number;
-  anchorPrice: number; // typical à la carte value, for the strike-through
-  deliveryDays: number;
-  blurb: string;
-  featured: boolean;
-  orderUrl: string;
+/* The Full Platform Pitch: the flagship pitch we built for HighLevel,
+ * re-brandable for a reseller's SaaS. Its own library tab and a member
+ * of the new-video list. FLAG: the per-option price mapping is a best
+ * guess from the live page ($97 / $495 / $595 / $695), confirm. */
+export type PitchOption = { name: string; price: number; note: string };
+
+export const pitchProduct = {
+  slug: "pitch",
+  name: "Full Platform Pitch",
+  tagline:
+    "The full-platform pitch we made for HighLevel, re-branded for your SaaS: your logo, dashboard colors, brand name in the voiceover, and your choice of accent or language.",
+  wistiaId: "7dc2746xn7",
+  orderUrl: "https://order.ghlvideo.com/hl-full-pitch-video",
+  fromPrice: 495,
+  options: [
+    { name: "The Original Video", price: 0, note: "Free download, as delivered to HighLevel." },
+    { name: "Logo Only", price: 97, note: "Your logo dropped into the dashboard." },
+    { name: "Complete Brand Customization", price: 495, note: "Your logo, colors, and brand name in the voiceover." },
+    { name: "UK / Australian Accent", price: 595, note: "Full rebrand, re-voiced in a UK or AU accent." },
+    { name: "Dutch Edition", price: 695, note: "Full rebrand, localized in Dutch." },
+    { name: "Spanish Edition", price: 695, note: "Full rebrand, localized in Spanish." },
+  ] as PitchOption[],
 };
 
-export const videoBundles: VideoBundle[] = [
+/* ---------------------------------------------------------------- */
+/* Video bundles, three ways: New (newest releases only), Classic (the
+ * pre-2026 catalog, at reduced prices) and Mix (best of both). Each item
+ * names the library it comes from so a Mix bundle reads clearly. FLAG:
+ * prices, counts, and order SKUs are a design proposal, easy to change.
+ * Anchor prices are the summed a-la-carte value of the contents. */
+export type BundleLibrary = "New Library" | "Classic Library";
+export type BundleItem = { label: string; library: BundleLibrary };
+export type BundleTier = {
+  slug: string;
+  name: string;
+  price: number;
+  anchorPrice: number;
+  deliveryDays: number;
+  featured: boolean;
+  items: BundleItem[];
+  orderUrl: string;
+};
+export type BundleCategory = {
+  slug: string;
+  name: string;
+  blurb: string;
+  tiers: BundleTier[];
+};
+
+const NEW: BundleLibrary = "New Library";
+const CLASSIC: BundleLibrary = "Classic Library";
+
+export const bundleCategories: BundleCategory[] = [
   {
-    slug: "starter",
-    name: "Starter Bundle",
-    pick: 10,
-    price: 995,
-    anchorPrice: 1950,
-    deliveryDays: 7,
-    blurb: "Cover the essentials and launch fast.",
-    featured: false,
-    orderUrl: "https://order.ghlvideo.com/ghlv-bundle-10",
+    slug: "new",
+    name: "New Video Bundle",
+    blurb:
+      "Only our newest releases. Small and high-value for now; it grows as the new library does.",
+    tiers: [
+      {
+        slug: "new-essential",
+        name: "Essential",
+        price: 995,
+        anchorPrice: 1380,
+        deliveryDays: 7,
+        featured: false,
+        orderUrl: "https://order.ghlvideo.com/ghlv-new-essential",
+        items: [
+          { label: "1× Explainer", library: NEW },
+          { label: "2× Short Explainer", library: NEW },
+          { label: "Full Platform Pitch", library: NEW },
+        ],
+      },
+      {
+        slug: "new-growth",
+        name: "Growth",
+        price: 1495,
+        anchorPrice: 2265,
+        deliveryDays: 10,
+        featured: true,
+        orderUrl: "https://order.ghlvideo.com/ghlv-new-growth",
+        items: [
+          { label: "1× Explainer", library: NEW },
+          { label: "4× Short Explainer", library: NEW },
+          { label: "1× Demo", library: NEW },
+          { label: "Full Platform Pitch", library: NEW },
+        ],
+      },
+    ],
   },
   {
-    slug: "growth",
-    name: "Growth Bundle",
-    pick: 25,
-    price: 1695,
-    anchorPrice: 4875,
-    deliveryDays: 10,
-    blurb: "A full funnel of video. The popular choice.",
-    featured: true,
-    orderUrl: "https://order.ghlvideo.com/ghlv-bundle-25",
+    slug: "classic",
+    name: "Classic Library Bundle",
+    blurb:
+      "The full pre-2026 catalog, at reduced prices. Still brandable, still yours.",
+    tiers: [
+      {
+        slug: "classic-starter",
+        name: "Starter",
+        price: 795,
+        anchorPrice: 1570,
+        deliveryDays: 7,
+        featured: false,
+        orderUrl: "https://order.ghlvideo.com/ghlv-bundle1",
+        items: [
+          { label: "1× Explainer", library: CLASSIC },
+          { label: "1× Short Explainer", library: CLASSIC },
+          { label: "1× Demo", library: CLASSIC },
+          { label: "5× Marketing", library: CLASSIC },
+        ],
+      },
+      {
+        slug: "classic-growth",
+        name: "Growth",
+        price: 1355,
+        anchorPrice: 4225,
+        deliveryDays: 10,
+        featured: false,
+        orderUrl: "https://order.ghlvideo.com/ghlv-bundle2",
+        items: [
+          { label: "2× Explainer", library: CLASSIC },
+          { label: "5× Short Explainer", library: CLASSIC },
+          { label: "1× Demo (incl. V3)", library: CLASSIC },
+          { label: "10× Marketing", library: CLASSIC },
+          { label: "7× Feature Animations", library: CLASSIC },
+        ],
+      },
+      {
+        slug: "classic-pro",
+        name: "Pro",
+        price: 1595,
+        anchorPrice: 7370,
+        deliveryDays: 10,
+        featured: true,
+        orderUrl: "https://order.ghlvideo.com/ghlv-bundle3",
+        items: [
+          { label: "4× Explainer", library: CLASSIC },
+          { label: "10× Short Explainer", library: CLASSIC },
+          { label: "2× Demo (incl. V3)", library: CLASSIC },
+          { label: "15× Marketing", library: CLASSIC },
+          { label: "15× Feature Animations", library: CLASSIC },
+        ],
+      },
+      {
+        slug: "classic-complete",
+        name: "Complete",
+        price: 2395,
+        anchorPrice: 12755,
+        deliveryDays: 14,
+        featured: false,
+        orderUrl: "https://order.ghlvideo.com/ghlv-bundle4",
+        items: [
+          { label: "All 6× Explainer", library: CLASSIC },
+          { label: "All 26× Short Explainer", library: CLASSIC },
+          { label: "All 3× Demo", library: CLASSIC },
+          { label: "All 21× Marketing", library: CLASSIC },
+          { label: "All 23× Feature Animations", library: CLASSIC },
+        ],
+      },
+    ],
   },
   {
-    slug: "scale",
-    name: "Scale Bundle",
-    pick: 50,
-    price: 2495,
-    anchorPrice: 9750,
-    deliveryDays: 14,
-    blurb: "Go wide across every format and feature.",
-    featured: false,
-    orderUrl: "https://order.ghlvideo.com/ghlv-bundle-50",
+    slug: "mix",
+    name: "Mix Bundle",
+    blurb:
+      "The best of both. Our newest videos paired with the classic library in one order.",
+    tiers: [
+      {
+        slug: "mix-core",
+        name: "Mix",
+        price: 2695,
+        anchorPrice: 6350,
+        deliveryDays: 10,
+        featured: true,
+        orderUrl: "https://order.ghlvideo.com/ghlv-mix1",
+        items: [
+          { label: "1× Explainer", library: NEW },
+          { label: "Full Platform Pitch", library: NEW },
+          { label: "3× Explainer", library: CLASSIC },
+          { label: "8× Short Explainer", library: CLASSIC },
+          { label: "1× Demo (incl. V3)", library: CLASSIC },
+          { label: "10× Marketing", library: CLASSIC },
+          { label: "10× Feature Animations", library: CLASSIC },
+        ],
+      },
+      {
+        slug: "mix-pro",
+        name: "Mix Pro",
+        price: 3495,
+        anchorPrice: 10025,
+        deliveryDays: 14,
+        featured: false,
+        orderUrl: "https://order.ghlvideo.com/ghlv-mix2",
+        items: [
+          { label: "1× Explainer", library: NEW },
+          { label: "4× Short Explainer", library: NEW },
+          { label: "1× Demo", library: NEW },
+          { label: "Full Platform Pitch", library: NEW },
+          { label: "4× Explainer", library: CLASSIC },
+          { label: "12× Short Explainer", library: CLASSIC },
+          { label: "2× Demo (incl. V3)", library: CLASSIC },
+          { label: "15× Marketing", library: CLASSIC },
+          { label: "15× Feature Animations", library: CLASSIC },
+        ],
+      },
+    ],
   },
 ];
-
-export const videoBundleNote =
-  "Pick any videos from the full library: explainers, demos, short explainers, marketing videos, and feature animations. Mix formats however you like. Every video is white-labeled to your SaaS.";
 
 export const videoStack = {
   slug: "stack",
   name: "Complete Video Stack",
   tagline:
-    "The everything bundle: 53 custom-branded videos across every format your HighLevel SaaS needs, from homepage explainer to feature animations. One order, live in 10 days.",
-  price: 1995,
+    "The everything bundle: 53 custom-branded videos mixing our newest releases with the classic library, across every format your HighLevel SaaS needs. One order, live in 10 days.",
+  price: 2495,
   anchorPrice: 55000,
   totalCount: 53,
   deliveryDays: 10,

@@ -10,6 +10,7 @@ import {
   featureAnimations,
   oldVideos,
   oldVideoTypes,
+  pitchProduct,
   premadePacks,
   premadeVideos,
   videoStack,
@@ -1233,6 +1234,98 @@ function PackBundleView({ pack }: { pack: PremadePack }) {
 }
 
 /* ---------------------------------------------------------------- */
+/* Full Platform Pitch: the flagship pitch, six ways to brand it       */
+/* ---------------------------------------------------------------- */
+
+function PitchView() {
+  const p = pitchProduct;
+  return (
+    <div>
+      {/* header band */}
+      <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-5 border-b border-hair px-5 py-6 md:px-7">
+        <div className="max-w-[62ch]">
+          <p className="font-display text-h3 text-ink">{p.name}</p>
+          <p className="mt-1.5 text-sm leading-relaxed text-muted">
+            {p.tagline}
+          </p>
+        </div>
+        <div className="flex items-center gap-5">
+          <span className="flex items-baseline gap-1.5">
+            <span className="font-mono text-label uppercase text-muted">
+              from
+            </span>
+            <span className="font-mono text-[1.5rem] font-bold text-gold [font-variant-numeric:tabular-nums]">
+              ${p.fromPrice.toLocaleString("en-US")}
+            </span>
+          </span>
+          <a
+            href={p.orderUrl}
+            target="_blank"
+            rel="noopener"
+            className="group inline-flex items-center gap-2 whitespace-nowrap rounded-[3px] bg-brand-gradient px-6 py-3 text-sm font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.28)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98]"
+          >
+            Order the pitch
+            <span
+              aria-hidden="true"
+              className="transition-transform duration-200 group-hover:translate-x-0.5"
+            >
+              &rarr;
+            </span>
+          </a>
+        </div>
+      </div>
+
+      {/* body: preview + the six branding options */}
+      <div className="grid lg:grid-cols-[1.35fr_1fr]">
+        <div className="border-b border-hair p-5 md:p-7 lg:border-b-0 lg:border-r">
+          <p className="mb-3 font-mono text-label uppercase text-dim">
+            [ Watch the pitch ]
+          </p>
+          <div className="aspect-video w-full border border-hair bg-black">
+            <iframe
+              src={`https://fast.wistia.net/embed/iframe/${p.wistiaId}?playerColor=FCC000`}
+              title={p.name}
+              allow="autoplay; fullscreen"
+              allowFullScreen
+              className="h-full w-full"
+            />
+          </div>
+          <p className="mt-3 text-sm text-muted">
+            The exact video we produced for HighLevel, re-branded for your
+            SaaS with permission.
+          </p>
+        </div>
+
+        <div className="p-5 md:p-7">
+          <p className="mb-3 font-mono text-label uppercase text-dim">
+            [ Six ways to make it yours ]
+          </p>
+          <ul className="grid gap-px overflow-hidden rounded-[3px] border border-hair bg-hair">
+            {p.options.map((opt) => (
+              <li key={opt.name} className="bg-canvas p-3.5">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="font-display text-[0.9375rem] font-semibold text-ink">
+                    {opt.name}
+                  </span>
+                  <span className="shrink-0 font-mono text-[0.9375rem] font-bold text-gold [font-variant-numeric:tabular-nums]">
+                    {opt.price === 0
+                      ? "Free"
+                      : `$${opt.price.toLocaleString("en-US")}`}
+                  </span>
+                </div>
+                <p className="mt-1 text-[0.8125rem] leading-relaxed text-muted">
+                  {opt.note}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------- */
 /* The library shell                                                  */
 /* ---------------------------------------------------------------- */
 
@@ -1244,6 +1337,7 @@ export function PremadeLibrary() {
     { slug: "new", label: "All New Videos", count: newReady.length as number | null },
     ...premadePacks.map((p) => ({ slug: p.slug, label: p.name, count: p.count })),
     { slug: videoStack.slug, label: videoStack.name, count: videoStack.totalCount as number | null },
+    { slug: pitchProduct.slug, label: pitchProduct.name, count: null },
     { slug: "features", label: "Feature Animations", count: featureAnimations.length as number | null },
     { slug: "old", label: "Classic Library", count: oldBrowse.length as number | null },
   ];
@@ -1314,6 +1408,8 @@ export function PremadeLibrary() {
           <PackBundleView pack={activePack} />
         ) : view === videoStack.slug ? (
           <VideoStackView />
+        ) : view === pitchProduct.slug ? (
+          <PitchView />
         ) : view === "features" ? (
           <FeatureAnimationView />
         ) : view === "old" ? (
