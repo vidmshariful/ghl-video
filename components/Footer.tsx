@@ -37,7 +37,7 @@ function Column({
           <li key={l.href + l.label}>
             <Link
               href={l.href}
-              className="text-sm text-muted transition-colors hover:text-ink"
+              className="text-body text-muted transition-colors hover:text-ink"
             >
               {l.label}
             </Link>
@@ -54,8 +54,8 @@ export function Footer() {
       <div className="shell grid grid-cols-2 gap-x-8 gap-y-12 py-16 md:grid-cols-[1.4fr_1fr_1fr_1fr_1fr]">
         <div className="col-span-2 md:col-span-1">
           <Logo className="h-6" />
-          <p className="mt-4 max-w-[26ch] text-sm text-muted">{footerBlurb}</p>
-          <p className="mt-3 font-mono text-xs text-muted">{entityLine}</p>
+          <p className="mt-4 max-w-[26ch] text-body text-muted">{footerBlurb}</p>
+          <p className="mt-3 font-mono text-body-sm text-muted">{entityLine}</p>
         </div>
 
         <Column
@@ -86,10 +86,10 @@ export function Footer() {
                   href={brand.url}
                   target="_blank"
                   rel="noopener"
-                  className="group inline-flex items-baseline gap-2 text-sm text-muted transition-colors hover:text-ink"
+                  className="group inline-flex items-baseline gap-2 text-body text-muted transition-colors hover:text-ink"
                 >
                   {brand.name}
-                  <span className="font-mono text-xs text-muted group-hover:text-ink">
+                  <span className="font-mono text-body-sm text-muted group-hover:text-ink">
                     {brand.domain}
                   </span>
                 </a>
@@ -100,7 +100,7 @@ export function Footer() {
       </div>
 
       <div className="border-t border-hair">
-        <div className="shell flex flex-col gap-3 py-6 font-mono text-xs text-dim md:flex-row md:items-center md:justify-between">
+        <div className="shell flex flex-col gap-3 py-6 font-mono text-body-sm text-dim md:flex-row md:items-center md:justify-between">
           <a
             href={`mailto:${site.email}`}
             className="transition-colors hover:text-muted"

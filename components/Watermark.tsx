@@ -18,7 +18,7 @@ function Tick({ pos }: { pos: string }) {
   return (
     <span
       aria-hidden="true"
-      className={`absolute ${pos} z-10 font-mono text-[0.625rem] leading-none text-dim/70`}
+      className={`absolute ${pos} z-10 font-mono text-label leading-none text-dim/70`}
     >
       +
     </span>

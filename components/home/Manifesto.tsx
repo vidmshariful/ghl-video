@@ -49,7 +49,7 @@ export function Manifesto() {
                   <p className="font-mono text-label uppercase text-dim">
                     What they see now
                   </p>
-                  <p className="mt-3 flex items-baseline gap-2.5 text-[0.9375rem] text-muted">
+                  <p className="mt-3 flex items-baseline gap-2.5 text-body text-muted">
                     <span aria-hidden="true" className="font-mono text-dim">
                       &times;
                     </span>
@@ -60,7 +60,7 @@ export function Manifesto() {
                   <p className="font-mono text-label uppercase text-gold">
                     What they could see
                   </p>
-                  <p className="mt-3 flex items-baseline gap-2.5 text-[0.9375rem] font-medium text-ink">
+                  <p className="mt-3 flex items-baseline gap-2.5 text-body font-medium text-ink">
                     <svg
                       viewBox="0 0 12 12"
                       className="h-3 w-3 shrink-0 translate-y-[0.15em]"

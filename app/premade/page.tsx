@@ -113,7 +113,7 @@ export default function PremadePage() {
                 className="group/cell flex h-full flex-col gap-5 bg-canvas p-8 transition-colors duration-300 hover:bg-surface"
               >
                 <DrawnIcon name={includedIcons[i]} accent="gold" />
-                <p className="max-w-[34ch] text-[0.9375rem] leading-relaxed text-muted">
+                <p className="max-w-[34ch] text-body leading-relaxed text-muted">
                   {item}
                 </p>
               </div>
@@ -150,10 +150,10 @@ export default function PremadePage() {
                     {String(i + 1).padStart(2, "0")}
                   </span>
                 </div>
-                <h3 className="mt-5 font-display text-[1.1875rem] font-semibold tracking-[-0.01em] text-ink">
+                <h3 className="mt-5 font-display text-h4 font-semibold tracking-[-0.01em] text-ink">
                   {s.title}
                 </h3>
-                <p className="mt-2 max-w-[38ch] text-[0.9375rem] leading-relaxed text-muted">
+                <p className="mt-2 max-w-[38ch] text-body leading-relaxed text-muted">
                   {s.line}
                 </p>
               </div>
@@ -214,7 +214,7 @@ export default function PremadePage() {
                   {item.line}
                 </p>
                 <p
-                  className={`mt-6 inline-flex items-center gap-2 text-sm font-semibold ${item.accentCls}`}
+                  className={`mt-6 inline-flex items-center gap-2 text-body font-semibold ${item.accentCls}`}
                 >
                   {item.linkLabel}
                   <span

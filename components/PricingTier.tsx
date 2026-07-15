@@ -43,7 +43,7 @@ export function PricingTier({
       )}
       <h3 className="font-display text-h3 text-ink">{plan.name}</h3>
       <p className="mt-4 flex items-baseline gap-2">
-        <span className="font-mono text-[2.25rem] font-bold leading-none text-gold [font-variant-numeric:tabular-nums]">
+        <span className="font-mono text-stat-lg font-bold leading-none text-gold [font-variant-numeric:tabular-nums]">
           ${plan.price.toLocaleString("en-US")}
         </span>
         <span className="font-mono text-label uppercase text-dim">/ month</span>
@@ -53,7 +53,7 @@ export function PricingTier({
         href={plan.orderUrl}
         target="_blank"
         rel="noopener"
-        className="group mt-7 inline-flex items-center justify-center gap-2 rounded-[3px] bg-brand-gradient px-6 py-3.5 text-[0.9375rem] font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.25)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98]"
+        className="group mt-7 inline-flex items-center justify-center gap-2 rounded-[3px] bg-brand-gradient px-6 py-3.5 text-body font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.25)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98]"
       >
         Start editing
         <span

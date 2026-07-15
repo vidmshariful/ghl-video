@@ -33,7 +33,7 @@ export function AudienceSplit() {
                 <h3 className="mt-4 max-w-[20ch] font-display text-h3 text-ink">
                   {audiences.resellers.title}
                 </h3>
-                <p className="mt-3 max-w-[50ch] text-sm leading-relaxed text-muted">
+                <p className="mt-3 max-w-[50ch] text-body leading-relaxed text-muted">
                   {audiences.resellers.body}
                 </p>
                 <div className="mt-8 flex flex-wrap gap-6">
@@ -41,7 +41,7 @@ export function AudienceSplit() {
                     <Link
                       key={l.href}
                       href={l.href}
-                      className="group inline-flex items-center gap-2 text-sm font-semibold text-green"
+                      className="group inline-flex items-center gap-2 text-body font-semibold text-green"
                     >
                       {l.label}
                       <span
@@ -65,7 +65,7 @@ export function AudienceSplit() {
                 <h3 className="mt-4 max-w-[16ch] font-display text-h3 text-ink">
                   {audiences.creators.title}
                 </h3>
-                <p className="mt-3 text-sm leading-relaxed text-muted">
+                <p className="mt-3 text-body leading-relaxed text-muted">
                   {audiences.creators.body}
                 </p>
                 <div className="mt-8">
@@ -73,7 +73,7 @@ export function AudienceSplit() {
                     <Link
                       key={l.href}
                       href={l.href}
-                      className="group inline-flex items-center gap-2 text-sm font-semibold text-blue"
+                      className="group inline-flex items-center gap-2 text-body font-semibold text-blue"
                     >
                       {l.label}
                       <span

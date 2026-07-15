@@ -52,7 +52,7 @@ export function ShowreelMoment() {
           <RevealItem>
             <Link
               href="/work/"
-              className="group inline-flex items-center gap-2 text-sm font-semibold text-gold"
+              className="group inline-flex items-center gap-2 text-body font-semibold text-gold"
             >
               See all work
               <span

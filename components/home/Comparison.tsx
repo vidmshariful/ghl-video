@@ -51,9 +51,9 @@ export function Comparison() {
     },
   };
   const us =
-    "flex items-start gap-2 border-l border-gold/40 bg-gold/[0.06] px-5 py-3.5 text-[0.9375rem] font-medium text-ink";
+    "flex items-start gap-2 border-l border-gold/40 bg-gold/[0.06] px-5 py-3.5 text-body font-medium text-ink";
   const them =
-    "flex items-start gap-2 px-6 py-3.5 text-[0.9375rem] text-dim";
+    "flex items-start gap-2 px-6 py-3.5 text-body text-dim";
 
   return (
     <section
@@ -138,10 +138,10 @@ export function Comparison() {
                       className={`grid grid-cols-2 md:hidden ${i > 0 ? "border-t border-hair" : ""}`}
                     >
                       <div className="px-5 py-3.5">
-                        <p className="font-mono text-[0.5625rem] uppercase tracking-[0.12em] text-dim">
+                        <p className="font-mono text-label uppercase tracking-[0.12em] text-dim">
                           {row.label}
                         </p>
-                        <p className="mt-1.5 flex items-start gap-1.5 text-sm text-dim">
+                        <p className="mt-1.5 flex items-start gap-1.5 text-body text-dim">
                           <span aria-hidden="true" className="font-mono">
                             &times;
                           </span>
@@ -149,7 +149,7 @@ export function Comparison() {
                         </p>
                       </div>
                       <div className="flex flex-col justify-center border-l border-gold/40 bg-gold/[0.06] px-5 py-3.5">
-                        <p className="flex items-start gap-1.5 text-sm font-medium text-ink">
+                        <p className="flex items-start gap-1.5 text-body font-medium text-ink">
                           <Check />
                           {row.us}
                         </p>

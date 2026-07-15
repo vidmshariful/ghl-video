@@ -10,7 +10,7 @@ function Tick({ pos, delay }: { pos: string; delay: number }) {
   return (
     <motion.span
       aria-hidden="true"
-      className={`bp-anim absolute ${pos} font-mono text-[0.625rem] leading-none text-dim/70`}
+      className={`bp-anim absolute ${pos} font-mono text-label leading-none text-dim/70`}
       initial={reduced ? false : { opacity: 0, scale: 0.4 }}
       whileInView={{ opacity: 1, scale: 1 }}
       viewport={{ once: true, margin: "-60px" }}

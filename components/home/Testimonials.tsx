@@ -50,10 +50,10 @@ function ReviewCard({ quote, name }: { quote: string; name: string }) {
   return (
     <blockquote className="mb-5 break-inside-avoid rounded-card border border-hair bg-surface p-6">
       <Stars />
-      <p className="mt-4 text-[0.9375rem] leading-relaxed text-muted">{quote}</p>
+      <p className="mt-4 text-body leading-relaxed text-muted">{quote}</p>
       <footer className="mt-5 flex items-center justify-between gap-4 border-t border-hair pt-4">
         <p>
-          <span className="block text-[0.9375rem] font-medium text-ink">
+          <span className="block text-body font-medium text-ink">
             {name}
           </span>
           <GoogleCue />
@@ -76,7 +76,7 @@ function TrustBar() {
       {stats.map((s) => (
         <div key={s.l} className="px-4 py-4">
           <div className="flex items-baseline gap-2">
-            <span className="font-mono text-[1.5rem] font-bold leading-none text-gold [font-variant-numeric:tabular-nums]">
+            <span className="font-mono text-price font-bold leading-none text-gold [font-variant-numeric:tabular-nums]">
               {s.v}
             </span>
           </div>
@@ -123,7 +123,7 @@ export function Testimonials() {
                   href={googleReviewsUrl}
                   target="_blank"
                   rel="noopener"
-                  className="group inline-flex items-center gap-2 text-sm font-semibold text-gold"
+                  className="group inline-flex items-center gap-2 text-body font-semibold text-gold"
                 >
                   Read all 17 on Google
                   <span

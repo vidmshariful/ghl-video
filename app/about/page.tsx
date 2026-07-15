@@ -134,7 +134,7 @@ export default function AboutPage() {
               <div className="grid gap-px overflow-hidden rounded-card border border-hair bg-hair sm:grid-cols-3">
                 {namedClients.map((c) => (
                   <div key={c.name} className="bg-canvas p-6">
-                    <p className="font-display text-[1.0625rem] font-semibold text-ink">
+                    <p className="font-display text-h4 font-semibold text-ink">
                       {c.name}
                     </p>
                     <p className="mt-1 font-mono text-label uppercase text-dim">
@@ -151,7 +151,7 @@ export default function AboutPage() {
                 rel="noopener"
                 className="group flex h-full min-w-56 flex-col justify-center rounded-card border border-hair card-glass p-6"
               >
-                <span className="font-mono text-[2rem] font-bold leading-none text-gold [font-variant-numeric:tabular-nums]">
+                <span className="font-mono text-stat-lg font-bold leading-none text-gold [font-variant-numeric:tabular-nums]">
                   <Stat value={clients} suffix="+" />
                 </span>
                 <span className="mt-2 font-mono text-label uppercase text-dim">
@@ -202,7 +202,7 @@ export default function AboutPage() {
                     </a>
                   ))}
                 </div>
-                <p className="mt-6 border-t border-hair pt-5 text-sm text-dim">
+                <p className="mt-6 border-t border-hair pt-5 text-body text-dim">
                   {disclaimer}
                 </p>
               </div>

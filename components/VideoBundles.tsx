@@ -28,10 +28,10 @@ function BundleCard({ tier }: { tier: BundleTier }) {
 
       {/* price with the à-la-carte value struck through */}
       <div className="mt-4 flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
-        <span className="font-mono text-[2.25rem] font-bold leading-none text-gold [font-variant-numeric:tabular-nums]">
+        <span className="font-mono text-stat-lg font-bold leading-none text-gold [font-variant-numeric:tabular-nums]">
           ${tier.price.toLocaleString("en-US")}
         </span>
-        <span className="font-mono text-[0.9375rem] text-dim line-through [font-variant-numeric:tabular-nums]">
+        <span className="font-mono text-body text-dim line-through [font-variant-numeric:tabular-nums]">
           ${tier.anchorPrice.toLocaleString("en-US")}
         </span>
         <span className="font-mono text-label uppercase text-muted">
@@ -60,10 +60,10 @@ function BundleCard({ tier }: { tier: BundleTier }) {
                 strokeLinejoin="round"
               />
             </svg>
-            <span className="text-[0.9375rem] text-muted">
+            <span className="text-body text-muted">
               {item.label}
               {mixed && (
-                <span className="ml-1.5 font-mono text-[0.6875rem] uppercase tracking-[0.08em] text-dim">
+                <span className="ml-1.5 font-mono text-label uppercase tracking-[0.08em] text-dim">
                   [{item.library}]
                 </span>
               )}
@@ -80,7 +80,7 @@ function BundleCard({ tier }: { tier: BundleTier }) {
         href={tier.orderUrl}
         target="_blank"
         rel="noopener"
-        className="group mt-5 inline-flex items-center justify-center gap-2 rounded-[3px] bg-brand-gradient px-6 py-3.5 text-[0.9375rem] font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.25)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98]"
+        className="group mt-5 inline-flex items-center justify-center gap-2 rounded-[3px] bg-brand-gradient px-6 py-3.5 text-body font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.25)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98]"
       >
         Get the bundle
         <span
@@ -128,7 +128,7 @@ export function VideoBundles() {
         })}
       </div>
 
-      <p className="mx-auto mt-5 max-w-[56ch] text-center text-[0.9375rem] leading-relaxed text-muted">
+      <p className="mx-auto mt-5 max-w-[56ch] text-center text-body leading-relaxed text-muted">
         {active.blurb}
       </p>
 

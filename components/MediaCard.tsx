@@ -46,7 +46,7 @@ export function MediaCard({
         {...(startAt !== undefined ? { startAt, endAt } : {})}
       />
       <div className="flex flex-1 items-start justify-between gap-4 border-b border-hair px-1 pb-4 pt-3.5">
-        <h3 className="min-w-0 font-display text-[1.0625rem] font-semibold leading-snug tracking-[-0.01em] text-ink">
+        <h3 className="min-w-0 font-display text-h4 font-semibold leading-snug tracking-[-0.01em] text-ink">
           {title}
         </h3>
         {action && <div className="shrink-0">{action}</div>}

@@ -41,7 +41,7 @@ function PhotoSlot({
         </>
       )}
       <div className="relative w-full border-t border-hair bg-canvas/70 px-4 py-3 backdrop-blur-sm">
-        <p className="font-display text-sm font-semibold text-ink">
+        <p className="font-display text-body font-semibold text-ink">
           {name ?? "To be announced"}
         </p>
         <p className="mt-0.5 min-h-[2.8em] font-mono text-label uppercase text-muted">

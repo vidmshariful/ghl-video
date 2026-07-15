@@ -5,8 +5,8 @@
  */
 
 const sizes = {
-  md: "h-10 w-10 text-[0.8125rem]",
-  lg: "h-14 w-14 text-base",
+  md: "h-10 w-10 text-body-sm",
+  lg: "h-14 w-14 text-body",
 } as const;
 
 function initialsOf(name: string) {

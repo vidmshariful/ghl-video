@@ -65,12 +65,12 @@ export default function ContactPage() {
                     <p className="mt-4 max-w-[38ch] font-display text-h3 text-ink">
                       {p.fallback.headline}
                     </p>
-                    <p className="mt-3 text-[0.9375rem] text-muted">
+                    <p className="mt-3 text-body text-muted">
                       {p.fallback.line}
                     </p>
                     <a
                       href={`mailto:${site.email}`}
-                      className="mt-6 inline-flex items-center gap-2 font-mono text-[0.9375rem] font-semibold text-gold underline-offset-4 hover:underline"
+                      className="mt-6 inline-flex items-center gap-2 font-mono text-body font-semibold text-gold underline-offset-4 hover:underline"
                     >
                       {site.email}
                       <span aria-hidden="true">&rarr;</span>
@@ -85,13 +85,13 @@ export default function ContactPage() {
                     <p className="font-mono text-label uppercase text-muted">
                       [ Custom project? ]
                     </p>
-                    <p className="mt-4 max-w-[38ch] text-[0.9375rem] text-muted">
+                    <p className="mt-4 max-w-[38ch] text-body text-muted">
                       Skip the call and send the short form instead. A fixed
                       quote comes back within 24 hours.
                     </p>
                     <a
                       href={cta.requestQuote.href}
-                      className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-gold"
+                      className="mt-5 inline-flex items-center gap-2 text-body font-semibold text-gold"
                     >
                       {cta.requestQuote.label}
                       <span aria-hidden="true">&rarr;</span>

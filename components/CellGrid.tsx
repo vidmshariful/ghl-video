@@ -55,10 +55,10 @@ export function CellGrid({
                 </span>
               )}
             </div>
-            <h3 className="mt-5 font-display text-[1.1875rem] font-semibold tracking-[-0.01em] text-ink">
+            <h3 className="mt-5 font-display text-h4 font-semibold tracking-[-0.01em] text-ink">
               {item.title}
             </h3>
-            <p className="mt-2 max-w-[38ch] text-[0.9375rem] leading-relaxed text-muted">
+            <p className="mt-2 max-w-[38ch] text-body leading-relaxed text-muted">
               {item.line}
             </p>
           </div>
@@ -118,7 +118,7 @@ export function FitSplit({
                     strokeLinejoin="round"
                   />
                 </svg>
-                <span className="text-[0.9375rem] text-muted">{item}</span>
+                <span className="text-body text-muted">{item}</span>
               </li>
             ))}
           </ul>
@@ -136,7 +136,7 @@ export function FitSplit({
                 <span aria-hidden="true" className="font-mono text-dim">
                   &times;
                 </span>
-                <span className="text-[0.9375rem] text-muted">{item}</span>
+                <span className="text-body text-muted">{item}</span>
               </li>
             ))}
           </ul>

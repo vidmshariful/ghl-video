@@ -194,7 +194,7 @@ function BuyVideoLink({
       href={video.orderUrl}
       target="_blank"
       rel="noopener"
-      className={`group/btn inline-flex items-center gap-1.5 whitespace-nowrap rounded-[3px] bg-brand-gradient px-4 py-2 text-[0.8125rem] font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] transition-all duration-200 hover:brightness-110 active:scale-[0.98] ${className}`}
+      className={`group/btn inline-flex items-center gap-1.5 whitespace-nowrap rounded-[3px] bg-brand-gradient px-4 py-2 text-body-sm font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] transition-all duration-200 hover:brightness-110 active:scale-[0.98] ${className}`}
     >
       {label}
       <span
@@ -209,7 +209,7 @@ function BuyVideoLink({
 
 function Price({ value }: { value: number }) {
   return (
-    <span className="font-mono text-[1.125rem] font-bold text-gold [font-variant-numeric:tabular-nums]">
+    <span className="font-mono text-lede font-bold text-gold [font-variant-numeric:tabular-nums]">
       ${value.toLocaleString("en-US")}
     </span>
   );
@@ -266,7 +266,7 @@ function PackTile({ count }: { count: number }) {
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 hatch opacity-20"
       />
-      <span className="relative font-mono text-[2.75rem] font-bold leading-none text-gradient [font-variant-numeric:tabular-nums]">
+      <span className="relative font-mono text-stat-lg font-bold leading-none text-gradient [font-variant-numeric:tabular-nums]">
         {count}
       </span>
       <span className="relative mt-2 font-mono text-label uppercase tracking-[0.14em] text-muted">
@@ -307,7 +307,7 @@ function VersionToggle({
               e.stopPropagation();
               onChange(v);
             }}
-            className={`rounded-[2px] px-2.5 py-1 font-mono text-[0.6875rem] uppercase tracking-[0.1em] transition-colors ${
+            className={`rounded-[2px] px-2.5 py-1 font-mono text-label uppercase tracking-[0.1em] transition-colors ${
               active
                 ? "bg-gold/15 font-semibold text-gold"
                 : "text-muted hover:text-ink"
@@ -390,7 +390,7 @@ function LibraryCard({
       <div className="flex flex-1 border-b border-hair px-1 pb-4 pt-3.5">
         <div className="flex w-full items-start justify-between gap-4">
           <div className="min-w-0">
-            <h3 className="font-display text-[1.0625rem] font-semibold leading-snug tracking-[-0.01em] text-ink">
+            <h3 className="font-display text-h4 font-semibold leading-snug tracking-[-0.01em] text-ink">
               {video.title}
             </h3>
             {descriptor && (
@@ -515,10 +515,10 @@ function PreviewLightbox({
           {video.previewOnly ? (
             <>
               <div>
-                <p className="font-display text-[1.0625rem] font-semibold text-[#EEF0F6]">
+                <p className="font-display text-h4 font-semibold text-[#EEF0F6]">
                   {video.title}
                 </p>
-                <p className="mt-0.5 text-sm text-[#9096A8]">
+                <p className="mt-0.5 text-body text-[#9096A8]">
                   {video.previewNote ??
                     "Included in the bundle, branded to your platform."}
                 </p>
@@ -526,23 +526,23 @@ function PreviewLightbox({
               <BuyVideoLink
                 video={video}
                 label={video.previewCtaLabel ?? "Order the bundle"}
-                className="px-6 py-3 text-sm"
+                className="px-6 py-3 text-body"
               />
             </>
           ) : (
             <>
               <div>
-                <p className="font-display text-[1.0625rem] font-semibold text-[#EEF0F6]">
+                <p className="font-display text-h4 font-semibold text-[#EEF0F6]">
                   {video.title}
                 </p>
-                <p className="mt-0.5 text-sm text-[#9096A8]">
+                <p className="mt-0.5 text-body text-[#9096A8]">
                   Make it yours, branded to you.{" "}
                   <span className="font-mono font-semibold text-gold">
                     ${video.price.toLocaleString("en-US")} one-time
                   </span>
                 </p>
               </div>
-              <BuyVideoLink video={video} className="px-6 py-3 text-sm" />
+              <BuyVideoLink video={video} className="px-6 py-3 text-body" />
             </>
           )}
         </div>
@@ -582,7 +582,7 @@ function FilterGroup({
                 type="button"
                 onClick={() => onPick(opt)}
                 aria-pressed={isActive}
-                className={`flex w-full items-center gap-2.5 px-2 py-1.5 text-left text-[0.8125rem] transition-colors ${
+                className={`flex w-full items-center gap-2.5 px-2 py-1.5 text-left text-body-sm transition-colors ${
                   isActive ? "text-gold" : "text-muted hover:text-ink"
                 }`}
               >
@@ -595,7 +595,7 @@ function FilterGroup({
                 <span className="flex-1">{opt ?? "Any"}</span>
                 {count !== undefined && (
                   <span
-                    className={`font-mono text-[0.6875rem] [font-variant-numeric:tabular-nums] ${
+                    className={`font-mono text-label [font-variant-numeric:tabular-nums] ${
                       isActive ? "text-gold/70" : "text-dim"
                     }`}
                   >
@@ -635,7 +635,7 @@ function VideoBrowser({
   return (
     <div>
       {note && (
-        <p className="border-b border-hair px-5 py-3.5 text-sm text-muted md:px-7">
+        <p className="border-b border-hair px-5 py-3.5 text-body text-muted md:px-7">
           {note}
         </p>
       )}
@@ -741,7 +741,7 @@ function FeatureAnimationView() {
       {/* what this is */}
       <div className="border-b border-hair px-5 py-6 md:px-7">
         <p className="font-display text-h3 text-ink">Feature Animations</p>
-        <p className="mt-1.5 max-w-[70ch] text-sm leading-relaxed text-muted">
+        <p className="mt-1.5 max-w-[70ch] text-body leading-relaxed text-muted">
           Every HighLevel feature as a short animation, in two cuts: a clean
           Simplified UI and the Real UI on the live dashboard. Sold in bundles,
           branded to your platform.
@@ -827,13 +827,13 @@ function FeatureAnimationView() {
                 </span>
                 <span className="min-w-0 flex-1">
                   <span
-                    className={`block text-[0.875rem] font-medium leading-snug ${
+                    className={`block text-body font-medium leading-snug ${
                       i === idx ? "text-ink" : "text-muted"
                     }`}
                   >
                     {f.name}
                   </span>
-                  <span className="mt-0.5 block font-mono text-[0.625rem] uppercase tracking-[0.14em] text-dim">
+                  <span className="mt-0.5 block font-mono text-label uppercase tracking-[0.14em] text-dim">
                     {f.real ? "Simplified + Real UI" : "Simplified UI"}
                   </span>
                 </span>
@@ -847,7 +847,7 @@ function FeatureAnimationView() {
       {/* pricing: sold in bundles, never one at a time */}
       <div className="border-t border-hair px-5 py-6 md:px-7">
         <p className="font-mono text-label uppercase text-dim">[ Pricing ]</p>
-        <p className="mt-1 max-w-[60ch] text-sm text-muted">
+        <p className="mt-1 max-w-[60ch] text-body text-muted">
           Feature animations are ordered in bundles, not one at a time. Pick the
           pack that covers the features you need.
         </p>
@@ -884,17 +884,17 @@ function FeaturePriceCard({ pack }: { pack: (typeof featurePacks)[number] }) {
       <p className="font-mono text-label uppercase text-dim">
         {pack.packCount} animations
       </p>
-      <p className="mt-2 font-mono text-[1.75rem] font-bold leading-none text-gold [font-variant-numeric:tabular-nums]">
+      <p className="mt-2 font-mono text-price font-bold leading-none text-gold [font-variant-numeric:tabular-nums]">
         ${pack.price.toLocaleString("en-US")}
       </p>
-      <p className="mt-2 text-[0.8125rem] leading-relaxed text-muted">
+      <p className="mt-2 text-body-sm leading-relaxed text-muted">
         {pack.subtitle}
       </p>
       <a
         href={pack.orderUrl}
         target="_blank"
         rel="noopener"
-        className="group/btn mt-4 inline-flex items-center justify-center gap-1.5 rounded-[3px] bg-brand-gradient px-4 py-2.5 text-[0.8125rem] font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
+        className="group/btn mt-4 inline-flex items-center justify-center gap-1.5 rounded-[3px] bg-brand-gradient px-4 py-2.5 text-body-sm font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
       >
         Order {pack.packCount}
         {"× "}
@@ -926,7 +926,7 @@ function FeaturePriceCard({ pack }: { pack: (typeof featurePacks)[number] }) {
       {open && (
         <ul className="mt-3 grid gap-2">
           {featureIncludes.map((it) => (
-            <li key={it.text} className="flex items-start gap-2.5 text-[0.8125rem]">
+            <li key={it.text} className="flex items-start gap-2.5 text-body-sm">
               <span
                 aria-hidden="true"
                 className={`mt-0.5 shrink-0 ${it.ok ? "text-green" : "text-error"}`}
@@ -999,7 +999,7 @@ function ComingSoonVideo() {
       <span className="relative mt-4 rounded-full border border-hair bg-canvas px-4 py-1.5 font-mono text-label uppercase text-dim">
         Video coming soon
       </span>
-      <p className="relative mt-3 max-w-[38ch] px-6 text-sm text-muted">
+      <p className="relative mt-3 max-w-[38ch] px-6 text-body text-muted">
         A short walkthrough from our team is being filmed and lands here soon.
       </p>
     </div>
@@ -1042,7 +1042,7 @@ function BundleView({
       <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-5 border-b border-hair px-5 py-6 md:px-7">
         <div className="max-w-[60ch]">
           <p className="font-display text-h3 text-ink">{name}</p>
-          <p className="mt-1.5 text-sm leading-relaxed text-muted">{tagline}</p>
+          <p className="mt-1.5 text-body leading-relaxed text-muted">{tagline}</p>
         </div>
         <div className="flex items-center gap-5">
           {count !== null && (
@@ -1054,11 +1054,11 @@ function BundleView({
             <>
               <span className="flex items-baseline gap-2">
                 {anchorPrice ? (
-                  <span className="font-mono text-[0.9375rem] text-dim line-through [font-variant-numeric:tabular-nums]">
+                  <span className="font-mono text-body text-dim line-through [font-variant-numeric:tabular-nums]">
                     ${anchorPrice.toLocaleString("en-US")}
                   </span>
                 ) : null}
-                <span className="font-mono text-[1.5rem] font-bold text-gold [font-variant-numeric:tabular-nums]">
+                <span className="font-mono text-price font-bold text-gold [font-variant-numeric:tabular-nums]">
                   ${(price ?? 0).toLocaleString("en-US")}
                 </span>
               </span>
@@ -1066,7 +1066,7 @@ function BundleView({
                 href={orderUrl ?? "#"}
                 target="_blank"
                 rel="noopener"
-                className="group inline-flex items-center gap-2 whitespace-nowrap rounded-[3px] bg-brand-gradient px-6 py-3 text-sm font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.28)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98]"
+                className="group inline-flex items-center gap-2 whitespace-nowrap rounded-[3px] bg-brand-gradient px-6 py-3 text-body font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.28)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98]"
               >
                 {ctaLabel}
                 <span
@@ -1080,7 +1080,7 @@ function BundleView({
           ) : (
             <Link
               href={cta.bookACall.href}
-              className="group inline-flex items-center gap-2 whitespace-nowrap rounded-[3px] bg-brand-gradient px-6 py-3 text-sm font-semibold text-[#08090D] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98]"
+              className="group inline-flex items-center gap-2 whitespace-nowrap rounded-[3px] bg-brand-gradient px-6 py-3 text-body font-semibold text-[#08090D] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98]"
             >
               {cta.bookACall.label}
               <span aria-hidden="true">&rarr;</span>
@@ -1096,7 +1096,7 @@ function BundleView({
             [ Watch before you buy ]
           </p>
           <ComingSoonVideo />
-          <p className="mt-3 text-sm text-muted">{overviewNote}</p>
+          <p className="mt-3 text-body text-muted">{overviewNote}</p>
         </div>
 
         <div className="p-5 md:p-7">
@@ -1116,18 +1116,18 @@ function BundleView({
                       className="h-full w-full object-cover opacity-85"
                     />
                   ) : null}
-                  <span className="absolute inset-0 flex items-center justify-center font-mono text-[0.9375rem] font-bold text-gradient [font-variant-numeric:tabular-nums]">
+                  <span className="absolute inset-0 flex items-center justify-center font-mono text-body font-bold text-gradient [font-variant-numeric:tabular-nums]">
                     {f.count}
                   </span>
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block font-display text-[0.9375rem] font-semibold text-ink">
+                  <span className="block font-display text-body font-semibold text-ink">
                     {f.count}
                     {"× "}
                     {f.name}
                   </span>
                   {f.value ? (
-                    <span className="mt-0.5 block font-mono text-[0.625rem] uppercase tracking-[0.14em] text-dim">
+                    <span className="mt-0.5 block font-mono text-label uppercase tracking-[0.14em] text-dim">
                       value ${f.value.toLocaleString("en-US")}
                     </span>
                   ) : null}
@@ -1150,7 +1150,7 @@ function BundleView({
             [ Preview the line-up ]
           </p>
           {previewNote && (
-            <p className="mt-1 max-w-[72ch] text-sm leading-relaxed text-muted">
+            <p className="mt-1 max-w-[72ch] text-body leading-relaxed text-muted">
               {previewNote}
             </p>
           )}
@@ -1314,7 +1314,7 @@ function VersionLightbox({
             <span className="relative rounded-full border border-hair bg-canvas px-4 py-1.5 font-mono text-label uppercase text-dim">
               Example coming soon
             </span>
-            <p className="relative mt-3 max-w-[38ch] px-6 text-sm text-muted">
+            <p className="relative mt-3 max-w-[38ch] px-6 text-body text-muted">
               We are producing a {version.name} sample. Order now and we brand
               it for you.
             </p>
@@ -1323,10 +1323,10 @@ function VersionLightbox({
         {/* buy or download, in reach */}
         <div className="flex flex-wrap items-center justify-between gap-4 border border-t-0 border-[#2b2f40] bg-[#111219] px-5 py-4">
           <div>
-            <p className="font-display text-[1.0625rem] font-semibold text-[#EEF0F6]">
+            <p className="font-display text-h4 font-semibold text-[#EEF0F6]">
               {version.name}
             </p>
-            <p className="mt-0.5 text-sm text-[#9096A8]">
+            <p className="mt-0.5 text-body text-[#9096A8]">
               {version.note}{" "}
               <span className="font-mono font-semibold text-gold">
                 {free ? "Free" : `$${version.price.toLocaleString("en-US")}`}
@@ -1338,7 +1338,7 @@ function VersionLightbox({
             target="_blank"
             rel="noopener"
             {...(version.cta === "download" ? { download: "" } : {})}
-            className="group inline-flex items-center gap-2 whitespace-nowrap rounded-[3px] bg-brand-gradient px-6 py-3 text-sm font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
+            className="group inline-flex items-center gap-2 whitespace-nowrap rounded-[3px] bg-brand-gradient px-6 py-3 text-body font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
           >
             {version.cta === "download" ? "Download free" : "Buy now"}
             <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-0.5">
@@ -1360,7 +1360,7 @@ function CollabView() {
       {/* header band */}
       <div className="border-b border-hair px-5 py-6 md:px-7">
         <p className="font-display text-h3 text-ink">{project.name}</p>
-        <p className="mt-1.5 max-w-[72ch] text-sm leading-relaxed text-muted">
+        <p className="mt-1.5 max-w-[72ch] text-body leading-relaxed text-muted">
           {project.tagline}
         </p>
       </div>
@@ -1379,7 +1379,7 @@ function CollabView() {
               preload="metadata"
               className="aspect-video w-full border border-hair bg-black"
             />
-            <p className="mt-3 text-sm text-muted">
+            <p className="mt-3 text-body text-muted">
               The exact video we produced for HighLevel. Pick a version on the
               right to see it branded and grab it.
             </p>
@@ -1406,14 +1406,14 @@ function CollabView() {
                     </svg>
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block font-display text-[0.9375rem] font-semibold text-ink">
+                    <span className="block font-display text-body font-semibold text-ink">
                       {v.name}
                     </span>
-                    <span className="mt-0.5 block text-[0.8125rem] leading-snug text-muted">
+                    <span className="mt-0.5 block text-body-sm leading-snug text-muted">
                       {v.note}
                     </span>
                   </span>
-                  <span className="shrink-0 font-mono text-[0.9375rem] font-bold text-gold [font-variant-numeric:tabular-nums]">
+                  <span className="shrink-0 font-mono text-body font-bold text-gold [font-variant-numeric:tabular-nums]">
                     {v.price === 0 ? "Free" : `$${v.price.toLocaleString("en-US")}`}
                   </span>
                 </button>
@@ -1462,7 +1462,7 @@ export function PremadeLibrary() {
               role="tab"
               aria-selected={isActive}
               onClick={() => setView(tab.slug)}
-              className="group/tab flex min-h-11 items-center gap-1.5 px-3 font-mono text-[0.8125rem] transition-colors"
+              className="group/tab flex min-h-11 items-center gap-1.5 px-3 font-mono text-body-sm transition-colors"
             >
               <span
                 aria-hidden="true"
@@ -1485,7 +1485,7 @@ export function PremadeLibrary() {
               </span>
               {tab.count !== null && (
                 <span
-                  className={`text-[0.6875rem] ${isActive ? "text-gold/70" : "text-dim"}`}
+                  className={`text-label ${isActive ? "text-gold/70" : "text-dim"}`}
                 >
                   {tab.count}
                 </span>

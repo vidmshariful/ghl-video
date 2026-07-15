@@ -78,7 +78,7 @@ export function ServicePanels() {
                 <h3 className="mt-4 max-w-[24ch] font-display text-[clamp(1.5rem,2.4vw,2rem)] font-semibold leading-tight tracking-tight text-ink">
                   {panel.title}
                 </h3>
-                <p className="mt-4 max-w-[52ch] text-[0.9375rem] leading-relaxed text-muted">
+                <p className="mt-4 max-w-[52ch] text-body leading-relaxed text-muted">
                   {panel.body}
                 </p>
                 <Checklist
@@ -88,7 +88,7 @@ export function ServicePanels() {
                 />
                 <Link
                   href={panel.href}
-                  className={`group mt-8 inline-flex items-center gap-2 text-sm font-semibold ${accentText[panel.accent as keyof typeof accentText]}`}
+                  className={`group mt-8 inline-flex items-center gap-2 text-body font-semibold ${accentText[panel.accent as keyof typeof accentText]}`}
                 >
                   {panel.linkLabel}
                   <span

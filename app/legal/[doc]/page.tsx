@@ -60,7 +60,7 @@ export default async function LegalPage({
             {data.sections.map((section, i) => (
               <section key={`${section.h}-${i}`}>
                 {section.h && (
-                  <h2 className="font-display text-[1.25rem] font-semibold tracking-[-0.01em] text-ink">
+                  <h2 className="font-display text-h3 font-semibold tracking-[-0.01em] text-ink">
                     {section.h}
                   </h2>
                 )}
@@ -69,7 +69,7 @@ export default async function LegalPage({
                     item.t === "li" ? (
                       <p
                         key={j}
-                        className="flex gap-3 text-[0.9375rem] leading-relaxed text-muted"
+                        className="flex gap-3 text-body leading-relaxed text-muted"
                       >
                         <span
                           aria-hidden="true"
@@ -80,7 +80,7 @@ export default async function LegalPage({
                     ) : (
                       <p
                         key={j}
-                        className="max-w-[70ch] text-[0.9375rem] leading-relaxed text-muted"
+                        className="max-w-[70ch] text-body leading-relaxed text-muted"
                       >
                         {item.text}
                       </p>

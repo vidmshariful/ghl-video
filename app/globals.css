@@ -74,13 +74,42 @@
   --text-h3--letter-spacing: -0.015em;
   --text-h3--font-weight: 600;
 
+  /* h4: the card/cell title voice. Was hand-rolled at both 17px and
+     19px in different components; one size now. */
+  --text-h4: 1.0625rem;
+  --text-h4--line-height: 1.35;
+  --text-h4--letter-spacing: -0.01em;
+  --text-h4--font-weight: 600;
+
   --text-lede: 1.125rem;
   --text-lede--line-height: 1.65;
+
+  /* body: THE running-text size. The site used to ship two, 14px and
+     15px, a pixel apart and side by side. This is the one. */
+  --text-body: 0.9375rem;
+  --text-body--line-height: 1.6;
+
+  /* body-sm: dense secondary text only (card subtitles, notes) */
+  --text-body-sm: 0.8125rem;
+  --text-body-sm--line-height: 1.55;
 
   --text-price: 1.375rem;
   --text-price--line-height: 1.2;
   --text-price--font-weight: 700;
 
+  /* display numerals: prices, counts, stats. There were five hand-rolled
+     sizes for these (44/36/32/28/24) and four of them were prices.
+     --text-price carries the card figure; this is the hero figure. A
+     middle size was tried and dropped: at the laptop root it landed 2px
+     from --text-price, which nobody can see. */
+  --text-stat-lg: 2.25rem;
+  --text-stat-lg--line-height: 1;
+  --text-stat-lg--font-weight: 700;
+
+  /* label: the smallest type on the site, and the floor. A --text-micro
+     was tried for the 9-10px tags and dropped: at the laptop root it
+     rendered 10px, exactly the same as this, so it was a second name for
+     one size. The old 9px tags round up to here and are legible now. */
   --text-label: 0.6875rem;
   --text-label--line-height: 1.4;
   --text-label--letter-spacing: 0.14em;

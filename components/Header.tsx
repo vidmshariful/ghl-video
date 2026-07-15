@@ -43,7 +43,7 @@ function BracketLabel({
     <span className="flex items-center gap-1">
       {bracket("[")}
       <span
-        className={`text-sm font-medium transition-colors ${
+        className={`text-body font-medium transition-colors ${
           active ? "text-ink" : "text-muted group-hover/nl:text-ink"
         }`}
       >
@@ -80,7 +80,7 @@ function MagneticCta() {
     >
       <Link
         href={cta.bookACall.href}
-        className="group inline-flex items-center gap-2 rounded-[3px] bg-brand-gradient px-5 py-2.5 text-sm font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
+        className="group inline-flex items-center gap-2 rounded-[3px] bg-brand-gradient px-5 py-2.5 text-body font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
       >
         {cta.bookACall.label}
         <span
@@ -172,8 +172,8 @@ function ServicesMenu({ pathname }: { pathname: string | null }) {
             className="absolute left-1/2 top-full z-50 w-[27rem] pt-4"
           >
             <div className="relative rounded-card border border-hair card-glass p-2 shadow-[0_24px_60px_rgba(0,0,0,0.5)]">
-              <span aria-hidden="true" className="absolute -left-1 -top-1.5 font-mono text-[0.625rem] leading-none text-dim/70">+</span>
-              <span aria-hidden="true" className="absolute -right-1 -top-1.5 font-mono text-[0.625rem] leading-none text-dim/70">+</span>
+              <span aria-hidden="true" className="absolute -left-1 -top-1.5 font-mono text-label leading-none text-dim/70">+</span>
+              <span aria-hidden="true" className="absolute -right-1 -top-1.5 font-mono text-label leading-none text-dim/70">+</span>
               <ul className="divide-y divide-hair">
                 {navServices.map((s) => (
                   <li key={s.href}>
@@ -186,10 +186,10 @@ function ServicesMenu({ pathname }: { pathname: string | null }) {
                         className={`h-2 w-2 shrink-0 rounded-[2px] ${accentDot[s.accent]}`}
                       />
                       <span className="flex-1">
-                        <span className="block font-display text-[0.9375rem] font-semibold text-ink">
+                        <span className="block font-display text-body font-semibold text-ink">
                           {s.name}
                         </span>
-                        <span className="mt-0.5 block text-xs text-muted">
+                        <span className="mt-0.5 block text-body-sm text-muted">
                           {s.line}
                         </span>
                       </span>
@@ -286,7 +286,7 @@ export function Header() {
         <div className="flex items-center gap-3 md:hidden">
           <Link
             href={cta.bookACall.href}
-            className="inline-flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-[3px] bg-brand-gradient px-4 text-xs font-semibold text-[#08090D]"
+            className="inline-flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-[3px] bg-brand-gradient px-4 text-body-sm font-semibold text-[#08090D]"
           >
             {cta.bookACall.label}
             <span aria-hidden="true">&rarr;</span>
@@ -334,7 +334,7 @@ export function Header() {
                     aria-hidden="true"
                     className={`h-2 w-2 rounded-[2px] ${accentDot[s.accent]}`}
                   />
-                  <span className="font-display text-xl font-semibold tracking-tight text-ink">
+                  <span className="font-display text-h3 font-semibold tracking-tight text-ink">
                     {s.name}
                   </span>
                 </Link>
@@ -346,14 +346,14 @@ export function Header() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="border-t border-hair py-4 font-display text-xl font-semibold tracking-tight text-ink"
+                  className="border-t border-hair py-4 font-display text-h3 font-semibold tracking-tight text-ink"
                 >
                   {item.label}
                 </Link>
               ))}
               <Link
                 href={cta.bookACall.href}
-                className="border-t border-hair py-4 font-display text-xl font-semibold tracking-tight text-gold"
+                className="border-t border-hair py-4 font-display text-h3 font-semibold tracking-tight text-gold"
               >
                 {cta.bookACall.label} &rarr;
               </Link>

@@ -9,7 +9,7 @@ export function ProofStrip({ quote }: { quote?: string }) {
     <div className="border-y border-hair py-6">
       <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4 text-center">
         <span className="flex items-baseline gap-2.5">
-          <span className="font-mono text-[1.375rem] font-bold text-gold [font-variant-numeric:tabular-nums]">
+          <span className="font-mono text-price font-bold text-gold [font-variant-numeric:tabular-nums]">
             {clients}+
           </span>
           <span className="font-mono text-label uppercase text-dim">
@@ -23,7 +23,7 @@ export function ProofStrip({ quote }: { quote?: string }) {
           rel="noopener"
           className="group flex items-baseline gap-2.5"
         >
-          <span className="font-mono text-[1.375rem] font-bold text-gold [font-variant-numeric:tabular-nums] underline-offset-4 group-hover:underline">
+          <span className="font-mono text-price font-bold text-gold [font-variant-numeric:tabular-nums] underline-offset-4 group-hover:underline">
             {rating}
           </span>
           <span className="font-mono text-label uppercase text-dim">
@@ -36,7 +36,7 @@ export function ProofStrip({ quote }: { quote?: string }) {
               aria-hidden="true"
               className="hidden h-4 w-px bg-hair lg:block"
             />
-            <span className="max-w-[44ch] text-sm text-muted">{quote}</span>
+            <span className="max-w-[44ch] text-body text-muted">{quote}</span>
           </>
         )}
       </div>

@@ -46,7 +46,7 @@ export function ClosingCta() {
                     {cta.seePremade.label}
                   </Button>
                 </div>
-                <p className="mt-8 border-t border-hair pt-6 text-sm text-muted">
+                <p className="mt-8 border-t border-hair pt-6 text-body text-muted">
                   Publishing weekly?{" "}
                   <Link
                     href="/editing/"
@@ -74,10 +74,10 @@ export function ClosingCta() {
                       {String(i + 1).padStart(2, "0")}
                     </span>
                     <div>
-                      <p className="font-display text-[1.0625rem] font-semibold text-ink">
+                      <p className="font-display text-h4 font-semibold text-ink">
                         {step.title}
                       </p>
-                      <p className="mt-1 text-sm text-muted">{step.line}</p>
+                      <p className="mt-1 text-body text-muted">{step.line}</p>
                     </div>
                   </li>
                 ))}

@@ -147,7 +147,7 @@ export function Hero() {
                   />
                   <div aria-hidden="true" className="h-12 w-px shrink-0 bg-hair" />
                   <div>
-                    <p className="max-w-[46ch] text-sm leading-relaxed text-muted">
+                    <p className="max-w-[46ch] text-body leading-relaxed text-muted">
                       {home.hero.testimonial.quote}
                     </p>
                     <p className="mt-2 font-mono text-label uppercase text-dim">
@@ -188,7 +188,7 @@ export function Hero() {
                 />
                 <div aria-hidden="true" className="h-12 w-px shrink-0 bg-hair" />
                 <div>
-                  <p className="max-w-[46ch] text-sm leading-relaxed text-muted">
+                  <p className="max-w-[46ch] text-body leading-relaxed text-muted">
                     {home.hero.testimonial.quote}
                   </p>
                   <p className="mt-2 font-mono text-label uppercase text-dim">

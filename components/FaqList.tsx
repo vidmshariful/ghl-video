@@ -16,7 +16,7 @@ export function FaqList({
           className="group border-b border-hair first:border-t"
         >
           <summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-7 [&::-webkit-details-marker]:hidden">
-            <span className="font-display text-[1.1875rem] font-semibold text-ink [text-wrap:balance]">
+            <span className="font-display text-h4 font-semibold text-ink [text-wrap:balance]">
               {item.q}
             </span>
             <svg
@@ -33,7 +33,7 @@ export function FaqList({
               />
             </svg>
           </summary>
-          <p className="max-w-[68ch] pb-7 text-[0.9375rem] leading-relaxed text-muted">
+          <p className="max-w-[68ch] pb-7 text-body leading-relaxed text-muted">
             {item.a}
           </p>
         </details>

@@ -10,7 +10,7 @@ import { pages, site } from "@/lib/site";
  * Field set is locked by the plan: name, email, company, type, details.
  */
 const inputCls =
-  "w-full rounded-[3px] border border-hair bg-surface px-4 py-3.5 text-[0.9375rem] text-ink placeholder:text-dim focus:border-gold focus:outline-none";
+  "w-full rounded-[3px] border border-hair bg-surface px-4 py-3.5 text-body text-ink placeholder:text-dim focus:border-gold focus:outline-none";
 
 export function QuoteForm() {
   const q = pages.quote;
@@ -20,7 +20,7 @@ export function QuoteForm() {
     return (
       <div className="rounded-[3px] border border-gold/40 bg-gold/5 px-6 py-8 text-center">
         <p className="font-display text-h3 text-ink">{q.confirmation}</p>
-        <p className="mt-2 text-sm text-muted">
+        <p className="mt-2 text-body text-muted">
           Your email app has the request; hit send and it is with us.
         </p>
       </div>
@@ -105,7 +105,7 @@ export function QuoteForm() {
       <div>
         <button
           type="submit"
-          className="group inline-flex items-center gap-2.5 rounded-[3px] bg-brand-gradient px-10 py-[18px] text-[1rem] font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.28)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98] max-sm:w-full"
+          className="group inline-flex items-center gap-2.5 rounded-[3px] bg-brand-gradient px-10 py-[18px] text-body font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.28)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98] max-sm:w-full"
         >
           Send request
           <span
