@@ -918,6 +918,28 @@ export const pages = {
       accent: "your platform and your ICP.",
       lede: "Scripted, voiced, and produced by an in-house team that already knows HighLevel. You explain your positioning once; we handle everything from script to final cut.",
     },
+    /* 3. what every custom video has to do, before any craft talk */
+    craft: {
+      chip: "The craft",
+      headline: "What goes into",
+      accent: "every video.",
+      intro:
+        "Three jobs every custom video has to do. Everything else is craft in service of these.",
+      items: [
+        {
+          title: "Hook",
+          line: "The first seconds decide whether the rest gets watched. We open on the problem your buyer already has, not on your logo.",
+        },
+        {
+          title: "Story",
+          line: "One argument, start to finish. Every scene earns the next one, so the viewer is still there when the ask arrives.",
+        },
+        {
+          title: "Conversion",
+          line: "Every cut ends on one action. No menu of options, no soft close, no hoping they figure out the next step.",
+        },
+      ],
+    },
     formats: {
       chip: "The formats",
       headline: "Four formats,",
@@ -1015,6 +1037,84 @@ export const pages = {
         line: "You never explain what a snapshot or a subaccount is. We already know.",
       },
     ],
+    /* 6. real recent builds, not placeholders */
+    samples: {
+      chip: "Sample work",
+      headline: "Custom work,",
+      accent: "in action.",
+      intro:
+        "Recent builds for HighLevel SaaS. Scripted, voiced, and animated in house.",
+    },
+    /* 7. the difference: capabilities got a heading of its own */
+    difference: {
+      chip: "The difference",
+      headline: "Made for",
+      accent: "HighLevel brands.",
+      intro: "A team that already knows the platform and the buyer.",
+    },
+    /* 8. two ways in. PLACEHOLDER embeds until the HighLevel snippets land. */
+    getStarted: {
+      chip: "Get started",
+      headline: "Send the brief",
+      accent: "or talk it through.",
+      intro:
+        "Both land in the same place: a fixed quote and a real timeline. Pick whichever you prefer.",
+      tabs: [
+        {
+          key: "quote",
+          label: "Request a quote",
+          embedLabel: "Quote form",
+          note: "The quote form drops in here. A human reads it and replies with a fixed price and a timeline within 24 hours.",
+        },
+        {
+          key: "call",
+          label: "Schedule a discovery call",
+          embedLabel: "Booking calendar",
+          note: "Fifteen minutes. You talk through what you sell and what you need, and you leave with the right format and the real price.",
+        },
+      ],
+    },
+    /* 9. proof: real Google reviews, reused from the homepage set */
+    proof: {
+      chip: "Proof",
+      headline: "Founders who",
+      accent: "trust the work.",
+      intro: "Every review below is a real one, pulled from Google.",
+    },
+    /* 10 */
+    faq: {
+      chip: "Questions",
+      headline: "Your questions,",
+      accent: "answered.",
+      items: [
+        {
+          q: "How much does custom cost?",
+          a: "Ads start at $1,500, explainers at $2,500, demos at $3,500, and onboarding series at $5,000. Those are floors, not estimates. You get an exact number in writing before anything goes into production.",
+        },
+        {
+          q: "How long does it take?",
+          a: "Most single videos ship in two to four weeks, depending on format and how many revision rounds you use. Onboarding series run longer. The timeline comes with the quote, so you know before you commit.",
+        },
+        {
+          q: "Can you match my brand exactly?",
+          a: "Colors, fonts, dashboard screens, and voice. You approve the script and the visual direction before production starts, so there is no reveal at the end that you did not see coming.",
+        },
+        {
+          q: "What if I just need a simple video?",
+          a: "Then custom is the wrong spend. The premade library is $495 a video, branded to you, and it ships in days. We will tell you that on the call rather than sell you a build you do not need.",
+        },
+      ],
+    },
+    /* 11 */
+    closing: {
+      headline: "Ready for video",
+      accent: "built for you?",
+      points: [
+        "Custom scope and quote",
+        "Built around your brand",
+        "Made for HighLevel",
+      ],
+    },
     fit: {
       chip: "Fit",
       headline: "Built for some teams,",
