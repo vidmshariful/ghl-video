@@ -1962,28 +1962,100 @@ export type StackFormat = {
 };
 
 /* ---------------------------------------------------------------- */
-/* The Full Platform Pitch: the flagship pitch we built for HighLevel,
- * re-brandable for a reseller's SaaS. Its own library tab and a member
- * of the new-video list. FLAG: the per-option price mapping is a best
- * guess from the live page ($97 / $495 / $595 / $695), confirm. */
-export type PitchOption = { name: string; price: number; note: string };
+/* HighLevel x Vidiosa: our collaborations with HighLevel. We produce a
+ * video for HighLevel; they release a white-label cut for resellers and
+ * let us brand it for any customer who asks. Every such project lives
+ * here. For now, one: the Full Platform Pitch, in six versions. Each
+ * version has its own preview (mp4 or Wistia); Dutch and Spanish have no
+ * example yet. Prices and CTAs are verbatim from the live page. */
+export type CollabVersion = {
+  slug: string;
+  name: string;
+  price: number; // 0 = free download
+  cta: "buy" | "download";
+  url: string;
+  wistiaId: string | null; // preview; null = no example yet
+  note: string;
+};
+export type CollabProject = {
+  slug: string;
+  name: string;
+  tagline: string;
+  mainPreview: string; // mp4 of the HighLevel original
+  versions: CollabVersion[];
+};
 
-export const pitchProduct = {
-  slug: "pitch",
-  name: "Full Platform Pitch",
-  tagline:
-    "The full-platform pitch we made for HighLevel, re-branded for your SaaS: your logo, dashboard colors, brand name in the voiceover, and your choice of accent or language.",
-  wistiaId: "7dc2746xn7",
-  orderUrl: "https://order.ghlvideo.com/hl-full-pitch-video",
-  fromPrice: 495,
-  options: [
-    { name: "The Original Video", price: 0, note: "Free download, as delivered to HighLevel." },
-    { name: "Logo Only", price: 97, note: "Your logo dropped into the dashboard." },
-    { name: "Complete Brand Customization", price: 495, note: "Your logo, colors, and brand name in the voiceover." },
-    { name: "UK / Australian Accent", price: 595, note: "Full rebrand, re-voiced in a UK or AU accent." },
-    { name: "Dutch Edition", price: 695, note: "Full rebrand, localized in Dutch." },
-    { name: "Spanish Edition", price: 695, note: "Full rebrand, localized in Spanish." },
-  ] as PitchOption[],
+export const collab = {
+  slug: "collab",
+  tabLabel: "HighLevel x Vidiosa",
+  blurb:
+    "Videos we produced with HighLevel. They ship a free white-label cut; we brand it for any SaaS that asks.",
+  projects: [
+    {
+      slug: "full-platform-pitch",
+      name: "Full Platform Pitch",
+      tagline:
+        "We produced HighLevel's own full-platform pitch. They released a white-label cut for their resellers, and gave us permission to brand it for any SaaS that asks. Watch the original, then pick your version.",
+      mainPreview:
+        "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a56f37c1a0f04805029e049.mp4",
+      versions: [
+        {
+          slug: "white-label",
+          name: "White-Label Version",
+          price: 0,
+          cta: "download",
+          url: "https://www.playbook.com/s/ghlprojects/CLTewo4gtHBzHNCZxRKDvCkn",
+          wistiaId: "7dc2746xn7",
+          note: "HighLevel's white-label cut. Free to download and use.",
+        },
+        {
+          slug: "logo-only",
+          name: "Logo Only",
+          price: 97,
+          cta: "buy",
+          url: "https://order.ghlvideo.com/hl-full-pitch-video",
+          wistiaId: "pyvywzfmao",
+          note: "Your logo dropped into the dashboard.",
+        },
+        {
+          slug: "complete-brand",
+          name: "Complete Brand Customization",
+          price: 495,
+          cta: "buy",
+          url: "https://order.ghlvideo.com/hl-full-pitch-video",
+          wistiaId: "x8drp1z4u8",
+          note: "Your logo, colors, and brand name in the voiceover.",
+        },
+        {
+          slug: "uk-accent",
+          name: "UK / Australian Accent",
+          price: 595,
+          cta: "buy",
+          url: "https://order.ghlvideo.com/hl-full-pitch-video",
+          wistiaId: "yon4baclgn",
+          note: "Full rebrand, re-voiced in a UK or Australian accent.",
+        },
+        {
+          slug: "dutch",
+          name: "Dutch Edition",
+          price: 695,
+          cta: "buy",
+          url: "https://order.ghlvideo.com/hl-full-pitch-video",
+          wistiaId: null,
+          note: "Full rebrand, localized in Dutch.",
+        },
+        {
+          slug: "spanish",
+          name: "Spanish Edition",
+          price: 695,
+          cta: "buy",
+          url: "https://order.ghlvideo.com/hl-full-pitch-video",
+          wistiaId: null,
+          note: "Full rebrand, localized in Spanish.",
+        },
+      ],
+    },
+  ] as CollabProject[],
 };
 
 /* ---------------------------------------------------------------- */

@@ -6,14 +6,15 @@ import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { MediaFrame } from "@/components/MediaFrame";
 import {
+  collab,
   cta,
   featureAnimations,
   oldVideos,
   oldVideoTypes,
-  pitchProduct,
   premadePacks,
   premadeVideos,
   videoStack,
+  type CollabVersion,
   type PremadePack,
 } from "@/lib/site";
 
@@ -1234,93 +1235,180 @@ function PackBundleView({ pack }: { pack: PremadePack }) {
 }
 
 /* ---------------------------------------------------------------- */
-/* Full Platform Pitch: the flagship pitch, six ways to brand it       */
+/* HighLevel x Vidiosa: collaborations, played version by version      */
 /* ---------------------------------------------------------------- */
 
-function PitchView() {
-  const p = pitchProduct;
-  return (
-    <div>
-      {/* header band */}
-      <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-5 border-b border-hair px-5 py-6 md:px-7">
-        <div className="max-w-[62ch]">
-          <p className="font-display text-h3 text-ink">{p.name}</p>
-          <p className="mt-1.5 text-sm leading-relaxed text-muted">
-            {p.tagline}
-          </p>
-        </div>
-        <div className="flex items-center gap-5">
-          <span className="flex items-baseline gap-1.5">
-            <span className="font-mono text-label uppercase text-muted">
-              from
-            </span>
-            <span className="font-mono text-[1.5rem] font-bold text-gold [font-variant-numeric:tabular-nums]">
-              ${p.fromPrice.toLocaleString("en-US")}
-            </span>
-          </span>
-          <a
-            href={p.orderUrl}
-            target="_blank"
-            rel="noopener"
-            className="group inline-flex items-center gap-2 whitespace-nowrap rounded-[3px] bg-brand-gradient px-6 py-3 text-sm font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.28)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98]"
-          >
-            Order the pitch
-            <span
-              aria-hidden="true"
-              className="transition-transform duration-200 group-hover:translate-x-0.5"
-            >
-              &rarr;
-            </span>
-          </a>
-        </div>
-      </div>
+/* A version's own preview, in a popup, with its buy-or-download CTA. */
+function VersionLightbox({
+  version,
+  onClose,
+}: {
+  version: CollabVersion;
+  onClose: () => void;
+}) {
+  const closeRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    const prev = document.activeElement as HTMLElement | null;
+    closeRef.current?.focus();
+    document.documentElement.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.documentElement.style.overflow = "";
+      prev?.focus();
+    };
+  }, [onClose]);
 
-      {/* body: preview + the six branding options */}
-      <div className="grid lg:grid-cols-[1.35fr_1fr]">
-        <div className="border-b border-hair p-5 md:p-7 lg:border-b-0 lg:border-r">
-          <p className="mb-3 font-mono text-label uppercase text-dim">
-            [ Watch the pitch ]
-          </p>
-          <div className="aspect-video w-full border border-hair bg-black">
+  const free = version.price === 0;
+  return createPortal(
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={version.name}
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-[#08090D]/90 p-4 backdrop-blur-md md:p-12"
+      onClick={onClose}
+    >
+      <div className="relative w-full max-w-5xl" onClick={(e) => e.stopPropagation()}>
+        <button
+          ref={closeRef}
+          type="button"
+          onClick={onClose}
+          aria-label="Close preview"
+          className="absolute -top-12 right-0 flex h-10 w-10 items-center justify-center rounded-[3px] border border-[#2b2f40] bg-[#111219] text-[#EEF0F6] transition-colors hover:border-gold"
+        >
+          <svg viewBox="0 0 12 12" className="h-3.5 w-3.5" aria-hidden="true">
+            <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        </button>
+        {version.wistiaId ? (
+          <div className="aspect-video w-full border border-[#2b2f40] bg-black">
             <iframe
-              src={`https://fast.wistia.net/embed/iframe/${p.wistiaId}?playerColor=FCC000`}
-              title={p.name}
+              src={`https://fast.wistia.net/embed/iframe/${version.wistiaId}?autoPlay=true&playerColor=FCC000`}
+              title={version.name}
               allow="autoplay; fullscreen"
               allowFullScreen
               className="h-full w-full"
             />
           </div>
-          <p className="mt-3 text-sm text-muted">
-            The exact video we produced for HighLevel, re-branded for your
-            SaaS with permission.
+        ) : (
+          <div className="relative flex aspect-video w-full flex-col items-center justify-center border border-[#2b2f40] bg-surface text-center">
+            <div aria-hidden="true" className="pointer-events-none absolute inset-0 hatch opacity-30" />
+            <span className="relative rounded-full border border-hair bg-canvas px-4 py-1.5 font-mono text-label uppercase text-dim">
+              Example coming soon
+            </span>
+            <p className="relative mt-3 max-w-[38ch] px-6 text-sm text-muted">
+              We are producing a {version.name} sample. Order now and we brand
+              it for you.
+            </p>
+          </div>
+        )}
+        {/* buy or download, in reach */}
+        <div className="flex flex-wrap items-center justify-between gap-4 border border-t-0 border-[#2b2f40] bg-[#111219] px-5 py-4">
+          <div>
+            <p className="font-display text-[1.0625rem] font-semibold text-[#EEF0F6]">
+              {version.name}
+            </p>
+            <p className="mt-0.5 text-sm text-[#9096A8]">
+              {version.note}{" "}
+              <span className="font-mono font-semibold text-gold">
+                {free ? "Free" : `$${version.price.toLocaleString("en-US")}`}
+              </span>
+            </p>
+          </div>
+          <a
+            href={version.url}
+            target="_blank"
+            rel="noopener"
+            {...(version.cta === "download" ? { download: "" } : {})}
+            className="group inline-flex items-center gap-2 whitespace-nowrap rounded-[3px] bg-brand-gradient px-6 py-3 text-sm font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
+          >
+            {version.cta === "download" ? "Download free" : "Buy now"}
+            <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-0.5">
+              &rarr;
+            </span>
+          </a>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+function CollabView() {
+  const project = collab.projects[0];
+  const [open, setOpen] = useState<CollabVersion | null>(null);
+  return (
+    <div>
+      {/* header band */}
+      <div className="border-b border-hair px-5 py-6 md:px-7">
+        <p className="font-display text-h3 text-ink">{project.name}</p>
+        <p className="mt-1.5 max-w-[72ch] text-sm leading-relaxed text-muted">
+          {project.tagline}
+        </p>
+      </div>
+
+      {/* body: the HighLevel original on the left, the versions on the right */}
+      <div className="grid lg:grid-cols-[1.35fr_1fr]">
+        <div className="min-w-0 border-b border-hair lg:border-b-0 lg:border-r">
+          <p className="flex min-h-[3rem] items-center border-b border-hair bg-surface px-5 font-mono text-label uppercase text-dim">
+            [ The HighLevel original ]
           </p>
+          <div className="p-5 md:p-7">
+            <video
+              src={project.mainPreview}
+              controls
+              playsInline
+              preload="metadata"
+              className="aspect-video w-full border border-hair bg-black"
+            />
+            <p className="mt-3 text-sm text-muted">
+              The exact video we produced for HighLevel. Pick a version on the
+              right to see it branded and grab it.
+            </p>
+          </div>
         </div>
 
-        <div className="p-5 md:p-7">
-          <p className="mb-3 font-mono text-label uppercase text-dim">
-            [ Six ways to make it yours ]
+        <div className="min-w-0">
+          <p className="flex min-h-[3rem] items-center border-b border-hair bg-surface px-5 font-mono text-label uppercase text-dim">
+            [ {project.versions.length} versions ]
           </p>
-          <ul className="grid gap-px overflow-hidden rounded-[3px] border border-hair bg-hair">
-            {p.options.map((opt) => (
-              <li key={opt.name} className="bg-canvas p-3.5">
-                <div className="flex items-baseline justify-between gap-3">
-                  <span className="font-display text-[0.9375rem] font-semibold text-ink">
-                    {opt.name}
+          <ul>
+            {project.versions.map((v) => (
+              <li key={v.slug}>
+                <button
+                  type="button"
+                  onClick={() => setOpen(v)}
+                  aria-haspopup="dialog"
+                  className="group/v flex w-full items-center gap-4 border-b border-hair px-5 py-4 text-left transition-colors last:border-b-0 hover:bg-surface"
+                >
+                  {/* play affordance */}
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-hair bg-canvas transition-colors group-hover/v:border-gold">
+                    <svg viewBox="0 0 24 24" className="ml-0.5 h-4 w-4 text-gold" aria-hidden="true">
+                      <path d="M8 5v14l11-7z" fill="currentColor" />
+                    </svg>
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-display text-[0.9375rem] font-semibold text-ink">
+                      {v.name}
+                    </span>
+                    <span className="mt-0.5 block text-[0.8125rem] leading-snug text-muted">
+                      {v.note}
+                    </span>
                   </span>
                   <span className="shrink-0 font-mono text-[0.9375rem] font-bold text-gold [font-variant-numeric:tabular-nums]">
-                    {opt.price === 0
-                      ? "Free"
-                      : `$${opt.price.toLocaleString("en-US")}`}
+                    {v.price === 0 ? "Free" : `$${v.price.toLocaleString("en-US")}`}
                   </span>
-                </div>
-                <p className="mt-1 text-[0.8125rem] leading-relaxed text-muted">
-                  {opt.note}
-                </p>
+                </button>
               </li>
             ))}
           </ul>
         </div>
       </div>
+
+      {open && <VersionLightbox version={open} onClose={() => setOpen(null)} />}
     </div>
   );
 }
@@ -1337,7 +1425,7 @@ export function PremadeLibrary() {
     { slug: "new", label: "All New Videos", count: newReady.length as number | null },
     ...premadePacks.map((p) => ({ slug: p.slug, label: p.name, count: p.count })),
     { slug: videoStack.slug, label: videoStack.name, count: videoStack.totalCount as number | null },
-    { slug: pitchProduct.slug, label: pitchProduct.name, count: null },
+    { slug: collab.slug, label: collab.tabLabel, count: null },
     { slug: "features", label: "Feature Animations", count: featureAnimations.length as number | null },
     { slug: "old", label: "Classic Library", count: oldBrowse.length as number | null },
   ];
@@ -1408,8 +1496,8 @@ export function PremadeLibrary() {
           <PackBundleView pack={activePack} />
         ) : view === videoStack.slug ? (
           <VideoStackView />
-        ) : view === pitchProduct.slug ? (
-          <PitchView />
+        ) : view === collab.slug ? (
+          <CollabView />
         ) : view === "features" ? (
           <FeatureAnimationView />
         ) : view === "old" ? (
