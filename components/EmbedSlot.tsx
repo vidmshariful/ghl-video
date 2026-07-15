@@ -24,7 +24,7 @@ export function EmbedSlot({
           </span>
           <span className="text-muted">{label}</span>
         </p>
-        <p className="mx-auto mt-4 max-w-[36ch] text-body text-dim">{note}</p>
+        <p className="mx-auto mt-4 max-w-[var(--measure-body)] text-body text-dim">{note}</p>
       </div>
     </Panel>
   );

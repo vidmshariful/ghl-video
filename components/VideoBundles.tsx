@@ -128,7 +128,7 @@ export function VideoBundles() {
         })}
       </div>
 
-      <p className="mx-auto mt-5 max-w-[56ch] text-center text-body leading-relaxed text-muted">
+      <p className="mx-auto mt-5 max-w-[var(--measure-body)] text-center text-body leading-relaxed text-muted">
         {active.blurb}
       </p>
 

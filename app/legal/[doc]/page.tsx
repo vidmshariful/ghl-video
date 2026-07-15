@@ -36,7 +36,7 @@ export default async function LegalPage({
   return (
     <>
       {/* the title block stays on the dark ground (hero rule) */}
-      <section data-bp-idx="1" className="relative pt-32 md:pt-36">
+      <section data-bp-idx="1" className="relative hero-pad">
         <div className="shell pb-12 text-center">
           <SectionChip index={1} label="Legal" />
           <h1 className="mx-auto mt-7 font-display text-[clamp(2rem,4vw,3rem)] font-semibold leading-[1.02] tracking-[-0.025em] text-ink">
@@ -53,7 +53,7 @@ export default async function LegalPage({
 
       {/* the document reads on paper */}
       <div className="theme-light">
-        <section className="relative py-16 md:py-20">
+        <section className="relative section-pad-sm">
           <div className="shell">
             <div className="mx-auto max-w-3xl">
               <div className="grid gap-10">
@@ -80,7 +80,7 @@ export default async function LegalPage({
                     ) : (
                       <p
                         key={j}
-                        className="max-w-[70ch] text-body leading-relaxed text-muted"
+                        className="max-w-[var(--measure-body)] text-body leading-relaxed text-muted"
                       >
                         {item.text}
                       </p>

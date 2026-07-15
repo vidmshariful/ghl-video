@@ -36,7 +36,7 @@ export function ProofStrip({ quote }: { quote?: string }) {
               aria-hidden="true"
               className="hidden h-4 w-px bg-hair lg:block"
             />
-            <span className="max-w-[44ch] text-body text-muted">{quote}</span>
+            <span className="max-w-[var(--measure-body)] text-body text-muted">{quote}</span>
           </>
         )}
       </div>

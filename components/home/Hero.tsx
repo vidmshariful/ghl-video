@@ -57,6 +57,11 @@ export function Hero() {
   });
 
   return (
+    /* the one hero that is not hero-pad, on purpose: this hero is a
+       bounded panel, so its border IS the start line. Centered text on
+       the other pages needs more air above it to start at the same
+       optical point. Matching the numbers would make them look less
+       alike, not more. */
     <section data-bp-idx="1" className="relative overflow-x-clip pt-28 pb-14 md:pt-32">
       {/* ambient: one gold and one green field behind the hero card */}
       <div
@@ -117,7 +122,7 @@ export function Hero() {
 
               <motion.p
                 {...fadeUp(0.45)}
-                className="mt-6 max-w-[44ch] text-lede text-muted"
+                className="mt-6 max-w-[var(--measure-lede)] text-lede text-muted"
               >
                 {home.hero.lede}
               </motion.p>
@@ -147,7 +152,7 @@ export function Hero() {
                   />
                   <div aria-hidden="true" className="h-12 w-px shrink-0 bg-hair" />
                   <div>
-                    <p className="max-w-[46ch] text-body leading-relaxed text-muted">
+                    <p className="max-w-[var(--measure-body)] text-body leading-relaxed text-muted">
                       {home.hero.testimonial.quote}
                     </p>
                     <p className="mt-2 font-mono text-label uppercase text-dim">
@@ -188,7 +193,7 @@ export function Hero() {
                 />
                 <div aria-hidden="true" className="h-12 w-px shrink-0 bg-hair" />
                 <div>
-                  <p className="max-w-[46ch] text-body leading-relaxed text-muted">
+                  <p className="max-w-[var(--measure-body)] text-body leading-relaxed text-muted">
                     {home.hero.testimonial.quote}
                   </p>
                   <p className="mt-2 font-mono text-label uppercase text-dim">

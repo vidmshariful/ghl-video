@@ -37,7 +37,7 @@ export function SectionHead({
         </h2>
         {intro && (
           <p
-            className={`mt-5 max-w-[52ch] text-lede text-muted ${
+            className={`mt-5 max-w-[var(--measure-lede)] text-lede text-muted ${
               center ? "mx-auto" : ""
             }`}
           >

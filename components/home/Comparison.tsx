@@ -73,7 +73,7 @@ export function Comparison() {
             >
               {comparison.headline}
             </h2>
-            <p className="mt-4 max-w-[52ch] text-lede text-muted">
+            <p className="mt-4 max-w-[var(--measure-lede)] text-lede text-muted">
               {comparison.intro}
             </p>
           </RevealItem>

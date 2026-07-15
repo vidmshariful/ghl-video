@@ -62,7 +62,7 @@ export default function AboutPage() {
                 {p.story.paragraphs.map((par) => (
                   <p
                     key={par.slice(0, 24)}
-                    className="max-w-[62ch] text-lede leading-relaxed text-muted"
+                    className="max-w-[var(--measure-lede)] text-lede leading-relaxed text-muted"
                   >
                     {par}
                   </p>
@@ -182,7 +182,7 @@ export default function AboutPage() {
           <Reveal className="mt-10">
             <RevealItem>
               <div className="rounded-card border border-hair bg-canvas p-7 md:p-8">
-                <p className="max-w-[62ch] text-lede text-muted">
+                <p className="max-w-[var(--measure-lede)] text-lede text-muted">
                   {p.entity.lines[0]}
                 </p>
                 <div className="mt-5 flex flex-wrap gap-3">

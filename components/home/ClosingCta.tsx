@@ -35,7 +35,7 @@ export function ClosingCta() {
                   {home.closing.headline}{" "}
                   <span className="text-gold">{home.closing.accent}</span>
                 </h2>
-                <p className="mt-5 max-w-[44ch] text-lede text-muted">
+                <p className="mt-5 max-w-[var(--measure-lede)] text-lede text-muted">
                   {home.closing.lede}
                 </p>
                 <div className="mt-9 flex flex-wrap gap-4">

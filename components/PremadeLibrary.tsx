@@ -741,7 +741,7 @@ function FeatureAnimationView() {
       {/* what this is */}
       <div className="border-b border-hair px-5 py-6 md:px-7">
         <p className="font-display text-h3 text-ink">Feature Animations</p>
-        <p className="mt-1.5 max-w-[70ch] text-body leading-relaxed text-muted">
+        <p className="mt-1.5 max-w-[var(--measure-body)] text-body leading-relaxed text-muted">
           Every HighLevel feature as a short animation, in two cuts: a clean
           Simplified UI and the Real UI on the live dashboard. Sold in bundles,
           branded to your platform.
@@ -847,7 +847,7 @@ function FeatureAnimationView() {
       {/* pricing: sold in bundles, never one at a time */}
       <div className="border-t border-hair px-5 py-6 md:px-7">
         <p className="font-mono text-label uppercase text-dim">[ Pricing ]</p>
-        <p className="mt-1 max-w-[60ch] text-body text-muted">
+        <p className="mt-1 max-w-[var(--measure-body)] text-body text-muted">
           Feature animations are ordered in bundles, not one at a time. Pick the
           pack that covers the features you need.
         </p>
@@ -999,7 +999,7 @@ function ComingSoonVideo() {
       <span className="relative mt-4 rounded-full border border-hair bg-canvas px-4 py-1.5 font-mono text-label uppercase text-dim">
         Video coming soon
       </span>
-      <p className="relative mt-3 max-w-[38ch] px-6 text-body text-muted">
+      <p className="relative mt-3 max-w-[var(--measure-body)] px-6 text-body text-muted">
         A short walkthrough from our team is being filmed and lands here soon.
       </p>
     </div>
@@ -1040,7 +1040,7 @@ function BundleView({
     <div>
       {/* header band: value anchor + one CTA */}
       <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-5 border-b border-hair px-5 py-6 md:px-7">
-        <div className="max-w-[60ch]">
+        <div className="max-w-[var(--measure-body)]">
           <p className="font-display text-h3 text-ink">{name}</p>
           <p className="mt-1.5 text-body leading-relaxed text-muted">{tagline}</p>
         </div>
@@ -1150,7 +1150,7 @@ function BundleView({
             [ Preview the line-up ]
           </p>
           {previewNote && (
-            <p className="mt-1 max-w-[72ch] text-body leading-relaxed text-muted">
+            <p className="mt-1 max-w-[var(--measure-body)] text-body leading-relaxed text-muted">
               {previewNote}
             </p>
           )}
@@ -1314,7 +1314,7 @@ function VersionLightbox({
             <span className="relative rounded-full border border-hair bg-canvas px-4 py-1.5 font-mono text-label uppercase text-dim">
               Example coming soon
             </span>
-            <p className="relative mt-3 max-w-[38ch] px-6 text-body text-muted">
+            <p className="relative mt-3 max-w-[var(--measure-body)] px-6 text-body text-muted">
               We are producing a {version.name} sample. Order now and we brand
               it for you.
             </p>
@@ -1360,7 +1360,7 @@ function CollabView() {
       {/* header band */}
       <div className="border-b border-hair px-5 py-6 md:px-7">
         <p className="font-display text-h3 text-ink">{project.name}</p>
-        <p className="mt-1.5 max-w-[72ch] text-body leading-relaxed text-muted">
+        <p className="mt-1.5 max-w-[var(--measure-body)] text-body leading-relaxed text-muted">
           {project.tagline}
         </p>
       </div>

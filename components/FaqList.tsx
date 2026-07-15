@@ -33,7 +33,7 @@ export function FaqList({
               />
             </svg>
           </summary>
-          <p className="max-w-[68ch] pb-7 text-body leading-relaxed text-muted">
+          <p className="max-w-[var(--measure-body)] pb-7 text-body leading-relaxed text-muted">
             {item.a}
           </p>
         </details>

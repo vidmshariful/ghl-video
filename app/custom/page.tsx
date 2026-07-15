@@ -79,7 +79,7 @@ export default function CustomPage() {
                         from ${f.from.toLocaleString("en-US")}
                       </p>
                     </div>
-                    <p className="max-w-[46ch] pt-2 text-body text-muted">
+                    <p className="max-w-[var(--measure-body)] pt-2 text-body text-muted">
                       {f.line}
                     </p>
                   </div>

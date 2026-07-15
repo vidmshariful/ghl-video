@@ -25,7 +25,7 @@ export default function QuotePage() {
 
       {/* light zone: the form */}
       <div className="theme-light">
-        <section data-bp-idx="2" className="relative py-16 md:py-20">
+        <section data-bp-idx="2" className="relative section-pad-sm">
           <div className="shell">
             <div className="mx-auto max-w-3xl">
               <Reveal>

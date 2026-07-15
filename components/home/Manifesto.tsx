@@ -17,10 +17,10 @@ export function Manifesto() {
   const after = idx >= 0 ? manifesto.statement.slice(idx + manifesto.emphasis.length) : "";
 
   return (
-    <section className="relative overflow-x-clip">
+    <section className="relative overflow-x-clip section-pad-sm">
       <DrawnBorder />
       <SectionGlow accent="gold" position="right" />
-      <div className="shell relative py-16 md:py-20">
+      <div className="shell relative">
         <Reveal>
           <RevealItem>
             <div className="grid overflow-hidden rounded-card border border-hair bg-canvas lg:grid-cols-[1.6fr_1fr]">

@@ -70,7 +70,7 @@ export function TeamSection({ index = 7 }: { index?: number }) {
               {team.headline}{" "}
               <span className="text-gradient">{team.accent}</span>
             </h2>
-            <p className="mt-4 max-w-[52ch] text-lede text-muted">
+            <p className="mt-4 max-w-[var(--measure-lede)] text-lede text-muted">
               {team.intro}
             </p>
           </RevealItem>

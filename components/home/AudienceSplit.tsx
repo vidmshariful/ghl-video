@@ -33,7 +33,7 @@ export function AudienceSplit() {
                 <h3 className="mt-4 max-w-[20ch] font-display text-h3 text-ink">
                   {audiences.resellers.title}
                 </h3>
-                <p className="mt-3 max-w-[50ch] text-body leading-relaxed text-muted">
+                <p className="mt-3 max-w-[var(--measure-body)] text-body leading-relaxed text-muted">
                   {audiences.resellers.body}
                 </p>
                 <div className="mt-8 flex flex-wrap gap-6">

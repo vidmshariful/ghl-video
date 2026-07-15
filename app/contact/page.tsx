@@ -28,7 +28,7 @@ export default function ContactPage() {
 
       {/* light zone: what happens on the call, then the calendar */}
       <div className="theme-light">
-        <section data-bp-idx="2" className="relative py-16 md:py-20">
+        <section data-bp-idx="2" className="relative section-pad-sm">
           <div className="shell">
             <CellGrid
               items={p.callPoints.map((s, i) => ({ ...s, icon: callIcons[i] }))}
@@ -38,7 +38,7 @@ export default function ContactPage() {
           </div>
         </section>
 
-        <section data-bp-idx="3" className="relative pb-16 md:pb-20">
+        <section data-bp-idx="3" className="relative section-pad-sm pt-0">
           <div className="shell">
             <div className="grid items-start gap-8 lg:grid-cols-[1.4fr_1fr]">
               {/* LeadConnector calendar slot (PLACEHOLDER until the embed
@@ -85,7 +85,7 @@ export default function ContactPage() {
                     <p className="font-mono text-label uppercase text-muted">
                       [ Custom project? ]
                     </p>
-                    <p className="mt-4 max-w-[38ch] text-body text-muted">
+                    <p className="mt-4 max-w-[var(--measure-body)] text-body text-muted">
                       Skip the call and send the short form instead. A fixed
                       quote comes back within 24 hours.
                     </p>
@@ -105,7 +105,7 @@ export default function ContactPage() {
       </div>
 
       {/* light proof, back on the dark ground before the footer */}
-      <section data-bp-idx="4" className="relative py-16">
+      <section data-bp-idx="4" className="relative section-pad-sm">
         <div className="shell">
           <ProofStrip quote='"Great quality and quick turnaround! Will definitely work with again!" Ryan Maule, Google review' />
         </div>

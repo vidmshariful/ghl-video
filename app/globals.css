@@ -10,6 +10,16 @@
   --green: #00cc00;
   --brand-gradient: linear-gradient(100deg, #fcc000, #00cc00);
 
+  /* Two reading measures, and only two. Prose caps had drifted to nine
+     values between 26ch and 72ch: at the narrow end they squeezed body
+     copy to ~32 characters a line, at the wide end they let it run to
+     ~80. Both are outside the 60-75 a reader wants.
+     In a narrow grid cell the column is already narrower than the cap,
+     so the cap goes inert and the column does the work. It only binds
+     where there is real width to give away. */
+  --measure-lede: 52ch;
+  --measure-body: 68ch;
+
   /* the strip between a page-frame rail and the shell edge: half the
      difference between the frame column and the content column */
   --rail-gutter: calc(
@@ -208,8 +218,23 @@ p {
 }
 
 /* section rhythm: confident, not cavernous */
+/* Two section rhythms, and only two. Everything that is not a hero or
+   the thin trust bar uses one of these; hand-set py- values had the page
+   breathing at six different rates as you scrolled. */
 @utility section-pad {
   padding-block: clamp(5rem, 8vw, 7.5rem);
+}
+
+/* compact: for short utility sections (contact, quote, legal, proof
+   strips). Matches the py-16 md:py-20 it replaces, to the pixel. */
+@utility section-pad-sm {
+  padding-block: clamp(4rem, 5.5vw, 5rem);
+}
+
+/* every page hero clears the sticky header by the same distance. Legal
+   sat 4px above the others for no reason anyone could name. */
+@utility hero-pad {
+  padding-top: clamp(9rem, 11vw, 10rem);
 }
 
 /* blueprint hatch: sparse diagonal texture for divider strips */

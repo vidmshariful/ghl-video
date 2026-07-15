@@ -30,7 +30,7 @@ export function StubPage({
           <h1 className="mt-7 font-display text-[clamp(2rem,4vw,3rem)] font-semibold leading-[1.02] tracking-[-0.025em] text-ink">
             {title}
           </h1>
-          <p className="mt-5 max-w-[52ch] text-lede text-muted">{note}</p>
+          <p className="mt-5 max-w-[var(--measure-lede)] text-lede text-muted">{note}</p>
           <div className="mt-10 flex flex-wrap gap-4">
             {emailCta ? (
               <Button href={`mailto:${site.email}`} external variant="primary">

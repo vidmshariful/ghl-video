@@ -58,7 +58,7 @@ export function RuledSection({
                 <span className="text-gradient">{accent}</span>
               </h2>
               {intro && (
-                <p className="mx-auto mt-5 max-w-[52ch] text-lede text-muted">
+                <p className="mx-auto mt-5 max-w-[var(--measure-lede)] text-lede text-muted">
                   {intro}
                 </p>
               )}

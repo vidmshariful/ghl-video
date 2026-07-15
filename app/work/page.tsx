@@ -92,7 +92,7 @@ export default function WorkPage() {
       </section>
 
       <div className="theme-light">
-      <section data-bp-idx="4" className="relative py-20">
+      <section data-bp-idx="4" className="relative section-pad-sm">
         <div className="shell">
           <CrossSell
             items={[

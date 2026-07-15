@@ -109,7 +109,7 @@ export function Testimonials() {
                 {reviews.headline}{" "}
                 <span className="text-gradient">{reviews.accent}</span>
               </h2>
-              <p className="mt-4 max-w-[44ch] text-lede text-muted">
+              <p className="mt-4 max-w-[var(--measure-lede)] text-lede text-muted">
                 {reviews.ratingLine}
               </p>
               <div className="mt-8">

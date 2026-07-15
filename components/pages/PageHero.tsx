@@ -44,7 +44,7 @@ export function PageHero({
   children?: ReactNode;
 }) {
   return (
-    <section data-bp-idx="1" className="relative overflow-x-clip pt-36 md:pt-40">
+    <section data-bp-idx="1" className="relative overflow-x-clip hero-pad">
       <SectionGlow accent={accentColor} position="left" />
       <div className="shell relative pb-14 text-center md:pb-16">
         <div className="flex flex-wrap items-center justify-center gap-3">
@@ -58,7 +58,7 @@ export function PageHero({
         <h1 className="mx-auto mt-8 max-w-[22ch] font-display text-hero text-ink">
           {headline} <span className="text-gradient">{accent}</span>
         </h1>
-        <p className="mx-auto mt-6 max-w-[54ch] text-lede text-muted">{lede}</p>
+        <p className="mx-auto mt-6 max-w-[var(--measure-lede)] text-lede text-muted">{lede}</p>
         {children && (
           <div className="mt-9 flex flex-wrap justify-center gap-4">
             {children}

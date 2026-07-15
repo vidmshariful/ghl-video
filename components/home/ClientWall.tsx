@@ -31,7 +31,7 @@ export function ClientWall() {
               </span>{" "}
               HighLevel founders, and counting.
             </h2>
-            <p className="mx-auto mt-5 max-w-[54ch] text-lede text-muted">
+            <p className="mx-auto mt-5 max-w-[var(--measure-lede)] text-lede text-muted">
               The teams that build on HighLevel trust GHL Video with the
               videos that sell their platform.
             </p>

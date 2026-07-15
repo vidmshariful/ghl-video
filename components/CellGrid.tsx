@@ -58,7 +58,7 @@ export function CellGrid({
             <h3 className="mt-5 font-display text-h4 font-semibold tracking-[-0.01em] text-ink">
               {item.title}
             </h3>
-            <p className="mt-2 max-w-[38ch] text-body leading-relaxed text-muted">
+            <p className="mt-2 max-w-[var(--measure-body)] text-body leading-relaxed text-muted">
               {item.line}
             </p>
           </div>
