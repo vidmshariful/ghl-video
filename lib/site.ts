@@ -118,9 +118,12 @@ export const clipWindows: Partial<
 
 export const premadePrice = 495; // legacy flat price, kept for reference
 
-/* The premade catalog spans four video types; filters use them. */
+/* The premade catalog's video types; filters use them. "Feature
+ * Explainer" is the short, single-feature cut (formerly "Short
+ * Explainer"); "Explainer" is now reserved for the master and pitch. */
 export const premadeTypes = [
   "Explainer",
+  "Feature Explainer",
   "Demo",
   "Ads / Promo",
   "Animated GIF",
@@ -200,38 +203,38 @@ export const premadePacks: PremadePack[] = [
         ],
       },
       {
-        name: "Short Explainers",
+        name: "Feature Explainers",
         count: 7,
         line: "One 60-second explainer per core capability, with AI woven through the how-it-works.",
         videos: [
           {
             title: "AI Receptionist + Conversational AI",
-            type: "Explainer",
-            format: "Short Explainer",
+            type: "Feature Explainer",
+            format: "Feature Explainer",
             capability: "AI Receptionist",
             src: aiPackClips.receptionist,
             poster: "/posters/ai-receptionist.jpg",
           },
           {
             title: "Unified Inbox + Conversational AI",
-            type: "Explainer",
-            format: "Short Explainer",
+            type: "Feature Explainer",
+            format: "Feature Explainer",
             capability: "Unified Inbox",
             src: aiPackClips.inbox,
             poster: "/posters/ai-inbox.jpg",
           },
           {
             title: "Reputation Management + Reviews AI",
-            type: "Explainer",
-            format: "Short Explainer",
+            type: "Feature Explainer",
+            format: "Feature Explainer",
             capability: "Reputation & Reviews",
             src: aiPackClips.reputation,
             poster: "/posters/ai-reputation.jpg",
           },
           {
             title: "Social Media Planner + Content AI",
-            type: "Explainer",
-            format: "Short Explainer",
+            type: "Feature Explainer",
+            format: "Feature Explainer",
             capability: "Social & Content",
             src: null,
             poster: null,
@@ -239,8 +242,8 @@ export const premadePacks: PremadePack[] = [
           },
           {
             title: "AI Website + Funnel Builder",
-            type: "Explainer",
-            format: "Short Explainer",
+            type: "Feature Explainer",
+            format: "Feature Explainer",
             capability: "Websites & Funnels",
             src: null,
             poster: null,
@@ -248,8 +251,8 @@ export const premadePacks: PremadePack[] = [
           },
           {
             title: "Ask AI, Your In-Platform Assistant",
-            type: "Explainer",
-            format: "Short Explainer",
+            type: "Feature Explainer",
+            format: "Feature Explainer",
             capability: "Ask AI",
             src: null,
             poster: null,
@@ -257,8 +260,8 @@ export const premadePacks: PremadePack[] = [
           },
           {
             title: "Mobile App, Run Your Business From Your Phone",
-            type: "Explainer",
-            format: "Short Explainer",
+            type: "Feature Explainer",
+            format: "Feature Explainer",
             capability: "Mobile App",
             src: null,
             poster: null,
@@ -290,6 +293,7 @@ export const premadePacks: PremadePack[] = [
  * FLAG: Ads / Promo and Animated GIF prices are placeholder defaults. */
 export const premadeTypePrice: Record<PremadeType, number> = {
   Explainer: 495,
+  "Feature Explainer": 495,
   Demo: 995,
   "Ads / Promo": 495,
   "Animated GIF": 495,

@@ -340,7 +340,7 @@ function LibraryCard({
       : video.poster;
 
   return (
-    <div className="group/card">
+    <div className="group/card flex h-full flex-col">
       {video.wistiaId && video.poster ? (
         <PosterPlay video={video} onOpen={() => onPreview(video, "simplified")} />
       ) : video.preview ? (
@@ -377,21 +377,21 @@ function LibraryCard({
           </span>
         </div>
       )}
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-hair px-1 pb-4 pt-3.5">
+      <div className="flex flex-1 flex-col border-b border-hair px-1 pb-4 pt-3.5">
         <div className="min-w-0">
-          <h3 className="font-display text-[1.0625rem] font-semibold tracking-[-0.01em] text-ink">
+          <h3 className="font-display text-[1.0625rem] font-semibold leading-snug tracking-[-0.01em] text-ink">
             {video.title}
           </h3>
-          <p className="mt-0.5 font-mono text-label uppercase text-dim">
+          <p className="mt-1 font-mono text-label uppercase text-dim">
             {video.subtitle ?? video.typeTag}
           </p>
         </div>
         {video.previewOnly ? (
-          <span className="font-mono text-label uppercase text-dim">
+          <span className="mt-auto pt-4 font-mono text-label uppercase text-dim">
             Included
           </span>
         ) : (
-          <div className="flex items-center gap-4">
+          <div className="mt-auto flex items-center justify-between gap-3 pt-4">
             <Price value={video.price} />
             <BuyVideoLink video={video} />
           </div>
@@ -681,6 +681,7 @@ function VideoBrowser({
                       animate={{ opacity: 1, scale: 1 }}
                       exit={reduced ? undefined : { opacity: 0, scale: 0.985 }}
                       transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                      className="h-full"
                     >
                       <LibraryCard
                         video={video}
