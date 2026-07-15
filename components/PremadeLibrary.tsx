@@ -773,13 +773,16 @@ function FeatureAnimationView() {
               setIdx((i) => Math.max(i - 1, 0));
             }
           }}
-          className="flex flex-col focus-visible:outline-2"
+          className="lg:relative focus-visible:outline-2"
         >
+          {/* absolute-fill on desktop so the player sets the height and
+              the list scrolls inside it, not the other way around */}
+          <div className="flex h-full flex-col lg:absolute lg:inset-0">
           <p className="shrink-0 border-b border-hair px-5 py-3 font-mono text-label uppercase text-dim">
             {featureAnimations.length} animations{" "}
             <span className="hidden lg:inline">/ use &uarr; &darr; keys</span>
           </p>
-          <div className="max-h-[26rem] flex-1 overflow-y-auto lg:max-h-none lg:min-h-0">
+          <div className="max-h-[26rem] flex-1 overflow-y-auto min-h-0 lg:max-h-none">
             {featureAnimations.map((f, i) => (
               <button
                 key={f.slug}
@@ -815,6 +818,7 @@ function FeatureAnimationView() {
                 </span>
               </button>
             ))}
+          </div>
           </div>
         </div>
       </div>
