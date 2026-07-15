@@ -386,10 +386,15 @@ export const customFormats = [
   { name: "Onboarding Series", from: 5000, sample: null as string | null },
 ] as const;
 
+/* anchorPrice is the published list price; `price` is what is charged.
+ * A struck-through number is a claim about a former price, so these are
+ * list prices to stand behind, not decoration. Chosen so all three read
+ * "save 25%" rather than a ragged 25 / 23 / 22. */
 export const editingPlans = [
   {
     name: "Starter",
     price: 595,
+    anchorPrice: 795,
     longForm: 2,
     longFormNote: "up to 15 min each",
     shortForm: 4,
@@ -399,6 +404,7 @@ export const editingPlans = [
   {
     name: "Growth",
     price: 995,
+    anchorPrice: 1325,
     longForm: 4,
     shortForm: 8,
     featured: true,
@@ -407,6 +413,7 @@ export const editingPlans = [
   {
     name: "Scale",
     price: 1795,
+    anchorPrice: 2395,
     longForm: 8,
     shortForm: 16,
     featured: false,
@@ -415,8 +422,12 @@ export const editingPlans = [
   },
 ] as const;
 
-export const editingAllPlans =
-  "No contracts, unlimited revisions, edited by a HighLevel-fluent team.";
+/* editingAllPlans (the one-line "no contracts, unlimited revisions,
+ * HighLevel-fluent team") was promoted to pages.editing.allPlans, a
+ * section of its own: those three facts are what unblock a monthly
+ * commitment, and they were doing that job as one line of body copy.
+ * The line is gone rather than kept, so the page does not say the same
+ * three things twice in consecutive sections. */
 
 /* ------------------------------------------------------------------ */
 /* Entity, disclaimer, sister brands                                    */
@@ -1164,6 +1175,75 @@ export const pages = {
       headline: "Pick your",
       accent: "monthly capacity.",
       featuredLabel: "Most chosen",
+    },
+    /* 3. name the pain before the price. A subscription buyer needs the
+       argument before the number. */
+    bottleneck: {
+      chip: "The bottleneck",
+      headline: "Editing is eating",
+      accent: "your week.",
+      intro:
+        "You record fast. Then the timeline swallows the day, and the content that was going to grow the business sits in a folder.",
+      items: [
+        {
+          title: "You are the bottleneck",
+          line: "Every hour in the timeline is an hour not spent selling, building, or filming the next one.",
+        },
+        {
+          title: "Explaining it twice",
+          line: "A generic editor does not know what a snapshot or a subaccount is, so every brief turns into a lesson.",
+        },
+        {
+          title: "The output swings",
+          line: "Quality changes with whoever picked up the file, so the channel never looks like one thing.",
+        },
+      ],
+    },
+    /* 6. the objection-killers, promoted out of a single line of body
+       copy under the plans. These are what actually unblock a monthly
+       commitment, so they get a section. */
+    allPlans: {
+      chip: "Every plan includes",
+      headline: "The same team,",
+      accent: "whatever you spend.",
+      intro:
+        "Nothing below is a tier. Every plan gets all of it.",
+      stats: [
+        { v: "2 to 3", l: "day turnaround" },
+        { v: "Unlimited", l: "revisions" },
+        { v: "Zero", l: "contracts" },
+      ],
+      items: [
+        {
+          title: "HighLevel fluency",
+          line: "Editors who already know the platform, the audience, and what a good HighLevel video sounds like.",
+        },
+        {
+          title: "Unlimited revisions",
+          line: "We cut until it is right. There is no revision counter and no per-change invoice.",
+        },
+        {
+          title: "Fast turnaround",
+          line: "Edits back in two to three business days, so a publishing schedule stays a schedule.",
+        },
+        {
+          title: "No contracts",
+          line: "Month to month. Pause when you stop filming, cancel when it stops paying. No exit call.",
+        },
+      ],
+    },
+    /* 8. real Google reviews, the same set the homepage quotes */
+    proof: {
+      chip: "Proof",
+      headline: "Creators who",
+      accent: "stopped editing.",
+      intro: "Every review below is a real one, pulled from Google.",
+    },
+    /* 10 */
+    closing: {
+      headline: "Stop editing.",
+      accent: "Start publishing.",
+      points: ["No contracts", "Unlimited revisions", "Edits back in days"],
     },
     samples: {
       chip: "The difference",

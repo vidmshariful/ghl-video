@@ -3,6 +3,8 @@ import { Checklist } from "@/components/Checklist";
 type Plan = {
   name: string;
   price: number;
+  /* published list price, struck through beside what is charged */
+  anchorPrice: number;
   longForm: number;
   longFormNote?: string;
   shortForm: number;
@@ -23,6 +25,7 @@ export function PricingTier({
   plan: Plan;
   featuredLabel: string;
 }) {
+  const saved = Math.round((1 - plan.price / plan.anchorPrice) * 100);
   const lines = [
     `${plan.longForm} long-form videos${plan.longFormNote ? ` (${plan.longFormNote})` : ""}`,
     `${plan.shortForm} short-form videos`,
@@ -42,11 +45,23 @@ export function PricingTier({
         </span>
       )}
       <h3 className="font-display text-h3 text-ink">{plan.name}</h3>
+      {/* Price on its own line, list price and saving on the next. Run as
+          one row and the widest plan ($1,795 / month $2,395 save 25%)
+          wraps where the others do not, which drops that card's
+          checklist and misaligns all three. Two lines always. */}
       <p className="mt-4 flex items-baseline gap-2">
         <span className="font-mono text-stat-lg font-bold leading-none text-gold [font-variant-numeric:tabular-nums]">
           ${plan.price.toLocaleString("en-US")}
         </span>
         <span className="font-mono text-label uppercase text-dim">/ month</span>
+      </p>
+      <p className="mt-2 flex items-baseline gap-2.5">
+        <span className="font-mono text-body text-dim line-through [font-variant-numeric:tabular-nums]">
+          ${plan.anchorPrice.toLocaleString("en-US")}
+        </span>
+        <span className="font-mono text-label uppercase text-muted">
+          save {saved}%
+        </span>
       </p>
       <Checklist items={lines} className="mt-6 flex-1" />
       <a
