@@ -36,9 +36,6 @@ export function VideoTestimonials() {
                 title={item.name}
                 meta={item.company}
                 label={`Testimonial from ${item.name}, ${item.company}`}
-                {...("startAt" in item
-                  ? { startAt: item.startAt, endAt: item.endAt }
-                  : {})}
               />
             </RevealItem>
           ))}
