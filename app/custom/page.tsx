@@ -4,6 +4,7 @@ import { CellGrid, FitSplit } from "@/components/CellGrid";
 import { DrawnBorder } from "@/components/DrawnBorder";
 import { MediaFrame } from "@/components/MediaFrame";
 import { Reveal, RevealItem } from "@/components/Reveal";
+import { RuledSection } from "@/components/RuledSection";
 import { SectionGlow } from "@/components/SectionGlow";
 import { SectionHead } from "@/components/SectionHead";
 import { PageHero } from "@/components/pages/PageHero";
@@ -90,51 +91,43 @@ export default function CustomPage() {
       </section>
 
       {/* how pricing works */}
-      <section data-bp-idx="3" className="relative section-pad">
-        <DrawnBorder />
-        <div className="shell">
-          <SectionHead
-            index={3}
-            chip={p.pricing.chip}
-            headline={p.pricing.headline}
-            accent={p.pricing.accent}
-            accentColor="green"
-          />
-          <div className="mt-12">
-            <CellGrid
-              items={p.pricing.points.map((x, i) => ({
-                ...x,
-                icon: pricingIcons[i],
-              }))}
-              accent="green"
-            />
-          </div>
-        </div>
-      </section>
+      <RuledSection
+        bpIdx={3}
+        index={3}
+        chip={p.pricing.chip}
+        headline={p.pricing.headline}
+        accent={p.pricing.accent}
+        accentColor="green"
+      >
+        <CellGrid
+          items={p.pricing.points.map((x, i) => ({
+            ...x,
+            icon: pricingIcons[i],
+          }))}
+          accent="green"
+          framed={false}
+        />
+      </RuledSection>
 
       {/* six-step process */}
-      <section data-bp-idx="4" className="relative section-pad">
-        <DrawnBorder />
-        <div className="shell">
-          <SectionHead
-            index={4}
-            chip={p.process.chip}
-            headline={p.process.headline}
-            accent={p.process.accent}
-            accentColor="green"
-          />
-          <div className="mt-12">
-            <CellGrid
-              items={p.process.steps.map((s, i) => ({
-                ...s,
-                icon: processIcons[i],
-              }))}
-              accent="green"
-              numbered
-            />
-          </div>
-        </div>
-      </section>
+      <RuledSection
+        bpIdx={4}
+        index={4}
+        chip={p.process.chip}
+        headline={p.process.headline}
+        accent={p.process.accent}
+        accentColor="green"
+      >
+        <CellGrid
+          items={p.process.steps.map((s, i) => ({
+            ...s,
+            icon: processIcons[i],
+          }))}
+          accent="green"
+          numbered
+          framed={false}
+        />
+      </RuledSection>
 
       {/* capabilities */}
       <section data-bp-idx="5" className="relative section-pad">
@@ -151,25 +144,21 @@ export default function CustomPage() {
       </section>
 
       {/* who it's for */}
-      <section data-bp-idx="6" className="relative section-pad">
-        <DrawnBorder />
-        <div className="shell">
-          <SectionHead
-            index={6}
-            chip={p.fit.chip}
-            headline={p.fit.headline}
-            accent={p.fit.accent}
-            accentColor="green"
-          />
-          <div className="mt-12">
-            <FitSplit
-              forItems={p.fit.forItems}
-              notItems={p.fit.notItems}
-              accent="green"
-            />
-          </div>
-        </div>
-      </section>
+      <RuledSection
+        bpIdx={6}
+        index={6}
+        chip={p.fit.chip}
+        headline={p.fit.headline}
+        accent={p.fit.accent}
+        accentColor="green"
+      >
+        <FitSplit
+          forItems={p.fit.forItems}
+          notItems={p.fit.notItems}
+          accent="green"
+          framed={false}
+        />
+      </RuledSection>
 
       </div>
 

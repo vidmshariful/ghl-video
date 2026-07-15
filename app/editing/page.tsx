@@ -7,6 +7,7 @@ import { MediaFrame } from "@/components/MediaFrame";
 import { PricingTier } from "@/components/PricingTier";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { SectionGlow } from "@/components/SectionGlow";
+import { RuledSection } from "@/components/RuledSection";
 import { SectionHead } from "@/components/SectionHead";
 import { PageHero } from "@/components/pages/PageHero";
 import { ProofStrip } from "@/components/pages/ProofStrip";
@@ -131,46 +132,38 @@ export default function EditingPage() {
       {/* light zone: fit through FAQ */}
       <div className="theme-light">
       {/* fit */}
-      <section data-bp-idx="4" className="relative section-pad">
-        <DrawnBorder />
-        <div className="shell">
-          <SectionHead
-            index={4}
-            chip={p.fit.chip}
-            headline={p.fit.headline}
-            accent={p.fit.accent}
-            accentColor="blue"
-          />
-          <div className="mt-12">
-            <FitSplit
-              forItems={p.fit.forItems}
-              notItems={p.fit.notItems}
-              accent="blue"
-            />
-          </div>
-        </div>
-      </section>
+      <RuledSection
+        bpIdx={4}
+        index={4}
+        chip={p.fit.chip}
+        headline={p.fit.headline}
+        accent={p.fit.accent}
+        accentColor="blue"
+      >
+        <FitSplit
+          forItems={p.fit.forItems}
+          notItems={p.fit.notItems}
+          accent="blue"
+          framed={false}
+        />
+      </RuledSection>
 
       {/* how it works */}
-      <section data-bp-idx="5" className="relative section-pad">
-        <DrawnBorder />
-        <div className="shell">
-          <SectionHead
-            index={5}
-            chip={p.how.chip}
-            headline={p.how.headline}
-            accent={p.how.accent}
-            accentColor="blue"
-          />
-          <div className="mt-12">
-            <CellGrid
-              items={p.how.steps.map((s, i) => ({ ...s, icon: howIcons[i] }))}
-              accent="blue"
-              numbered
-            />
-          </div>
-        </div>
-      </section>
+      <RuledSection
+        bpIdx={5}
+        index={5}
+        chip={p.how.chip}
+        headline={p.how.headline}
+        accent={p.how.accent}
+        accentColor="blue"
+      >
+        <CellGrid
+          items={p.how.steps.map((s, i) => ({ ...s, icon: howIcons[i] }))}
+          accent="blue"
+          numbered
+          framed={false}
+        />
+      </RuledSection>
 
       {/* proof + FAQ */}
       <section data-bp-idx="6" className="relative section-pad">

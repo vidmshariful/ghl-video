@@ -20,6 +20,7 @@ export function CellGrid({
   accent = "gold",
   columns = 3,
   numbered = false,
+  framed = true,
 }: {
   items: readonly {
     icon?: IconName;
@@ -29,12 +30,14 @@ export function CellGrid({
   accent?: ChipAccent;
   columns?: 2 | 3;
   numbered?: boolean;
+  /* drop the own frame when the grid sits inside a RuledSection box */
+  framed?: boolean;
 }) {
   return (
     <Reveal
-      className={`grid gap-px overflow-hidden rounded-card border border-hair bg-hair sm:grid-cols-2 ${
-        columns === 3 ? "lg:grid-cols-3" : ""
-      }`}
+      className={`grid gap-px bg-hair sm:grid-cols-2 ${
+        framed ? "overflow-hidden rounded-card border border-hair" : ""
+      } ${columns === 3 ? "lg:grid-cols-3" : ""}`}
     >
       {items.map((item, i) => (
         <RevealItem key={item.title} className="h-full">
@@ -74,15 +77,22 @@ export function FitSplit({
   forItems,
   notItems,
   accent = "green",
+  framed = true,
 }: {
   forItems: readonly string[];
   notItems: readonly string[];
   accent?: ChipAccent;
+  /* drop the own frame when the split sits inside a RuledSection box */
+  framed?: boolean;
 }) {
   const tickColor = "#FCC000";
   void accent;
   return (
-    <Reveal className="grid gap-px overflow-hidden rounded-card border border-hair bg-hair md:grid-cols-2">
+    <Reveal
+      className={`grid gap-px bg-hair md:grid-cols-2 ${
+        framed ? "overflow-hidden rounded-card border border-hair" : ""
+      }`}
+    >
       <RevealItem className="h-full">
         <div className="h-full bg-canvas p-7 md:p-8">
           <p className={`font-mono text-label uppercase ${accentText[accent]}`}>
