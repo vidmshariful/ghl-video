@@ -1987,7 +1987,7 @@ export type CollabProject = {
 
 export const collab = {
   slug: "collab",
-  tabLabel: "HighLevel x Vidiosa",
+  tabLabel: "HighLevel x GHL Video",
   blurb:
     "Videos we produced with HighLevel. They ship a free white-label cut; we brand it for any SaaS that asks.",
   projects: [
