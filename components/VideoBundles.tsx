@@ -116,7 +116,7 @@ export function VideoBundles() {
               role="tab"
               aria-selected={isActive}
               onClick={() => setCat(c.slug)}
-              className={`rounded-[3px] px-4 py-2 font-mono text-label uppercase transition-colors ${
+              className={`tap rounded-[3px] px-4 py-2 font-mono text-label uppercase transition-colors ${
                 isActive
                   ? "bg-gold/15 font-semibold text-gold"
                   : "text-muted hover:text-ink"

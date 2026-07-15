@@ -194,7 +194,7 @@ function BuyVideoLink({
       href={video.orderUrl}
       target="_blank"
       rel="noopener"
-      className={`group/btn inline-flex items-center gap-1.5 whitespace-nowrap rounded-[3px] bg-brand-gradient px-4 py-2 text-body-sm font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] transition-all duration-200 hover:brightness-110 active:scale-[0.98] ${className}`}
+      className={`tap group/btn inline-flex items-center gap-1.5 whitespace-nowrap rounded-[3px] bg-brand-gradient px-4 py-2 text-body-sm font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] transition-all duration-200 hover:brightness-110 active:scale-[0.98] ${className}`}
     >
       {label}
       <span
@@ -582,7 +582,7 @@ function FilterGroup({
                 type="button"
                 onClick={() => onPick(opt)}
                 aria-pressed={isActive}
-                className={`flex w-full items-center gap-2.5 px-2 py-1.5 text-left text-body-sm transition-colors ${
+                className={`tap flex w-full items-center gap-2.5 px-2 py-1.5 text-left text-body-sm transition-colors ${
                   isActive ? "text-gold" : "text-muted hover:text-ink"
                 }`}
               >
