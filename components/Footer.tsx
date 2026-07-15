@@ -30,7 +30,8 @@ function Column({
 }) {
   return (
     <div>
-      <h2 className="font-mono text-label uppercase text-muted">{heading}</h2>
+      {/* h3: a footer column label must not outrank a section h2 */}
+      <h3 className="font-mono text-label uppercase text-muted">{heading}</h3>
       <ul className="mt-4 flex flex-col gap-2.5">
         {links.map((l) => (
           <li key={l.href + l.label}>
@@ -75,9 +76,9 @@ export function Footer() {
         />
 
         <div>
-          <h2 className="font-mono text-label uppercase text-muted">
+          <h3 className="font-mono text-label uppercase text-muted">
             Our Other Brands
-          </h2>
+          </h3>
           <ul className="mt-4 flex flex-col gap-2.5">
             {otherBrands.map((brand) => (
               <li key={brand.name}>

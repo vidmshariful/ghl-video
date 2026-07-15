@@ -918,8 +918,10 @@ export const pages = {
   custom: {
     hero: {
       chip: "Custom Production",
-      headline: "Custom video, built from scratch",
-      accent: "for your platform and your ICP.",
+      /* two lines like every other hero: the chip already says "Custom
+         Production", so "Custom video" was paying for a third line twice */
+      headline: "Built from scratch for",
+      accent: "your platform and your ICP.",
       lede: "Scripted, voiced, and produced by an in-house team that already knows HighLevel. You explain your positioning once; we handle everything from script to final cut.",
     },
     formats: {

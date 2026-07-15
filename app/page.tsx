@@ -5,7 +5,6 @@ import { Manifesto } from "@/components/home/Manifesto";
 import { ShowreelMoment } from "@/components/home/ShowreelMoment";
 import { ClientWall } from "@/components/home/ClientWall";
 import { Comparison } from "@/components/home/Comparison";
-import { TeamSection } from "@/components/home/TeamSection";
 import { VideoTestimonials } from "@/components/home/VideoTestimonials";
 import { Testimonials } from "@/components/home/Testimonials";
 import { Faq } from "@/components/home/Faq";
@@ -28,8 +27,9 @@ export default function Home() {
       </div>
       <VideoTestimonials />
       <div className="theme-light">
+        {/* the team lives on About; it ran on both pages with the same
+            "Full time, in house" heading, so About owns it now */}
         <Testimonials />
-        <TeamSection />
         <Faq />
       </div>
       <FounderNote />

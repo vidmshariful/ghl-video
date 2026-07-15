@@ -64,15 +64,15 @@ function ReviewCard({ quote, name }: { quote: string; name: string }) {
   );
 }
 
-/* three locked figures in one ruled row */
+/* the review figures, and only those: "teams served" is the client
+ * wall's line, and it was being said here for the third time */
 function TrustBar() {
   const stats = [
     { v: rating, l: "on Google", stars: true },
     { v: "17", l: "5-star reviews" },
-    { v: `${clients}+`, l: "teams served" },
   ];
   return (
-    <div className="grid grid-cols-3 divide-x divide-hair overflow-hidden rounded-card border border-hair bg-surface">
+    <div className="grid grid-cols-2 divide-x divide-hair overflow-hidden rounded-card border border-hair bg-surface">
       {stats.map((s) => (
         <div key={s.l} className="px-4 py-4">
           <div className="flex items-baseline gap-2">

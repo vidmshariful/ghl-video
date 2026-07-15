@@ -1,12 +1,13 @@
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { SectionGlow } from "@/components/SectionGlow";
 import { Stat } from "@/components/Stat";
-import { clients, googleReviewsUrl, rating } from "@/lib/site";
+import { clients } from "@/lib/site";
 
 /*
- * The client wall: one big collage of real client logos arranged around
- * the HighLevel mark. The social-proof moment. The collage PNG is built
- * for the dark ground, so it drops straight in.
+ * The client wall owns the 800+ figure and nothing else: one big collage
+ * of real client logos arranged around the HighLevel mark. The 5.0 lives
+ * with the reviews further down. The collage PNG is built for the dark
+ * ground, so it drops straight in.
  */
 export function ClientWall() {
   return (
@@ -51,27 +52,6 @@ export function ClientWall() {
           </RevealItem>
         </Reveal>
 
-        <Reveal className="mt-12">
-          <RevealItem>
-            <a
-              href={googleReviewsUrl}
-              target="_blank"
-              rel="noopener"
-              className="group inline-flex items-center gap-2.5 font-mono text-label uppercase text-muted transition-colors hover:text-gold"
-            >
-              <span className="font-mono text-[1.25rem] font-bold leading-none text-gold [font-variant-numeric:tabular-nums]">
-                {rating}
-              </span>
-              rating on Google
-              <span
-                aria-hidden="true"
-                className="transition-transform duration-200 group-hover:translate-x-0.5"
-              >
-                &rarr;
-              </span>
-            </a>
-          </RevealItem>
-        </Reveal>
       </div>
     </section>
   );
