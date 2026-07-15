@@ -35,6 +35,9 @@ type BrowseVideo = {
   realPreview: string | null;
   realPoster: string | null;
   previewOnly: boolean;
+  /* what a preview-only card says in place of a price + buy button */
+  previewNote: string | null;
+  previewCtaLabel: string | null;
   orderUrl: string;
 };
 
@@ -63,6 +66,8 @@ const newReady: BrowseVideo[] = premadeVideos
     realPreview: null,
     realPoster: null,
     previewOnly: false,
+    previewNote: null,
+    previewCtaLabel: null,
     orderUrl: v.orderUrl,
   }));
 
@@ -71,22 +76,42 @@ const newGroups: FilterDef[] = [
   { label: "Capability", options: [...new Set(newReady.map((v) => v.subTag))], on: "subTag" },
 ];
 
-const oldClassic: BrowseVideo[] = oldVideos.map((v) => ({
-  slug: v.slug,
-  title: v.title,
-  typeTag: v.type,
-  subTag: "Pre-2026",
-  price: v.price,
-  preview: v.preview ?? null,
-  poster: v.poster,
-  wistiaId: v.wistiaId ?? null,
-  subtitle: v.subtitle ?? null,
-  packCount: v.packCount ?? null,
-  realPreview: null,
-  realPoster: null,
-  previewOnly: false,
-  orderUrl: v.orderUrl,
-}));
+/* feature animations get their own playlist tab, so the classic grid is
+ * every other pre-2026 type: the individually-buyable videos. */
+const oldClassic: BrowseVideo[] = oldVideos
+  .filter((v) => v.type !== "Feature Animation")
+  .map((v) => ({
+    slug: v.slug,
+    title: v.title,
+    typeTag: v.type,
+    subTag: "Pre-2026",
+    price: v.price,
+    preview: v.preview ?? null,
+    poster: v.poster,
+    wistiaId: v.wistiaId ?? null,
+    subtitle: v.subtitle ?? null,
+    packCount: v.packCount ?? null,
+    realPreview: null,
+    realPoster: null,
+    previewOnly: false,
+    previewNote: null,
+    previewCtaLabel: null,
+    orderUrl: v.orderUrl,
+  }));
+
+const oldBrowse: BrowseVideo[] = oldClassic;
+
+const oldGroups: FilterDef[] = [
+  {
+    label: "Video type",
+    options: oldVideoTypes.filter((t) => t !== "Feature Animation"),
+    on: "typeTag",
+  },
+];
+
+/* the three feature-animation bundles: this is how they are sold, in
+ * multiples, never one at a time. */
+const featurePacks = oldVideos.filter((v) => v.type === "Feature Animation");
 
 /* the 23 feature animations, each a two-cut preview (Simplified / Real
  * UI). Bundled in the packs, so no single price or checkout. */
@@ -104,14 +129,42 @@ const featureBrowse: BrowseVideo[] = featureAnimations.map((f) => ({
   realPreview: f.real,
   realPoster: f.thumbReal,
   previewOnly: true,
+  previewNote: "Included in every feature-animation pack, branded to you.",
+  previewCtaLabel: "See the packs",
   orderUrl: "https://order.ghlvideo.com/feature-animations-15",
 }));
 
-/* packs first (buyable), then the feature previews under the same filter */
-const oldBrowse: BrowseVideo[] = [...oldClassic, ...featureBrowse];
+/* the Complete Video Stack's pre-decided line-up: our HighLevel team's
+ * pick of the strongest videos across the new and classic library, in
+ * the exact counts the stack sells (2 / 1 / 20 / 15 / 15 = 53). Swappable
+ * on request at checkout. Built here so the counts can never drift. */
+const stackNote =
+  "Hand-picked by our HighLevel team from the full library, updated for every reseller. Want a different video in any slot? Request swaps at checkout.";
 
-const oldGroups: FilterDef[] = [
-  { label: "Video type", options: oldVideoTypes, on: "typeTag" },
+const stackByType = (type: string) =>
+  oldClassic.filter((v) => v.typeTag === type);
+
+const stackPicks: BrowseVideo[] = [
+  ...stackByType("Explainer").slice(0, 2),
+  ...stackByType("Demo").filter((v) => v.slug === "demo-v3-6708"),
+  ...stackByType("Short Explainer").slice(0, 20),
+  ...stackByType("Marketing").slice(0, 15),
+  ...featureBrowse.slice(0, 15),
+].map((v) => ({
+  ...v,
+  price: 0,
+  previewOnly: true,
+  previewNote: "Part of the Complete Video Stack, branded to your platform.",
+  previewCtaLabel: "Get the stack",
+  orderUrl: videoStack.orderUrl,
+}));
+
+const stackGroups: FilterDef[] = [
+  {
+    label: "Format",
+    options: [...new Set(stackPicks.map((v) => v.typeTag))],
+    on: "typeTag",
+  },
 ];
 
 /*
@@ -365,7 +418,7 @@ function LibraryCard({
         </div>
         {video.previewOnly ? (
           <span className="font-mono text-label uppercase text-dim">
-            In every pack
+            Included
           </span>
         ) : (
           <div className="flex items-center gap-4">
@@ -482,13 +535,13 @@ function PreviewLightbox({
                   {video.title}
                 </p>
                 <p className="mt-0.5 text-sm text-[#9096A8]">
-                  Included in every feature-animation pack, branded to your
-                  platform.
+                  {video.previewNote ??
+                    "Included in the bundle, branded to your platform."}
                 </p>
               </div>
               <BuyVideoLink
                 video={video}
-                label="See the packs"
+                label={video.previewCtaLabel ?? "Order the bundle"}
                 className="px-6 py-3 text-sm"
               />
             </>
@@ -889,6 +942,164 @@ function PackPlaylist({ pack }: { pack: PremadePack }) {
 }
 
 /* ---------------------------------------------------------------- */
+/* Feature animations: a two-cut playlist over the pack pricing        */
+/* ---------------------------------------------------------------- */
+
+function FeatureAnimationView() {
+  const [idx, setIdx] = useState(0);
+  const [version, setVersion] = useState<Version>("simplified");
+  const feat = featureAnimations[idx];
+  const hasReal = Boolean(feat.real);
+  const src = version === "real" && feat.real ? feat.real : feat.simplified;
+  const poster =
+    version === "real" && feat.real ? feat.thumbReal : feat.thumbSimplified;
+
+  return (
+    <div>
+      {/* what this is */}
+      <div className="border-b border-hair px-5 py-6 md:px-7">
+        <p className="font-display text-h3 text-ink">Feature Animations</p>
+        <p className="mt-1.5 max-w-[70ch] text-sm leading-relaxed text-muted">
+          Every HighLevel feature as a short animation, in two cuts: a clean
+          Simplified UI and the Real UI on the live dashboard. Sold in bundles,
+          branded to your platform.
+        </p>
+      </div>
+
+      {/* playlist: preview left, list right */}
+      <div className="grid lg:grid-cols-[1fr_20rem]">
+        <div className="min-w-0 border-b border-hair p-5 md:p-7 lg:border-b-0 lg:border-r">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <p className="font-mono text-label uppercase text-dim">
+              [ {feat.name} ]
+            </p>
+            {hasReal ? (
+              <VersionToggle version={version} onChange={setVersion} />
+            ) : (
+              <span className="font-mono text-label uppercase text-dim">
+                Simplified UI only
+              </span>
+            )}
+          </div>
+          <video
+            key={src}
+            src={src}
+            poster={poster}
+            controls
+            autoPlay
+            muted
+            playsInline
+            className="aspect-video w-full border border-hair bg-black"
+          />
+        </div>
+
+        <div
+          role="listbox"
+          aria-label="Feature animations"
+          aria-activedescendant={`fa-opt-${idx}`}
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowDown") {
+              e.preventDefault();
+              setIdx((i) => Math.min(i + 1, featureAnimations.length - 1));
+            }
+            if (e.key === "ArrowUp") {
+              e.preventDefault();
+              setIdx((i) => Math.max(i - 1, 0));
+            }
+          }}
+          className="focus-visible:outline-2"
+        >
+          <p className="border-b border-hair px-5 py-3 font-mono text-label uppercase text-dim">
+            {featureAnimations.length} animations{" "}
+            <span className="hidden lg:inline">/ use &uarr; &darr; keys</span>
+          </p>
+          <div className="max-h-[26rem] overflow-y-auto">
+            {featureAnimations.map((f, i) => (
+              <button
+                key={f.slug}
+                id={`fa-opt-${i}`}
+                type="button"
+                role="option"
+                aria-selected={i === idx}
+                onClick={() => setIdx(i)}
+                className={`flex w-full items-baseline gap-3 border-b border-hair px-5 py-3.5 text-left transition-colors last:border-b-0 ${
+                  i === idx
+                    ? "border-l-2 border-l-gold bg-surface"
+                    : "border-l-2 border-l-transparent hover:bg-surface/60"
+                }`}
+              >
+                <span
+                  className={`font-mono text-label [font-variant-numeric:tabular-nums] ${
+                    i === idx ? "text-gold" : "text-dim"
+                  }`}
+                >
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span
+                    className={`block text-[0.875rem] font-medium leading-snug ${
+                      i === idx ? "text-ink" : "text-muted"
+                    }`}
+                  >
+                    {f.name}
+                  </span>
+                  <span className="mt-0.5 block font-mono text-[0.625rem] uppercase tracking-[0.14em] text-dim">
+                    {f.real ? "Simplified + Real UI" : "Simplified UI"}
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* pricing: sold in bundles, never one at a time */}
+      <div className="border-t border-hair px-5 py-6 md:px-7">
+        <p className="font-mono text-label uppercase text-dim">[ Pricing ]</p>
+        <p className="mt-1 max-w-[60ch] text-sm text-muted">
+          Feature animations are ordered in bundles, not one at a time. Pick the
+          pack that covers the features you need.
+        </p>
+        <div className="mt-5 grid gap-4 sm:grid-cols-3">
+          {featurePacks.map((pack) => (
+            <div
+              key={pack.slug}
+              className="flex flex-col rounded-[3px] border border-hair bg-canvas p-5"
+            >
+              <p className="font-mono text-label uppercase text-dim">
+                {pack.packCount} animations
+              </p>
+              <p className="mt-2 font-mono text-[1.75rem] font-bold leading-none text-gold [font-variant-numeric:tabular-nums]">
+                ${pack.price.toLocaleString("en-US")}
+              </p>
+              <p className="mt-2 flex-1 text-[0.8125rem] leading-relaxed text-muted">
+                {pack.subtitle}
+              </p>
+              <a
+                href={pack.orderUrl}
+                target="_blank"
+                rel="noopener"
+                className="group/btn mt-4 inline-flex items-center justify-center gap-1.5 rounded-[3px] bg-brand-gradient px-4 py-2.5 text-[0.8125rem] font-semibold text-[#08090D] shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
+              >
+                Order {pack.packCount}
+                {"× "}
+                <span
+                  aria-hidden="true"
+                  className="transition-transform duration-200 group-hover/btn:translate-x-0.5"
+                >
+                  &rarr;
+                </span>
+              </a>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------- */
 /* Stack view: the everything bundle, sold as one                     */
 /* ---------------------------------------------------------------- */
 
@@ -1002,6 +1213,21 @@ function VideoStackView() {
           </p>
         </div>
       </div>
+
+      {/* the pre-decided line-up, previewable video by video */}
+      <div className="border-t border-hair">
+        <div className="px-5 py-6 md:px-7">
+          <p className="font-mono text-label uppercase text-dim">
+            [ Preview the line-up ]
+          </p>
+          <p className="mt-1 max-w-[72ch] text-sm leading-relaxed text-muted">
+            {stackNote}
+          </p>
+        </div>
+        <div className="border-t border-hair">
+          <VideoBrowser videos={stackPicks} groups={stackGroups} />
+        </div>
+      </div>
     </div>
   );
 }
@@ -1018,6 +1244,7 @@ export function PremadeLibrary() {
     { slug: "new", label: "All New Videos", count: newReady.length as number | null },
     ...premadePacks.map((p) => ({ slug: p.slug, label: p.name, count: p.count })),
     { slug: videoStack.slug, label: videoStack.name, count: videoStack.totalCount as number | null },
+    { slug: "features", label: "Feature Animations", count: featureAnimations.length as number | null },
     { slug: "old", label: "Classic Library", count: oldBrowse.length as number | null },
   ];
 
@@ -1087,6 +1314,8 @@ export function PremadeLibrary() {
           <PackPlaylist pack={activePack} />
         ) : view === videoStack.slug ? (
           <VideoStackView />
+        ) : view === "features" ? (
+          <FeatureAnimationView />
         ) : view === "old" ? (
           <VideoBrowser
             videos={oldBrowse}
