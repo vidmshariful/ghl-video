@@ -239,7 +239,13 @@ function PosterPlay({
         loading="lazy"
         className="h-full w-full object-cover opacity-90 transition duration-300 group-hover/pp:scale-[1.03] group-hover/pp:opacity-100"
       />
-      <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-60" />
+      <span className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-[#030303]/90 via-[#030303]/40 to-transparent" />
+      <span className="pointer-events-none absolute bottom-3.5 left-4 z-10 font-mono text-label uppercase">
+        <span className="text-[#EEF0F6]">{video.typeTag}</span>
+        {video.subTag && video.subTag !== "Pre-2026" && (
+          <span className="text-[#9096A8]"> / {video.subTag}</span>
+        )}
+      </span>
       <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
         <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-gradient shadow-[0_0_28px_rgba(0,204,0,0.3)] transition-transform duration-300 group-hover/pp:scale-110">
           <svg viewBox="0 0 24 24" className="ml-0.5 h-5 w-5" aria-hidden="true">
@@ -315,15 +321,6 @@ function VersionToggle({
   );
 }
 
-/* A small labelled chip on a light surface. Card meta rides on these. */
-function Tag({ children }: { children: string }) {
-  return (
-    <span className="inline-flex items-center whitespace-nowrap rounded-[3px] border border-hair bg-surface px-2 py-1 font-mono text-[0.625rem] uppercase tracking-[0.1em] text-muted">
-      {children}
-    </span>
-  );
-}
-
 /* One card for every library row. Wistia classics get a poster+play;
  * mp4 classics get the hover frame; feature animations get a two-cut
  * toggle and no single price; feature packs get the typographic tile. */
@@ -345,15 +342,10 @@ function LibraryCard({
       ? video.realPoster
       : video.poster;
 
-  /* left column: the feature this video covers. right column: chips.
-     the type always tags; a distinct capability tags too. */
-  const featureName =
-    video.subtitle ??
-    (video.subTag && video.subTag !== "Pre-2026" ? video.subTag : null);
-  const tags = [
-    video.typeTag,
-    ...(video.subTag === "Pre-2026" ? ["Classic"] : []),
-  ];
+  /* the descriptor line only earns its place when it is a real
+     description, not a repeat of the type/capability shown on the video */
+  const descriptor =
+    video.subtitle && video.subtitle !== video.subTag ? video.subtitle : null;
 
   return (
     <div className="group/card flex h-full flex-col">
@@ -369,6 +361,7 @@ function LibraryCard({
             tint="gold"
             interactive={false}
             rounded="rounded-none"
+            caption={{ title: video.typeTag, sub: video.subTag }}
           />
           {twoCut && (
             <div className="absolute left-2 top-2 z-20">
@@ -393,37 +386,30 @@ function LibraryCard({
         </div>
       )}
 
-      {/* details: a bordered card body with meta chips and a ruled price */}
-      <div className="flex flex-1 flex-col border-x border-b border-hair bg-canvas">
-        <div className="flex items-start justify-between gap-3 p-4">
+      {/* details: title wraps on the left; price + action stay pinned right */}
+      <div className="flex flex-1 border-b border-hair px-1 pb-4 pt-3.5">
+        <div className="flex w-full items-start justify-between gap-4">
           <div className="min-w-0">
             <h3 className="font-display text-[1.0625rem] font-semibold leading-snug tracking-[-0.01em] text-ink">
               {video.title}
             </h3>
-            {featureName && (
-              <p className="mt-1 text-[0.8125rem] leading-snug text-muted">
-                {featureName}
+            {descriptor && (
+              <p className="mt-1 font-mono text-label uppercase text-dim">
+                {descriptor}
               </p>
             )}
           </div>
-          <div className="flex shrink-0 flex-col items-end gap-1.5">
-            {tags.map((t) => (
-              <Tag key={t}>{t}</Tag>
-            ))}
-          </div>
-        </div>
-        {video.previewOnly ? (
-          <div className="mt-auto border-t border-hair p-4">
-            <span className="font-mono text-label uppercase text-dim">
+          {video.previewOnly ? (
+            <span className="shrink-0 font-mono text-label uppercase text-dim">
               Included
             </span>
-          </div>
-        ) : (
-          <div className="mt-auto flex items-center justify-between gap-3 border-t border-hair p-4">
-            <Price value={video.price} />
-            <BuyVideoLink video={video} />
-          </div>
-        )}
+          ) : (
+            <div className="flex shrink-0 items-center gap-3">
+              <Price value={video.price} />
+              <BuyVideoLink video={video} />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
