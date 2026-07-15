@@ -173,9 +173,7 @@ export function Hero() {
                 src={featured.src}
                 poster={featured.poster}
                 label={`${featured.client}, ${featured.format}`}
-                caption={{ title: featured.client, sub: featured.format }}
-                startAt={"startAt" in featured ? featured.startAt : 0}
-                endAt={"endAt" in featured ? featured.endAt : undefined}
+                caption={{ title: featured.format }}
                 className="!absolute inset-3 h-auto !aspect-auto"
               />
             </motion.div>

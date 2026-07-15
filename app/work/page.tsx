@@ -6,7 +6,7 @@ import { Reveal, RevealItem } from "@/components/Reveal";
 import { SectionGlow } from "@/components/SectionGlow";
 import { CrossSell } from "@/components/pages/CrossSell";
 import { PageHero } from "@/components/pages/PageHero";
-import { clipWindows, clips, cta, home, pages, posters } from "@/lib/site";
+import { cta, home, newSamples, pages } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Our Work",
@@ -14,20 +14,8 @@ export const metadata: Metadata = {
     "Recent video work for HighLevel SaaS teams across premade, custom production, and editing. Every piece plays.",
 };
 
-/* PLACEHOLDER portfolio: the homepage sample set, expanded here until
- * Shariful sends the final portfolio list. Attributions match the
- * homepage so no clip carries two client names. */
-const pieces = [
-  {
-    key: "featured" as const,
-    client: "NeoLuxLabs",
-    format: "Onboarding Series",
-  },
-  { key: "sampleA" as const, client: "Emma.io", format: "Platform Demo" },
-  { key: "sampleB" as const, client: "AI Clinic Assist", format: "Explainer" },
-  { key: "sampleC" as const, client: "Premade launch set", format: "Premade" },
-  { key: "reel" as const, client: "Studio reel", format: "Mixed formats" },
-];
+/* Our newest real videos as the portfolio. Expands as more ship. */
+const pieces = newSamples;
 
 export default function WorkPage() {
   const p = pages.work;
@@ -55,32 +43,20 @@ export default function WorkPage() {
             {/* featured piece full width, then two-up rows */}
             <RevealItem>
               <MediaCard
-                src={clips[pieces[0].key]}
-                poster={posters[pieces[0].key]}
-                title={pieces[0].client}
+                src={pieces[0].src}
+                poster={pieces[0].poster}
+                title={pieces[0].title}
                 meta={pieces[0].format}
-                {...(clipWindows[pieces[0].key]
-                  ? {
-                      startAt: clipWindows[pieces[0].key]!.startAt,
-                      endAt: clipWindows[pieces[0].key]!.endAt,
-                    }
-                  : {})}
               />
             </RevealItem>
             <RevealItem className="grid gap-6 md:grid-cols-2">
               {pieces.slice(1).map((piece) => (
                 <MediaCard
-                  key={piece.key}
-                  src={clips[piece.key]}
-                  poster={posters[piece.key]}
-                  title={piece.client}
+                  key={piece.src}
+                  src={piece.src}
+                  poster={piece.poster}
+                  title={piece.title}
                   meta={piece.format}
-                  {...(clipWindows[piece.key]
-                    ? {
-                        startAt: clipWindows[piece.key]!.startAt,
-                        endAt: clipWindows[piece.key]!.endAt,
-                      }
-                    : {})}
                 />
               ))}
             </RevealItem>

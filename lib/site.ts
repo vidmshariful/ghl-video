@@ -92,6 +92,10 @@ export const clips = {
     "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/69a5aa2c753f15417fa8fbe1.mp4",
   sampleC:
     "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6984930e1dfc023b2d7fb5b4.mp4",
+  /* a real premade (the AI-first master explainer) for the premade
+   * service panel, so the homepage previews actual product */
+  premadeNew:
+    "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a54fdf79c9b37b5fd24a140.mp4",
 } as const;
 
 export const posters = {
@@ -100,6 +104,7 @@ export const posters = {
   sampleA: "/posters/clip-3.jpg",
   sampleB: "/posters/clip-4.jpg",
   sampleC: "/posters/clip-5.jpg",
+  premadeNew: "/posters/ai-master.jpg",
 } as const;
 
 /* Curated ambient-loop windows per clip: every frame that plays a clip
@@ -465,6 +470,42 @@ export const trustLogos = [
   { name: "Loopwise", placeholder: true },
 ] as const;
 
+/* The newest real videos, used as live examples across the site (home
+ * showreel, Our Work) instead of the heavy placeholder clips. Sourced
+ * from the AI-first pack plus the branded pitch cut. */
+export const newSamples = [
+  {
+    src: aiPackClips.master,
+    poster: "/posters/ai-master.jpg",
+    title: "All-in-one + AI-First Positioning",
+    format: "Master Explainer",
+  },
+  {
+    src: aiPackClips.receptionist,
+    poster: "/posters/ai-receptionist.jpg",
+    title: "AI Receptionist + Conversational AI",
+    format: "Feature Explainer",
+  },
+  {
+    src: aiPackClips.inbox,
+    poster: "/posters/ai-inbox.jpg",
+    title: "Unified Inbox + Conversational AI",
+    format: "Feature Explainer",
+  },
+  {
+    src: aiPackClips.reputation,
+    poster: "/posters/ai-reputation.jpg",
+    title: "Reputation Management + Reviews AI",
+    format: "Feature Explainer",
+  },
+  {
+    src: "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a56fa0fbaf5f6da40287c33.mp4",
+    poster: null,
+    title: "HighLevel's Official Full Platform Pitch",
+    format: "Full Platform Pitch",
+  },
+] as const;
+
 /* NOTE (per Shariful): the homepage shows NO prices for any service.
  * Pricing lives on the service pages. Premade pricing is also moving
  * off a single flat figure; final premade price model pending. */
@@ -504,7 +545,7 @@ export const home = {
         linkLabel: "See premade videos",
         href: "/premade/",
         accent: "gold",
-        mediaKey: "sampleC",
+        mediaKey: "premadeNew",
       },
       {
         name: "Custom Production",
@@ -627,32 +668,26 @@ export const home = {
 
   work: {
     eyebrow: "The work",
-    /* One featured piece plus two supporting clips, all hover-play.
-     * Client and format captions are placeholders until the real
-     * featured set is chosen. Swap here only. */
+    /* One featured piece plus two supporting clips, all hover-play. Our
+     * newest real videos: the AI-first master and two feature cuts. */
     pieces: [
       {
-        src: clips.featured,
-        poster: posters.featured,
-        client: "NeoLuxLabs",
-        format: "Onboarding Series",
-        /* ambient loop window comes from clipWindows.featured */
-        startAt: clipWindows.featured!.startAt,
-        endAt: clipWindows.featured!.endAt,
+        src: newSamples[0].src,
+        poster: newSamples[0].poster,
+        client: newSamples[0].title,
+        format: newSamples[0].format,
       },
       {
-        src: clips.sampleA,
-        poster: posters.sampleA,
-        client: "Emma.io",
-        format: "Platform Demo",
-        startAt: clipWindows.sampleA!.startAt,
-        endAt: clipWindows.sampleA!.endAt,
+        src: newSamples[1].src,
+        poster: newSamples[1].poster,
+        client: newSamples[1].title,
+        format: newSamples[1].format,
       },
       {
-        src: clips.sampleB,
-        poster: posters.sampleB,
-        client: "AI Clinic Assist",
-        format: "Explainer",
+        src: newSamples[3].src,
+        poster: newSamples[3].poster,
+        client: newSamples[3].title,
+        format: newSamples[3].format,
       },
     ],
   },

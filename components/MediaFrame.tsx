@@ -125,7 +125,7 @@ export function MediaFrame({
   src: string;
   poster: string | null;
   label?: string;
-  caption?: { title: string; sub: string };
+  caption?: { title: string; sub?: string };
   interactive?: boolean;
   /* ambient loop window: skip a clip's intro and loop back before its
    * tail (placeholder clips carry title cards); the lightbox always
@@ -233,7 +233,9 @@ export function MediaFrame({
       {caption && (
         <figcaption className="pointer-events-none absolute bottom-3.5 left-4 z-10 font-mono text-label uppercase">
           <span className="text-[#EEF0F6]">{caption.title}</span>
-          <span className="text-[#9096A8]"> / {caption.sub}</span>
+          {caption.sub && (
+            <span className="text-[#9096A8]"> / {caption.sub}</span>
+          )}
         </figcaption>
       )}
 

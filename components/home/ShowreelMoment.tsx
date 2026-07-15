@@ -32,8 +32,6 @@ export function ShowreelMoment() {
               poster={featured.poster}
               title={featured.client}
               meta={featured.format}
-              startAt={"startAt" in featured ? featured.startAt : undefined}
-              endAt={"endAt" in featured ? featured.endAt : undefined}
             />
           </RevealItem>
 
@@ -45,9 +43,6 @@ export function ShowreelMoment() {
                 poster={piece.poster}
                 title={piece.client}
                 meta={piece.format}
-                {...("startAt" in piece
-                  ? { startAt: piece.startAt, endAt: piece.endAt }
-                  : {})}
               />
             ))}
           </RevealItem>
