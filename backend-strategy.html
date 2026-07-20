@@ -1,0 +1,340 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GHL Video / Backend Strategy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--gold:#FCC000;--blue:#0090FC;--green:#00CC00;--canvas:#08090D;--surface:#111219;--card:#161821;--hair:#242736;--text:#EEF0F6;--muted:#9096A8;--dim:#5A6076;--err:#FF6B6B;--grad:linear-gradient(100deg,#FCC000,#00CC00);--f:'Archivo',system-ui,sans-serif;--m:ui-monospace,'SF Mono',Menlo,monospace}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+body{font-family:var(--f);background:var(--canvas);color:var(--text);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+b,strong{color:#fff;font-weight:700}
+.layout{display:grid;grid-template-columns:248px 1fr;max-width:1340px;margin:0 auto}
+nav.toc{position:sticky;top:0;align-self:start;height:100vh;overflow-y:auto;border-right:1px solid var(--hair);padding:24px 16px 40px}
+main{min-width:0}
+@media(max-width:940px){.layout{grid-template-columns:1fr}nav.toc{position:static;height:auto;border-right:none;border-bottom:1px solid var(--hair)}}
+.bt{font-weight:800;font-size:15px;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.bs{font-family:var(--m);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:2px 0 16px}
+.toc a{display:block;padding:5px 8px;border-radius:6px;color:var(--muted);font-size:12.5px}
+.toc a:hover,.toc a.active{background:var(--surface);color:var(--text)}
+.toc .gp{font-family:var(--m);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin:14px 0 5px 8px}
+.hero{border-bottom:1px solid var(--hair);padding:52px clamp(22px,4vw,56px) 40px;background-image:radial-gradient(46% 60% at 90% -10%,rgba(0,204,0,.14),transparent 62%),radial-gradient(40% 45% at 2% 0%,rgba(252,192,0,.12),transparent 60%)}
+.tag{display:inline-block;font-family:var(--m);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--green);border:1px solid var(--hair);border-radius:100px;padding:5px 12px;margin-bottom:20px;margin-right:8px}
+h1{font-weight:800;font-size:clamp(27px,4vw,42px);letter-spacing:-1.2px;line-height:1.08;max-width:880px}
+h1 em{font-style:normal;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lede{max-width:760px;margin-top:14px;color:var(--muted);font-size:16px}
+section{padding:40px clamp(22px,4vw,56px);border-bottom:1px solid var(--hair)}
+.eyebrow{font-family:var(--m);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;display:flex;gap:9px;align-items:center}
+.eyebrow::before{content:"";width:20px;height:3px;background:var(--grad);border-radius:2px}
+.eyebrow .n{color:var(--green)}
+h2{font-weight:800;font-size:clamp(20px,2.7vw,27px);letter-spacing:-.6px;margin-bottom:12px}
+h3{font-weight:700;font-size:16px;margin:18px 0 7px}
+.intro{max-width:820px;color:var(--muted);margin-bottom:18px}
+p{margin-bottom:11px;max-width:860px}
+.crit{border:1px solid rgba(255,107,107,.4);background:rgba(255,107,107,.06);border-radius:12px;padding:16px 18px;margin:14px 0}
+.crit .l{font-family:var(--m);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--err);font-weight:700;margin-bottom:6px}
+.crit p{color:#f4c9c9;margin:0}
+.win{border:1px solid rgba(0,204,0,.3);background:rgba(0,204,0,.05);border-radius:12px;padding:16px 18px;margin:14px 0}
+.win .l{font-family:var(--m);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--green);font-weight:700;margin-bottom:6px}
+.win p{color:#c2eecb;margin:0}
+.warn{border:1px solid rgba(252,192,0,.34);background:rgba(252,192,0,.06);border-radius:12px;padding:16px 18px;margin:14px 0}
+.warn .l{font-family:var(--m);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:6px}
+.warn p{color:#e7cf9a;margin:0}
+ul.rule{list-style:none;display:flex;flex-direction:column;gap:8px;margin:4px 0 12px}
+ul.rule li{position:relative;padding-left:20px;color:var(--muted);font-size:14px;max-width:860px}
+ul.rule li::before{content:"";position:absolute;left:0;top:8px;width:7px;height:7px;border-radius:50%;background:var(--green)}
+ul.rule.no li::before{background:var(--err)}
+ol.step{list-style:none;counter-reset:s;display:flex;flex-direction:column;gap:9px;margin:6px 0 12px}
+ol.step li{counter-increment:s;position:relative;padding:11px 15px 11px 46px;background:var(--surface);border:1px solid var(--hair);border-radius:10px;color:var(--muted);font-size:13.5px}
+ol.step li::before{content:counter(s,decimal-leading-zero);position:absolute;left:14px;top:11px;font-family:var(--m);font-size:12px;color:var(--green);font-weight:700}
+ol.step li b{color:#fff}
+code{font-family:var(--m);font-size:12px;background:#05060a;border:1px solid var(--hair);border-radius:5px;padding:1px 6px;color:#c7cfda}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px}
+th{font-family:var(--m);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:left;padding:9px 12px;border-bottom:1px solid var(--hair)}
+td{padding:9px 12px;border-bottom:1px solid var(--hair);color:var(--muted);vertical-align:top}
+td b{color:#fff}td .y{color:var(--gold)}td .g{color:var(--green)}td .r{color:var(--err)}
+tr.pick{background:rgba(0,204,0,.05)}
+.card{background:var(--surface);border:1px solid var(--hair);border-radius:12px;padding:18px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:760px){.g2{grid-template-columns:1fr}}
+footer{padding:30px clamp(22px,4vw,56px);font-family:var(--m);font-size:11px;color:var(--dim);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+footer .grd{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:700}
+</style></head><body><div class="layout">
+<nav class="toc"><div class="bt">GHL VIDEO</div><div class="bs">Backend Strategy / Research-verified</div>
+<div class="gp">Strategy</div>
+<a href="#why">Why now</a>
+<a href="#scope">What it manages</a>
+<a href="#nongoals">Hard non-goals</a>
+<a href="#current">Current state</a>
+<div class="gp">Architecture</div>
+<a href="#options">The options</a>
+<a href="#rec">Recommendation</a>
+<a href="#model">Content model</a>
+<a href="#guardrails">Guardrails engine</a>
+<a href="#pipeline">Publish pipeline</a>
+<a href="#ops">Ops dashboard</a>
+<div class="gp">Execution</div>
+<a href="#roles">Roles and workflow</a>
+<a href="#rollout">Rollout plan</a>
+<a href="#costs">Costs</a>
+<a href="#risks">Risks</a>
+<a href="#decisions">Decisions needed</a>
+</nav><main>
+
+<div class="hero">
+  <span class="tag">Internal / Strategy</span><span class="tag">Facts verified July 2026</span>
+  <h1>One backend for the website: <em>content, guardrails, and visibility.</em></h1>
+  <p class="lede">The site is live-grade, but it is managed through a single 100KB TypeScript file that only a developer can touch. This document is the strategy for replacing that with a backend the whole team can use, without giving up the static architecture, the SEO work, or the HighLevel commerce stack.</p>
+</div>
+
+<section id="why">
+  <div class="eyebrow"><span class="n">01</span> / Why now</div>
+  <h2>The content layer outgrew the file it lives in</h2>
+  <p>Every word, price, SKU, FAQ, and section of ghlvideo.com lives in <code>lib/site.ts</code>: 2,651 lines, 100KB, roughly 50 exported blocks. It was the right choice for the build phase. One typed file meant prices could never drift between pages, and the launch QA proved that value repeatedly.</p>
+  <p>It is the wrong choice for operations. Three people who are not developers need to update videos, prices, reviews, and posts. Today every edit is a code change, a commit, and a deploy that only one person can safely make.</p>
+  <div class="crit"><div class="l">The evidence from launch week</div><p>Every serious defect the pre-launch review caught was a content-ops failure, not a code failure: a hero claiming a bundle floor the page itself contradicted, invented checkout slugs nobody had verified, a retired price surviving in a CTA string, year numbers hiding in card tags, a typo shipped inside SKU data. A backend with validation would have refused to publish all of them.</p></div>
+  <ul class="rule">
+    <li><b>Speed:</b> a price change or a new video should be a two-minute edit by anyone on the team, not a developer task.</li>
+    <li><b>Safety:</b> the brand rules (pricing, vocabulary, no contractions, no year numbers) should be enforced by the system, not by memory.</li>
+    <li><b>Growth:</b> the SEO roadmap requires publishing Knowledge Hub posts on a schedule. That is impossible if publishing means writing TypeScript.</li>
+    <li><b>Visibility:</b> orders, bookings, and quote requests live in HighLevel. The team should see them next to the content that produced them.</li>
+  </ul>
+</section>
+
+<section id="scope">
+  <div class="eyebrow"><span class="n">02</span> / Scope</div>
+  <h2>What the backend manages</h2>
+  <table>
+    <tr><th>Module</th><th>What it holds</th><th>Who uses it</th></tr>
+    <tr><td><b>Catalog</b></td><td>Every video SKU across both libraries, feature animations, packs, the stack, collab versions. Type, price, preview, poster, checkout URL.</td><td>Producer, founder</td></tr>
+    <tr><td><b>Offers</b></td><td>Bundle categories and tiers, editing plans, custom format floors. One pricing source referenced everywhere, never duplicated.</td><td>Founder only</td></tr>
+    <tr><td><b>Pages</b></td><td>Heroes, section copy, FAQs, CTAs per page. Structured blocks that map to the section components the site already has.</td><td>Whole team</td></tr>
+    <tr><td><b>Knowledge Hub</b></td><td>Posts with the SEO fields built in: focus keyword, meta, direct-answer intro, FAQ block, internal-link target.</td><td>Whole team</td></tr>
+    <tr><td><b>Proof</b></td><td>Google reviews (verbatim), video testimonials, named clients, client logos.</td><td>Whole team</td></tr>
+    <tr><td><b>Media</b></td><td>Previews, posters, transcripts. Rules enforced at upload: size ceilings, poster required, no uncompressed masters.</td><td>Producer</td></tr>
+    <tr><td><b>SEO ops</b></td><td>Redirects, per-page meta overrides, sitemap entries. The redirect map stops being a hand-edited file.</td><td>Founder, developer</td></tr>
+    <tr><td><b>Guardrails</b></td><td>The publish-time validators in section 08. The rulebook as software.</td><td>Runs automatically</td></tr>
+    <tr><td><b>Ops dashboard</b></td><td>Read-only panels: recent orders, upcoming bookings, quote submissions, checkout-link health.</td><td>Whole team</td></tr>
+  </table>
+</section>
+
+<section id="nongoals">
+  <div class="eyebrow"><span class="n">03</span> / Hard non-goals</div>
+  <h2>What this backend will never do</h2>
+  <ul class="rule no">
+    <li><b>No payments.</b> Checkout stays on order.ghlvideo.com funnels. The backend stores checkout URLs and verifies they respond; it never processes a dollar.</li>
+    <li><b>No CRM.</b> Contacts, pipelines, and follow-up live in HighLevel. The dashboard reads them; it never becomes a second source of truth.</li>
+    <li><b>No booking engine.</b> LeadConnector calendars own scheduling. The backend shows appointments, nothing more.</li>
+    <li><b>No runtime dependency for visitors.</b> The public site stays statically generated. If the backend is down, the website does not care.</li>
+    <li><b>No second design system.</b> The admin edits content that renders through the existing components. Editors choose content, never layout.</li>
+  </ul>
+  <div class="win"><div class="l">The principle</div><p>HighLevel is the system of record for money and people. The backend is the system of record for content. The website is a fast, static projection of both. Every integration is read-only in exactly one direction.</p></div>
+</section>
+
+<section id="current">
+  <div class="eyebrow"><span class="n">04</span> / Current state</div>
+  <h2>What exists today</h2>
+  <div class="g2">
+    <div class="card"><h3 style="margin-top:0">Content inventory</h3>
+      <ul class="rule">
+        <li>59 classic library videos, 9 new library videos</li>
+        <li>23 feature animations in 3 packs</li>
+        <li>8 bundle tiers across 3 categories, plus the 53-video stack</li>
+        <li>3 editing plans, 4 custom format floors</li>
+        <li>9 page copy blocks, 6 FAQ sets, 8 Google reviews</li>
+        <li>28 distinct checkout slugs on order.ghlvideo.com</li>
+      </ul>
+    </div>
+    <div class="card"><h3 style="margin-top:0">Current flow</h3>
+      <ul class="rule">
+        <li>Edit <code>lib/site.ts</code> in the repo (developer only)</li>
+        <li>Commit to main, Vercel builds the static export</li>
+        <li>Checkout, booking, and forms run on HighLevel</li>
+        <li>QA is a manual playwright suite run by the developer</li>
+        <li>No roles, no drafts, no preview for editors, no audit trail</li>
+      </ul>
+    </div>
+  </div>
+  <div class="warn"><div class="l">Compliance flag found during research</div><p>Vercel's Hobby plan prohibits commercial use, and this site sells services. If the current Vercel project is on Hobby, it must move to Pro ($20 per seat per month) or the static export moves to Cloudflare Workers static hosting, which is free for commercial use. Verify the plan before anything else in this document.</p></div>
+</section>
+
+<section id="options">
+  <div class="eyebrow"><span class="n">05</span> / Architecture</div>
+  <h2>Four ways to build it, one honest comparison</h2>
+  <p class="intro">All four were checked against current reality in July 2026: licenses, free tiers, maintenance health, and compatibility with the static export. Sources at the end.</p>
+  <table>
+    <tr><th>Option</th><th>Shape</th><th>Cost</th><th>Strengths</th><th>Deal-breakers</th></tr>
+    <tr class="pick"><td><b>A. Payload sidecar</b></td><td>Payload 3 admin as its own small app + Neon Postgres. Site stays exactly as it is; builds pull content from Payload.</td><td class="g">$0 software, $0 DB</td><td>MIT license forever. Relational catalog fits Postgres. Code-first schemas mirror the existing TypeScript types. Drafts, versions, roles all free. The public site keeps its static export untouched.</td><td>Two apps to maintain. Content API calls happen at build time only.</td></tr>
+    <tr><td><b>B. Payload single-app</b></td><td>Payload embedded in the site app at /admin; drop the static export for standard SSG.</td><td class="g">$0 software, $0 DB</td><td>One repo, one deploy, live preview and instant updates via revalidation.</td><td>Verified: the Payload admin is incompatible with <code>output: "export"</code>. This option rebuilds the site's rendering architecture days after launch, and Cloudflare portability degrades to an adapter dependency.</td></tr>
+    <tr><td><b>C. Sanity hosted</b></td><td>Sanity Studio + content lake; site pulls at build time, static export unchanged.</td><td>$0 now, $15 per seat when outgrown</td><td>Zero infrastructure. Free tier covers 20 seats and 10k documents. TypeGen keeps typed content. Best editor UX out of the box.</td><td>Content lives outside the repo in a public dataset on the free tier. Cost scales per seat. A second query language (GROQ) enters the stack.</td></tr>
+    <tr><td><b>D. Git-based CMS</b></td><td>Keystatic or TinaCMS editing content files in the repo.</td><td>$0 to $41/mo</td><td>Content stays in git, minimal moving parts.</td><td>Verified: Keystatic ships releases but went months with silent maintainers, and its own README says experimental. Tina caps free at 2 users; this team needs 4. Weakest fit for a 90-SKU relational catalog.</td></tr>
+  </table>
+</section>
+
+<section id="rec">
+  <div class="eyebrow"><span class="n">06</span> / Recommendation</div>
+  <h2>Phase zero costs nothing. Then Payload as a sidecar.</h2>
+  <p><b>Phase zero, this week, no new infrastructure:</b> keep content in git and make it safe. Split <code>lib/site.ts</code> into domain files under <code>/content</code>, move the guardrails validators (section 08) into CI so a rule violation fails the build, and stand up the daily checkout-link checker on GitHub Actions. This delivers most of the safety value of a backend for zero dollars and zero migration risk, and nothing built in phase zero is thrown away later: the validators and checks become the CMS publish hooks.</p>
+  <p><b>Then the real backend: Option A, Payload 3 as a sidecar admin.</b> The reasoning, in order of weight:</p>
+  <ul class="rule">
+    <li><b>The site stays untouched.</b> The static export, the SEO layer, the five #1 rankings, the Cloudflare portability: none of it is renegotiated. The backend is additive, not surgical.</li>
+    <li><b>Free means free.</b> Payload is MIT (and actively developed after the Figma acquisition; v3.86 shipped this month). Neon's free Postgres auto-wakes on connection, which suits a database that is only touched when someone edits content or a build runs. Software cost stays zero at any team size.</li>
+    <li><b>The catalog is relational.</b> SKUs reference packs, packs reference bundles, bundles reference prices. Postgres relations plus Payload's admin UI handle this the way a document store only approximates.</li>
+    <li><b>The types survive.</b> Payload schemas are code-first TypeScript. The collections in section 07 are close to a transcription of the types that already exist, and the seed import is a script over the current file.</li>
+  </ul>
+  <p><b>Runner-up:</b> Sanity, if after seeing both admins you prefer zero infrastructure over zero vendor. Everything else in this document works identically with either choice; only section 07's implementation notes change.</p>
+</section>
+
+<section id="model">
+  <div class="eyebrow"><span class="n">07</span> / Content model</div>
+  <h2>Collections, mapped one-to-one from what exists</h2>
+  <table>
+    <tr><th>Collection</th><th>Replaces (in site.ts)</th><th>Notes</th></tr>
+    <tr><td><b>videos</b></td><td>premadeVideos + oldVideos</td><td>One collection, a <code>library</code> field (new / classic). Type, capability, price reference, preview, poster, wistiaId, comingSoon, checkout URL.</td></tr>
+    <tr><td><b>featureAnimations</b></td><td>featureAnimations</td><td>Dual cuts (simplified / real UI), pack membership.</td></tr>
+    <tr><td><b>packs</b></td><td>premadePacks + videoStack</td><td>Playlist relation to videos, price, anchor, checkout URL.</td></tr>
+    <tr><td><b>bundles</b></td><td>bundleCategories</td><td>Category, tiers with allocations, prices, anchors, delivery days.</td></tr>
+    <tr><td><b>plans</b></td><td>editingPlans + customFormats</td><td>The founder-only pricing table. Everything else references it.</td></tr>
+    <tr><td><b>collabProjects</b></td><td>collab</td><td>Versions with per-version previews and CTAs.</td></tr>
+    <tr><td><b>pages</b></td><td>pages.* + home.*</td><td>Structured section blocks matching the existing components: hero, sectionHead, faq, ruleList, cellGrid. Editors fill fields; layout is fixed.</td></tr>
+    <tr><td><b>posts</b></td><td>new</td><td>Knowledge Hub. Required fields: focus keyword, meta (no prices allowed), direct-answer intro, body, FAQ block, one internal link target.</td></tr>
+    <tr><td><b>reviews</b></td><td>home.reviews</td><td>Verbatim quotes flagged as such, so validators exempt them.</td></tr>
+    <tr><td><b>testimonials, team, logos</b></td><td>videoTestimonials, team, trustLogos</td><td>Straight ports.</td></tr>
+    <tr><td><b>redirects</b></td><td>_redirects + vercel.json</td><td>Single collection; both files are generated at build.</td></tr>
+    <tr><td><b>settings</b></td><td>site, cta, socials, entityLine, disclaimer</td><td>Global singletons, including the entity definition from the SEO guide.</td></tr>
+  </table>
+  <p>Migration is mechanical because the source is already typed: a one-time script parses the current file and seeds every collection, and the build-time fetch layer returns objects with the same shape the components consume today.</p>
+</section>
+
+<section id="guardrails">
+  <div class="eyebrow"><span class="n">08</span> / Guardrails engine</div>
+  <h2>The rulebook becomes software</h2>
+  <p class="intro">Every rule below was violated at least once during the build phase and caught by manual review. In the backend they run as publish-time validators: a save that breaks one is rejected with the reason, before it can reach the site.</p>
+  <table>
+    <tr><th>Validator</th><th>Rule enforced</th></tr>
+    <tr><td><b>Characters</b></td><td>No em dashes, en dashes, ellipsis characters, or middle dots in any visible field.</td></tr>
+    <tr><td><b>Contractions</b></td><td>Rejected everywhere except fields flagged as verbatim quotes.</td></tr>
+    <tr><td><b>Years</b></td><td>No year numbers in any customer-facing field.</td></tr>
+    <tr><td><b>Proof figures</b></td><td>Client count must be the literal 800+; rating the literal 5.0. No other figures accepted.</td></tr>
+    <tr><td><b>Pricing integrity</b></td><td>Prices live only in the plans and offers collections; copy fields reject dollar amounts that do not match a referenced price. Meta descriptions and titles reject dollar amounts entirely.</td></tr>
+    <tr><td><b>CTA vocabulary</b></td><td>CTA fields accept only: Book a Call, Order Now, Start editing, Request a Quote, See the plans, See the videos.</td></tr>
+    <tr><td><b>Checkout URLs</b></td><td>Must match order.ghlvideo.com, and must have passed the most recent daily link check before publish.</td></tr>
+    <tr><td><b>Media weight</b></td><td>Preview uploads over the size ceiling are rejected; a video without a poster cannot publish.</td></tr>
+    <tr><td><b>SEO shape</b></td><td>Posts require focus keyword, meta within length, direct-answer intro, and one internal link before publish.</td></tr>
+    <tr><td><b>Affiliation</b></td><td>Any field mentioning HighLevel endorsement or partnership requires founder-role approval to publish.</td></tr>
+  </table>
+</section>
+
+<section id="pipeline">
+  <div class="eyebrow"><span class="n">09</span> / Publish pipeline</div>
+  <h2>From draft to live in one safe path</h2>
+  <ol class="step">
+    <li><b>Draft.</b> Editor changes content in the admin. Versions retained; nothing touches the site.</li>
+    <li><b>Validate.</b> Guardrails run on save. Violations block with a plain-language reason.</li>
+    <li><b>Preview.</b> A preview build renders the draft on a private URL for sign-off.</li>
+    <li><b>Publish.</b> The admin fires the Vercel deploy hook (verified: hooks are on all plans, rate-limited at 60 per hour, roughly three cents of build cost per publish).</li>
+    <li><b>Acceptance.</b> The existing QA suite runs against the fresh build: rendered pages, dead links, copy-rule scan, schema validation. A red run rolls back to the previous deployment.</li>
+    <li><b>Log.</b> Who published what, when, and what the validators said. The audit trail the file never had.</li>
+  </ol>
+  <div class="win"><div class="l">Reuse, not rebuild</div><p>Step five is the playwright and python QA harness already written during launch week, promoted from a developer habit to a pipeline gate.</p></div>
+</section>
+
+<section id="ops">
+  <div class="eyebrow"><span class="n">10</span> / Ops dashboard</div>
+  <h2>HighLevel visibility, read-only, verified feasible</h2>
+  <p class="intro">The API research confirmed every panel below is buildable today with a Private Integration Token: no marketplace app, no OAuth flow, no commerce rebuild.</p>
+  <table>
+    <tr><th>Panel</th><th>Source (API 2.0)</th><th>Notes</th></tr>
+    <tr><td><b>Recent orders</b></td><td>GET /payments/orders</td><td>Filter by date, status, funnel product. Read scope only.</td></tr>
+    <tr><td><b>Upcoming bookings</b></td><td>GET /calendars/events</td><td>The Book a Call pipeline at a glance.</td></tr>
+    <tr><td><b>Quote and form leads</b></td><td>GET /forms/submissions</td><td>Plus surveys if used.</td></tr>
+    <tr><td><b>Checkout-link health</b></td><td>Daily GitHub Actions check</td><td>HEAD-checks all 28 funnel URLs; failures alert before a buyer finds them.</td></tr>
+  </table>
+  <ul class="rule">
+    <li><b>Auth:</b> a sub-account Private Integration Token with read-only scopes, rotated quarterly. Verified limits: 100 requests per 10 seconds, 200,000 per day. Polling every few minutes uses under 1 percent of that.</li>
+    <li><b>Push later, if wanted:</b> native webhook topics require a marketplace app, but workflow triggers (Order Submitted, Payment Received, Customer Booked Appointment, Form Submitted) can fire standard outbound webhooks at the dashboard. Start with polling; add push only if minutes matter.</li>
+    <li><b>Security line:</b> the token lives server-side in the admin app only. It can never ship in the static site bundle, because a static export ships everything to the browser.</li>
+  </ul>
+</section>
+
+<section id="roles">
+  <div class="eyebrow"><span class="n">11</span> / Roles and workflow</div>
+  <h2>Who can do what</h2>
+  <table>
+    <tr><th>Role</th><th>Can</th><th>Cannot</th></tr>
+    <tr><td><b>Founder (admin)</b></td><td>Everything, including prices, offers, redirects, affiliation-flagged copy, and role assignment.</td><td></td></tr>
+    <tr><td><b>Editor</b></td><td>Pages, posts, reviews, catalog metadata, media. Draft and publish within guardrails.</td><td>Prices, offers, redirects, settings.</td></tr>
+    <tr><td><b>Viewer</b></td><td>Read the admin and the ops dashboard.</td><td>Change anything.</td></tr>
+  </table>
+  <p>Two-step publishing (editor drafts, founder approves) is available per collection; recommended for pages and posts in the first months, relaxed once the guardrails have earned trust.</p>
+</section>
+
+<section id="rollout">
+  <div class="eyebrow"><span class="n">12</span> / Rollout plan</div>
+  <h2>Five phases, each shippable alone</h2>
+  <ol class="step">
+    <li><b>Phase 0: safety in git (days).</b> Split site.ts into /content modules, validators into CI, link checker on Actions, Vercel plan verified. Acceptance: a rule violation fails the build; a dead checkout URL alerts within a day.</li>
+    <li><b>Phase 1: the sidecar admin (week one).</b> Payload app + Neon, collections from section 07, seed import from the current file. Acceptance: every SKU, page block, and price visible and editable in the admin; the site still builds from git, untouched.</li>
+    <li><b>Phase 2: the switchover (week two).</b> The site's build fetches from Payload instead of the local file, with the file kept as a frozen fallback for one release. Publish wired to the deploy hook and the acceptance suite. Content freeze during the switch; the old file is deleted only after two clean releases. Acceptance: an editor changes a price in the admin and it is live, validated, within minutes, with zero developer involvement.</li>
+    <li><b>Phase 3: Knowledge Hub (week three).</b> Posts collection live with the SEO-shape validator; the first three posts from the SEO guide published through it. Acceptance: a post goes from draft to indexed without a developer.</li>
+    <li><b>Phase 4: ops dashboard (week four).</b> PIT created, orders, bookings, and leads panels live next to the content. Acceptance: the team answers "did we sell anything today" without opening HighLevel.</li>
+  </ol>
+</section>
+
+<section id="costs">
+  <div class="eyebrow"><span class="n">13</span> / Costs</div>
+  <h2>What this actually costs</h2>
+  <table>
+    <tr><th>Item</th><th>Monthly</th><th>Note</th></tr>
+    <tr><td>Payload CMS</td><td class="g">$0</td><td>MIT license, self-managed.</td></tr>
+    <tr><td>Neon Postgres free tier</td><td class="g">$0</td><td>0.5GB storage, auto-wake compute. This catalog is a few megabytes.</td></tr>
+    <tr><td>GitHub Actions checks</td><td class="g">$0</td><td>Roughly 30 minutes per month against a 2,000-minute free allowance.</td></tr>
+    <tr><td>Build cost per publish</td><td class="g">~$0.03</td><td>Within the Pro plan's included credit at any realistic publish volume.</td></tr>
+    <tr><td>Vercel Pro</td><td class="y">$20 per seat</td><td>Required for commercial use regardless of this project. One seat suffices; the team edits in the admin, not in Vercel.</td></tr>
+    <tr><td>Sanity alternative</td><td class="y">$0 now, $60 later</td><td>Free tier today; $15 per seat for four editors if limits are outgrown.</td></tr>
+  </table>
+</section>
+
+<section id="risks">
+  <div class="eyebrow"><span class="n">14</span> / Risks</div>
+  <h2>What can go wrong, and the mitigation</h2>
+  <ul class="rule no">
+    <li><b>Dual-source drift during migration.</b> Mitigation: content freeze during phase 2, the file kept as read-only fallback, deletion only after two clean releases.</li>
+    <li><b>The admin becomes a second website project.</b> Mitigation: the non-goals in section 03 are scope law. The admin gets no design system, no public pages, no ambitions.</li>
+    <li><b>Free-tier surprises.</b> Mitigation: Neon auto-wakes (verified) so a quiet database is safe; the only hard dependency at visitor time is static hosting, which has no tier risk.</li>
+    <li><b>Token leakage.</b> Mitigation: PIT is server-side only, read-only scopes, quarterly rotation. The static site never sees it.</li>
+    <li><b>Single-maintainer bus factor moves rather than disappears.</b> The admin still needs a developer for schema changes. Mitigation: schemas change rarely once modeled; day-to-day operation needs no developer at all, which is the point.</li>
+  </ul>
+</section>
+
+<section id="decisions">
+  <div class="eyebrow"><span class="n">15</span> / Decisions needed</div>
+  <h2>Five calls only the founder can make</h2>
+  <ol class="step">
+    <li><b>Confirm the Vercel plan.</b> Hobby is non-compliant for this site. Pro, or move static hosting to Cloudflare.</li>
+    <li><b>Payload sidecar or Sanity.</b> The recommendation is Payload; both admins can be demoed with the real catalog in a day each before committing.</li>
+    <li><b>Approval mode at start.</b> Editor-publishes-within-guardrails, or editor-drafts-founder-approves for the first months.</li>
+    <li><b>Ops dashboard scope.</b> Orders and bookings only, or leads too.</li>
+    <li><b>Phase 0 start.</b> It costs nothing, breaks nothing, and can begin immediately.</li>
+  </ol>
+</section>
+
+<section>
+  <div class="eyebrow"><span class="n">16</span> / Sources</div>
+  <h2>Key verified facts</h2>
+  <ul class="rule">
+    <li>Payload 3 MIT, active post-acquisition; admin incompatible with static export in one app: payloadcms.com/docs, github.com/payloadcms/payload discussion 9855, figma.com/blog/payload-joins-figma</li>
+    <li>Sanity free tier 20 seats / 10k documents / public datasets; Growth $15 per seat: sanity.io/pricing (fetched July 2026)</li>
+    <li>Keystatic releases resumed but project health uncertain; Tina free tier caps at 2 users: npm registry, github.com/Thinkmill/keystatic discussion 1467</li>
+    <li>Vercel: Hobby non-commercial policy, deploy hooks 60 per hour, builds billed per CPU-minute, cron limits: vercel.com/docs (fair-use, deploy-hooks, limits, cron)</li>
+    <li>Vercel Postgres migrated to Neon; Neon free auto-wakes, Supabase free pauses after 7 idle days: neon.com/docs/introduction/plans, supabase.com/pricing</li>
+    <li>Next.js static export cannot use ISR, Draft Mode, Server Actions, or config redirects: nextjs.org/docs static-exports guide</li>
+    <li>HighLevel API 2.0: PIT auth for internal tools, GET /payments/orders, /calendars/events, /forms/submissions, limits 100 per 10s and 200k per day; native webhook topics require a marketplace app; workflow webhooks are the standard push alternative; API 1.0 support ended: marketplace.gohighlevel.com/docs, help.gohighlevel.com</li>
+  </ul>
+</section>
+
+</main></div>
+<footer><span class="grd">GHL VIDEO / Backend Strategy</span><span>Internal / Research verified July 2026</span></footer>
+<script>
+const links=[...document.querySelectorAll('nav.toc a')];const map=new Map(links.map(a=>[a.getAttribute('href').slice(1),a]));
+const obs=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){links.forEach(l=>l.classList.remove('active'));const a=map.get(e.target.id);if(a)a.classList.add('active');}});},{rootMargin:'-8% 0px -85% 0px'});
+document.querySelectorAll('main section').forEach(s=>obs.observe(s));
+</script></body></html>
