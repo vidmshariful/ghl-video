@@ -106,7 +106,7 @@ export default function WorkPage() {
                 eyebrow: "Custom Production",
                 line: "Something bespoke, scripted for your positioning.",
                 linkLabel: "See custom production",
-                href: "/custom/",
+                href: "/custom-video/",
                 icon: "clapperboard",
               },
             ]}

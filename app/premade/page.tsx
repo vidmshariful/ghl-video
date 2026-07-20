@@ -190,7 +190,7 @@ export default function PremadePage() {
                 eyebrow: "Custom Production",
                 line: "Bespoke scripts, your positioning, built from scratch.",
                 linkLabel: "See custom production",
-                href: "/custom/",
+                href: "/custom-video/",
                 accentCls: "text-gold",
                 icon: "clapperboard" as IconName,
                 iconAccent: "gold" as const,

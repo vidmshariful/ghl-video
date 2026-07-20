@@ -31,7 +31,9 @@ const pricingIcons = ["tags", "clock", "lock"] as const;
 const differenceIcons = ["globe", "building", "zap"] as const;
 
 export const metadata: Metadata = {
-  title: "Custom Production",
+  /* the old site's title for this page ranks #1 for "gohighlevel
+     custom video production"; keep it verbatim (template adds | GHL Video) */
+  title: "GoHighLevel Custom Video Production | Built From Scratch",
   description:
     "Custom video built from scratch for your platform and your ICP: ads, explainers, demos, and onboarding series with published starting prices and a fixed quote before production.",
 };
@@ -54,7 +56,7 @@ export default function CustomPage() {
             name: "Custom Video Production",
             description:
               "Custom video built from scratch for your platform and your ICP: ads, explainers, demos, and onboarding series, with published starting prices and a fixed quote before production.",
-            path: "/custom/",
+            path: "/custom-video/",
             offers: { lowPrice: 1500, count: 4 },
           }),
           faqSchema(p.faq.items),

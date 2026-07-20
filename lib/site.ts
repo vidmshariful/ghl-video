@@ -41,7 +41,7 @@ export const navServices = [
   {
     name: "Custom Production",
     line: "Scripted and produced for your ICP",
-    href: "/custom/",
+    href: "/custom-video/",
     posterKey: "featured",
   },
   {
@@ -573,7 +573,7 @@ export const home = {
           "Onboarding series",
         ],
         linkLabel: "See custom production",
-        href: "/custom/",
+        href: "/custom-video/",
         mediaKey: "featured",
       },
       {
@@ -750,7 +750,7 @@ export const home = {
       body: "Premade videos to move fast, custom production when it has to be yours. Fluent in MRR, churn, and what a demo has to do.",
       links: [
         { label: "Premade videos", href: "/premade/" },
-        { label: "Custom production", href: "/custom/" },
+        { label: "Custom production", href: "/custom-video/" },
       ],
     },
     creators: {

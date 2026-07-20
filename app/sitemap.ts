@@ -8,7 +8,7 @@ export const dynamic = "force-static";
 const routes = [
   "/",
   "/premade/",
-  "/custom/",
+  "/custom-video/",
   "/quote/",
   "/editing/",
   "/work/",

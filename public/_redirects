@@ -9,3 +9,7 @@
 /refund-policy/ /legal/refund/ 301
 /refund-policy /legal/refund/ 301
 /refund/ /legal/refund/ 301
+
+# route renamed before launch; preview URLs may have been seen
+/custom/ /custom-video/ 301
+/custom /custom-video/ 301

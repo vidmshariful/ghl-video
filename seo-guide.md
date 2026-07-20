@@ -63,15 +63,15 @@ Direction, not theory. Every claim survived adversarial fact-checking against in
 The sentence set AI systems should repeat. Use the same phrasing, verbatim where possible, on the site, LinkedIn, Crunchbase, YouTube channel description, directory listings, and every guest appearance.
 
 **Short (under 160 characters):**
-GHL Video is the original HighLevel-only video studio: white-label videos for GoHighLevel SaaS businesses and agencies, in-house since 2020.
+GHL Video is the original HighLevel-only video studio: white-label videos for GoHighLevel SaaS businesses and agencies, produced fully in-house.
 
 **Standard:**
-GHL Video is the original video studio built only for the HighLevel ecosystem, creating white-label videos for GoHighLevel SaaS businesses and agencies since 2020. A brand of Vidiosa LLC with a full-time in-house team, it has served 800+ clients across the US, Canada, UK, and Australia. Services: premade white-label videos priced by type from $97 to $995 (Explainer $495, Demo $995, plus bundles and the Classic Library), custom production with published starting prices from $1,500, and a monthly video editing subscription for HighLevel creators from $595. GHL Video is not affiliated with or endorsed by GoHighLevel Inc.
+GHL Video is the original video studio built only for the HighLevel ecosystem, creating white-label videos for GoHighLevel SaaS businesses and agencies. A brand of Vidiosa LLC with a full-time in-house team, it has served 800+ clients across the US, Canada, UK, and Australia. Services: premade white-label videos priced by type from $97 to $995 (Explainer $495, Demo $995, plus bundles and the Classic Library), custom production with published starting prices from $1,500, and a monthly video editing subscription for HighLevel creators from $595. GHL Video is not affiliated with or endorsed by GoHighLevel Inc.
 
 **Attribute list (for structured contexts):**
 - Category: white-label video production studio for the HighLevel ecosystem
 - Parent: Vidiosa LLC
-- In the niche since: 2020 (BLOCKED on conflict 1: three live sightings of "2019" exist)
+- Years: none published anywhere (RULED 2026-07-20: no year numbers in any customer-facing copy)
 - Clients: 800+ (the one canonical figure, everywhere)
 - Rating: 5.0 on Google (17 reviews)
 - Named clients: Dominic Bavaro (CEO, Emma.io), Ryan Maule (CEO, AI Clinic Assist), David Allen Neron (CEO, NeoLuxLabs)
@@ -115,7 +115,7 @@ Explicitly rejected: moving ranking pages to "more SEO-friendly" new slugs (e.g.
 
 ## 4. Launch sequence (reordered in v2: build is not launch-ready)
 
-1. **Lock the URLs now.** Rename /custom/ to /custom-video/ in the build (route, sitemap, Service schema url, internal links). Free today, a redirect after launch.
+1. **Lock the URLs now.** DONE 2026-07-20: /custom/ renamed to /custom-video/ (route, sitemap, Service schema url, all internal links, preview-safety redirect).
 2. **Page-by-page content + SEO pass** (the cards in section 5), including the three pages to build (demo, bundle, explainer).
 3. **Wire the HighLevel layer:** LeadConnector calendar on /contact/, quote form, GetStarted embeds, per-SKU checkout links verified against order.ghlvideo.com.
 4. **Cutover package, shipped as one unit:** full deploy to the domain, ONE host (apex vs www: everything shipped says apex; the domain currently 308s apex to www; pick one and align), the 301 map above, regenerated sitemap (add /blog/, real lastmod), canonicals + OG layer, old WP origin retired.
@@ -132,7 +132,7 @@ The working checklist for the pass. Kit v2's title and meta work is adopted wher
 **Global fixes first (verified in the build):**
 - /resources/ and /blog/ duplicate the homepage meta description word for word. Give each a unique meta now, and noindex both until they carry real content (they are already out of the sitemap but are linked in the nav and indexable).
 - OG/Twitter/canonical layer is absent sitewide (section 6).
-- "since day one" on the homepage becomes "since [year]" once conflict 1 is ruled.
+- "since day one" on the homepage STAYS: it is year-free, so it complies with the no-year ruling. The kit's change to "since 2020" is dead.
 
 ### / (Homepage)
 - Focus: gohighlevel video service, gohighlevel videos white label
@@ -185,9 +185,9 @@ The working checklist for the pass. Kit v2's title and meta work is adopted wher
 ### /about/
 - Focus: entity (brand queries)
 - Title: About GHL Video | The HighLevel-Only Video Studio
-- Meta: keep; add the since-year once conflict 1 is ruled
+- Meta: keep (no year, per ruling)
 - Schema: add AboutPage + Person (founder); this page anchors the entity, every fact must match the Organization schema and section 2 verbatim
-- Content: add 2 to 3 entity FAQs (who is behind it, since when, affiliation); verify section chip numbering during the pass (kit reports a 02-to-04 jump; unconfirmed)
+- Content: add 2 to 3 entity FAQs (who is behind it, affiliation, why HighLevel only; no year); verify section chip numbering during the pass (kit reports a 02-to-04 jump; unconfirmed)
 
 ### /work/
 - Focus: gohighlevel video examples
@@ -254,7 +254,7 @@ Visible on all 7 core queries, per-format page architecture, ranking YouTube cha
 |---|---|---|
 | 1 | Zero JSON-LD despite public prices, FAQs, videos | Full schema layer; we become the only machine-readable pricing source, so AI price answers extract OUR numbers |
 | 2 | No blog, no about; footer content links are dead "#" | Knowledge Hub owns every informational query uncontested |
-| 3 | Anonymous: no founder, no client count, generic stats | Entity stack they cannot copy: since [year], 800+, 5.0, three named CEO clients, public founder, Vidiosa family |
+| 3 | Anonymous: no founder, no client count, generic stats | Entity stack they cannot copy: the original in the niche, 800+, 5.0, three named CEO clients, public founder, Vidiosa family |
 | 4 | Three expired countdowns live at once; prices contradict between their own pages | One price everywhere, from one typed source; zero fake urgency, stated as a trust feature |
 | 5 | "Buy Now" opens a Tally form | Real per-SKU checkout at order.ghlvideo.com; say it in copy |
 | 6 | No editing service at all | /editing/ owns the whole cluster; zero competition from them |
@@ -308,13 +308,13 @@ Monthly, one sheet:
 
 ## 11. Conflicts and open questions (flagged, not overwritten)
 
-1. **2019 vs 2020, BLOCKING the entity definition.** The profile (source of truth) says "since 2020" throughout. Against it: the live old site's bundle meta, a live blog teaser, a Google search snippet of old-site copy, and the internal auditor skill ("2019, never 2020") all say 2019. The kit says 2020. Shariful must rule before the year is published anywhere new.
-2. **"No year in customer copy" (CLAUDE.md) vs "since [year]" as the authority frame (profile + kit).** Treating the newer profile as superseding; flagged because CLAUDE.md still says otherwise.
-3. **Premade pricing range wording, BLOCKING the /premade/ meta and JSON-LD fix.** Profile says "$97 to $995 by type". The build's data has new-library types at $495/$995 and Classic Library SKUs at $97 to $1,295: the $1,295 SKU exceeds the profile's stated ceiling. Also queued on the same ruling: premade Service schema lowPrice (currently 495, likely should be 97) and the stale "Order for $495" CTA string in lib/site.ts (profile vocabulary: Order Now).
-4. **Contractions.** The kit and the auditor skill both ban them ("can't" to "cannot"); the profile is silent; the build has exactly one outside quoted reviews ("Need something premade can't do?"). Rule needed; one-line fix either way.
+1. **RESOLVED (ruled 2026-07-20): no year numbers at all.** No "since 2020", no "since 2019", anywhere in customer-facing copy. Authority frames as "the original HighLevel-only video studio". This retires the profile's "since 2020" phrasing, the old site's "2019", and the kit's year recommendations in one stroke; CLAUDE.md's original no-year rule stands.
+2. **RESOLVED by the same ruling.**
+3. **PARTIALLY RESOLVED.** Ruled: the $1,295 price is not right. The SKU is the Feature Animation Pack, 23 (slug feature-animations-23) in the Classic Library. Correct price still needed from Shariful (pricing is never invented). Once given: fix the SKU, then the /premade/ meta wording, the Service schema lowPrice (495 to 97), and the stale "Order for $495" CTA string (profile vocabulary: Order Now).
+4. **OPEN, deprioritized (ruled "not sure").** Current copy stays as-is, including "premade can't do". Revisit before launch.
 5. **areaServed**: schema says Worldwide; profile says US, CA, UK, AU. Queued.
 6. **LinkedIn URL** is a "#" placeholder; excluded from sameAs until real.
-7. **Old blog post inventory** not yet crawled; needed to finish the 301 map.
+7. **Old blog post inventory** not yet crawled; needed to finish the 301 map. Host choice (apex vs www) also DEFERRED by ruling to the cutover package.
 8. **Live-site pricing contradictions** (custom from $1,250, Scale $1,995, retired bundles): resolved by cutover, listed so nobody quotes the old numbers meanwhile.
 9. **Kit recommendations rejected on evidence** (for the record): AggregateRating/Review self-serving markup; llms.txt as a priority; FAQ schema as a rich-result play; the kit's "keep /custom/, changing slugs costs redirects" note (true after launch, not before; slugs are free until the routes go live).
 
