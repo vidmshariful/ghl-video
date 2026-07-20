@@ -4,8 +4,10 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { JsonLd } from "@/components/JsonLd";
 import { PageFrame } from "@/components/PageFrame";
 import { ScrollRuler } from "@/components/ScrollRuler";
+import { organizationSchema, websiteSchema } from "@/lib/schema";
 import { site } from "@/lib/site";
 
 /* Client-picked pairing: Archivo carries the headlines, Raveo Display
@@ -49,6 +51,8 @@ export default function RootLayout({
         <link rel="preload" as="image" href="/posters/clip-2.jpg" />
       </head>
       <body className="flex min-h-full flex-col">
+        {/* sitewide entity graph, server-rendered into every page */}
+        <JsonLd schema={[organizationSchema(), websiteSchema()]} />
         <a
           href="#main"
           className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[110] focus:rounded-[3px] focus:bg-gold focus:px-4 focus:py-2.5 focus:text-body focus:font-semibold focus:text-canvas"

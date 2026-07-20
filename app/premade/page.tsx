@@ -4,6 +4,7 @@ import { Button } from "@/components/Button";
 import { DrawnBorder } from "@/components/DrawnBorder";
 import { DrawnIcon, type IconName } from "@/components/DrawnIcon";
 import { FaqList } from "@/components/FaqList";
+import { JsonLd } from "@/components/JsonLd";
 import { PremadeLibrary } from "@/components/PremadeLibrary";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { RuledSection } from "@/components/RuledSection";
@@ -12,6 +13,7 @@ import { SectionHead } from "@/components/SectionHead";
 import { VideoBundles } from "@/components/VideoBundles";
 import { PageHero } from "@/components/pages/PageHero";
 import { ProofStrip } from "@/components/pages/ProofStrip";
+import { faqSchema, serviceSchema } from "@/lib/schema";
 import { cta, pages } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -33,6 +35,19 @@ export default function PremadePage() {
   const p = pages.premade;
   return (
     <>
+      <JsonLd
+        schema={[
+          serviceSchema({
+            name: "Premade HighLevel Videos",
+            description:
+              "The premade HighLevel video library: explainers, demos, ads, and animated GIFs, plus complete packs. Branded to your SaaS and delivered in days.",
+            path: "/premade/",
+            offers: { lowPrice: 495 },
+          }),
+          faqSchema(p.faq.items),
+        ]}
+      />
+
       <PageHero
         chip={p.hero.chip}
         headline={p.hero.headline}

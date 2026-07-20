@@ -11,8 +11,10 @@ import { ReviewCard } from "@/components/ReviewCard";
 import { RuledSection } from "@/components/RuledSection";
 import { SectionGlow } from "@/components/SectionGlow";
 import { SectionHead } from "@/components/SectionHead";
+import { JsonLd } from "@/components/JsonLd";
 import { GetStarted } from "@/components/pages/GetStarted";
 import { PageHero } from "@/components/pages/PageHero";
+import { faqSchema, serviceSchema } from "@/lib/schema";
 import {
   clips,
   clipWindows,
@@ -46,6 +48,19 @@ export default function CustomPage() {
 
   return (
     <>
+      <JsonLd
+        schema={[
+          serviceSchema({
+            name: "Custom Video Production",
+            description:
+              "Custom video built from scratch for your platform and your ICP: ads, explainers, demos, and onboarding series, with published starting prices and a fixed quote before production.",
+            path: "/custom/",
+            offers: { lowPrice: 1500, count: 4 },
+          }),
+          faqSchema(p.faq.items),
+        ]}
+      />
+
       {/* 1. hero */}
       <PageHero
         chip={p.hero.chip}

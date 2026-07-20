@@ -11,7 +11,9 @@ import { ReviewCard } from "@/components/ReviewCard";
 import { SectionGlow } from "@/components/SectionGlow";
 import { RuledSection } from "@/components/RuledSection";
 import { SectionHead } from "@/components/SectionHead";
+import { JsonLd } from "@/components/JsonLd";
 import { PageHero } from "@/components/pages/PageHero";
+import { faqSchema, serviceSchema } from "@/lib/schema";
 import {
   clips,
   clipWindows,
@@ -39,6 +41,19 @@ export default function EditingPage() {
 
   return (
     <>
+      <JsonLd
+        schema={[
+          serviceSchema({
+            name: "Video Editing",
+            description:
+              "Your in-house HighLevel editor on a monthly plan. Send raw footage, get back publish-ready edits from a HighLevel-fluent team. No contracts, unlimited revisions.",
+            path: "/editing/",
+            offers: { lowPrice: 595, highPrice: 1795, count: 3 },
+          }),
+          faqSchema(p.faq.items),
+        ]}
+      />
+
       {/* 1. hero */}
       <PageHero
         chip={p.hero.chip}
