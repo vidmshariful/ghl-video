@@ -62,12 +62,22 @@ export type IconName = keyof typeof icons;
  * draw itself is a CSS transition on stroke-dashoffset driven by a
  * CSS variable. Reduced motion renders the icon fully drawn.
  */
+const toneClass = {
+  gold: "text-gold",
+  ink: "text-ink",
+  muted: "text-muted",
+  dim: "text-dim",
+} as const;
+
 export function DrawnIcon({
   name,
   size = 26,
+  tone = "gold",
 }: {
   name: IconName;
   size?: number;
+  /* opt-in; default gold keeps every existing call site unchanged */
+  tone?: keyof typeof toneClass;
 }) {
   const Icon = icons[name];
   const ref = useRef<HTMLSpanElement>(null);
@@ -113,7 +123,7 @@ export function DrawnIcon({
   return (
     <span
       ref={ref}
-      className={"drawn-icon inline-flex text-gold"}
+      className={`drawn-icon inline-flex ${toneClass[tone]}`}
       style={{ "--dash": drawn ? 0 : 1 } as React.CSSProperties}
     >
       <Icon size={size} strokeWidth={1.5} aria-hidden="true" />
