@@ -1,30 +1,18 @@
 import type { MetadataRoute } from "next";
+import { sitePages } from "@/lib/pages-list";
 import { site } from "@/lib/site";
 
 export const dynamic = "force-static";
 
-/* Core pages only; stubs for /resources and /blog stay out until they
- * carry real content. */
-const routes = [
-  "/",
-  "/premade/",
-  "/custom-video/",
-  "/highlevel-demo-video/",
-  "/highlevel-video-bundle/",
-  "/quote/",
-  "/editing/",
-  "/work/",
-  "/about/",
-  "/contact/",
-  "/legal/privacy/",
-  "/legal/terms/",
-  "/legal/refund/",
-];
+/* stubs stay out until they carry real content (they are noindex) */
+const EXCLUDE = ["/blog/", "/resources/"];
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  return routes.map((path) => ({
-    url: `${site.url}${path}`,
-    changeFrequency: path === "/" ? "weekly" : "monthly",
-    priority: path === "/" ? 1 : path.startsWith("/legal") ? 0.2 : 0.8,
-  }));
+  return sitePages
+    .filter((p) => !EXCLUDE.includes(p.path))
+    .map((p) => ({
+      url: `${site.url}${p.path}`,
+      changeFrequency: p.path === "/" ? ("weekly" as const) : ("monthly" as const),
+      priority: p.path === "/" ? 1 : p.path.startsWith("/legal") ? 0.2 : 0.8,
+    }));
 }
