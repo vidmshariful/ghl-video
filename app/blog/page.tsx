@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   description:
     "The GHL Video Knowledge Hub: practical guides on HighLevel video, demos, onboarding, and SaaS growth.",
   robots: { index: false, follow: true },
+  alternates: { canonical: "/blog/" },
 };
 
 export default function Page() {

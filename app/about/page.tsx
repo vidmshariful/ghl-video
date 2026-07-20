@@ -6,7 +6,10 @@ import { Reveal, RevealItem } from "@/components/Reveal";
 import { SectionHead } from "@/components/SectionHead";
 import { Stat } from "@/components/Stat";
 import { TeamSection } from "@/components/home/TeamSection";
+import { FaqList } from "@/components/FaqList";
+import { JsonLd } from "@/components/JsonLd";
 import { PageHero } from "@/components/pages/PageHero";
+import { faqSchema } from "@/lib/schema";
 import {
   clients,
   cta,
@@ -21,9 +24,10 @@ import {
 } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "About",
+  title: "About the HighLevel-Only Video Studio",
   description:
     "The original HighLevel-only video studio: one niche, an in-house team, and 800+ HighLevel SaaS teams served. A brand of Vidiosa LLC.",
+  alternates: { canonical: "/about/" },
 };
 
 export default function AboutPage() {
@@ -202,6 +206,26 @@ export default function AboutPage() {
                   {disclaimer}
                 </p>
               </div>
+            </RevealItem>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* entity FAQ: the questions buyers and AI engines verify */}
+      <section data-bp-idx="7" className="relative section-pad">
+        <DrawnBorder />
+        <div className="shell">
+          <JsonLd schema={[faqSchema(p.faq.items)]} />
+          <SectionHead
+            index={7}
+            chip={p.faq.chip}
+            headline={p.faq.headline}
+            accent={p.faq.accent}
+            center
+          />
+          <Reveal className="mx-auto mt-12 max-w-4xl">
+            <RevealItem>
+              <FaqList items={p.faq.items} />
             </RevealItem>
           </Reveal>
         </div>

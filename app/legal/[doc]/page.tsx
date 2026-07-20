@@ -15,6 +15,7 @@ export async function generateMetadata({
   const { doc } = await params;
   return {
     title: legalDocs[doc]?.title ?? "Legal",
+    alternates: { canonical: `/legal/${doc}/` },
     description: `GHL Video ${legalDocs[doc]?.title ?? "legal document"}.`,
   };
 }

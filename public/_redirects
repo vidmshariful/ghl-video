@@ -1,6 +1,6 @@
 # Cloudflare Pages redirect map (301s from the old WordPress URLs).
-# PARTIAL: these are the URLs verified live today. Shariful's full old
-# URL list extends this file before cutover.
+# Old blog POST urls still need crawling from the old sitemap before
+# cutover; the route-level map below is complete.
 /privacy-policy/ /legal/privacy/ 301
 /privacy-policy /legal/privacy/ 301
 /terms-and-conditions/ /legal/terms/ 301
@@ -13,3 +13,19 @@
 # route renamed before launch; preview URLs may have been seen
 /custom/ /custom-video/ 301
 /custom /custom-video/ 301
+
+# old WordPress routes -> new IA (ranking URLs are preserved as real
+# pages and deliberately absent here: /custom-video/, /highlevel-demo-video/,
+# /highlevel-video-bundle/)
+/highlevel-feature-animation/ /premade/ 301
+/highlevel-feature-animation /premade/ 301
+/highlevel-marketing-videos/ /premade/ 301
+/highlevel-marketing-videos /premade/ 301
+/highlevel-video-editing-service/ /editing/ 301
+/highlevel-video-editing-service /editing/ 301
+/onboarding-process/ /custom-video/ 301
+/onboarding-process /custom-video/ 301
+/schedule-a-call/ /contact/ 301
+/schedule-a-call /contact/ 301
+/contact-us/ /contact/ 301
+/contact-us /contact/ 301

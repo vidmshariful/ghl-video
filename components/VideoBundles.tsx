@@ -82,7 +82,7 @@ function BundleCard({ tier }: { tier: BundleTier }) {
         rel="noopener"
         className="group mt-5 inline-flex items-center justify-center gap-2 rounded-[3px] bg-brand-gradient px-6 py-3.5 text-body font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.25)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98]"
       >
-        Get the bundle
+        Order Now
         <span
           aria-hidden="true"
           className="transition-transform duration-200 group-hover:translate-x-0.5"
@@ -128,15 +128,20 @@ export function VideoBundles() {
         })}
       </div>
 
-      <p className="mx-auto mt-5 max-w-[var(--measure-body)] text-center text-body leading-relaxed text-muted">
-        {active.blurb}
-      </p>
-
-      <div className="mx-auto mt-10 grid max-w-4xl items-start gap-5 sm:grid-cols-2">
-        {active.tiers.map((tier) => (
-          <BundleCard key={tier.slug} tier={tier} />
-        ))}
-      </div>
+      {/* every category renders into the HTML (crawlable); only the
+          active one displays */}
+      {bundleCategories.map((c) => (
+        <div key={c.slug} hidden={c.slug !== active.slug}>
+          <p className="mx-auto mt-5 max-w-[var(--measure-body)] text-center text-body leading-relaxed text-muted">
+            {c.blurb}
+          </p>
+          <div className="mx-auto mt-10 grid max-w-4xl items-start gap-5 sm:grid-cols-2">
+            {c.tiers.map((tier) => (
+              <BundleCard key={tier.slug} tier={tier} />
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

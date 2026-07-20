@@ -84,7 +84,7 @@ const oldClassic: BrowseVideo[] = oldVideos
     slug: v.slug,
     title: v.title,
     typeTag: v.type,
-    subTag: "Pre-2026",
+    subTag: "Classic",
     price: v.price,
     preview: v.preview ?? null,
     poster: v.poster,
@@ -119,7 +119,7 @@ const featureBrowse: BrowseVideo[] = featureAnimations.map((f) => ({
   slug: `fa-${f.slug}`,
   title: f.name,
   typeTag: "Feature Animation",
-  subTag: "Pre-2026",
+  subTag: "Classic",
   price: 0,
   preview: f.simplified,
   poster: f.thumbSimplified,
@@ -155,7 +155,7 @@ const stackPicks: BrowseVideo[] = [
   price: 0,
   previewOnly: true,
   previewNote: "Part of the Complete Video Stack, branded to your platform.",
-  previewCtaLabel: "Get the stack",
+  previewCtaLabel: "Order Now",
   orderUrl: videoStack.orderUrl,
 }));
 
@@ -182,7 +182,7 @@ const stackGroups: FilterDef[] = [
 
 function BuyVideoLink({
   video,
-  label = "Buy now",
+  label = "Order Now",
   className = "",
 }: {
   video: { orderUrl: string };
@@ -1178,7 +1178,7 @@ function VideoStackView() {
       price={s.price}
       anchorPrice={s.anchorPrice}
       orderUrl={s.orderUrl}
-      ctaLabel="Get the stack"
+      ctaLabel="Order Now"
       overviewNote={`A walkthrough of the full stack from our team. Every format below ships branded to your platform, delivered in ${s.deliveryDays} days.`}
       summaryItems={s.formats.map((f) => ({
         name: f.name,
@@ -1213,7 +1213,7 @@ function PackBundleView({ pack }: { pack: PremadePack }) {
       realPoster: null,
       previewOnly: true,
       previewNote: `Included in the ${pack.name}, branded to your platform.`,
-      previewCtaLabel: "Get the pack",
+      previewCtaLabel: "Order Now",
       orderUrl: pack.orderUrl ?? cta.bookACall.href,
     })),
   );
@@ -1238,7 +1238,7 @@ function PackBundleView({ pack }: { pack: PremadePack }) {
       price={pack.price}
       anchorPrice={pack.anchorPrice}
       orderUrl={pack.orderUrl}
-      ctaLabel="Get the pack"
+      ctaLabel="Order Now"
       overviewNote="A walkthrough of the pack from our team, branded to your platform. Every video below is included."
       summaryItems={summaryItems}
       footNote={pack.count ? `${pack.count} videos. One order.` : null}
@@ -1434,7 +1434,6 @@ function CollabView() {
 
 export function PremadeLibrary() {
   const [view, setView] = useState<string>("new");
-  const activePack = premadePacks.find((p) => p.slug === view);
 
   const tabs = [
     { slug: "new", label: "All New Videos", count: newReady.length as number | null },
@@ -1507,23 +1506,36 @@ export function PremadeLibrary() {
 
       {/* the instrument panel: square, hairline-framed */}
       <div className="mt-8 border border-hair bg-canvas">
-        {activePack ? (
-          <PackBundleView pack={activePack} />
-        ) : view === videoStack.slug ? (
+        {/* EVERY view renders into the static HTML so the whole catalog,
+            every SKU, and every price is crawlable: AI crawlers do not
+            execute JavaScript, and content that appears only after a
+            click does not exist to them. Only the active view displays;
+            hidden views cost nothing (display:none never intersects, so
+            no media loads or plays). */}
+        <div hidden={view !== "new"}>
+          <VideoBrowser videos={newReady} groups={newGroups} />
+        </div>
+        {premadePacks.map((pk) => (
+          <div key={pk.slug} hidden={view !== pk.slug}>
+            <PackBundleView pack={pk} />
+          </div>
+        ))}
+        <div hidden={view !== videoStack.slug}>
           <VideoStackView />
-        ) : view === collab.slug ? (
+        </div>
+        <div hidden={view !== collab.slug}>
           <CollabView />
-        ) : view === "features" ? (
+        </div>
+        <div hidden={view !== "features"}>
           <FeatureAnimationView />
-        ) : view === "old" ? (
+        </div>
+        <div hidden={view !== "old"}>
           <VideoBrowser
             videos={oldBrowse}
             groups={oldGroups}
-            note="Produced before HighLevel's 2026 refresh. Most still brand cleanly, at the original prices and checkout links."
+            note="Produced before HighLevel's current platform refresh. Most still brand cleanly, at the original prices and checkout links."
           />
-        ) : (
-          <VideoBrowser videos={newReady} groups={newGroups} />
-        )}
+        </div>
       </div>
     </div>
   );

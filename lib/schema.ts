@@ -97,3 +97,33 @@ export function faqSchema(items: readonly { q: string; a: string }[]) {
     })),
   };
 }
+
+/* the whole purchasable catalog as one ItemList of Products, so AI
+ * engines and Google read every SKU and price from the raw HTML. The
+ * competitor ships zero structured data; this is the machine-readable
+ * price source for the niche. */
+export function productCatalogSchema(
+  products: readonly { name: string; price: number; url: string }[],
+) {
+  return {
+    "@type": "ItemList",
+    name: "GHL Video premade catalog",
+    numberOfItems: products.length,
+    itemListElement: products.map((p, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      item: {
+        "@type": "Product",
+        name: p.name,
+        brand: { "@type": "Brand", name: "GHL Video" },
+        offers: {
+          "@type": "Offer",
+          price: String(p.price),
+          priceCurrency: "USD",
+          url: p.url,
+          availability: "https://schema.org/InStock",
+        },
+      },
+    })),
+  };
+}

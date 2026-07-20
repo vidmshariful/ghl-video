@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Button } from "@/components/Button";
 import { CellGrid } from "@/components/CellGrid";
+import { RuleList } from "@/components/RuleList";
 import { FitCards } from "@/components/FitCards";
 import { DrawnBorder } from "@/components/DrawnBorder";
 import { FaqList } from "@/components/FaqList";
@@ -27,7 +28,6 @@ import {
 
 const craftIcons = ["zap", "message", "crosshair"] as const;
 const processIcons = ["crosshair", "pen-line", "mic", "clapperboard", "message", "package-check"] as const;
-const pricingIcons = ["tags", "clock", "lock"] as const;
 const differenceIcons = ["globe", "building", "zap"] as const;
 
 export const metadata: Metadata = {
@@ -36,6 +36,7 @@ export const metadata: Metadata = {
   title: "GoHighLevel Custom Video Production | Built From Scratch",
   description:
     "Custom video built from scratch for your platform and your ICP: ads, explainers, demos, and onboarding series with published starting prices and a fixed quote before production.",
+  alternates: { canonical: "/custom-video/" },
 };
 
 export default function CustomPage() {
@@ -173,12 +174,11 @@ export default function CustomPage() {
           {/* how the number is arrived at: the floors are real, the
               quote is fixed. This is the argument the price list makes
               on its own, so it sits with the price list. */}
+          {/* the pricing rules read as rules: a list under the format
+              cards, not a second card wall */}
           <div className="mt-5">
-            <CellGrid
-              items={p.pricing.points.map((x, i) => ({
-                ...x,
-                icon: pricingIcons[i],
-              }))}
+            <RuleList
+              items={p.pricing.points.map((x) => ({ title: x.title, line: x.line }))}
             />
           </div>
         </div>

@@ -11,6 +11,12 @@ import { Faq } from "@/components/home/Faq";
 import { FounderNote } from "@/components/home/FounderNote";
 import { ClosingCta } from "@/components/home/ClosingCta";
 
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
+
 export default function Home() {
   return (
     <>

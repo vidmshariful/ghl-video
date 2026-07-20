@@ -7,32 +7,51 @@ import { FaqList } from "@/components/FaqList";
 import { JsonLd } from "@/components/JsonLd";
 import { PremadeLibrary } from "@/components/PremadeLibrary";
 import { Reveal, RevealItem } from "@/components/Reveal";
+import { RuleList } from "@/components/RuleList";
 import { RuledSection } from "@/components/RuledSection";
 import { SectionGlow } from "@/components/SectionGlow";
 import { SectionHead } from "@/components/SectionHead";
 import { VideoBundles } from "@/components/VideoBundles";
 import { PageHero } from "@/components/pages/PageHero";
 import { ProofStrip } from "@/components/pages/ProofStrip";
-import { faqSchema, serviceSchema } from "@/lib/schema";
-import { cta, pages } from "@/lib/site";
+import { faqSchema, productCatalogSchema, serviceSchema } from "@/lib/schema";
+import {
+  bundleCategories,
+  cta,
+  oldVideos,
+  pages,
+  premadePacks,
+  premadeVideos,
+  videoStack,
+} from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "Premade Videos",
+  title: "GoHighLevel White-Label Videos and Video Packs",
   description:
-    "The premade HighLevel video library: explainers, demos, ads, and animated GIFs, plus complete packs. Branded to your SaaS and delivered in 5 to 7 days.",
+    "The premade GoHighLevel video library: explainers, demos, ads, and animated GIFs, plus complete packs. White-labeled to your SaaS and delivered in 5 to 7 days.",
+  alternates: { canonical: "/premade/" },
 };
 
-const includedIcons: IconName[] = [
-  "palette",
-  "layout",
-  "mic",
-  "badge-check",
-  "package-check",
-];
 const howIcons: IconName[] = ["mouse-click", "palette", "package-check"];
 
 export default function PremadePage() {
   const p = pages.premade;
+  /* every purchasable SKU, machine-readable: singles, packs, the stack,
+     and all bundle tiers */
+  const catalog = [
+    ...premadeVideos
+      .filter((v) => !v.comingSoon)
+      .map((v) => ({ name: v.title, price: v.price, url: v.orderUrl })),
+    ...oldVideos.map((v) => ({ name: v.title, price: v.price, url: v.orderUrl })),
+    ...premadePacks.map((pk) => ({ name: pk.name, price: pk.price, url: pk.orderUrl })),
+    { name: videoStack.name, price: videoStack.price, url: videoStack.orderUrl },
+    ...bundleCategories.flatMap((c) =>
+      c.tiers.map((t) => ({ name: `${c.name}: ${t.name}`, price: t.price, url: t.orderUrl })),
+    ),
+  ].filter(
+    (x): x is { name: string; price: number; url: string } =>
+      typeof x.price === "number" && x.price > 0 && typeof x.url === "string",
+  );
   return (
     <>
       <JsonLd
@@ -45,6 +64,7 @@ export default function PremadePage() {
             offers: { lowPrice: 495 },
           }),
           faqSchema(p.faq.items),
+          productCatalogSchema(catalog),
         ]}
       />
 
@@ -108,7 +128,8 @@ export default function PremadePage() {
         </div>
       </section>
 
-      {/* what's included: ruled box, iconed cells */}
+      {/* what is included: a flat list of facts reads as a list, not a
+          wall of cards. Rule rows inside the ruled box. */}
       <RuledSection
         bpIdx={4}
         index={4}
@@ -116,27 +137,13 @@ export default function PremadePage() {
         headline={p.included.headline}
         accent={p.included.accent}
       >
-        <Reveal className="grid gap-px bg-hair sm:grid-cols-2 lg:grid-cols-3">
-          {p.included.items.map((item, i) => (
-            <RevealItem key={item} className="h-full">
-              <div
-                data-cell
-                className="group/cell flex h-full flex-col gap-5 bg-canvas p-8 transition-colors duration-300 hover:bg-surface"
-              >
-                <DrawnIcon name={includedIcons[i]} />
-                <p className="max-w-[var(--measure-body)] text-body leading-relaxed text-muted">
-                  {item}
-                </p>
-              </div>
-            </RevealItem>
-          ))}
-          {/* the empty cell wears the blueprint hatch */}
-          <RevealItem className="hidden h-full lg:block">
-            <div className="relative h-full min-h-24 bg-canvas">
-              <div className="absolute inset-0 hatch" aria-hidden="true" />
-            </div>
-          </RevealItem>
-        </Reveal>
+        <div className="px-6 py-8 md:px-8 md:py-10">
+          <RuleList
+            items={p.included.items.map((line) => ({ line }))}
+            columns={2}
+            framed={false}
+          />
+        </div>
       </RuledSection>
 
       {/* how it works: ruled box, numbered sequence */}
@@ -181,7 +188,7 @@ export default function PremadePage() {
         index={6}
         chip="Keep going"
         headline="Need something"
-        accent="premade can't do?"
+        accent="premade cannot do?"
       >
         <Reveal className="grid gap-px bg-hair md:grid-cols-2">
           {(

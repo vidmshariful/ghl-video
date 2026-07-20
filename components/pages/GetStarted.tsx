@@ -53,14 +53,19 @@ export function GetStarted({ tabs }: { tabs: readonly GetStartedTab[] }) {
         })}
       </div>
 
-      <div
-        role="tabpanel"
-        id={`start-panel-${current.key}`}
-        aria-labelledby={`start-tab-${current.key}`}
-        className="mx-auto mt-8 max-w-3xl"
-      >
-        <EmbedSlot label={current.embedLabel} note={current.note} />
-      </div>
+      {/* both panels stay in the DOM; only the active one displays */}
+      {tabs.map((t) => (
+        <div
+          key={t.key}
+          role="tabpanel"
+          id={`start-panel-${t.key}`}
+          aria-labelledby={`start-tab-${t.key}`}
+          hidden={t.key !== current.key}
+          className="mx-auto mt-8 max-w-3xl"
+        >
+          <EmbedSlot label={t.embedLabel} note={t.note} />
+        </div>
+      ))}
     </div>
   );
 }

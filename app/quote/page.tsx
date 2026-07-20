@@ -9,6 +9,7 @@ export const metadata: Metadata = {
   title: "Request a Quote",
   description:
     "Tell us about your custom video project. Five fields, a human reads it, and you get a fixed quote within 24 hours.",
+  alternates: { canonical: "/quote/" },
 };
 
 export default function QuotePage() {

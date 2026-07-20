@@ -30,10 +30,16 @@ const raveo = localFont({
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
   title: {
-    default: "GHL Video: Video built for HighLevel SaaS",
+    default: "GoHighLevel White-Label Video Infrastructure for HL SaaS | GHL Video",
     template: "%s | GHL Video",
   },
   description: site.description,
+  openGraph: {
+    type: "website",
+    siteName: "GHL Video",
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "GHL Video" }],
+  },
+  twitter: { card: "summary_large_image" },
 };
 
 export default function RootLayout({

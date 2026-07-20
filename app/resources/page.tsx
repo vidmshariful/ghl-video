@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   description:
     "Free video resources for HighLevel SaaS teams: guides, templates, and swipe files, added as they release.",
   robots: { index: false, follow: true },
+  alternates: { canonical: "/resources/" },
 };
 
 export default function Page() {

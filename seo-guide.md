@@ -1,8 +1,16 @@
-# GHL Video: SEO and AI-Search Guideline (2026), v2
+# GHL Video: SEO and AI-Search Guideline (2026), v3
 
 Working document for the page-by-page content and SEO pass. Facts, pricing, and voice follow the company profile (the master reference); conflicts are flagged in section 11, never silently overwritten.
 
-v2 changes: URL policy corrected after live SERP verification (/custom-video/ holds a #1 and will be reused, not redirected), the launch sequence reordered around the fact that the new build is not ready to go live, the SEO Kit v2 reconciled (its per-page title and meta work adopted, three of its recommendations rejected on evidence), and five kit claims verified against the build.
+v3 (launch day): the SEO Kit is adopted as the final guide, with Shariful's confirmations on the flagged items recorded below. Rulings now in force:
+- No AggregateRating/Review markup, confirmed (self-serving policy risk).
+- Titles use BOTH phrasings naturally: HighLevel where it reads better, GoHighLevel where it reads better. Search Console shows traffic on both variants, so the page set deliberately covers both.
+- NO prices in titles or meta descriptions. Prices appear on pages only. Where a premade range is needed on-page, it is $495 to $995. The $97 Classic floor is never used as an anchor: the Classic Library is expected to be deprecated or retired soon.
+- Bundle prices are never judged against single-video ranges. The $1,295 Feature Animation Pack 23 is a bundle price and stays. Conflict closed; Service schema lowPrice stays 495.
+- Order Now is the purchase CTA everywhere (SKU cards, packs, bundles), per the profile vocabulary.
+- Contractions are fixed per the kit (final): can't becomes cannot, What's becomes What is, outside verbatim review quotes.
+
+v2 changes: URL policy corrected after live SERP verification (/custom-video/ holds a #1 and is reused, not redirected), launch sequence reordered, kit reconciled, five kit claims verified against the build.
 
 Research base: 15-agent run on 2026-07-20 (five research tracks, each adversarially fact-checked; live audits of ghlvideo.com, the Vercel preview, and the local build; ghlsaasvideo.com teardown; 7-query SERP map), plus follow-up live SERP checks for the custom and editing clusters. Sources in section 12.
 
@@ -310,8 +318,8 @@ Monthly, one sheet:
 
 1. **RESOLVED (ruled 2026-07-20): no year numbers at all.** No "since 2020", no "since 2019", anywhere in customer-facing copy. Authority frames as "the original HighLevel-only video studio". This retires the profile's "since 2020" phrasing, the old site's "2019", and the kit's year recommendations in one stroke; CLAUDE.md's original no-year rule stands.
 2. **RESOLVED by the same ruling.**
-3. **PARTIALLY RESOLVED.** Ruled: the $1,295 price is not right. The SKU is the Feature Animation Pack, 23 (slug feature-animations-23) in the Classic Library. Correct price still needed from Shariful (pricing is never invented). Once given: fix the SKU, then the /premade/ meta wording, the Service schema lowPrice (495 to 97), and the stale "Order for $495" CTA string (profile vocabulary: Order Now).
-4. **OPEN, deprioritized (ruled "not sure").** Current copy stays as-is, including "premade can't do". Revisit before launch.
+3. **RESOLVED (ruled launch day).** Bundle pricing is never treated as single-video pricing: the $1,295 Feature Animation Pack 23 is a bundle price and stays. Premade single-video range for on-page copy is $495 to $995. The $97 Classic floor is not used as an anchor anywhere (Classic Library expected to be deprecated soon). Service schema lowPrice stays 495. No prices in titles or metas at all. The stale "Order for $495" CTA string becomes Order Now.
+4. **RESOLVED (kit adopted as final).** The kit bans contractions, so the two instances are fixed at launch: "premade can't do" becomes "premade cannot do", the "What's included" chip becomes "What is included". Verbatim review quotes keep their original wording.
 5. **areaServed**: schema says Worldwide; profile says US, CA, UK, AU. Queued.
 6. **LinkedIn URL** is a "#" placeholder; excluded from sameAs until real.
 7. **Old blog post inventory** not yet crawled; needed to finish the 301 map. Host choice (apex vs www) also DEFERRED by ruling to the cutover package.

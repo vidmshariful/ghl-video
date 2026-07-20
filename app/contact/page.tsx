@@ -7,9 +7,10 @@ import { ProofStrip } from "@/components/pages/ProofStrip";
 import { cta, pages, site } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "Contact and Book a Call",
+  title: "Book a HighLevel Video Call",
   description:
     "Book a 15-minute call with the HighLevel-only video studio. You leave with the right format and the real price. Or email hi@ghlvideo.com.",
+  alternates: { canonical: "/contact/" },
 };
 
 const callIcons = ["calendar-check", "crosshair", "badge-check"] as const;

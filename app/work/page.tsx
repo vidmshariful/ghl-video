@@ -9,9 +9,10 @@ import { PageHero } from "@/components/pages/PageHero";
 import { cta, home, newSamples, pages } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "Our Work",
+  title: "HighLevel Video Examples and Portfolio",
   description:
     "Recent video work for HighLevel SaaS teams across premade, custom production, and editing. Every piece plays.",
+  alternates: { canonical: "/work/" },
 };
 
 /* Our newest real videos as the portfolio. Expands as more ship. */

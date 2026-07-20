@@ -14,7 +14,7 @@ export const site = {
   orderBase: "https://order.ghlvideo.com",
   tagline: "Video built for HighLevel SaaS. Fast, custom, done.",
   description:
-    "The specialized video studio built only for the HighLevel ecosystem. A white-label AI-first video pack for resellers, custom production with published starting prices, and monthly editing plans.",
+    "The video studio built only for the HighLevel ecosystem: a white-label premade library, custom production with published starting prices, and monthly editing for HighLevel creators. 800+ teams served, rated 5.0 on Google.",
 };
 
 export const clients = 800; // always rendered as "800+"
@@ -65,7 +65,7 @@ export const cta = {
   bookACall: { label: "Book a Call", href: "/contact/" },
   seePremade: { label: "See premade videos", href: "/premade/" },
   requestQuote: { label: "Request a Quote", href: "/quote/" },
-  orderPremade: "Order for $495",
+  orderPremade: "Order Now",
   startEditing: "Start editing",
 } as const;
 
@@ -850,18 +850,18 @@ export const pages = {
       chip: "Premade Videos",
       headline: "Branded HighLevel videos,",
       accent: "ready when you are.",
-      lede: "Browse the full library. Buy any video on its own, or get a complete pack and save. Every one is white-labeled to your SaaS.",
-      priceSignal: "Videos from $495, packs from $1,495",
+      lede: "Browse the full library. Order any video on its own, or take a pack and save. Every one is white-labeled to your SaaS.",
+      priceSignal: "Videos $495 to $995. Bundles from $995.",
     },
     grid: {
       chip: "The library",
       headline: "Every video",
       accent: "and pack, in one place.",
       intro:
-        "Filter the library on the left, or open a pack to browse it as a playlist. Preview any video, buy it on its own, or get the whole pack.",
+        "800+ HighLevel teams order from this library. Filter it on the left, open a pack to browse it as a playlist, and preview anything before you order.",
     },
     included: {
-      chip: "What's included",
+      chip: "What is included",
       headline: "Every video ships",
       accent: "white-label.",
       items: [
@@ -906,7 +906,7 @@ export const pages = {
         },
         {
           q: "Some videos say coming soon. What does that mean?",
-          a: "Four of the nine videos are finished and previewable today. The other five are in production and roll out to the pack as they release, at no extra cost.",
+          a: "It means the video is in production. Anything with a visible preview ships today, and coming-soon titles unlock for pack buyers as they release, at no extra cost.",
         },
         {
           q: "What if I need a different script or format?",
@@ -927,7 +927,7 @@ export const pages = {
          Production", so "Custom video" was paying for a third line twice */
       headline: "Built from scratch for",
       accent: "your platform and your ICP.",
-      lede: "Scripted, voiced, and produced by an in-house team that already knows HighLevel. You explain your positioning once; we handle everything from script to final cut.",
+      lede: "Custom video production by an in-house team that already knows HighLevel: scripted, voiced, and animated for your ICP. You explain your positioning once; we handle everything from script to final cut.",
     },
     /* 3. what every custom video has to do, before any craft talk */
     craft: {
@@ -1274,7 +1274,7 @@ export const pages = {
       chip: "Fit",
       headline: "Made for people",
       accent: "who publish.",
-      intro: "Editing on a plan fits people who ship on a schedule.",
+      intro: "HighLevel video editing on a monthly plan, for people who ship on a schedule.",
       cards: [
         {
           icon: "calendar-check",
@@ -1349,6 +1349,101 @@ export const pages = {
     },
   },
 
+  /* /highlevel-demo-video/ : preserved ranking URL, rebuilt as a page */
+  demo: {
+    hero: {
+      chip: "Demo Videos",
+      headline: "Your platform, demoed",
+      accent: "under your brand.",
+      lede: "A white-label walkthrough of your SaaS: your dashboard theme, your logo, your voiceover. Prospects watch the platform win before they ever book the call.",
+    },
+    versions: {
+      chip: "The versions",
+      headline: "Three demos,",
+      accent: "one job.",
+      intro: "Every version shows the platform working under your brand. Pick the delivery style that fits your positioning.",
+    },
+    vsLoom: {
+      chip: "Demo vs Loom",
+      headline: "Retire the",
+      accent: "Loom walkthrough.",
+      rows: [
+        {
+          title: "Positioning",
+          line: "A Loom says you record screencasts. A branded demo says you run a platform.",
+        },
+        {
+          title: "Consistency",
+          line: "The demo delivers the same pitch on every watch: on your site, in ads, and inside onboarding.",
+        },
+        {
+          title: "Close rate",
+          line: "Prospects arrive at the call pre-sold by a walkthrough that never skips the strong parts.",
+        },
+      ],
+    },
+    faq: {
+      chip: "FAQ",
+      headline: "Asked before",
+      accent: "every demo order.",
+      items: [
+        {
+          q: "What is a white label demo video?",
+          a: "A walkthrough of the HighLevel platform branded as yours: your logo, your dashboard theme, and your voiceover, with full commercial rights. Nothing in it points back to us.",
+        },
+        {
+          q: "Which demo version should I pick?",
+          a: "V1 is spokesperson led, V2 is a motion graphic cut, and V3 covers the AI capabilities. Most resellers lead with V3 for AI-first positioning and add V1 when they want a human face.",
+        },
+        {
+          q: "How custom is a premade demo?",
+          a: "Your branding, dashboard theme, and voiceover are applied to a proven script. If you need a walkthrough built around your own flows and positioning, that is custom production.",
+        },
+      ],
+    },
+  },
+
+  /* /highlevel-video-bundle/ : preserved ranking URL, rebuilt as a page */
+  bundles: {
+    hero: {
+      chip: "Video Bundles",
+      headline: "Every funnel stage,",
+      accent: "one order.",
+      lede: "Explainers, demos, and feature videos in one white-label order. Pick the new releases, the Classic Library, or a mix, and save against single-video pricing.",
+    },
+    picker: {
+      chip: "The bundles",
+      headline: "Three ways",
+      accent: "to bundle.",
+      intro: "Every bundle fixes the format counts; you pick the titles inside each format. Every video ships white-labeled to your SaaS.",
+    },
+    included: [
+      { line: "Every video white-labeled: your logo, your colors, your voiceover" },
+      { line: "Full commercial rights across the whole bundle" },
+      { line: "One intake form covers the entire order" },
+      { line: "Delivery timeline shown on every bundle before you order" },
+    ],
+    faq: {
+      chip: "FAQ",
+      headline: "Asked before",
+      accent: "every bundle order.",
+      items: [
+        {
+          q: "Can I choose which videos go in the bundle?",
+          a: "Yes, within the format counts. A bundle fixes how many explainers, feature videos, or demos you get, and you pick the titles inside each format.",
+        },
+        {
+          q: "Are bundle videos different from single orders?",
+          a: "No. Same videos, same white-label pass, same commercial rights. The bundle exists so a full funnel costs less than ordering one video at a time.",
+        },
+        {
+          q: "Which bundle should I start with?",
+          a: "New Video Bundle Essential covers a launch. The Classic bundles carry the proven catalog at reduced pricing. Mix bundles cover both libraries in one order.",
+        },
+      ],
+    },
+  },
+
   about: {
     hero: {
       chip: "About",
@@ -1384,6 +1479,26 @@ export const pages = {
       lines: [
         "GHL Video is a brand of Vidiosa LLC, alongside growX and socialX.",
         "GHL Video is not affiliated with or endorsed by GoHighLevel Inc. We build for the ecosystem as an independent studio.",
+      ],
+    },
+    /* entity questions AI engines get asked; answered in our words */
+    faq: {
+      chip: "FAQ",
+      headline: "The questions",
+      accent: "buyers verify.",
+      items: [
+        {
+          q: "Who is behind GHL Video?",
+          a: "GHL Video is a brand of Vidiosa LLC, founded and led by Shariful Islam, with a full-time in-house team covering scripting, voiceover, animation, and editing. Nothing is outsourced.",
+        },
+        {
+          q: "Is GHL Video affiliated with GoHighLevel?",
+          a: "No. GHL Video is not affiliated with or endorsed by GoHighLevel Inc. We are an independent studio that builds exclusively for the HighLevel ecosystem.",
+        },
+        {
+          q: "Why work only in the HighLevel ecosystem?",
+          a: "One platform, learned once, compounding across 800+ clients. You never brief us on what a snapshot or a subaccount is, so every project starts at your positioning instead of the basics.",
+        },
       ],
     },
   },
@@ -2399,7 +2514,7 @@ export const bundleCategories: BundleCategory[] = [
     slug: "classic",
     name: "Classic Library Bundle",
     blurb:
-      "The full pre-2026 catalog, at reduced prices. Still brandable, still yours.",
+      "The proven classic catalog at reduced prices. Still brandable, still yours.",
     tiers: [
       {
         slug: "classic-starter",

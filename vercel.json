@@ -1,9 +1,104 @@
 {
   "redirects": [
-    { "source": "/privacy-policy", "destination": "/legal/privacy/", "permanent": true },
-    { "source": "/terms-and-conditions", "destination": "/legal/terms/", "permanent": true },
-    { "source": "/terms", "destination": "/legal/terms/", "permanent": true },
-    { "source": "/refund-policy", "destination": "/legal/refund/", "permanent": true },
-    { "source": "/refund", "destination": "/legal/refund/", "permanent": true }
+    {
+      "source": "/custom",
+      "destination": "/custom-video/",
+      "permanent": true
+    },
+    {
+      "source": "/custom/",
+      "destination": "/custom-video/",
+      "permanent": true
+    },
+    {
+      "source": "/highlevel-feature-animation",
+      "destination": "/premade/",
+      "permanent": true
+    },
+    {
+      "source": "/highlevel-feature-animation/",
+      "destination": "/premade/",
+      "permanent": true
+    },
+    {
+      "source": "/highlevel-marketing-videos",
+      "destination": "/premade/",
+      "permanent": true
+    },
+    {
+      "source": "/highlevel-marketing-videos/",
+      "destination": "/premade/",
+      "permanent": true
+    },
+    {
+      "source": "/highlevel-video-editing-service",
+      "destination": "/editing/",
+      "permanent": true
+    },
+    {
+      "source": "/highlevel-video-editing-service/",
+      "destination": "/editing/",
+      "permanent": true
+    },
+    {
+      "source": "/onboarding-process",
+      "destination": "/custom-video/",
+      "permanent": true
+    },
+    {
+      "source": "/onboarding-process/",
+      "destination": "/custom-video/",
+      "permanent": true
+    },
+    {
+      "source": "/schedule-a-call",
+      "destination": "/contact/",
+      "permanent": true
+    },
+    {
+      "source": "/schedule-a-call/",
+      "destination": "/contact/",
+      "permanent": true
+    },
+    {
+      "source": "/contact-us",
+      "destination": "/contact/",
+      "permanent": true
+    },
+    {
+      "source": "/contact-us/",
+      "destination": "/contact/",
+      "permanent": true
+    },
+    {
+      "source": "/privacy-policy",
+      "destination": "/legal/privacy/",
+      "permanent": true
+    },
+    {
+      "source": "/privacy-policy/",
+      "destination": "/legal/privacy/",
+      "permanent": true
+    },
+    {
+      "source": "/terms-and-conditions",
+      "destination": "/legal/terms/",
+      "permanent": true
+    },
+    {
+      "source": "/terms-and-conditions/",
+      "destination": "/legal/terms/",
+      "permanent": true
+    },
+    {
+      "source": "/refund-policy",
+      "destination": "/legal/refund/",
+      "permanent": true
+    },
+    {
+      "source": "/refund-policy/",
+      "destination": "/legal/refund/",
+      "permanent": true
+    }
   ]
 }

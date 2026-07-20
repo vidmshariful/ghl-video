@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Button } from "@/components/Button";
 import { CellGrid } from "@/components/CellGrid";
+import { RuleList } from "@/components/RuleList";
 import { FitCards } from "@/components/FitCards";
 import { DrawnBorder } from "@/components/DrawnBorder";
 import { FaqList } from "@/components/FaqList";
@@ -26,12 +27,12 @@ import {
 
 const bottleneckIcons = ["clock", "message", "zap"] as const;
 const howIcons = ["upload", "scissors", "send"] as const;
-const allPlansIcons = ["building", "pen-line", "clock", "lock"] as const;
 
 export const metadata: Metadata = {
-  title: "Video Editing",
+  title: "HighLevel Video Editing Subscription",
   description:
     "Your in-house HighLevel editor on a monthly plan. Send raw footage, get back publish-ready edits from a HighLevel-fluent team. No contracts, unlimited revisions.",
+  alternates: { canonical: "/editing/" },
 };
 
 export default function EditingPage() {
@@ -167,12 +168,11 @@ export default function EditingPage() {
               </RevealItem>
             ))}
           </Reveal>
+          {/* the stat band carries the numbers; the guarantees read as a
+              list, not four more cards */}
           <div className="mt-5">
-            <CellGrid
-              items={p.allPlans.items.map((x, i) => ({
-                ...x,
-                icon: allPlansIcons[i],
-              }))}
+            <RuleList
+              items={p.allPlans.items.map((x) => ({ title: x.title, line: x.line }))}
               columns={2}
             />
           </div>

@@ -9,6 +9,8 @@ const routes = [
   "/",
   "/premade/",
   "/custom-video/",
+  "/highlevel-demo-video/",
+  "/highlevel-video-bundle/",
   "/quote/",
   "/editing/",
   "/work/",
