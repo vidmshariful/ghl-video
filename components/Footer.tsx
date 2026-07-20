@@ -12,6 +12,7 @@ import {
   navServices,
   navLinks,
 } from "@/lib/site";
+import type { SiteChrome } from "@/lib/chrome";
 
 /*
  * Footer mirrors the nav IA: brand column, Services, Explore, Company,
@@ -48,7 +49,19 @@ function Column({
   );
 }
 
-export function Footer() {
+export function Footer({ chrome }: { chrome?: SiteChrome }) {
+  const services =
+    chrome?.services.map((s) => ({ label: s.name, href: s.href })) ??
+    navServices.map((s) => ({ label: s.name, href: s.href }));
+  const explore =
+    chrome?.nav ?? navLinks.map((l) => ({ label: l.label, href: l.href }));
+  const company = chrome?.footerCompany ?? [
+    { label: "Contact", href: "/contact/" },
+    { label: cta.bookACall.label, href: cta.bookACall.href },
+    { label: "Request a Quote", href: "/quote/" },
+  ];
+  const brands = chrome?.brands ?? otherBrands;
+  const legal = chrome?.legal ?? legalLinks;
   return (
     <footer className="border-t border-hair bg-[#050505]">
       <div className="shell grid grid-cols-2 gap-x-8 gap-y-12 py-16 md:grid-cols-[1.4fr_1fr_1fr_1fr_1fr]">
@@ -58,29 +71,16 @@ export function Footer() {
           <p className="mt-3 font-mono text-body-sm text-muted">{entityLine}</p>
         </div>
 
-        <Column
-          heading="Services"
-          links={navServices.map((s) => ({ label: s.name, href: s.href }))}
-        />
-        <Column
-          heading="Explore"
-          links={navLinks.map((l) => ({ label: l.label, href: l.href }))}
-        />
-        <Column
-          heading="Company"
-          links={[
-            { label: "Contact", href: "/contact/" },
-            { label: cta.bookACall.label, href: cta.bookACall.href },
-            { label: "Request a Quote", href: "/quote/" },
-          ]}
-        />
+        <Column heading="Services" links={services} />
+        <Column heading="Explore" links={explore} />
+        <Column heading="Company" links={company} />
 
         <div>
           <h3 className="font-mono text-label uppercase text-muted">
             Our Other Brands
           </h3>
           <ul className="mt-4 flex flex-col gap-2.5">
-            {otherBrands.map((brand) => (
+            {brands.map((brand) => (
               <li key={brand.name}>
                 <a
                   href={brand.url}
@@ -108,7 +108,7 @@ export function Footer() {
             {site.email}
           </a>
           <div className="flex gap-5">
-            {legalLinks.map((l) => (
+            {legal.map((l) => (
               <Link
                 key={l.href}
                 href={l.href}

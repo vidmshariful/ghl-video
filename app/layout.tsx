@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Archivo } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
+import { getChrome } from "@/lib/chrome";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { JsonLd } from "@/components/JsonLd";
@@ -42,11 +43,14 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image" },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  /* backend-managed chrome: fetched once at build time (static export),
+     falls back to lib/site.ts values if the backend is unreachable */
+  const chrome = await getChrome();
   return (
     <html
       lang="en"
@@ -57,6 +61,16 @@ export default function RootLayout({
         <link rel="preload" as="image" href="/posters/clip-2.jpg" />
       </head>
       <body className="flex min-h-full flex-col">
+        {/* tracking + verification snippets, managed in the Supabase
+            backend. Server-rendered into the static HTML at body start
+            (Google's supported placement for GTM when head injection is
+            unavailable); the noscript pair sits in the body-end block. */}
+        {chrome.headScripts ? (
+          <div
+            suppressHydrationWarning
+            dangerouslySetInnerHTML={{ __html: chrome.headScripts }}
+          />
+        ) : null}
         {/* sitewide entity graph, server-rendered into every page */}
         <JsonLd schema={[organizationSchema(), websiteSchema()]} />
         <a
@@ -67,11 +81,18 @@ export default function RootLayout({
         </a>
         <PageFrame />
         <ScrollRuler />
-        <Header />
+        <Header nav={chrome.nav} services={chrome.services} />
         <main id="main" className="relative z-10 flex-1">
           {children}
         </main>
-        <Footer />
+        <Footer chrome={chrome} />
+        {/* backend-managed body-end snippets (GTM noscript, chat widget) */}
+        {chrome.bodyEndScripts ? (
+          <div
+            suppressHydrationWarning
+            dangerouslySetInnerHTML={{ __html: chrome.bodyEndScripts }}
+          />
+        ) : null}
       </body>
     </html>
   );

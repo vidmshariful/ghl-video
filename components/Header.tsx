@@ -11,7 +11,8 @@ import {
   useSpring,
 } from "framer-motion";
 import { Logo } from "@/components/Logo";
-import { navServices, navLinks, cta, posters } from "@/lib/site";
+import { navServices as staticServices, navLinks as staticNavLinks, cta, posters } from "@/lib/site";
+import type { ChromeService } from "@/lib/chrome";
 
 /* Nav label in the bracket language: dim mono brackets fade in on
  * hover, stay lit on the active page. Brackets always occupy space so
@@ -92,11 +93,17 @@ function MagneticCta() {
  * with three hairline-separated rows, poster thumb per service.
  * Hover-opens on desktop, click toggles everywhere, Escape and
  * outside click close. */
-function ServicesMenu({ pathname }: { pathname: string | null }) {
+function ServicesMenu({
+  pathname,
+  services,
+}: {
+  pathname: string | null;
+  services: readonly ChromeService[];
+}) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const active = navServices.some((s) =>
+  const active = services.some((s) =>
     pathname?.startsWith(s.href.replace(/\/$/, "")),
   );
 
@@ -169,7 +176,7 @@ function ServicesMenu({ pathname }: { pathname: string | null }) {
               <span aria-hidden="true" className="absolute -left-1 -top-1.5 font-mono text-label leading-none text-dim/70">+</span>
               <span aria-hidden="true" className="absolute -right-1 -top-1.5 font-mono text-label leading-none text-dim/70">+</span>
               <ul className="divide-y divide-hair">
-                {navServices.map((s) => (
+                {services.map((s) => (
                   <li key={s.href}>
                     <Link
                       href={s.href}
@@ -213,7 +220,13 @@ function ServicesMenu({ pathname }: { pathname: string | null }) {
   );
 }
 
-export function Header() {
+export function Header({
+  nav = staticNavLinks as unknown as { label: string; href: string }[],
+  services = staticServices as unknown as ChromeService[],
+}: {
+  nav?: { label: string; href: string }[];
+  services?: ChromeService[];
+}) {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
@@ -259,8 +272,8 @@ export function Header() {
           className="hidden flex-1 items-center justify-center gap-6 border-x border-hair px-6 md:flex"
           aria-label="Main"
         >
-          <ServicesMenu pathname={pathname} />
-          {navLinks.map((item) => (
+          <ServicesMenu pathname={pathname} services={services} />
+          {nav.map((item) => (
             <Link key={item.href} href={item.href} className="group/nl">
               <BracketLabel
                 active={!!pathname?.startsWith(item.href.replace(/\/$/, ""))}
@@ -318,7 +331,7 @@ export function Header() {
               <p className="pb-3 font-mono text-label uppercase text-dim">
                 [ Services ]
               </p>
-              {navServices.map((s) => (
+              {services.map((s) => (
                 <Link
                   key={s.href}
                   href={s.href}
@@ -336,7 +349,7 @@ export function Header() {
               <p className="pb-3 pt-8 font-mono text-label uppercase text-dim">
                 [ Explore ]
               </p>
-              {navLinks.map((item) => (
+              {nav.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
