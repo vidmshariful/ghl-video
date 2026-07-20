@@ -38,7 +38,9 @@ export function CellGrid({
             <div className="flex items-start justify-between">
               {item.icon && <DrawnIcon name={item.icon} />}
               {numbered && (
-                <span className="font-mono text-label uppercase text-gold">
+                /* the index recedes to dim: the gold icon is the one
+                   accent per cell, so the number no longer competes */
+                <span className="font-mono text-label uppercase text-dim">
                   {String(i + 1).padStart(2, "0")}
                 </span>
               )}

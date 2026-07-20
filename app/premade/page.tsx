@@ -141,7 +141,8 @@ export default function PremadePage() {
               >
                 <div className="flex items-start justify-between">
                   <DrawnIcon name={howIcons[i]} />
-                  <span className="font-mono text-label uppercase text-gold">
+                  {/* index dim, gold icon leads: one accent per cell */}
+                  <span className="font-mono text-label uppercase text-dim">
                     {String(i + 1).padStart(2, "0")}
                   </span>
                 </div>
