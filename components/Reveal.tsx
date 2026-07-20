@@ -14,35 +14,15 @@ const group: Variants = {
   show: { transition: { staggerChildren: 0.08 } },
 };
 
-/*
- * Both take `as`, because wrapping list items in divs costs more than it
- * looks. It puts a div between <ul> and <li>, which is invalid, and it
- * makes every item the only child of its own wrapper, so `first:` and
- * `last:` match every item at once: `first:pt-0 last:pb-0` silently
- * zeroes the padding on all of them. Render the semantic element and
- * both problems go away.
- */
-type Tag = "div" | "ul" | "ol" | "li";
-
-const tagged = {
-  div: motion.div,
-  ul: motion.ul,
-  ol: motion.ol,
-  li: motion.li,
-} as const;
-
 export function Reveal({
   children,
   className = "",
-  as = "div",
 }: {
   children: ReactNode;
   className?: string;
-  as?: Tag;
 }) {
-  const C = tagged[as];
   return (
-    <C
+    <motion.div
       className={className}
       variants={group}
       initial="hidden"
@@ -50,21 +30,18 @@ export function Reveal({
       viewport={{ once: true, margin: "-80px" }}
     >
       {children}
-    </C>
+    </motion.div>
   );
 }
 
 export function RevealItem({
   children,
   className = "",
-  as = "div",
 }: {
   children: ReactNode;
   className?: string;
-  as?: Tag;
 }) {
   const reduced = useReducedMotion();
-  const C = tagged[as];
   const item: Variants = {
     hidden: reduced ? { opacity: 1 } : { opacity: 0, y: 16 },
     show: {
@@ -74,8 +51,8 @@ export function RevealItem({
     },
   };
   return (
-    <C className={`reveal-i ${className}`} variants={item}>
+    <motion.div className={`reveal-i ${className}`} variants={item}>
       {children}
-    </C>
+    </motion.div>
   );
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Button } from "@/components/Button";
-import { CellGrid, FitSplit } from "@/components/CellGrid";
+import { CellGrid } from "@/components/CellGrid";
+import { FitCards } from "@/components/FitCards";
 import { DrawnBorder } from "@/components/DrawnBorder";
 import { FaqList } from "@/components/FaqList";
 import { MediaFrame } from "@/components/MediaFrame";
@@ -51,20 +52,22 @@ export default function EditingPage() {
         </Button>
       </PageHero>
 
-      {/* 2. who it is for */}
-      <RuledSection
-        bpIdx={2}
-        index={2}
-        chip={p.fit.chip}
-        headline={p.fit.headline}
-        accent={p.fit.accent}
-      >
-        <FitSplit
-          forItems={p.fit.forItems}
-          notItems={p.fit.notItems}
-          framed={false}
-        />
-      </RuledSection>
+      {/* 2. who it is for: audience cards, not a for/not-for list */}
+      <section data-bp-idx="2" className="relative section-pad">
+        <DrawnBorder />
+        <div className="shell">
+          <SectionHead
+            index={2}
+            chip={p.fit.chip}
+            headline={p.fit.headline}
+            accent={p.fit.accent}
+            intro={p.fit.intro}
+          />
+          <div className="mt-12">
+            <FitCards cards={p.fit.cards} cta={p.fit.cta} />
+          </div>
+        </div>
+      </section>
 
       {/* 3. the bottleneck: name the pain before the price */}
       <RuledSection

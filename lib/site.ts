@@ -1130,12 +1130,28 @@ export const pages = {
       chip: "Fit",
       headline: "Built for some teams,",
       accent: "not for all.",
-      forItems: [
-        "HighLevel SaaS resellers with real positioning to communicate",
-        "Agencies packaging HighLevel for a niche",
-        "Platforms that need demo and onboarding coverage",
-        "Founders who want video that matches the product's ambition",
+      intro: "Custom earns its cost when you have something specific to say.",
+      cards: [
+        {
+          icon: "building",
+          title: "SaaS resellers",
+          line: "HighLevel SaaS resellers with real positioning to communicate.",
+        },
+        {
+          icon: "crosshair",
+          title: "Niche agencies",
+          line: "Agencies packaging HighLevel for a specific niche.",
+        },
+        {
+          icon: "layout",
+          title: "Platform teams",
+          line: "Platforms that need demo and onboarding coverage.",
+        },
       ],
+      cta: { label: "Request a Quote", href: "#get-started" },
+      /* the "not for" disqualifier used to sit beside the "built for"
+         list. Kept here, unused, so the copy is not lost if we want it
+         back as a line under the cards. */
       notItems: [
         "One-off personal projects outside the HighLevel ecosystem",
         "Same-week turnarounds. Custom takes the time it takes",
@@ -1258,12 +1274,27 @@ export const pages = {
       chip: "Fit",
       headline: "Made for people",
       accent: "who publish.",
-      forItems: [
-        "HighLevel creators publishing weekly",
-        "Coaches and educators turning calls into content",
-        "Founders building an audience alongside the product",
-        "Agencies producing client content at volume",
+      intro: "Editing on a plan fits people who ship on a schedule.",
+      cards: [
+        {
+          icon: "calendar-check",
+          title: "Weekly publishers",
+          line: "HighLevel creators publishing every week.",
+        },
+        {
+          icon: "mic",
+          title: "Coaches and educators",
+          line: "Turning calls and lessons into content.",
+        },
+        {
+          icon: "building",
+          title: "Agencies at volume",
+          line: "Producing client content at scale.",
+        },
       ],
+      cta: { label: "Start editing", href: "#plans" },
+      /* the "not for" disqualifier, kept unused so the copy survives if
+         we want it back as a line under the cards. */
       notItems: [
         "One-off edits. The plans are monthly capacity",
         "Same-day turnarounds on every video",
