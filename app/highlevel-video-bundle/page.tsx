@@ -37,7 +37,7 @@ export default function VideoBundlePage() {
             description:
               "White-label video bundles for HighLevel SaaS: explainers, demos, and feature videos in one order, branded to your platform.",
             path: "/highlevel-video-bundle/",
-            offers: { lowPrice: 995 },
+            offers: { lowPrice: 795 },
           }),
           faqSchema(p.faq.items),
         ]}

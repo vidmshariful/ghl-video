@@ -851,7 +851,7 @@ export const pages = {
       headline: "Branded HighLevel videos,",
       accent: "ready when you are.",
       lede: "Browse the full library. Order any video on its own, or take a pack and save. Every one is white-labeled to your SaaS.",
-      priceSignal: "Videos $495 to $995. Bundles from $995.",
+      priceSignal: "Videos $495 to $995",
     },
     grid: {
       chip: "The library",
@@ -1065,7 +1065,7 @@ export const pages = {
     },
     /* 8. two ways in. PLACEHOLDER embeds until the HighLevel snippets land. */
     getStarted: {
-      chip: "Get started",
+      chip: "Your next step",
       headline: "Send the brief",
       accent: "or talk it through.",
       intro:
@@ -1073,13 +1073,13 @@ export const pages = {
       tabs: [
         {
           key: "quote",
-          label: "Request a quote",
+          label: "Request a Quote",
           embedLabel: "Quote form",
           note: "The quote form drops in here. A human reads it and replies with a fixed price and a timeline within 24 hours.",
         },
         {
           key: "call",
-          label: "Schedule a discovery call",
+          label: "Schedule a Discovery Call",
           embedLabel: "Booking calendar",
           note: "Fifteen minutes. You talk through what you sell and what you need, and you leave with the right format and the real price.",
         },
@@ -1263,8 +1263,8 @@ export const pages = {
     },
     samples: {
       chip: "The difference",
-      headline: "Same footage,",
-      accent: "different weight.",
+      headline: "Raw in,",
+      accent: "publish-ready out.",
       intro:
         "Raw talking-head footage in, publish-ready content out. Hooks, cuts, captions, and pacing handled.",
       before: { label: "Before", sub: "Raw footage" },
@@ -1659,7 +1659,7 @@ export const oldVideos: OldVideo[] = [
   },
   {
     slug: "calender-booking",
-    title: "Calender Booking",
+    title: "Calendar Booking",
     type: "Short Explainer",
     price: 195,
     preview: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/69245a77eb1014bee9f2f43f.mp4",
@@ -2319,7 +2319,7 @@ export const featureAnimations: FeatureAnimation[] = [
   },
   {
     slug: "voice-ai",
-    name: "Voice Ai",
+    name: "Voice AI",
     simplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cbd056f6d4c8b9153d288.mp4",
     real: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690cbcf56f6d4c2b9a53d0c1.mp4",
     thumbSimplified: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/690ccbab2e1faa1ff6b92dd6.png",

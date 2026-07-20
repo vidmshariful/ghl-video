@@ -896,8 +896,7 @@ function FeaturePriceCard({ pack }: { pack: (typeof featurePacks)[number] }) {
         rel="noopener"
         className="group/btn mt-4 inline-flex items-center justify-center gap-1.5 rounded-[3px] bg-brand-gradient px-4 py-2.5 text-body-sm font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
       >
-        Order {pack.packCount}
-        {"× "}
+        Order Now 
         <span
           aria-hidden="true"
           className="transition-transform duration-200 group-hover/btn:translate-x-0.5"
@@ -913,7 +912,7 @@ function FeaturePriceCard({ pack }: { pack: (typeof featurePacks)[number] }) {
         aria-expanded={open}
         className="mt-4 flex items-center justify-between gap-2 border-t border-hair pt-4 font-mono text-label uppercase text-muted transition-colors hover:text-gold"
       >
-        What&rsquo;s included
+        What is included
         <span
           aria-hidden="true"
           className={`text-gold transition-transform duration-200 ${
@@ -1101,7 +1100,7 @@ function BundleView({
 
         <div className="p-5 md:p-7">
           <p className="mb-3 font-mono text-label uppercase text-dim">
-            [ What&rsquo;s inside ]
+            [ What is inside ]
           </p>
           <ul className="grid gap-px overflow-hidden rounded-[3px] border border-hair bg-hair">
             {summaryItems.map((f) => (
