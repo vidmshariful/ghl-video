@@ -90,7 +90,13 @@ async function handleSucceeded(
   if (order.status !== "paid") {
     const { data: flipped } = await db
       .from("orders")
-      .update({ status: "paid", paid_at: new Date().toISOString() })
+      .update({
+        status: "paid",
+        paid_at: new Date().toISOString(),
+        invoice_number:
+          order.invoice_number ??
+          `GV-${(order.id as string).replace(/-/g, "").slice(0, 8).toUpperCase()}`,
+      })
       .eq("id", order.id)
       .neq("status", "paid")
       .select()

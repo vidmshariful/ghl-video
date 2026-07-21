@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import type { Session } from "@supabase/supabase-js";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 
@@ -50,7 +51,7 @@ type OrderSummary = {
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <section className="relative section-pad">
+    <section className="relative flex-1 py-12 md:py-16">
       <div className="shell">{children}</div>
     </section>
   );
@@ -433,19 +434,10 @@ function Portal({ session }: { session: Session }) {
 
   return (
     <Shell>
-      <div className="flex flex-wrap items-baseline justify-between gap-4">
-        <div>
-          <p className="font-mono text-label uppercase text-gold">[ Your account ]</p>
-          <h1 className="mt-3 font-display text-h2 text-ink">Welcome back.</h1>
-          <p className="mt-1 font-mono text-label uppercase text-dim">{session.user.email}</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => supabase.auth.signOut()}
-          className="tap rounded-[3px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
-        >
-          Sign out
-        </button>
+      <div>
+        <p className="font-mono text-label uppercase text-gold">[ Your account ]</p>
+        <h1 className="mt-3 font-display text-h2 text-ink">Welcome back.</h1>
+        <p className="mt-1 font-mono text-label uppercase text-dim">{session.user.email}</p>
       </div>
 
       <div className="mt-8 flex gap-6 border-b border-hair">
@@ -486,6 +478,26 @@ function Portal({ session }: { session: Session }) {
   );
 }
 
+function PortalTopBar({ session }: { session: Session | null }) {
+  return (
+    <header className="flex items-center justify-between border-b border-hair bg-surface px-6 py-4">
+      <Link href="/account" className="font-display text-body font-bold text-ink">
+        GHL <span className="text-gradient">VIDEO</span>
+        <span className="ml-2 font-mono text-label uppercase text-muted">/ Account</span>
+      </Link>
+      {session ? (
+        <button
+          type="button"
+          onClick={() => supabase.auth.signOut()}
+          className="tap rounded-[3px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
+        >
+          Sign out
+        </button>
+      ) : null}
+    </header>
+  );
+}
+
 export function AccountClient() {
   const [session, setSession] = useState<Session | null>(null);
   const [ready, setReady] = useState(false);
@@ -499,11 +511,18 @@ export function AccountClient() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  if (!ready)
-    return (
-      <Shell>
-        <p className="text-body text-muted">Loading...</p>
-      </Shell>
-    );
-  return session ? <Portal session={session} /> : <LoginView />;
+  return (
+    <div className="flex min-h-screen flex-col">
+      <PortalTopBar session={session} />
+      {!ready ? (
+        <Shell>
+          <p className="text-body text-muted">Loading...</p>
+        </Shell>
+      ) : session ? (
+        <Portal session={session} />
+      ) : (
+        <LoginView />
+      )}
+    </div>
+  );
 }
