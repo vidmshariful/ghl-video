@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { stripe } from "@/lib/checkout/stripe";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
-import { getActiveProductBySku } from "@/lib/checkout/products";
-import { syncOrderToHighLevel } from "@/lib/checkout/highlevel";
+import { syncPaidOrderToHighLevel } from "@/lib/checkout/fulfill";
 
 export const runtime = "nodejs";
 
@@ -101,68 +100,11 @@ async function handleSucceeded(
   }
 
   // Fulfill: re-entrant, gated on the opportunity not yet existing. A retry
-  // that finds the order paid-but-unsynced re-runs this idempotently.
+  // that finds the order paid-but-unsynced re-runs this idempotently. On
+  // failure, throw so the webhook returns non-2xx and Stripe re-delivers.
   if (order.status === "paid" && !order.highlevel_opportunity_id) {
-    await syncToHighLevel(db, order, pi);
-  }
-}
-
-async function syncToHighLevel(
-  db: ReturnType<typeof supabaseAdmin>,
-  order: Record<string, unknown>,
-  pi: Stripe.PaymentIntent,
-) {
-  const orderId = order.id as string;
-  const meta = (order.metadata as Record<string, unknown>) ?? {};
-  try {
-    const product = await getActiveProductBySku((meta.sku as string) ?? "");
-    const tags = (product?.metadata?.hl_tags as string[]) ?? ["ghlv-purchase"];
-    const { data: customer } = await db
-      .from("customers")
-      .select("name, phone, company")
-      .eq("id", order.customer_id as string)
-      .maybeSingle();
-
-    const { contactId, opportunityId } = await syncOrderToHighLevel({
-      email: order.customer_email as string,
-      name: customer?.name ?? undefined,
-      phone: customer?.phone ?? undefined,
-      company: customer?.company ?? undefined,
-      tags,
-      opportunityName: `${product?.name ?? "Order"} - ${order.customer_email}`,
-      amountDollars: Math.round(order.amount_cents as number) / 100,
-    });
-
-    await db
-      .from("orders")
-      .update({
-        highlevel_contact_id: contactId,
-        highlevel_opportunity_id: opportunityId,
-        metadata: { ...meta, hl_sync_failed: false },
-      })
-      .eq("id", orderId);
-    await db
-      .from("customers")
-      .update({ highlevel_contact_id: contactId })
-      .eq("id", order.customer_id as string);
-    await db.from("order_events").insert({
-      order_id: orderId,
-      event_type: "hl_synced",
-      payload: { contactId, opportunityId, tags },
-    });
-  } catch (err) {
-    // Flag for visibility, then re-throw: the payment stays paid, but the
-    // webhook returns non-2xx so Stripe re-delivers and the sync retries.
-    await db
-      .from("orders")
-      .update({ metadata: { ...meta, hl_sync_failed: true } })
-      .eq("id", orderId);
-    await db.from("order_events").insert({
-      order_id: orderId,
-      event_type: "hl_sync_failed",
-      payload: { error: (err as Error).message },
-    });
-    throw err;
+    const result = await syncPaidOrderToHighLevel(db, order);
+    if (!result.ok) throw new Error(result.error);
   }
 }
 
