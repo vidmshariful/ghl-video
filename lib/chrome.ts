@@ -77,6 +77,10 @@ async function sb<T>(path: string): Promise<T> {
     const r = await fetch(`${SB_URL}/rest/v1/${path}`, {
       headers: { apikey: SB_ANON, Authorization: `Bearer ${SB_ANON}` },
       signal: ctrl.signal,
+      // build-time only: keeps the marketing pages statically generated in
+      // server mode. Chrome refreshes on rebuild (the DB write fires the
+      // Vercel deploy hook), exactly as it did under static export.
+      cache: "force-cache",
     });
     if (!r.ok) throw new Error(`supabase ${r.status}`);
     return (await r.json()) as T;
