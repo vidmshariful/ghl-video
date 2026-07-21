@@ -456,48 +456,90 @@ function VideosScreen() {
         </div>
       )}
 
-      <ul className="mt-6 overflow-hidden rounded-card border border-hair">
-        {rows.map((r) => (
-          <li key={r.id} className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-hair bg-surface px-5 py-3.5 first:border-t-0">
-            <div className="min-w-0">
-              <p className="text-body font-semibold text-ink">
-                {r.title}
-                {r.price != null && (
-                  <span className="ml-3 font-mono text-body-sm text-gold">${r.price}</span>
-                )}
-                {!r.on_site && (
-                  <span className="ml-3 inline-flex rounded-full border border-gold/40 bg-canvas px-2.5 py-0.5 font-mono text-label uppercase text-gold">
-                    not on site
-                  </span>
-                )}
-              </p>
-              <p className="mt-0.5 font-mono text-label uppercase text-dim">
-                {r.library === "new" ? "New Library" : "Classic"} / {r.video_type}
-                {r.category ? ` / ${r.category}` : ""}
-                {r.notes ? ` / ${r.notes}` : ""}
-              </p>
+      {/* two main categories, sub-grouped by video type */}
+      {(
+        [
+          ["new", "New Videos"],
+          ["classic", "Classic Old Videos"],
+        ] as const
+      ).map(([lib, libLabel]) => {
+        const libRows = rows.filter((r) => r.library === lib);
+        if (!libRows.length) return null;
+        const typeIdx = (t: string) => {
+          const i = VIDEO_TYPES.indexOf(t);
+          return i === -1 ? VIDEO_TYPES.length : i;
+        };
+        const types = [...new Set(libRows.map((r) => r.video_type))].sort(
+          (a, b) => typeIdx(a) - typeIdx(b),
+        );
+        return (
+          <section key={lib} className="mt-10">
+            <div className="flex items-baseline gap-3 border-b border-hair pb-3">
+              <h2 className="font-display text-h4 font-semibold text-ink">
+                {libLabel}
+              </h2>
+              <span className="font-mono text-label uppercase text-dim">
+                {libRows.length} videos
+              </span>
             </div>
-            <div className="flex shrink-0 items-center gap-2">
-              {r.video_url && (
-                <a href={r.video_url} target="_blank" rel="noopener" className="tap rounded-[3px] border border-hair px-3.5 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold">
-                  Video
-                </a>
-              )}
-              {r.checkout_url && (
-                <a href={r.checkout_url} target="_blank" rel="noopener" className="tap rounded-[3px] border border-hair px-3.5 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold">
-                  Checkout
-                </a>
-              )}
-              <button type="button" onClick={() => setEditing(r)} className="tap rounded-[3px] border border-hair px-3.5 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold">
-                Edit
-              </button>
-              <button type="button" onClick={() => remove(r)} className="tap rounded-[3px] border border-hair px-3.5 py-1.5 font-mono text-label uppercase text-dim transition-colors hover:border-error/60 hover:text-error">
-                Delete
-              </button>
-            </div>
-          </li>
-        ))}
-      </ul>
+            {types.map((t) => {
+              const typeRows = libRows.filter((r) => r.video_type === t);
+              return (
+                <div key={t} className="mt-6">
+                  <p className="font-mono text-label uppercase text-gold">
+                    {t || "Untyped"}{" "}
+                    <span className="text-dim">{typeRows.length}</span>
+                  </p>
+                  <ul className="mt-2.5 overflow-hidden rounded-card border border-hair">
+                    {typeRows.map((r) => (
+                      <li key={r.id} className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-hair bg-surface px-5 py-3.5 first:border-t-0">
+                        <div className="min-w-0">
+                          <p className="text-body font-semibold text-ink">
+                            {r.title}
+                            {r.price != null && (
+                              <span className="ml-3 font-mono text-body-sm text-gold">${r.price}</span>
+                            )}
+                            {!r.on_site && (
+                              <span className="ml-3 inline-flex rounded-full border border-gold/40 bg-canvas px-2.5 py-0.5 font-mono text-label uppercase text-gold">
+                                not on site
+                              </span>
+                            )}
+                          </p>
+                          {(r.category || r.notes) && (
+                            <p className="mt-0.5 font-mono text-label uppercase text-dim">
+                              {r.category}
+                              {r.category && r.notes ? " / " : ""}
+                              {r.notes}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2">
+                          {r.video_url && (
+                            <a href={r.video_url} target="_blank" rel="noopener" className="tap rounded-[3px] border border-hair px-3.5 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold">
+                              Video
+                            </a>
+                          )}
+                          {r.checkout_url && (
+                            <a href={r.checkout_url} target="_blank" rel="noopener" className="tap rounded-[3px] border border-hair px-3.5 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold">
+                              Checkout
+                            </a>
+                          )}
+                          <button type="button" onClick={() => setEditing(r)} className="tap rounded-[3px] border border-hair px-3.5 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold">
+                            Edit
+                          </button>
+                          <button type="button" onClick={() => remove(r)} className="tap rounded-[3px] border border-hair px-3.5 py-1.5 font-mono text-label uppercase text-dim transition-colors hover:border-error/60 hover:text-error">
+                            Delete
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
+          </section>
+        );
+      })}
     </div>
   );
 }
