@@ -1,7 +1,10 @@
+import Link from "next/link";
 import { Checklist } from "@/components/Checklist";
+import { checkoutHref } from "@/lib/site";
 
 type Plan = {
   name: string;
+  sku: string;
   price: number;
   /* published list price, struck through beside what is charged */
   anchorPrice: number;
@@ -64,20 +67,33 @@ export function PricingTier({
         </span>
       </p>
       <Checklist items={lines} className="mt-6 flex-1" />
-      <a
-        href={plan.orderUrl}
-        target="_blank"
-        rel="noopener"
-        className="group mt-7 inline-flex items-center justify-center gap-2 rounded-[3px] bg-brand-gradient px-6 py-3.5 text-body font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.25)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98]"
-      >
-        Start editing
-        <span
-          aria-hidden="true"
-          className="transition-transform duration-200 group-hover:translate-x-0.5"
-        >
-          &rarr;
-        </span>
-      </a>
+      <StartEditingCta sku={plan.sku} orderUrl={plan.orderUrl} />
     </div>
+  );
+}
+
+function StartEditingCta({ sku, orderUrl }: { sku: string; orderUrl: string }) {
+  const dest = checkoutHref(sku, orderUrl);
+  const cls =
+    "group mt-7 inline-flex items-center justify-center gap-2 rounded-[3px] bg-brand-gradient px-6 py-3.5 text-body font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.25)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98]";
+  const inner = (
+    <>
+      Start editing
+      <span
+        aria-hidden="true"
+        className="transition-transform duration-200 group-hover:translate-x-0.5"
+      >
+        &rarr;
+      </span>
+    </>
+  );
+  return dest.external ? (
+    <a href={dest.href} target="_blank" rel="noopener" className={cls}>
+      {inner}
+    </a>
+  ) : (
+    <Link href={dest.href} className={cls}>
+      {inner}
+    </Link>
   );
 }

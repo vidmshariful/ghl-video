@@ -15,6 +15,11 @@ export type ProductMetadata = {
   bump_eligible?: boolean;
   upsell_sku?: string;
   hl_tags?: string[];
+  // subscription (editing plans)
+  stripe_price_id?: string;
+  long_form?: number;
+  short_form?: number;
+  featured?: boolean;
 };
 
 export type Product = {

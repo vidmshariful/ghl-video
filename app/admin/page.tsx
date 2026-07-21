@@ -8,6 +8,7 @@ import { supabase } from "./client";
 import type { View } from "./nav";
 import { DashboardScreen } from "./DashboardScreen";
 import { OrdersScreen } from "./OrdersScreen";
+import { SubscriptionsScreen } from "./SubscriptionsScreen";
 import { ProductsScreen } from "./ProductsScreen";
 import { CustomersScreen } from "./CustomersScreen";
 
@@ -595,6 +596,7 @@ export default function AdminPage() {
   const items: { key: View; label: string }[] = [
     { key: "dashboard", label: "Dashboard" },
     { key: "orders", label: "Orders" },
+    { key: "subscriptions", label: "Subscriptions" },
     { key: "products", label: "Products & Pricing" },
     { key: "customers", label: "Customers" },
     { key: "code", label: "Header & Footer Code" },
@@ -651,6 +653,8 @@ export default function AdminPage() {
             <DashboardScreen onNavigate={setView} />
           ) : view === "orders" ? (
             <OrdersScreen />
+          ) : view === "subscriptions" ? (
+            <SubscriptionsScreen />
           ) : view === "products" ? (
             <ProductsScreen />
           ) : view === "customers" ? (

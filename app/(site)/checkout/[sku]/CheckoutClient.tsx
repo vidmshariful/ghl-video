@@ -51,12 +51,14 @@ type Details = { name: string; email: string; company: string; phone: string };
 export function CheckoutClient({
   sku,
   priceLabel,
+  type,
 }: {
   sku: string;
   priceLabel: string;
+  type: "one_time" | "subscription";
 }) {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [orderId, setOrderId] = useState<string | null>(null);
+  const [successPath, setSuccessPath] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [details, setDetails] = useState<Details>({
@@ -71,7 +73,11 @@ export function CheckoutClient({
     setLoading(true);
     setError(null);
     try {
-      const r = await fetch("/api/checkout/create-intent", {
+      const endpoint =
+        type === "subscription"
+          ? "/api/checkout/create-subscription"
+          : "/api/checkout/create-intent";
+      const r = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sku, ...details }),
@@ -79,7 +85,11 @@ export function CheckoutClient({
       const j = await r.json();
       if (!r.ok) throw new Error(j.error ?? "Could not start checkout.");
       setClientSecret(j.clientSecret);
-      setOrderId(j.orderId);
+      setSuccessPath(
+        type === "subscription"
+          ? `/checkout/thank-you?plan=${encodeURIComponent(j.planName ?? "")}`
+          : `/checkout/thank-you?order=${j.orderId}`,
+      );
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -87,10 +97,10 @@ export function CheckoutClient({
     }
   }
 
-  if (clientSecret && orderId) {
+  if (clientSecret && successPath) {
     return (
       <Elements stripe={stripePromise} options={{ clientSecret, appearance }}>
-        <PaymentStep orderId={orderId} email={details.email} priceLabel={priceLabel} />
+        <PaymentStep successUrl={successPath} email={details.email} priceLabel={priceLabel} />
       </Elements>
     );
   }
@@ -173,11 +183,11 @@ export function CheckoutClient({
 }
 
 function PaymentStep({
-  orderId,
+  successUrl,
   email,
   priceLabel,
 }: {
-  orderId: string;
+  successUrl: string;
   email: string;
   priceLabel: string;
 }) {
@@ -195,7 +205,7 @@ function PaymentStep({
     const { error: err } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        return_url: `${window.location.origin}/checkout/thank-you?order=${orderId}`,
+        return_url: `${window.location.origin}${successUrl}`,
       },
       redirect: "if_required",
     });
@@ -204,7 +214,7 @@ function PaymentStep({
       setError(err.message ?? "Payment could not be completed.");
       setLoading(false);
     } else {
-      router.push(`/checkout/thank-you?order=${orderId}`);
+      router.push(successUrl);
     }
   }
 

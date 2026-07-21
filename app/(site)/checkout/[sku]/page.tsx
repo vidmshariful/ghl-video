@@ -21,22 +21,32 @@ export default async function CheckoutPage({
   const product = await getActiveProductBySku(sku);
   if (!product) notFound();
 
-  const priceLabel = (product.price_cents / 100).toLocaleString("en-US", {
+  const isSub = product.type === "subscription";
+  const money = (product.price_cents / 100).toLocaleString("en-US", {
     style: "currency",
     currency: product.currency.toUpperCase(),
     minimumFractionDigits: 0,
   });
+  const priceDisplay = isSub ? `${money}/mo` : money;
 
   const meta = product.metadata ?? {};
-  const included = [
-    meta.format ? `${meta.format}, 90 to 120 seconds` : "One finished video",
-    "AI-first, white-label script written for HighLevel SaaS",
-    "Broadcast-quality animation, voiceover, and sound",
-    meta.delivery_days
-      ? `Delivered in about ${meta.delivery_days} business days`
-      : "Fast delivery",
-    "Yours to use across your whole funnel",
-  ];
+  const included = isSub
+    ? [
+        `${meta.long_form} long-form edits per month`,
+        `${meta.short_form} short-form edits per month`,
+        "Unlimited revisions",
+        "No contracts, cancel anytime",
+        "Edited by a HighLevel-fluent team",
+      ]
+    : [
+        meta.format ? `${meta.format}, 90 to 120 seconds` : "One finished video",
+        "AI-first, white-label script written for HighLevel SaaS",
+        "Broadcast-quality animation, voiceover, and sound",
+        meta.delivery_days
+          ? `Delivered in about ${meta.delivery_days} business days`
+          : "Fast delivery",
+        "Yours to use across your whole funnel",
+      ];
 
   return (
     <section className="relative section-pad">
@@ -58,7 +68,7 @@ export default async function CheckoutPage({
               <span className="max-w-[22ch] font-display text-h4 text-ink">
                 {product.name}
               </span>
-              <span className="font-display text-price text-gold">{priceLabel}</span>
+              <span className="font-display text-price text-gold">{priceDisplay}</span>
             </div>
             {product.description ? (
               <p className="mt-5 text-body text-muted">{product.description}</p>
@@ -75,18 +85,18 @@ export default async function CheckoutPage({
             </ul>
             <div className="mt-7 flex items-baseline justify-between border-t border-hair pt-5">
               <span className="font-mono text-label uppercase text-muted">
-                Total due today
+                {isSub ? "Due today" : "Total due today"}
               </span>
-              <span className="font-display text-price text-ink">{priceLabel}</span>
+              <span className="font-display text-price text-ink">{priceDisplay}</span>
             </div>
             <p className="mt-3 text-body-sm text-dim">
-              One-time payment. No subscription.
+              {isSub ? "Billed monthly. Cancel anytime." : "One-time payment. No subscription."}
             </p>
           </aside>
 
           {/* details + payment */}
           <div className="rounded-card border border-hair bg-surface p-7 md:p-9">
-            <CheckoutClient sku={product.sku} priceLabel={priceLabel} />
+            <CheckoutClient sku={product.sku} priceLabel={priceDisplay} type={product.type} />
           </div>
         </div>
       </div>

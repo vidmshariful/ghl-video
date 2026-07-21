@@ -333,6 +333,93 @@ function OrdersList({ onOpen }: { onOpen: (id: string) => void }) {
   );
 }
 
+/* ---- subscriptions ---- */
+type Sub = {
+  id: string;
+  planName: string | null;
+  status: string;
+  amountCents: number;
+  currency: string;
+  interval: string;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+};
+
+function SubscriptionsView() {
+  const [subs, setSubs] = useState<Sub[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    authedFetch("/api/account/subscriptions").then((j) => {
+      setSubs(j.subscriptions ?? []);
+      setLoaded(true);
+    });
+  }, []);
+
+  async function manage() {
+    setBusy(true);
+    setErr("");
+    const { data } = await supabase.auth.getSession();
+    const r = await fetch("/api/account/billing-portal", {
+      method: "POST",
+      headers: data.session ? { Authorization: `Bearer ${data.session.access_token}` } : {},
+    });
+    const j = await r.json();
+    if (j.url) window.location.href = j.url;
+    else {
+      setErr(j.error ?? "Could not open billing.");
+      setBusy(false);
+    }
+  }
+
+  if (!loaded) return <p className="text-body text-muted">Loading...</p>;
+  if (subs.length === 0)
+    return (
+      <ComingSoon
+        title="No active plan."
+        line="When you start a monthly editing plan it will show up here to manage."
+      />
+    );
+
+  return (
+    <div className="grid gap-4">
+      {subs.map((s) => (
+        <div key={s.id} className="rounded-card border border-hair bg-surface p-6 md:p-8">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="font-display text-h4 text-ink">{s.planName}</p>
+              <p className="mt-1 font-mono text-label uppercase text-dim">
+                {money(s.amountCents, s.currency)}/mo
+                {s.currentPeriodEnd
+                  ? ` / ${s.cancelAtPeriodEnd ? "ends" : "renews"} ${day(s.currentPeriodEnd)}`
+                  : ""}
+              </p>
+            </div>
+            <span
+              className={`rounded-full border px-2.5 py-0.5 font-mono text-label uppercase ${
+                s.status === "active" ? "border-green/40 text-green" : "border-gold/40 text-gold"
+              }`}
+            >
+              {s.status}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={manage}
+            disabled={busy}
+            className="tap mt-5 rounded-[3px] border border-hair px-5 py-2.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-50"
+          >
+            {busy ? "Opening..." : "Manage subscription"}
+          </button>
+          {err && <p className="mt-3 text-body-sm text-error">{err}</p>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /* ---- signed-in portal ---- */
 function Portal({ session }: { session: Session }) {
   const [section, setSection] = useState<"orders" | "invoices" | "subscriptions">("orders");
@@ -392,10 +479,7 @@ function Portal({ session }: { session: Session }) {
             line="Downloadable invoices for every order will live here shortly. Your invoice number is on each order in the meantime."
           />
         ) : (
-          <ComingSoon
-            title="Subscriptions are on the way."
-            line="When you are on a monthly editing plan, you will manage it here: plan, next billing date, and changes."
-          />
+          <SubscriptionsView />
         )}
       </div>
     </Shell>

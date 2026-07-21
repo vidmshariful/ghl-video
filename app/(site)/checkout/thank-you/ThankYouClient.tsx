@@ -14,11 +14,14 @@ import { Button } from "@/components/Button";
 type Status = "loading" | "paid" | "pending" | "failed" | "error";
 
 export function ThankYouClient() {
-  const orderId = useSearchParams().get("order");
+  const params = useSearchParams();
+  const orderId = params.get("order");
+  const plan = params.get("plan");
   const [status, setStatus] = useState<Status>("loading");
   const [productName, setProductName] = useState<string | null>(null);
 
   useEffect(() => {
+    if (plan) return; // subscriptions don't poll an order
     if (!orderId) {
       setStatus("error");
       return;
@@ -51,7 +54,34 @@ export function ThankYouClient() {
       active = false;
       clearTimeout(timer);
     };
-  }, [orderId]);
+  }, [orderId, plan]);
+
+  if (plan) {
+    return (
+      <section className="relative section-pad">
+        <div className="shell">
+          <div className="mx-auto max-w-[42rem] text-center">
+            <p className="font-mono text-label uppercase text-gold">
+              [ Subscription active ]
+            </p>
+            <h1 className="mt-4 font-display text-h1 leading-[1.04] text-ink">
+              You are on {plan}.
+            </h1>
+            <p className="mt-5 text-lede text-muted">
+              Your editing plan is live. A receipt is on its way. Sign in to your
+              account to manage the plan and send your first footage.
+            </p>
+            <div className="mt-9 flex flex-wrap justify-center gap-4">
+              <Button href="/account/">Go to your account</Button>
+              <Button href="/contact/" variant="ghost">
+                Book a call
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="relative section-pad">

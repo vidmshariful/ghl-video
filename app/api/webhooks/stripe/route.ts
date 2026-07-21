@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { stripe } from "@/lib/checkout/stripe";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
-import { syncPaidOrderToHighLevel } from "@/lib/checkout/fulfill";
+import { syncPaidOrderToHighLevel, syncSubscriptionToHighLevel } from "@/lib/checkout/fulfill";
 
 export const runtime = "nodejs";
 
@@ -56,6 +56,13 @@ export async function POST(req: Request) {
       await handleSucceeded(db, event.data.object as Stripe.PaymentIntent);
     } else if (event.type === "payment_intent.payment_failed") {
       await handleFailed(db, event.data.object as Stripe.PaymentIntent);
+    } else if (
+      event.type === "customer.subscription.created" ||
+      event.type === "customer.subscription.updated"
+    ) {
+      await handleSubscription(db, event.data.object as Stripe.Subscription);
+    } else if (event.type === "customer.subscription.deleted") {
+      await handleSubscriptionDeleted(db, event.data.object as Stripe.Subscription);
     }
     // Recorded only after full success, so a thrown fulfillment leaves the
     // event unrecorded and Stripe retries it.
@@ -129,4 +136,46 @@ async function handleFailed(
       },
     });
   }
+}
+
+async function handleSubscription(
+  db: ReturnType<typeof supabaseAdmin>,
+  sub: Stripe.Subscription,
+) {
+  const { data: row } = await db
+    .from("subscriptions")
+    .select("*")
+    .eq("stripe_subscription_id", sub.id)
+    .maybeSingle();
+  if (!row) return; // created outside our flow
+
+  // current_period_end lives on the subscription in older API versions and
+  // on each subscription item in the current one.
+  const item = sub.items?.data?.[0] as unknown as { current_period_end?: number } | undefined;
+  const periodEnd =
+    (sub as unknown as { current_period_end?: number }).current_period_end ??
+    item?.current_period_end;
+  await db
+    .from("subscriptions")
+    .update({
+      status: sub.status,
+      current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
+      cancel_at_period_end: sub.cancel_at_period_end,
+    })
+    .eq("id", row.id);
+
+  // First activation: tag the customer in HighLevel once (flagged, not thrown).
+  if (sub.status === "active" && !row.metadata?.hl_synced) {
+    await syncSubscriptionToHighLevel(db, row);
+  }
+}
+
+async function handleSubscriptionDeleted(
+  db: ReturnType<typeof supabaseAdmin>,
+  sub: Stripe.Subscription,
+) {
+  await db
+    .from("subscriptions")
+    .update({ status: "canceled", cancel_at_period_end: false })
+    .eq("stripe_subscription_id", sub.id);
 }

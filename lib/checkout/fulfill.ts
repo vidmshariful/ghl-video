@@ -77,3 +77,51 @@ export async function syncPaidOrderToHighLevel(
     return { ok: false, error: (err as Error).message };
   }
 }
+
+type SubRow = {
+  id: string;
+  customer_id: string;
+  customer_email: string;
+  plan_name: string | null;
+  amount_cents: number | null;
+  metadata: Record<string, unknown> | null;
+};
+
+/** Sync an activated subscription to HighLevel (contact, editing tags,
+ *  opportunity) once. Flags on failure rather than throwing, since
+ *  subscription events fire often and the payment already succeeded. */
+export async function syncSubscriptionToHighLevel(
+  db: SupabaseClient,
+  sub: SubRow,
+): Promise<SyncResult> {
+  const meta = sub.metadata ?? {};
+  try {
+    const product = await getActiveProductBySku((meta.sku as string) ?? "");
+    const tags = (product?.metadata?.hl_tags as string[]) ?? ["ghlv-editing-subscriber"];
+    const { data: customer } = await db
+      .from("customers")
+      .select("name, phone, company")
+      .eq("id", sub.customer_id)
+      .maybeSingle();
+    const { contactId, opportunityId } = await syncOrderToHighLevel({
+      email: sub.customer_email,
+      name: customer?.name ?? undefined,
+      phone: customer?.phone ?? undefined,
+      company: customer?.company ?? undefined,
+      tags,
+      opportunityName: `${sub.plan_name ?? "Editing plan"} subscription - ${sub.customer_email}`,
+      amountDollars: Math.round(sub.amount_cents ?? 0) / 100,
+    });
+    await db
+      .from("subscriptions")
+      .update({ metadata: { ...meta, hl_synced: true, hl_contact_id: contactId, hl_opportunity_id: opportunityId } })
+      .eq("id", sub.id);
+    return { ok: true, contactId, opportunityId };
+  } catch (err) {
+    await db
+      .from("subscriptions")
+      .update({ metadata: { ...meta, hl_sync_failed: true } })
+      .eq("id", sub.id);
+    return { ok: false, error: (err as Error).message };
+  }
+}

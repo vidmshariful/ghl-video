@@ -372,6 +372,9 @@ export const premadeVideos: PremadeVideo[] = [...packVideos, ...standaloneNew];
  * onto native checkout, add its slug here once its products row exists. */
 export const nativeCheckoutSkus = new Set<string>([
   "all-in-one-ai-first-positioning",
+  "editing-starter",
+  "editing-growth",
+  "editing-scale",
 ]);
 
 /** Where a video's buy button points: internal /checkout for native SKUs,
@@ -411,6 +414,7 @@ export const customFormats = [
 export const editingPlans = [
   {
     name: "Starter",
+    sku: "editing-starter",
     price: 595,
     anchorPrice: 795,
     longForm: 2,
@@ -421,6 +425,7 @@ export const editingPlans = [
   },
   {
     name: "Growth",
+    sku: "editing-growth",
     price: 995,
     anchorPrice: 1325,
     longForm: 4,
@@ -430,6 +435,7 @@ export const editingPlans = [
   },
   {
     name: "Scale",
+    sku: "editing-scale",
     price: 1795,
     anchorPrice: 2395,
     longForm: 8,
