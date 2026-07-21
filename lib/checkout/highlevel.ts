@@ -37,7 +37,17 @@ function splitName(name?: string): { firstName?: string; lastName?: string } {
 }
 
 async function hlFetch(path: string, init: RequestInit) {
-  const r = await fetch(`${BASE}${path}`, { ...init, headers: headers() });
+  // Hard timeout: a hung HighLevel call must fail fast and be caught, never
+  // hang long enough for the serverless platform to kill the invocation
+  // after the order was already marked paid.
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 10000);
+  let r: Response;
+  try {
+    r = await fetch(`${BASE}${path}`, { ...init, headers: headers(), signal: ctrl.signal });
+  } finally {
+    clearTimeout(timer);
+  }
   const text = await r.text();
   let json: unknown = null;
   try {

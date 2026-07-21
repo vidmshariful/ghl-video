@@ -13,29 +13,35 @@ export const runtime = "nodejs";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(req: Request) {
-  let payload: {
-    sku?: string;
-    email?: string;
-    name?: string;
-    company?: string;
-    phone?: string;
-  };
+  let payload: Record<string, unknown>;
   try {
     payload = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const sku = payload.sku?.trim();
-  const email = payload.email?.trim().toLowerCase();
-  const name = payload.name?.trim();
-  const company = payload.company?.trim() || null;
-  const phone = payload.phone?.trim() || null;
+  // Coerce defensively: a non-string field becomes "" rather than throwing.
+  const asStr = (v: unknown) => (typeof v === "string" ? v.trim() : "");
+  const sku = asStr(payload.sku);
+  const email = asStr(payload.email).toLowerCase();
+  const name = asStr(payload.name);
+  const company = asStr(payload.company) || null;
+  const phone = asStr(payload.phone) || null;
 
   if (!sku) return NextResponse.json({ error: "Missing product." }, { status: 400 });
   if (!name) return NextResponse.json({ error: "Name is required." }, { status: 400 });
   if (!email || !EMAIL_RE.test(email)) {
     return NextResponse.json({ error: "A valid email is required." }, { status: 400 });
+  }
+  // Length caps: reject before any DB or Stripe object is created.
+  if (
+    sku.length > 64 ||
+    name.length > 120 ||
+    email.length > 254 ||
+    (company?.length ?? 0) > 120 ||
+    (phone?.length ?? 0) > 32
+  ) {
+    return NextResponse.json({ error: "One of the fields is too long." }, { status: 400 });
   }
 
   const product = await getActiveProductBySku(sku);
@@ -45,11 +51,16 @@ export async function POST(req: Request) {
 
   const db = supabaseAdmin();
 
-  // Upsert the customer by email; keep the latest details.
+  // Insert the customer if new, but do NOT overwrite an existing row's
+  // profile: the email is not proven to belong to the caller, so an
+  // unverified request must not clobber a real customer's stored details.
+  await db
+    .from("customers")
+    .upsert({ email, name, company, phone }, { onConflict: "email", ignoreDuplicates: true });
   const { data: customer, error: custErr } = await db
     .from("customers")
-    .upsert({ email, name, company, phone }, { onConflict: "email" })
-    .select()
+    .select("*")
+    .eq("email", email)
     .single();
   if (custErr || !customer) {
     return NextResponse.json({ error: "Could not start checkout." }, { status: 500 });
