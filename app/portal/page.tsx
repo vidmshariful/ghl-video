@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import { AccountClient } from "./AccountClient";
+import { PortalClient } from "./PortalClient";
 
 export const metadata: Metadata = {
-  title: "Your account",
+  title: "Portal",
   description: "Track your GHL Video orders, delivery, and invoices.",
   robots: { index: false, follow: false },
 };
 
-export default function AccountPage() {
-  return <AccountClient />;
+export default function PortalPage() {
+  return <PortalClient />;
 }

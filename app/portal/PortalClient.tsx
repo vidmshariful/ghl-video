@@ -6,9 +6,9 @@ import type { Session } from "@supabase/supabase-js";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 
 /*
- * The customer portal at /account. Magic-link login (passwordless), then the
+ * The customer portal at /portal. Magic-link login (passwordless), then the
  * customer's own orders with a delivery + status tracker, their producer, and
- * their invoice number. All data comes from /api/account/* server routes,
+ * their invoice number. All data comes from /api/portal/* server routes,
  * which scope every read to the signed-in email. Invoices and Subscriptions
  * are placeholders for now.
  */
@@ -70,7 +70,7 @@ function LoginView() {
     setErr("");
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim().toLowerCase(),
-      options: { emailRedirectTo: `${window.location.origin}/account`, shouldCreateUser: true },
+      options: { emailRedirectTo: `${window.location.origin}/portal`, shouldCreateUser: true },
     });
     setBusy(false);
     if (error) setErr(error.message);
@@ -80,7 +80,7 @@ function LoginView() {
   return (
     <Shell>
       <div className="mx-auto max-w-md">
-        <p className="font-mono text-label uppercase text-gold">[ Your account ]</p>
+        <p className="font-mono text-label uppercase text-gold">[ Your portal ]</p>
         <h1 className="mt-4 font-display text-h2 text-ink">Sign in to your portal.</h1>
         {sent ? (
           <div className="mt-8 rounded-card border border-gold/40 bg-gold/[0.06] px-6 py-8">
@@ -173,7 +173,7 @@ function OrderDetailView({ id, onBack }: { id: string; onBack: () => void }) {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    authedFetch(`/api/account/orders/${id}`).then((j) => {
+    authedFetch(`/api/portal/orders/${id}`).then((j) => {
       if (j.order) {
         setOrder(j.order);
         setUpdates(j.updates ?? []);
@@ -285,7 +285,7 @@ function OrdersList({ onOpen }: { onOpen: (id: string) => void }) {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    authedFetch("/api/account/orders").then((j) => {
+    authedFetch("/api/portal/orders").then((j) => {
       setOrders(j.orders ?? []);
       setLoaded(true);
     });
@@ -353,7 +353,7 @@ function SubscriptionsView() {
   const [err, setErr] = useState("");
 
   useEffect(() => {
-    authedFetch("/api/account/subscriptions").then((j) => {
+    authedFetch("/api/portal/subscriptions").then((j) => {
       setSubs(j.subscriptions ?? []);
       setLoaded(true);
     });
@@ -363,7 +363,7 @@ function SubscriptionsView() {
     setBusy(true);
     setErr("");
     const { data } = await supabase.auth.getSession();
-    const r = await fetch("/api/account/billing-portal", {
+    const r = await fetch("/api/portal/billing-portal", {
       method: "POST",
       headers: data.session ? { Authorization: `Bearer ${data.session.access_token}` } : {},
     });
@@ -435,7 +435,7 @@ function Portal({ session }: { session: Session }) {
   return (
     <Shell>
       <div>
-        <p className="font-mono text-label uppercase text-gold">[ Your account ]</p>
+        <p className="font-mono text-label uppercase text-gold">[ Your portal ]</p>
         <h1 className="mt-3 font-display text-h2 text-ink">Welcome back.</h1>
         <p className="mt-1 font-mono text-label uppercase text-dim">{session.user.email}</p>
       </div>
@@ -481,9 +481,9 @@ function Portal({ session }: { session: Session }) {
 function PortalTopBar({ session }: { session: Session | null }) {
   return (
     <header className="flex items-center justify-between border-b border-hair bg-surface px-6 py-4">
-      <Link href="/account" className="font-display text-body font-bold text-ink">
+      <Link href="/portal" className="font-display text-body font-bold text-ink">
         GHL <span className="text-gradient">VIDEO</span>
-        <span className="ml-2 font-mono text-label uppercase text-muted">/ Account</span>
+        <span className="ml-2 font-mono text-label uppercase text-muted">/ Portal</span>
       </Link>
       {session ? (
         <button
@@ -498,7 +498,7 @@ function PortalTopBar({ session }: { session: Session | null }) {
   );
 }
 
-export function AccountClient() {
+export function PortalClient() {
   const [session, setSession] = useState<Session | null>(null);
   const [ready, setReady] = useState(false);
 

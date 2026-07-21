@@ -72,7 +72,7 @@ export function ThankYouClient() {
               account to manage the plan and send your first footage.
             </p>
             <div className="mt-9 flex flex-wrap justify-center gap-4">
-              <Button href="/account/">Go to your account</Button>
+              <Button href="/portal/">Go to your portal</Button>
               <Button href="/contact/" variant="ghost">
                 Book a call
               </Button>

@@ -581,7 +581,7 @@ export default function AdminPage() {
         <p className="font-display text-h3 text-ink">Not authorized</p>
         <p className="max-w-sm text-body text-muted">
           {session.user.email} is not an admin. If you are a customer, your area
-          is at <span className="text-gold">/account</span>.
+          is at <span className="text-gold">/portal</span>.
         </p>
         <button
           type="button"
