@@ -19,7 +19,7 @@ import { site } from "@/lib/site";
 
 const supabase = createClient(SB_URL, SB_ANON);
 
-type View = "code" | "pages";
+type View = "code" | "pages" | "videos";
 
 /* ---------------------------------------------------------------- */
 /* Login                                                             */
@@ -246,6 +246,262 @@ function PagesScreen() {
   );
 }
 
+
+/* ---------------------------------------------------------------- */
+/* Screen 3: Video List (staging store: does NOT touch the website)  */
+/* ---------------------------------------------------------------- */
+type VideoRow = {
+  id: number;
+  title: string;
+  library: "new" | "classic";
+  video_type: string;
+  category: string;
+  video_url: string;
+  checkout_url: string;
+  price: number | null;
+  on_site: boolean;
+  notes: string;
+};
+
+const VIDEO_TYPES = [
+  "Explainer",
+  "Feature Explainer",
+  "Demo",
+  "Ads / Promo",
+  "Animated GIF",
+  "Short Explainer",
+  "Marketing",
+  "Feature Animation",
+];
+
+const EMPTY_VIDEO: Omit<VideoRow, "id"> = {
+  title: "",
+  library: "new",
+  video_type: "Explainer",
+  category: "",
+  video_url: "",
+  checkout_url: "",
+  price: null,
+  on_site: false,
+  notes: "",
+};
+
+function VideoForm({
+  initial,
+  onDone,
+  onCancel,
+}: {
+  initial: Partial<VideoRow>;
+  onDone: () => void;
+  onCancel: () => void;
+}) {
+  const [v, setV] = useState({ ...EMPTY_VIDEO, ...initial });
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const set = (k: string, val: unknown) => setV((x) => ({ ...x, [k]: val }));
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setErr("");
+    const payload = {
+      title: v.title,
+      library: v.library,
+      video_type: v.video_type,
+      category: v.category,
+      video_url: v.video_url,
+      checkout_url: v.checkout_url,
+      price: v.price === null || (v.price as unknown) === "" ? null : Number(v.price),
+      notes: v.notes,
+      updated_at: new Date().toISOString(),
+    };
+    const q = supabase.from("videos");
+    const { error } = "id" in initial && initial.id
+      ? await q.update(payload).eq("id", initial.id)
+      : await q.insert({ ...payload, on_site: false });
+    if (error) { setErr(error.message); setBusy(false); return; }
+    onDone();
+  }
+
+  const field =
+    "mt-1.5 w-full rounded-[3px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none";
+  const lab = "font-mono text-label uppercase text-muted";
+
+  return (
+    <form onSubmit={save} className="rounded-card border border-gold/40 bg-surface p-6">
+      <p className="font-display text-h4 font-semibold text-ink">
+        {"id" in initial && initial.id ? "Edit video" : "Add a video"}
+      </p>
+      <div className="mt-5 grid gap-4 sm:grid-cols-2">
+        <label className="sm:col-span-2">
+          <span className={lab}>Title</span>
+          <input required value={v.title} onChange={(e) => set("title", e.target.value)} className={field} />
+        </label>
+        <label>
+          <span className={lab}>Library</span>
+          <select value={v.library} onChange={(e) => set("library", e.target.value)} className={field}>
+            <option value="new">New Library</option>
+            <option value="classic">Classic Library</option>
+          </select>
+        </label>
+        <label>
+          <span className={lab}>Video type</span>
+          <select value={v.video_type} onChange={(e) => set("video_type", e.target.value)} className={field}>
+            {VIDEO_TYPES.map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span className={lab}>Category</span>
+          <input list="video-categories" value={v.category} onChange={(e) => set("category", e.target.value)} className={field} placeholder="All-in-one, AI Receptionist..." />
+          <datalist id="video-categories">
+            {["All-in-one", "AI Receptionist", "Unified Inbox", "Reputation Management", "Full platform overview"].map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
+        </label>
+        <label>
+          <span className={lab}>Price (USD)</span>
+          <input type="number" min="0" value={v.price ?? ""} onChange={(e) => set("price", e.target.value === "" ? null : Number(e.target.value))} className={field} />
+        </label>
+        <label className="sm:col-span-2">
+          <span className={lab}>Video link (preview / Wistia / mp4)</span>
+          <input value={v.video_url} onChange={(e) => set("video_url", e.target.value)} className={field} placeholder="https://..." />
+        </label>
+        <label className="sm:col-span-2">
+          <span className={lab}>Checkout link</span>
+          <input value={v.checkout_url} onChange={(e) => set("checkout_url", e.target.value)} className={field} placeholder="https://order.ghlvideo.com/..." />
+        </label>
+        <label className="sm:col-span-2">
+          <span className={lab}>Notes</span>
+          <input value={v.notes} onChange={(e) => set("notes", e.target.value)} className={field} />
+        </label>
+      </div>
+      {err && <p className="mt-4 text-body-sm text-error">{err}</p>}
+      <div className="mt-5 flex gap-3">
+        <button type="submit" disabled={busy} className="tap rounded-[3px] bg-brand-gradient px-6 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60">
+          {busy ? "Saving" : "Save video"}
+        </button>
+        <button type="button" onClick={onCancel} className="tap rounded-[3px] border border-hair px-6 py-2.5 text-body text-muted transition-colors hover:text-ink">
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function VideosScreen() {
+  const [rows, setRows] = useState<VideoRow[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [editing, setEditing] = useState<VideoRow | "new" | null>(null);
+  const [err, setErr] = useState("");
+
+  async function load() {
+    const { data, error } = await supabase
+      .from("videos")
+      .select("*")
+      .order("library", { ascending: true })
+      .order("video_type", { ascending: true })
+      .order("title", { ascending: true });
+    if (error) setErr(error.message);
+    else setRows(data as VideoRow[]);
+    setLoaded(true);
+  }
+  useEffect(() => { load(); }, []);
+
+  async function remove(row: VideoRow) {
+    if (!window.confirm(`Delete "${row.title}" from the list?`)) return;
+    const { error } = await supabase.from("videos").delete().eq("id", row.id);
+    if (error) setErr(error.message);
+    else load();
+  }
+
+  if (!loaded) return <p className="text-body text-muted">Loading videos...</p>;
+
+  return (
+    <div className="max-w-5xl">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="font-display text-h3 text-ink">Video List</h1>
+          <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
+            The master list: every video with its preview link and checkout
+            link. {rows.length} videos.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setEditing("new")}
+          className="tap rounded-[3px] bg-brand-gradient px-6 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110"
+        >
+          Add video
+        </button>
+      </div>
+
+      <div className="mt-4 rounded-[8px] border border-gold/30 bg-gold/[0.06] px-4 py-3 text-body-sm text-muted">
+        Changes here do <b className="text-gold">not</b> update the website.
+        This is the staging list: add or edit videos, then tell Claude Code
+        to update the website to match this list.
+      </div>
+
+      {err && <p className="mt-4 text-body-sm text-error">{err}</p>}
+
+      {editing && (
+        <div className="mt-6">
+          <VideoForm
+            initial={editing === "new" ? {} : editing}
+            onDone={() => { setEditing(null); load(); }}
+            onCancel={() => setEditing(null)}
+          />
+        </div>
+      )}
+
+      <ul className="mt-6 overflow-hidden rounded-card border border-hair">
+        {rows.map((r) => (
+          <li key={r.id} className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-hair bg-surface px-5 py-3.5 first:border-t-0">
+            <div className="min-w-0">
+              <p className="text-body font-semibold text-ink">
+                {r.title}
+                {r.price != null && (
+                  <span className="ml-3 font-mono text-body-sm text-gold">${r.price}</span>
+                )}
+                {!r.on_site && (
+                  <span className="ml-3 inline-flex rounded-full border border-gold/40 bg-canvas px-2.5 py-0.5 font-mono text-label uppercase text-gold">
+                    not on site
+                  </span>
+                )}
+              </p>
+              <p className="mt-0.5 font-mono text-label uppercase text-dim">
+                {r.library === "new" ? "New Library" : "Classic"} / {r.video_type}
+                {r.category ? ` / ${r.category}` : ""}
+                {r.notes ? ` / ${r.notes}` : ""}
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              {r.video_url && (
+                <a href={r.video_url} target="_blank" rel="noopener" className="tap rounded-[3px] border border-hair px-3.5 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold">
+                  Video
+                </a>
+              )}
+              {r.checkout_url && (
+                <a href={r.checkout_url} target="_blank" rel="noopener" className="tap rounded-[3px] border border-hair px-3.5 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold">
+                  Checkout
+                </a>
+              )}
+              <button type="button" onClick={() => setEditing(r)} className="tap rounded-[3px] border border-hair px-3.5 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold">
+                Edit
+              </button>
+              <button type="button" onClick={() => remove(r)} className="tap rounded-[3px] border border-hair px-3.5 py-1.5 font-mono text-label uppercase text-dim transition-colors hover:border-error/60 hover:text-error">
+                Delete
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 /* ---------------------------------------------------------------- */
 /* Shell                                                             */
 /* ---------------------------------------------------------------- */
@@ -270,6 +526,7 @@ export default function AdminPage() {
   const items: { key: View; label: string }[] = [
     { key: "code", label: "Header & Footer Code" },
     { key: "pages", label: "Pages" },
+    { key: "videos", label: "Video List" },
   ];
 
   return (
@@ -317,7 +574,7 @@ export default function AdminPage() {
 
         {/* content */}
         <section className="flex-1 p-6 md:p-10">
-          {view === "code" ? <CodeScreen /> : <PagesScreen />}
+          {view === "code" ? <CodeScreen /> : view === "pages" ? <PagesScreen /> : <VideosScreen />}
         </section>
       </div>
     </div>
