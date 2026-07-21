@@ -1,13 +1,11 @@
-import { createClient } from "@supabase/supabase-js";
-import { SB_ANON, SB_URL } from "@/lib/chrome";
+import { supabaseBrowser } from "@/lib/supabase-browser";
 
 /*
- * One shared Supabase client for the whole admin. The anon key is public;
- * after login supabase-js sends the admin's session JWT, so RLS sees the
- * authenticated role. Screens import this instance so they share the same
- * session, and admin API routes receive that session's access token.
+ * The admin screens use the shared browser client (one auth session per
+ * tab). After login supabase-js sends the admin's session JWT, so RLS
+ * (now gated on the admins allowlist) admits only real admins.
  */
-export const supabase = createClient(SB_URL, SB_ANON);
+export const supabase = supabaseBrowser;
 
 export const money = (cents: number, cur = "usd") =>
   (cents / 100).toLocaleString("en-US", {

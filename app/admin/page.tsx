@@ -549,6 +549,7 @@ function VideosScreen() {
 export default function AdminPage() {
   const [session, setSession] = useState<Session | null>(null);
   const [ready, setReady] = useState(false);
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [view, setView] = useState<View>("dashboard");
   const [loginError, setLoginError] = useState("");
 
@@ -561,8 +562,35 @@ export default function AdminPage() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  // Being logged in is not enough: this area is for the admins allowlist.
+  useEffect(() => {
+    if (!session) {
+      setIsAdmin(null);
+      return;
+    }
+    supabase.rpc("is_admin").then(({ data }) => setIsAdmin(data === true));
+  }, [session]);
+
   if (!ready) return null;
   if (!session) return <Login onError={setLoginError} error={loginError} />;
+  if (isAdmin === null) return null;
+  if (!isAdmin)
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-6 text-center">
+        <p className="font-display text-h3 text-ink">Not authorized</p>
+        <p className="max-w-sm text-body text-muted">
+          {session.user.email} is not an admin. If you are a customer, your area
+          is at <span className="text-gold">/account</span>.
+        </p>
+        <button
+          type="button"
+          onClick={() => supabase.auth.signOut()}
+          className="tap rounded-[3px] border border-hair px-5 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
+        >
+          Sign out
+        </button>
+      </div>
+    );
 
   const items: { key: View; label: string }[] = [
     { key: "dashboard", label: "Dashboard" },

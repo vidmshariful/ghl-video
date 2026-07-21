@@ -15,6 +15,11 @@ export type OrderRow = {
   metadata: Record<string, unknown> | null;
   created_at: string;
   paid_at: string | null;
+  fulfillment_stage: string;
+  assigned_manager: string;
+  delivery_url: string | null;
+  intake_completed: boolean;
+  invoice_number: string | null;
   product: { name: string } | null;
   customer: { name: string | null; company: string | null; phone: string | null } | null;
 };
@@ -106,6 +111,122 @@ function OrderActions({ order, onChanged }: { order: OrderRow; onChanged: () => 
   );
 }
 
+const STAGES = ["paid", "intake", "production", "review", "delivered"];
+const fField =
+  "mt-1.5 w-full rounded-[3px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none";
+const fLab = "font-mono text-label uppercase text-dim";
+
+function FulfillmentEditor({ order, onChanged }: { order: OrderRow; onChanged: () => void }) {
+  const [stage, setStage] = useState(order.fulfillment_stage);
+  const [manager, setManager] = useState(order.assigned_manager);
+  const [deliveryUrl, setDeliveryUrl] = useState(order.delivery_url ?? "");
+  const [intake, setIntake] = useState(order.intake_completed);
+  const [update, setUpdate] = useState("");
+  const [busy, setBusy] = useState<null | "save" | "post">(null);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  async function send(kind: "save" | "post") {
+    setBusy(kind);
+    setMsg(null);
+    try {
+      const r = await fetch(`/api/admin/orders/${order.id}/fulfillment`, {
+        method: "POST",
+        headers: { ...(await authHeader()), "Content-Type": "application/json" },
+        body: JSON.stringify({
+          stage,
+          manager,
+          deliveryUrl,
+          intakeCompleted: intake,
+          update: kind === "post" ? update : undefined,
+        }),
+      });
+      const j = await r.json();
+      if (j.ok) {
+        setMsg({ ok: true, text: kind === "post" ? "Update posted." : "Saved." });
+        if (kind === "post") setUpdate("");
+        onChanged();
+      } else setMsg({ ok: false, text: j.error ?? "Failed." });
+    } catch (e) {
+      setMsg({ ok: false, text: (e as Error).message });
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const btn =
+    "tap rounded-[3px] px-5 py-2 text-body-sm font-semibold transition-all disabled:opacity-50";
+
+  return (
+    <div className="mt-6 rounded-[8px] border border-gold/30 bg-gold/[0.04] p-5">
+      <p className="font-mono text-label uppercase text-gold">Fulfillment (what the customer sees)</p>
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <label>
+          <span className={fLab}>Stage</span>
+          <select value={stage} onChange={(e) => setStage(e.target.value)} className={fField}>
+            {STAGES.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span className={fLab}>Assigned producer</span>
+          <input value={manager} onChange={(e) => setManager(e.target.value)} className={fField} />
+        </label>
+        <label className="sm:col-span-2">
+          <span className={fLab}>PlayBook delivery link</span>
+          <input
+            value={deliveryUrl}
+            onChange={(e) => setDeliveryUrl(e.target.value)}
+            className={fField}
+            placeholder="https://playbook..."
+          />
+        </label>
+        <label className="flex items-center gap-3 sm:col-span-2">
+          <input
+            type="checkbox"
+            checked={intake}
+            onChange={(e) => setIntake(e.target.checked)}
+            className="h-4 w-4 accent-[#00CC00]"
+          />
+          <span className="text-body text-ink">Intake completed</span>
+        </label>
+      </div>
+      <div className="mt-4">
+        <button
+          type="button"
+          onClick={() => send("save")}
+          disabled={busy !== null}
+          className={`${btn} bg-brand-gradient text-canvas hover:brightness-110`}
+        >
+          {busy === "save" ? "Saving..." : "Save fulfillment"}
+        </button>
+      </div>
+
+      <div className="mt-5 border-t border-hair pt-4">
+        <span className={fLab}>Post an update the customer sees</span>
+        <textarea
+          value={update}
+          onChange={(e) => setUpdate(e.target.value)}
+          rows={2}
+          className={`${fField} resize-y`}
+          placeholder="First cut is in review."
+        />
+        <button
+          type="button"
+          onClick={() => send("post")}
+          disabled={busy !== null || !update.trim()}
+          className={`${btn} mt-3 border border-hair text-muted hover:border-gold/60 hover:text-gold`}
+        >
+          {busy === "post" ? "Posting..." : "Post update"}
+        </button>
+      </div>
+      {msg && <p className={`mt-3 text-body-sm ${msg.ok ? "text-green" : "text-error"}`}>{msg.text}</p>}
+    </div>
+  );
+}
+
 function OrderDetail({ order, onChanged }: { order: OrderRow; onChanged: () => void }) {
   const [events, setEvents] = useState<OrderEvent[] | null>(null);
   useEffect(() => {
@@ -138,7 +259,8 @@ function OrderDetail({ order, onChanged }: { order: OrderRow; onChanged: () => v
             </div>
           ))}
       </div>
-      <p className="mt-5 font-mono text-label uppercase text-dim">Timeline</p>
+      <FulfillmentEditor order={order} onChanged={onChanged} />
+      <p className="mt-6 font-mono text-label uppercase text-dim">Timeline</p>
       <ul className="mt-2 grid gap-1.5">
         {events === null ? (
           <li className="text-body-sm text-muted">Loading...</li>
