@@ -1517,8 +1517,35 @@ export const pages = {
     ],
     booking: {
       chip: "Pick a time",
-      /* LeadConnector calendar embed replaces this slot at launch */
-      note: "The booking calendar connects here at launch.",
+      /* the four LeadConnector calendars, embedded individually so the
+         booking screen stays on-brand (the HL group page is white and
+         carries no theme settings; the calendars themselves are dark) */
+      calendars: [
+        {
+          name: "Custom Video Strategy Call",
+          line: "Scope a fully custom video for your brand and offer.",
+          slug: "quick-questionsm04owt",
+          mins: 30,
+        },
+        {
+          name: "Premade Video Consultation",
+          line: "Confirm fit and customization for premade videos.",
+          slug: "quick-questions",
+          mins: 30,
+        },
+        {
+          name: "Video Editing Discovery Call",
+          line: "Pick the right monthly editing plan for your volume.",
+          slug: "quick-questionsrhuy1u",
+          mins: 30,
+        },
+        {
+          name: "Agency Partnership / White-Label Call",
+          line: "Offer our videos to your clients under your own brand.",
+          slug: "quick-questionsrhuy1u844j7q",
+          mins: 30,
+        },
+      ],
     },
     fallback: {
       headline: "Not a call person?",

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { CellGrid } from "@/components/CellGrid";
-import { LeadConnectorEmbed } from "@/components/LeadConnectorEmbed";
+import { BookingCalendars } from "@/components/BookingCalendars";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { PageHero } from "@/components/pages/PageHero";
 import { ProofStrip } from "@/components/pages/ProofStrip";
@@ -13,8 +12,6 @@ export const metadata: Metadata = {
   alternates: { canonical: "/contact/" },
 };
 
-const callIcons = ["calendar-check", "crosshair", "badge-check"] as const;
-
 export default function ContactPage() {
   const p = pages.contact;
   return (
@@ -26,86 +23,68 @@ export default function ContactPage() {
         lede={p.hero.lede}
       />
 
-      {/* light zone: what happens on the call, then the calendar */}
-      <div className="theme-light">
-        <section data-bp-idx="2" className="relative section-pad-sm">
-          <div className="shell">
-            <CellGrid
-              items={p.callPoints.map((s, i) => ({ ...s, icon: callIcons[i] }))}
-              numbered
-            />
-          </div>
-        </section>
+      {/* the calendar carries the section: full width, fallbacks below */}
+      <section data-bp-idx="2" className="relative section-pad-sm">
+        <div className="shell">
+          <div className="grid gap-8">
+            <Reveal>
+              <RevealItem>
+                <BookingCalendars calendars={p.booking.calendars} />
+              </RevealItem>
+            </Reveal>
 
-        <section data-bp-idx="3" className="relative section-pad-sm pt-0">
-          <div className="shell">
-            <div className="grid items-start gap-8 lg:grid-cols-[1.4fr_1fr]">
-              {/* the live LeadConnector calendar group */}
-              <Reveal>
-                <RevealItem>
-                  <LeadConnectorEmbed
-                    src="https://api.leadconnectorhq.com/widget/group/WRGcZjXqrdpHxaOoGp5N"
-                    embedId="WRGcZjXqrdpHxaOoGp5N_booking"
-                    title="Book a call with GHL Video"
-                  />
-                </RevealItem>
-              </Reveal>
-
-              {/* the calendar column runs tall, so the fallback cells stay
-                  in view beside it instead of stranding dead canvas */}
-              <Reveal className="grid gap-px self-start overflow-hidden border border-hair bg-hair lg:sticky lg:top-24">
-                <RevealItem className="h-full">
-                  <div
-                    data-cell
-                    className="h-full bg-canvas p-7 transition-colors duration-300 hover:bg-surface md:p-8"
+            <Reveal className="grid gap-px overflow-hidden border border-hair bg-hair md:grid-cols-2">
+              <RevealItem className="h-full">
+                <div
+                  data-cell
+                  className="h-full bg-canvas p-7 transition-colors duration-300 hover:bg-surface md:p-8"
+                >
+                  <p className="font-mono text-label uppercase text-gold">
+                    [ Email us ]
+                  </p>
+                  <p className="mt-4 max-w-[38ch] font-display text-h3 text-ink">
+                    {p.fallback.headline}
+                  </p>
+                  <p className="mt-3 text-body text-muted">
+                    {p.fallback.line}
+                  </p>
+                  <a
+                    href={`mailto:${site.email}`}
+                    className="mt-6 inline-flex items-center gap-2 font-mono text-body font-semibold text-gold underline-offset-4 hover:underline"
                   >
-                    <p className="font-mono text-label uppercase text-gold">
-                      [ Email us ]
-                    </p>
-                    <p className="mt-4 max-w-[38ch] font-display text-h3 text-ink">
-                      {p.fallback.headline}
-                    </p>
-                    <p className="mt-3 text-body text-muted">
-                      {p.fallback.line}
-                    </p>
-                    <a
-                      href={`mailto:${site.email}`}
-                      className="mt-6 inline-flex items-center gap-2 font-mono text-body font-semibold text-gold underline-offset-4 hover:underline"
-                    >
-                      {site.email}
-                      <span aria-hidden="true">&rarr;</span>
-                    </a>
-                  </div>
-                </RevealItem>
-                <RevealItem className="h-full">
-                  <div
-                    data-cell
-                    className="h-full bg-canvas p-7 transition-colors duration-300 hover:bg-surface md:p-8"
+                    {site.email}
+                    <span aria-hidden="true">&rarr;</span>
+                  </a>
+                </div>
+              </RevealItem>
+              <RevealItem className="h-full">
+                <div
+                  data-cell
+                  className="h-full bg-canvas p-7 transition-colors duration-300 hover:bg-surface md:p-8"
+                >
+                  <p className="font-mono text-label uppercase text-muted">
+                    [ Custom project? ]
+                  </p>
+                  <p className="mt-4 max-w-[var(--measure-body)] text-body text-muted">
+                    Skip the call and send the short form instead. A fixed
+                    quote comes back within 24 hours.
+                  </p>
+                  <a
+                    href={cta.requestQuote.href}
+                    className="mt-5 inline-flex items-center gap-2 text-body font-semibold text-gold"
                   >
-                    <p className="font-mono text-label uppercase text-muted">
-                      [ Custom project? ]
-                    </p>
-                    <p className="mt-4 max-w-[var(--measure-body)] text-body text-muted">
-                      Skip the call and send the short form instead. A fixed
-                      quote comes back within 24 hours.
-                    </p>
-                    <a
-                      href={cta.requestQuote.href}
-                      className="mt-5 inline-flex items-center gap-2 text-body font-semibold text-gold"
-                    >
-                      {cta.requestQuote.label}
-                      <span aria-hidden="true">&rarr;</span>
-                    </a>
-                  </div>
-                </RevealItem>
-              </Reveal>
-            </div>
+                    {cta.requestQuote.label}
+                    <span aria-hidden="true">&rarr;</span>
+                  </a>
+                </div>
+              </RevealItem>
+            </Reveal>
           </div>
-        </section>
-      </div>
+        </div>
+      </section>
 
       {/* light proof, back on the dark ground before the footer */}
-      <section data-bp-idx="4" className="relative section-pad-sm">
+      <section data-bp-idx="3" className="relative section-pad-sm">
         <div className="shell">
           <ProofStrip quote='"Great quality and quick turnaround! Will definitely work with again!" Ryan Maule, Google review' />
         </div>
