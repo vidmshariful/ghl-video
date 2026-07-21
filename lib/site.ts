@@ -367,6 +367,24 @@ const standaloneNew: PremadeVideo[] = [
 
 export const premadeVideos: PremadeVideo[] = [...packVideos, ...standaloneNew];
 
+/* SKUs served by the on-domain native checkout (POC). Every other video
+ * still links to its external order.ghlvideo.com page. To move another SKU
+ * onto native checkout, add its slug here once its products row exists. */
+export const nativeCheckoutSkus = new Set<string>([
+  "all-in-one-ai-first-positioning",
+]);
+
+/** Where a video's buy button points: internal /checkout for native SKUs,
+ *  the external order page for everything else. */
+export function checkoutHref(
+  slug: string,
+  orderUrl: string,
+): { href: string; external: boolean } {
+  return nativeCheckoutSkus.has(slug)
+    ? { href: `/checkout/${slug}`, external: false }
+    : { href: orderUrl, external: true };
+}
+
 /* Look up a video's individual price and checkout by title (packs use
  * this to offer the single-video buy alongside the pack). */
 export const premadeBySlugTitle: Record<string, PremadeVideo> =

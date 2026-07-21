@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { MediaFrame } from "@/components/MediaFrame";
 import {
+  checkoutHref,
   collab,
   cta,
   featureAnimations,
@@ -185,17 +186,14 @@ function BuyVideoLink({
   label = "Order Now",
   className = "",
 }: {
-  video: { orderUrl: string };
+  video: { slug: string; orderUrl: string };
   label?: string;
   className?: string;
 }) {
-  return (
-    <a
-      href={video.orderUrl}
-      target="_blank"
-      rel="noopener"
-      className={`tap group/btn inline-flex items-center gap-1.5 whitespace-nowrap rounded-[3px] bg-brand-gradient px-4 py-2 text-body-sm font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] transition-all duration-200 hover:brightness-110 active:scale-[0.98] ${className}`}
-    >
+  const dest = checkoutHref(video.slug, video.orderUrl);
+  const cls = `tap group/btn inline-flex items-center gap-1.5 whitespace-nowrap rounded-[3px] bg-brand-gradient px-4 py-2 text-body-sm font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] transition-all duration-200 hover:brightness-110 active:scale-[0.98] ${className}`;
+  const inner = (
+    <>
       {label}
       <span
         aria-hidden="true"
@@ -203,7 +201,18 @@ function BuyVideoLink({
       >
         &rarr;
       </span>
+    </>
+  );
+  // native checkout stays on-domain (same tab); external order pages open
+  // in a new tab as before.
+  return dest.external ? (
+    <a href={dest.href} target="_blank" rel="noopener" className={cls}>
+      {inner}
     </a>
+  ) : (
+    <Link href={dest.href} className={cls}>
+      {inner}
+    </Link>
   );
 }
 
