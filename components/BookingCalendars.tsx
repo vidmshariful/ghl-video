@@ -63,13 +63,18 @@ export function BookingCalendars({
       <div className="overflow-hidden rounded-card border border-hair bg-black">
         {/* keyed remount per calendar; form_embed.js resizes each iframe
             to its content as the widget posts its height */}
+        {/* the widget page carries ~60px of its own dead padding on
+            desktop (less on mobile); a negative TOP margin crops it
+            against the wrapper's overflow-hidden. The bottom is left
+            alone: the form step sits lower than step one and a bottom
+            crop cuts its Schedule Meeting button. */}
         <iframe
           key={cal.slug}
           src={`https://api.leadconnectorhq.com/widget/bookings/${cal.slug}`}
           title={`Book: ${cal.name}`}
           id={`lc-booking-${cal.slug}`}
           scrolling="no"
-          className="block w-full max-w-full border-0"
+          className="-mt-6 block w-full max-w-full border-0 lg:-mt-[60px]"
           style={{ minHeight: "46rem", overflow: "hidden" }}
         />
       </div>

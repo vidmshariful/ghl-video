@@ -1081,7 +1081,7 @@ export const pages = {
           key: "call",
           label: "Schedule a Discovery Call",
           embedLabel: "Booking calendar",
-          note: "Fifteen minutes. You talk through what you sell and what you need, and you leave with the right format and the real price.",
+          note: "Thirty minutes. You talk through what you sell and what you need, and you leave with the right format and the real price.",
         },
       ],
     },
@@ -1508,15 +1508,9 @@ export const pages = {
       chip: "Contact",
       headline: "Book the call.",
       accent: "Leave with a plan.",
-      lede: "Fifteen minutes. You talk through what you sell and what you need; you leave with the right format and the real price.",
+      lede: "Thirty minutes. You talk through what you sell and what you need; you leave with the right format and the real price.",
     },
-    callPoints: [
-      { title: "Show up", line: "No prep needed. Bring your SaaS and your goal." },
-      { title: "Scope", line: "We map the format that fits: premade, custom, or editing." },
-      { title: "Decide", line: "You get the price on the call. No follow-up sequence." },
-    ],
     booking: {
-      chip: "Pick a time",
       /* the four LeadConnector calendars, embedded individually so the
          booking screen stays on-brand (the HL group page is white and
          carries no theme settings; the calendars themselves are dark) */

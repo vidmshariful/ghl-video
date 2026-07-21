@@ -2,13 +2,12 @@ import type { Metadata } from "next";
 import { BookingCalendars } from "@/components/BookingCalendars";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { PageHero } from "@/components/pages/PageHero";
-import { ProofStrip } from "@/components/pages/ProofStrip";
 import { cta, pages, site } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Book a HighLevel Video Call",
   description:
-    "Book a 15-minute call with the HighLevel-only video studio. You leave with the right format and the real price. Or email hi@ghlvideo.com.",
+    "Book a 30-minute call with the HighLevel-only video studio. You leave with the right format and the real price. Or email hi@ghlvideo.com.",
   alternates: { canonical: "/contact/" },
 };
 
@@ -83,12 +82,6 @@ export default function ContactPage() {
         </div>
       </section>
 
-      {/* light proof, back on the dark ground before the footer */}
-      <section data-bp-idx="3" className="relative section-pad-sm">
-        <div className="shell">
-          <ProofStrip quote='"Great quality and quick turnaround! Will definitely work with again!" Ryan Maule, Google review' />
-        </div>
-      </section>
     </>
   );
 }
