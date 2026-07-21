@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { CellGrid } from "@/components/CellGrid";
-import { EmbedSlot } from "@/components/EmbedSlot";
+import { LeadConnectorEmbed } from "@/components/LeadConnectorEmbed";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { PageHero } from "@/components/pages/PageHero";
 import { ProofStrip } from "@/components/pages/ProofStrip";
@@ -40,19 +40,20 @@ export default function ContactPage() {
         <section data-bp-idx="3" className="relative section-pad-sm pt-0">
           <div className="shell">
             <div className="grid items-start gap-8 lg:grid-cols-[1.4fr_1fr]">
-              {/* LeadConnector calendar slot (PLACEHOLDER until the embed
-                  snippet arrives) */}
+              {/* the live LeadConnector calendar group */}
               <Reveal>
                 <RevealItem>
-                  <EmbedSlot
-                    label="Booking calendar"
-                    note={p.booking.note}
-                    minH="min-h-[32rem]"
+                  <LeadConnectorEmbed
+                    src="https://api.leadconnectorhq.com/widget/group/WRGcZjXqrdpHxaOoGp5N"
+                    embedId="WRGcZjXqrdpHxaOoGp5N_booking"
+                    title="Book a call with GHL Video"
                   />
                 </RevealItem>
               </Reveal>
 
-              <Reveal className="grid gap-px self-start overflow-hidden border border-hair bg-hair">
+              {/* the calendar column runs tall, so the fallback cells stay
+                  in view beside it instead of stranding dead canvas */}
+              <Reveal className="grid gap-px self-start overflow-hidden border border-hair bg-hair lg:sticky lg:top-24">
                 <RevealItem className="h-full">
                   <div
                     data-cell
