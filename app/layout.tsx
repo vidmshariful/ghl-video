@@ -38,8 +38,9 @@ export default function RootLayout({
       className={`${archivo.variable} ${raveo.variable} h-full antialiased`}
     >
       <head>
-        {/* the hero panel's poster is the first meaningful paint */}
-        <link rel="preload" as="image" href="/posters/clip-2.jpg" />
+        {/* the homepage hero's featured poster (home.work.pieces[0]) is the
+            first meaningful paint; keep this in sync with that source */}
+        <link rel="preload" as="image" href="/posters/ai-master.jpg" />
       </head>
       <body className="flex min-h-full flex-col">{children}</body>
     </html>

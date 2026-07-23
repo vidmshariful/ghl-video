@@ -17,11 +17,15 @@ const AI_BOTS = [
   "Google-Extended",
 ];
 
+/* Non-marketing routes: never index the app surfaces. They also carry a
+ * noindex meta, but disallowing here keeps them out of crawl entirely. */
+const DISALLOW = ["/admin/", "/portal/", "/checkout/"];
+
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
-      { userAgent: "*", allow: "/" },
-      ...AI_BOTS.map((userAgent) => ({ userAgent, allow: "/" })),
+      { userAgent: "*", allow: "/", disallow: DISALLOW },
+      ...AI_BOTS.map((userAgent) => ({ userAgent, allow: "/", disallow: DISALLOW })),
     ],
     sitemap: `${site.url}/sitemap.xml`,
   };

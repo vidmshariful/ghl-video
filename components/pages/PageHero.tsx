@@ -28,6 +28,7 @@ export function PageHero({
   lede,
   signal,
   divider = true,
+  top,
   children,
 }: {
   chip: string;
@@ -38,6 +39,8 @@ export function PageHero({
   signal?: string;
   /* the hatched hand-off strip below the boundary rule */
   divider?: boolean;
+  /* an optional element above the chip, e.g. a checkout progress bar */
+  top?: ReactNode;
   /* CTA row */
   children?: ReactNode;
 }) {
@@ -45,6 +48,7 @@ export function PageHero({
     <section data-bp-idx="1" className="relative overflow-x-clip hero-pad">
       <SectionGlow position="left" />
       <div className="shell relative pb-14 text-center md:pb-16">
+        {top && <div className="mb-11">{top}</div>}
         <div className="flex flex-wrap items-center justify-center gap-3">
           <SectionChip index={1} label={chip} />
           {signal && (

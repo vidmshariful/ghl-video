@@ -71,7 +71,7 @@ export default function CustomPage() {
         accent={p.hero.accent}
         lede={p.hero.lede}
       >
-        <Button href="#get-started" variant="hero">
+        <Button href={cta.requestQuote.href} variant="hero">
           {cta.requestQuote.label}
         </Button>
         <Button href={cta.bookACall.href} variant="ghost">
@@ -298,7 +298,7 @@ export default function CustomPage() {
                 <span className="text-gradient">{p.closing.accent}</span>
               </h2>
               <div className="mt-8 flex flex-wrap justify-center gap-4">
-                <Button href="#get-started">{cta.requestQuote.label}</Button>
+                <Button href={cta.requestQuote.href}>{cta.requestQuote.label}</Button>
                 <Button href={cta.bookACall.href} variant="ghost">
                   {cta.bookACall.label}
                 </Button>

@@ -20,7 +20,7 @@ export type OrderRow = {
   delivery_url: string | null;
   intake_completed: boolean;
   invoice_number: string | null;
-  product: { name: string } | null;
+  product: { name: string; sku: string; metadata: { code?: string } | null } | null;
   customer: { name: string | null; company: string | null; phone: string | null } | null;
 };
 type OrderEvent = { event_type: string; payload: Record<string, unknown>; created_at: string };
@@ -227,6 +227,98 @@ function FulfillmentEditor({ order, onChanged }: { order: OrderRow; onChanged: (
   );
 }
 
+type Brief = {
+  brandName: string;
+  primaryColor: string;
+  accentColor: string;
+  voiceover: string;
+  brandGuidelinesUrl: string;
+  notes: string;
+  logoUrl: string | null;
+  screenshotUrls: string[];
+};
+
+/* The client's submitted branding brief, read from the intake route (which
+ * returns the files as short-lived signed URLs). */
+function BrandingBrief({ orderId }: { orderId: string }) {
+  const [brief, setBrief] = useState<Brief | null | "loading">("loading");
+  useEffect(() => {
+    fetch(`/api/intake/${orderId}/`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => setBrief((j?.intake as Brief) ?? null))
+      .catch(() => setBrief(null));
+  }, [orderId]);
+
+  const lab = "shrink-0 font-mono text-label uppercase text-dim";
+  const chip =
+    "rounded-[3px] border border-hair px-3 py-1 font-mono text-label uppercase text-ink hover:border-gold/60";
+
+  return (
+    <div className="mt-6">
+      <p className="font-mono text-label uppercase text-gold">Branding brief</p>
+      {brief === "loading" ? (
+        <p className="mt-2 text-body-sm text-muted">Loading...</p>
+      ) : !brief ? (
+        <p className="mt-2 text-body-sm text-dim">
+          Not submitted yet. Client link:{" "}
+          <span className="break-all font-mono text-muted">/checkout/intake/{orderId}</span>
+        </p>
+      ) : (
+        <div className="mt-2 grid gap-2 text-body-sm">
+          <div className="flex gap-2">
+            <span className={lab}>Brand:</span>
+            <span className="text-muted">{brief.brandName}</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-5">
+            <span className="inline-flex items-center gap-2">
+              <span className={lab}>Primary</span>
+              <span className="h-4 w-4 rounded border border-hair" style={{ background: brief.primaryColor }} />
+              <span className="font-mono text-muted">{brief.primaryColor}</span>
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <span className={lab}>Accent</span>
+              <span className="h-4 w-4 rounded border border-hair" style={{ background: brief.accentColor }} />
+              <span className="font-mono text-muted">{brief.accentColor}</span>
+            </span>
+          </div>
+          <div className="flex gap-2">
+            <span className={lab}>Voiceover:</span>
+            <span className="text-muted">{brief.voiceover}</span>
+          </div>
+          {brief.brandGuidelinesUrl ? (
+            <div className="flex gap-2">
+              <span className={lab}>Guidelines:</span>
+              <a href={brief.brandGuidelinesUrl} target="_blank" rel="noopener" className="break-all text-gold hover:underline">
+                {brief.brandGuidelinesUrl}
+              </a>
+            </div>
+          ) : null}
+          {brief.notes ? (
+            <div className="flex gap-2">
+              <span className={lab}>Notes:</span>
+              <span className="whitespace-pre-wrap text-muted">{brief.notes}</span>
+            </div>
+          ) : null}
+          {brief.logoUrl || brief.screenshotUrls.length ? (
+            <div className="mt-1 flex flex-wrap gap-2">
+              {brief.logoUrl ? (
+                <a href={brief.logoUrl} target="_blank" rel="noopener" className={chip}>
+                  Logo
+                </a>
+              ) : null}
+              {brief.screenshotUrls.map((u, i) => (
+                <a key={i} href={u} target="_blank" rel="noopener" className={chip}>
+                  Shot {i + 1}
+                </a>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function OrderDetail({ order, onChanged }: { order: OrderRow; onChanged: () => void }) {
   const [events, setEvents] = useState<OrderEvent[] | null>(null);
   useEffect(() => {
@@ -260,6 +352,7 @@ function OrderDetail({ order, onChanged }: { order: OrderRow; onChanged: () => v
           ))}
       </div>
       <FulfillmentEditor order={order} onChanged={onChanged} />
+      <BrandingBrief orderId={order.id} />
       <p className="mt-6 font-mono text-label uppercase text-dim">Timeline</p>
       <ul className="mt-2 grid gap-1.5">
         {events === null ? (
@@ -290,7 +383,7 @@ export function OrdersScreen() {
   async function load() {
     const { data, error } = await supabase
       .from("orders")
-      .select("*, product:products(name), customer:customers(name,company,phone)")
+      .select("*, product:products(name, sku, metadata), customer:customers(name,company,phone)")
       .order("created_at", { ascending: false });
     if (error) setErr(error.message);
     else setRows(data as OrderRow[]);
@@ -380,6 +473,11 @@ export function OrdersScreen() {
                     <p className="text-body font-semibold text-ink">
                       {r.customer?.name || r.customer_email}
                       <span className="ml-3 font-mono text-body-sm text-muted">
+                        {r.product?.metadata?.code ? (
+                          <span className="text-gold/80">
+                            {r.product.metadata.code}{" "}
+                          </span>
+                        ) : null}
                         {r.product?.name ?? (r.metadata?.sku as string)}
                       </span>
                     </p>

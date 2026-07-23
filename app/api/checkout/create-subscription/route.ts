@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getActiveProductBySku } from "@/lib/checkout/products";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { stripe } from "@/lib/checkout/stripe";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -15,6 +16,14 @@ export const runtime = "nodejs";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(req: Request) {
+  const rl = rateLimit(`create-sub:${clientIp(req)}`, 8, 60_000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "Too many requests. Please slow down and try again." },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
+    );
+  }
+
   let payload: Record<string, unknown>;
   try {
     payload = await req.json();

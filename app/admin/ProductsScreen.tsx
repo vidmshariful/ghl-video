@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { money, supabase } from "./client";
+import { authHeader, money, supabase } from "./client";
 
 type ProductRow = {
   id: string;
@@ -183,6 +183,8 @@ export function ProductsScreen() {
   const [loaded, setLoaded] = useState(false);
   const [editing, setEditing] = useState<ProductRow | "new" | null>(null);
   const [err, setErr] = useState("");
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState("");
 
   async function load() {
     const { data, error } = await supabase
@@ -197,6 +199,29 @@ export function ProductsScreen() {
     load();
   }, []);
 
+  /* Create products rows for every one-time SKU in the catalog that does
+     not have one yet. Insert-only, so it never overwrites a price set here. */
+  async function sync() {
+    setSyncing(true);
+    setSyncMsg("");
+    try {
+      const r = await fetch("/api/admin/sync-products", {
+        method: "POST",
+        headers: await authHeader(),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error ?? "Sync failed.");
+      setSyncMsg(
+        `Synced: ${j.inserted} added, ${j.skipped} already present. ${j.total} one-time SKUs in the catalog.`,
+      );
+      await load();
+    } catch (e) {
+      setSyncMsg(e instanceof Error ? e.message : "Sync failed.");
+    } finally {
+      setSyncing(false);
+    }
+  }
+
   if (!loaded) return <p className="text-body text-muted">Loading products...</p>;
 
   return (
@@ -210,14 +235,30 @@ export function ProductsScreen() {
             {rows.length === 1 ? "" : "s"}.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setEditing("new")}
-          className="tap rounded-[3px] bg-brand-gradient px-6 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110"
-        >
-          Add product
-        </button>
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={sync}
+            disabled={syncing}
+            className="tap rounded-[3px] border border-hair px-5 py-2.5 text-body font-semibold text-ink transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-60"
+          >
+            {syncing ? "Syncing" : "Sync from catalog"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setEditing("new")}
+            className="tap rounded-[3px] bg-brand-gradient px-6 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110"
+          >
+            Add product
+          </button>
+        </div>
       </div>
+
+      {syncMsg && (
+        <p className="mt-4 rounded-[8px] border border-gold/30 bg-gold/[0.06] px-4 py-3 text-body-sm text-muted">
+          {syncMsg}
+        </p>
+      )}
 
       <div className="mt-4 rounded-[8px] border border-gold/30 bg-gold/[0.06] px-4 py-3 text-body-sm text-muted">
         The marketing pages show their prices from the site code, separate from

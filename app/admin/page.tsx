@@ -10,6 +10,7 @@ import { DashboardScreen } from "./DashboardScreen";
 import { OrdersScreen } from "./OrdersScreen";
 import { SubscriptionsScreen } from "./SubscriptionsScreen";
 import { ProductsScreen } from "./ProductsScreen";
+import { BumpsScreen } from "./BumpsScreen";
 import { CustomersScreen } from "./CustomersScreen";
 
 /*
@@ -598,6 +599,7 @@ export default function AdminPage() {
     { key: "orders", label: "Orders" },
     { key: "subscriptions", label: "Subscriptions" },
     { key: "products", label: "Products & Pricing" },
+    { key: "bumps", label: "Order Bumps" },
     { key: "customers", label: "Customers" },
     { key: "code", label: "Header & Footer Code" },
     { key: "pages", label: "Pages" },
@@ -657,6 +659,8 @@ export default function AdminPage() {
             <SubscriptionsScreen />
           ) : view === "products" ? (
             <ProductsScreen />
+          ) : view === "bumps" ? (
+            <BumpsScreen />
           ) : view === "customers" ? (
             <CustomersScreen />
           ) : view === "code" ? (

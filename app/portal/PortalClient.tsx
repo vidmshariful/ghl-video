@@ -41,6 +41,7 @@ async function authedFetch(path: string) {
 type OrderSummary = {
   id: string;
   productName: string | null;
+  productCode: string | null;
   amountCents: number;
   currency: string;
   status: string;
@@ -136,6 +137,7 @@ function ComingSoon({ title, line }: { title: string; line: string }) {
 type OrderDetail = {
   id: string;
   productName: string | null;
+  productCode: string | null;
   amountCents: number;
   currency: string;
   status: string;
@@ -192,7 +194,12 @@ function OrderDetailView({ id, onBack }: { id: string; onBack: () => void }) {
       </button>
 
       <div>
-        <div className="flex flex-wrap items-baseline justify-between gap-3">
+        {order.productCode && (
+          <p className="font-mono text-label uppercase tracking-[0.12em] text-gold/80">
+            {order.productCode}
+          </p>
+        )}
+        <div className="mt-1 flex flex-wrap items-baseline justify-between gap-3">
           <h2 className="font-display text-h3 text-ink">{order.productName ?? "Order"}</h2>
           <span className={`rounded-full border px-2.5 py-0.5 font-mono text-label uppercase ${STATUS_STYLE[order.status]}`}>
             {order.status}
@@ -208,6 +215,41 @@ function OrderDetailView({ id, onBack }: { id: string; onBack: () => void }) {
         <div className="rounded-card border border-hair bg-surface p-6 md:p-8">
           <p className="mb-5 font-mono text-label uppercase text-muted">Progress</p>
           <ProgressTracker stage={order.stage} />
+        </div>
+      )}
+
+      {/* branding brief */}
+      {order.status !== "refunded" && (
+        <div className="rounded-card border border-hair bg-surface p-6 md:p-8">
+          <p className="font-mono text-label uppercase text-muted">Branding brief</p>
+          {order.intakeCompleted ? (
+            <>
+              <p className="mt-3 text-body text-muted">
+                <span className="text-gold">Submitted.</span> We are on it. You can
+                update it anytime.
+              </p>
+              <a
+                href={`/checkout/intake/${id}`}
+                className="tap mt-5 inline-flex items-center gap-2 rounded-[3px] border border-hair px-6 py-3 font-mono text-label uppercase text-ink transition-colors hover:border-gold/60 hover:text-gold"
+              >
+                View or update brief
+              </a>
+            </>
+          ) : (
+            <>
+              <p className="mt-3 text-body text-muted">
+                One step to start production: your logo, colors, dashboard screens,
+                and voiceover preference.
+              </p>
+              <a
+                href={`/checkout/intake/${id}`}
+                className="tap mt-5 inline-flex items-center gap-2 rounded-[3px] bg-brand-gradient px-8 py-3.5 text-body font-semibold text-canvas transition-all hover:brightness-110"
+              >
+                Complete your branding brief
+                <span aria-hidden="true">&rarr;</span>
+              </a>
+            </>
+          )}
         </div>
       )}
 
@@ -283,15 +325,31 @@ function OrderDetailView({ id, onBack }: { id: string; onBack: () => void }) {
 function OrdersList({ onOpen }: { onOpen: (id: string) => void }) {
   const [orders, setOrders] = useState<OrderSummary[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    authedFetch("/api/portal/orders").then((j) => {
-      setOrders(j.orders ?? []);
-      setLoaded(true);
-    });
+    authedFetch("/api/portal/orders")
+      .then((j) => {
+        if (j.error) setFailed(true);
+        else setOrders(j.orders ?? []);
+        setLoaded(true);
+      })
+      .catch(() => {
+        setFailed(true);
+        setLoaded(true);
+      });
   }, []);
 
   if (!loaded) return <p className="text-body text-muted">Loading your orders...</p>;
+  if (failed)
+    return (
+      <div className="rounded-card border border-hair bg-surface px-6 py-12 text-center">
+        <p className="font-display text-h4 text-ink">We could not load your orders.</p>
+        <p className="mt-2 text-body text-muted">
+          Please refresh the page, or sign in again if your session has expired.
+        </p>
+      </div>
+    );
   if (orders.length === 0)
     return (
       <div className="rounded-card border border-hair bg-surface px-6 py-12 text-center">
@@ -310,7 +368,12 @@ function OrdersList({ onOpen }: { onOpen: (id: string) => void }) {
             className="flex w-full flex-wrap items-center justify-between gap-x-6 gap-y-2 rounded-card border border-hair bg-surface px-5 py-5 text-left transition-colors hover:border-gold/40"
           >
             <div className="min-w-0">
-              <p className="font-display text-h4 text-ink">{o.productName ?? "Order"}</p>
+              {o.productCode && (
+                <p className="font-mono text-label uppercase tracking-[0.12em] text-gold/80">
+                  {o.productCode}
+                </p>
+              )}
+              <p className="mt-0.5 font-display text-h4 text-ink">{o.productName ?? "Order"}</p>
               <p className="mt-1 font-mono text-label uppercase text-dim">
                 {day(o.createdAt)}
                 {o.invoiceNumber ? ` / ${o.invoiceNumber}` : ""}
@@ -375,6 +438,29 @@ function SubscriptionsView() {
     }
   }
 
+  async function refresh() {
+    const j = await authedFetch("/api/portal/subscriptions");
+    setSubs(j.subscriptions ?? []);
+  }
+
+  async function setCancel(id: string, cancel: boolean) {
+    setBusy(true);
+    setErr("");
+    const { data } = await supabase.auth.getSession();
+    const r = await fetch(`/api/portal/subscriptions/${id}/cancel`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(data.session ? { Authorization: `Bearer ${data.session.access_token}` } : {}),
+      },
+      body: JSON.stringify({ cancelAtPeriodEnd: cancel }),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) setErr(j.error ?? "Could not update your plan.");
+    else await refresh();
+    setBusy(false);
+  }
+
   if (!loaded) return <p className="text-body text-muted">Loading...</p>;
   if (subs.length === 0)
     return (
@@ -406,14 +492,43 @@ function SubscriptionsView() {
               {s.status}
             </span>
           </div>
-          <button
-            type="button"
-            onClick={manage}
-            disabled={busy}
-            className="tap mt-5 rounded-[3px] border border-hair px-5 py-2.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-50"
-          >
-            {busy ? "Opening..." : "Manage subscription"}
-          </button>
+          <div className="mt-5 flex flex-wrap gap-3">
+            {(s.status === "active" || s.status === "trialing") && !s.cancelAtPeriodEnd ? (
+              <button
+                type="button"
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      "Cancel this plan at the end of the current billing period? You keep access until then.",
+                    )
+                  )
+                    setCancel(s.id, true);
+                }}
+                disabled={busy}
+                className="tap rounded-[3px] border border-hair px-5 py-2.5 font-mono text-label uppercase text-muted transition-colors hover:border-error/60 hover:text-error disabled:opacity-50"
+              >
+                Cancel plan
+              </button>
+            ) : null}
+            {s.cancelAtPeriodEnd ? (
+              <button
+                type="button"
+                onClick={() => setCancel(s.id, false)}
+                disabled={busy}
+                className="tap rounded-[3px] border border-gold/40 px-5 py-2.5 font-mono text-label uppercase text-gold transition-colors hover:border-gold disabled:opacity-50"
+              >
+                Resume plan
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={manage}
+              disabled={busy}
+              className="tap rounded-[3px] border border-hair px-5 py-2.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-50"
+            >
+              {busy ? "..." : "Manage billing"}
+            </button>
+          </div>
           {err && <p className="mt-3 text-body-sm text-error">{err}</p>}
         </div>
       ))}
@@ -423,12 +538,13 @@ function SubscriptionsView() {
 
 /* ---- signed-in portal ---- */
 function Portal({ session }: { session: Session }) {
-  const [section, setSection] = useState<"orders" | "invoices" | "subscriptions">("orders");
+  const [section, setSection] = useState<"orders" | "subscriptions">("orders");
   const [openOrder, setOpenOrder] = useState<string | null>(null);
 
+  // Invoices tab hidden for launch (the invoice number is on each order); the
+  // dedicated invoices view can ship post-launch.
   const tabs: [typeof section, string][] = [
     ["orders", "Orders"],
-    ["invoices", "Invoices"],
     ["subscriptions", "Subscriptions"],
   ];
 
@@ -465,11 +581,6 @@ function Portal({ session }: { session: Session }) {
           ) : (
             <OrdersList onOpen={setOpenOrder} />
           )
-        ) : section === "invoices" ? (
-          <ComingSoon
-            title="Invoices are on the way."
-            line="Downloadable invoices for every order will live here shortly. Your invoice number is on each order in the meantime."
-          />
         ) : (
           <SubscriptionsView />
         )}

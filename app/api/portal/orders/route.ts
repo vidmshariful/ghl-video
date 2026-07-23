@@ -14,16 +14,21 @@ export async function GET(req: Request) {
   const { data } = await supabaseAdmin()
     .from("orders")
     .select(
-      "id, amount_cents, currency, status, fulfillment_stage, invoice_number, created_at, product:products(name)",
+      "id, amount_cents, currency, status, fulfillment_stage, invoice_number, created_at, product:products(name, sku, metadata)",
     )
     .eq("customer_email", email)
     .order("created_at", { ascending: false });
 
   const orders = (data ?? []).map((o) => {
-    const product = o.product as unknown as { name: string } | null;
+    const product = o.product as unknown as {
+      name: string;
+      sku: string;
+      metadata: { code?: string } | null;
+    } | null;
     return {
       id: o.id,
       productName: product?.name ?? null,
+      productCode: product?.metadata?.code ?? product?.sku?.toUpperCase() ?? null,
       amountCents: o.amount_cents,
       currency: o.currency,
       status: o.status,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { money, supabase, when } from "./client";
+import { authHeader, money, supabase, when } from "./client";
 
 type SubRow = {
   id: string;
@@ -29,18 +29,46 @@ export function SubscriptionsScreen() {
   const [rows, setRows] = useState<SubRow[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [err, setErr] = useState("");
+  const [busy, setBusy] = useState<string | null>(null);
 
-  useEffect(() => {
-    supabase
+  async function load() {
+    const { data, error } = await supabase
       .from("subscriptions")
       .select("*, customer:customers(name)")
-      .order("created_at", { ascending: false })
-      .then(({ data, error }) => {
-        if (error) setErr(error.message);
-        else setRows(data as SubRow[]);
-        setLoaded(true);
-      });
+      .order("created_at", { ascending: false });
+    if (error) setErr(error.message);
+    else setRows(data as SubRow[]);
+    setLoaded(true);
+  }
+
+  useEffect(() => {
+    load();
   }, []);
+
+  async function act(id: string, action: string, confirmMsg?: string) {
+    if (confirmMsg && !window.confirm(confirmMsg)) return;
+    setBusy(id);
+    setErr("");
+    try {
+      const r = await fetch(`/api/admin/subscriptions/${id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(await authHeader()) },
+        body: JSON.stringify({ action }),
+      });
+      const j = await r.json();
+      if (!j.ok) setErr(j.error ?? "Action failed.");
+      else await load();
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const btn =
+    "tap rounded-[3px] border border-hair px-3 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-50";
+  const btnDanger =
+    "tap rounded-[3px] border border-hair px-3 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-error/60 hover:text-error disabled:opacity-50";
 
   if (!loaded) return <p className="text-body text-muted">Loading subscriptions...</p>;
 
@@ -99,6 +127,35 @@ export function SubscriptionsScreen() {
                   {money(r.amount_cents, r.currency)}/mo
                 </span>
               </div>
+              {r.status !== "canceled" && r.status !== "incomplete" ? (
+                <div className="flex w-full flex-wrap items-center gap-2 pt-1">
+                  {r.cancel_at_period_end ? (
+                    <button type="button" disabled={busy === r.id} onClick={() => act(r.id, "resume")} className={btn}>
+                      Resume
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={busy === r.id}
+                      onClick={() => act(r.id, "cancel_period_end", `Cancel ${r.customer_email}'s plan at the end of the period?`)}
+                      className={btn}
+                    >
+                      Cancel at period end
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    disabled={busy === r.id}
+                    onClick={() => act(r.id, "cancel_now", `Cancel ${r.customer_email}'s plan IMMEDIATELY? They lose access now.`)}
+                    className={btnDanger}
+                  >
+                    Cancel now
+                  </button>
+                  {busy === r.id ? (
+                    <span className="font-mono text-label uppercase text-dim">working...</span>
+                  ) : null}
+                </div>
+              ) : null}
             </li>
           ))}
         </ul>

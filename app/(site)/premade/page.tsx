@@ -15,15 +15,7 @@ import { VideoBundles } from "@/components/VideoBundles";
 import { PageHero } from "@/components/pages/PageHero";
 import { ProofStrip } from "@/components/pages/ProofStrip";
 import { faqSchema, productCatalogSchema, serviceSchema } from "@/lib/schema";
-import {
-  bundleCategories,
-  cta,
-  oldVideos,
-  pages,
-  premadePacks,
-  premadeVideos,
-  videoStack,
-} from "@/lib/site";
+import { cta, pages, sellableProducts, site } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "GoHighLevel White-Label Videos and Video Packs",
@@ -36,22 +28,16 @@ const howIcons: IconName[] = ["mouse-click", "palette", "package-check"];
 
 export default function PremadePage() {
   const p = pages.premade;
-  /* every purchasable SKU, machine-readable: singles, packs, the stack,
-     and all bundle tiers */
-  const catalog = [
-    ...premadeVideos
-      .filter((v) => !v.comingSoon)
-      .map((v) => ({ name: v.title, price: v.price, url: v.orderUrl })),
-    ...oldVideos.map((v) => ({ name: v.title, price: v.price, url: v.orderUrl })),
-    ...premadePacks.map((pk) => ({ name: pk.name, price: pk.price, url: pk.orderUrl })),
-    { name: videoStack.name, price: videoStack.price, url: videoStack.orderUrl },
-    ...bundleCategories.flatMap((c) =>
-      c.tiers.map((t) => ({ name: `${c.name}: ${t.name}`, price: t.price, url: t.orderUrl })),
-    ),
-  ].filter(
-    (x): x is { name: string; price: number; url: string } =>
-      typeof x.price === "number" && x.price > 0 && typeof x.url === "string",
-  );
+  /* every purchasable one-time SKU, machine-readable: singles, packs, the
+     stack, and all bundle tiers, each pointing at its on-domain checkout.
+     Derived from the one sellable-catalog source so it never drifts. */
+  const catalog = sellableProducts
+    .filter((prod) => prod.type === "one_time" && prod.priceCents > 0)
+    .map((prod) => ({
+      name: prod.name,
+      price: prod.priceCents / 100,
+      url: `${site.url}/checkout/${prod.sku}`,
+    }));
   return (
     <>
       <JsonLd

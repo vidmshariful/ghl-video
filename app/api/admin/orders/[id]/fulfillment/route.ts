@@ -24,7 +24,21 @@ export async function POST(
   const patch: Record<string, unknown> = {};
   if (typeof body.stage === "string" && STAGES.includes(body.stage)) patch.fulfillment_stage = body.stage;
   if (typeof body.manager === "string") patch.assigned_manager = body.manager.trim() || "Tanvir Prince";
-  if (typeof body.deliveryUrl === "string") patch.delivery_url = body.deliveryUrl.trim() || null;
+  if (typeof body.deliveryUrl === "string") {
+    // Rendered to the customer as an href, so only allow http(s) (blocks
+    // javascript:/data: and typos).
+    const url = body.deliveryUrl.trim();
+    if (!url) {
+      patch.delivery_url = null;
+    } else if (/^https?:\/\//i.test(url)) {
+      patch.delivery_url = url;
+    } else {
+      return NextResponse.json(
+        { error: "Delivery link must start with http:// or https://" },
+        { status: 400 },
+      );
+    }
+  }
   if (typeof body.intakeCompleted === "boolean") patch.intake_completed = body.intakeCompleted;
 
   if (Object.keys(patch).length) {

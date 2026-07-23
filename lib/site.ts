@@ -367,24 +367,23 @@ const standaloneNew: PremadeVideo[] = [
 
 export const premadeVideos: PremadeVideo[] = [...packVideos, ...standaloneNew];
 
-/* SKUs served by the on-domain native checkout (POC). Every other video
- * still links to its external order.ghlvideo.com page. To move another SKU
- * onto native checkout, add its slug here once its products row exists. */
-export const nativeCheckoutSkus = new Set<string>([
-  "all-in-one-ai-first-positioning",
-  "editing-starter",
-  "editing-growth",
-  "editing-scale",
-]);
+/* Every premade video and pack is sold on-domain now. `nativeCheckoutSkus`
+ * is derived at the end of this file from `sellableProducts` (the single
+ * source that also seeds the products table), so adding a video or pack to
+ * the catalog above automatically routes it to native checkout. */
 
 /** Where a video's buy button points: internal /checkout for native SKUs,
- *  the external order page for everything else. */
+ *  the external order page as a fallback for anything not yet in the set. */
 export function checkoutHref(
   slug: string,
   orderUrl: string,
 ): { href: string; external: boolean } {
-  return nativeCheckoutSkus.has(slug)
-    ? { href: `/checkout/${slug}`, external: false }
+  // the checkout sku is the product code (skuFor), so /checkout/<sku> is the
+  // stable, rename-proof URL. Fall back to the external order page only for
+  // anything not yet in the native set.
+  const sku = skuFor(slug);
+  return nativeCheckoutSkus.has(sku)
+    ? { href: `/checkout/${sku}`, external: false }
     : { href: orderUrl, external: true };
 }
 
@@ -1172,7 +1171,7 @@ export const pages = {
           line: "Platforms that need demo and onboarding coverage.",
         },
       ],
-      cta: { label: "Request a Quote", href: "#get-started" },
+      cta: { label: "Request a Quote", href: "/quote/" },
       /* the "not for" disqualifier used to sit beside the "built for"
          list. Kept here, unused, so the copy is not lost if we want it
          back as a line under the cards. */
@@ -1847,94 +1846,85 @@ export const oldVideos: OldVideo[] = [
     orderUrl: "https://order.ghlvideo.com/short-explainer-videos",
   },
   {
-    slug: "explainer-v1",
-    title: "Explainer V1",
-    subtitle: "All-in-one platform overview",
+    slug: "all-in-one-platform-explainer",
+    title: "All-in-One Platform Explainer",
     type: "Explainer",
     price: 395,
     wistiaId: "trdqye7g5q",
     poster: "https://embed-ssl.wistia.com/deliveries/2804d0c1b80062a75c5d54de622c9e9a.jpg?image_crop_resized=960x540",
-    orderUrl: "https://order.ghlvideo.com/explainer-v1",
+    orderUrl: "https://order.ghlvideo.com/all-in-one-platform-explainer",
   },
   {
-    slug: "explainer-v2",
-    title: "Explainer V2",
-    subtitle: "AI agent and AI employee",
+    slug: "ai-employee-explainer",
+    title: "AI Employee Explainer",
     type: "Explainer",
     price: 395,
     wistiaId: "gq4rntluy4",
     poster: "https://embed-ssl.wistia.com/deliveries/ff1732dc84ecb4ebff55d486acb0e05942e69bcb.jpg?image_crop_resized=960x540",
-    orderUrl: "https://order.ghlvideo.com/explainer-v2",
+    orderUrl: "https://order.ghlvideo.com/ai-employee-explainer",
   },
   {
-    slug: "explainer-v3",
-    title: "Explainer V3",
-    subtitle: "Reputation management",
+    slug: "reputation-management-explainer",
+    title: "Reputation Management Explainer",
     type: "Explainer",
     price: 395,
     wistiaId: "rvgcfdknv0",
     poster: "https://embed-ssl.wistia.com/deliveries/9c1761630837e74003b299dfb4c5bb4f.jpg?image_crop_resized=960x540",
-    orderUrl: "https://order.ghlvideo.com/explainer-v3",
+    orderUrl: "https://order.ghlvideo.com/reputation-management-explainer",
   },
   {
-    slug: "explainer-v4",
-    title: "Explainer V4",
-    subtitle: "Social planner",
+    slug: "social-media-planner-explainer",
+    title: "Social Media Planner Explainer",
     type: "Explainer",
     price: 395,
     wistiaId: "9v0ca9v97y",
     poster: "https://embed-ssl.wistia.com/deliveries/2e7502573dedf87ad08321d39571c611.jpg?image_crop_resized=960x540",
-    orderUrl: "https://order.ghlvideo.com/explainer-v4",
+    orderUrl: "https://order.ghlvideo.com/social-media-planner-explainer",
   },
   {
-    slug: "explainer-v5",
-    title: "Explainer V5",
-    subtitle: "Never-ending outreach machine",
+    slug: "automated-outreach-explainer",
+    title: "Automated Outreach Explainer",
     type: "Explainer",
     price: 395,
     wistiaId: "8uhjekncqh",
     poster: "https://embed-ssl.wistia.com/deliveries/266e4085228e4583a5b49f7178c19478.jpg?image_crop_resized=960x540",
-    orderUrl: "https://order.ghlvideo.com/explainer-v5",
+    orderUrl: "https://order.ghlvideo.com/automated-outreach-explainer",
   },
   {
-    slug: "explainer-v6",
-    title: "Explainer V6",
-    subtitle: "Complete platform overview",
+    slug: "complete-platform-tour-explainer",
+    title: "Complete Platform Tour Explainer",
     type: "Explainer",
     price: 395,
     wistiaId: "nyv9u91be2",
     poster: "https://embed-ssl.wistia.com/deliveries/63b213ac1651cc07ce3b26cc0b8fc17e.jpg?image_crop_resized=960x540",
-    orderUrl: "https://order.ghlvideo.com/explainer-v6",
+    orderUrl: "https://order.ghlvideo.com/complete-platform-tour-explainer",
   },
   {
-    slug: "demo-v1",
-    title: "HighLevel Demo V1",
-    subtitle: "Spokesperson led",
+    slug: "spokesperson-platform-demo",
+    title: "Spokesperson Platform Demo",
     type: "Demo",
     price: 495,
     wistiaId: "6mji3qgjed",
     poster: "https://embed-ssl.wistia.com/deliveries/a6901634240c08a0dbc820ffe6796daab414b057.jpg?image_crop_resized=960x540",
-    orderUrl: "https://order.ghlvideo.com/demo-v1",
+    orderUrl: "https://order.ghlvideo.com/spokesperson-platform-demo",
   },
   {
-    slug: "demo-v2",
-    title: "HighLevel Demo V2",
-    subtitle: "Motion graphic, no AI",
+    slug: "motion-graphics-platform-demo",
+    title: "Motion Graphics Platform Demo",
     type: "Demo",
     price: 495,
     wistiaId: "5rltwdyq6h",
     poster: "https://embed-ssl.wistia.com/deliveries/192fb8589c66bb490a277524bd075e56.jpg?image_crop_resized=960x540",
-    orderUrl: "https://order.ghlvideo.com/demo-v2",
+    orderUrl: "https://order.ghlvideo.com/motion-graphics-platform-demo",
   },
   {
-    slug: "demo-v3-6708",
-    title: "HighLevel Demo V3",
-    subtitle: "AI capabilities, updated",
+    slug: "ai-platform-demo",
+    title: "AI Platform Demo",
     type: "Demo",
     price: 995,
     wistiaId: "kvxz5zjd6j",
     poster: "https://embed-ssl.wistia.com/deliveries/2ef47e87e0771057f43fcccc95946f07.jpg?image_crop_resized=960x540",
-    orderUrl: "https://order.ghlvideo.com/demo-v3-6708",
+    orderUrl: "https://order.ghlvideo.com/ai-platform-demo",
   },
   {
     slug: "marketing-1",
@@ -2676,6 +2666,7 @@ export const bundleCategories: BundleCategory[] = [
 
 export const videoStack = {
   slug: "stack",
+  sku: "complete-video-stack",
   name: "Complete Video Stack",
   tagline:
     "The everything bundle: 53 custom-branded videos mixing our newest releases with the classic library, across every format your HighLevel SaaS needs. One order, live in 10 days.",
@@ -2694,3 +2685,276 @@ export const videoStack = {
     { name: "Feature Animations", count: 15, value: 8000, sampleType: "Feature Animation" },
   ] as StackFormat[],
 };
+
+/* ---------------------------------------------------------------- */
+/* Product codes: the permanent identity for every video and pack     */
+/* ---------------------------------------------------------------- */
+
+/* A short, frozen, format-prefixed code is each product's true identity
+ * (EXP-014, DEMO-003, PACK-002). The display TITLE can repeat or change;
+ * the code never does. The code IS the checkout sku and URL, so a product
+ * can be renamed with zero broken links or order history. Keyed by the
+ * product's descriptive slug. APPEND-ONLY: assign the next number in a
+ * prefix's sequence when a video ships; never reuse or renumber. If you
+ * ever rename a video (change its slug), move its entry to the new key so
+ * the card still shows the code, the sku in the products table is
+ * unaffected. Prefixes: EXP explainer, SHORT short/feature explainer, DEMO
+ * demo, MKT marketing, FA feature-animation pack, PACK pack/stack/bundle,
+ * EDIT editing plan. */
+export const productCodes: Record<string, string> = {
+  "all-in-one-ai-first-positioning": "EXP-001",
+  "ai-receptionist-conversational-ai": "SHORT-001",
+  "unified-inbox-conversational-ai": "SHORT-002",
+  "reputation-management-reviews-ai": "SHORT-003",
+  "highlevel-official-full-platform-pitch": "EXP-002",
+  "ai-employee": "SHORT-004",
+  "conversational-ai": "SHORT-005",
+  "voice-ai": "SHORT-006",
+  "content-ai": "SHORT-007",
+  "all-in-one-inbox": "SHORT-008",
+  "opportunity-pipeline": "SHORT-009",
+  "automation-builder": "SHORT-010",
+  "reputation-manager": "SHORT-011",
+  "email-builder": "SHORT-012",
+  "contact-management": "SHORT-013",
+  "calender-booking": "SHORT-014",
+  "two-way-texting": "SHORT-015",
+  "social-media-planner": "SHORT-016",
+  "call-tracking-recording": "SHORT-017",
+  "payment-invoicing": "SHORT-018",
+  "missed-call-text-back": "SHORT-019",
+  "mobile-app": "SHORT-020",
+  "live-chat-widget": "SHORT-021",
+  membership: "SHORT-022",
+  "power-dialer": "SHORT-023",
+  reporting: "SHORT-024",
+  "forms-surveys": "SHORT-025",
+  "comparison-video": "SHORT-026",
+  "everything-in-one-place": "SHORT-027",
+  "all-in-one-platform": "SHORT-028",
+  "funnel-website-builder": "SHORT-029",
+  "all-in-one-platform-explainer": "EXP-003",
+  "ai-employee-explainer": "EXP-004",
+  "reputation-management-explainer": "EXP-005",
+  "social-media-planner-explainer": "EXP-006",
+  "automated-outreach-explainer": "EXP-007",
+  "complete-platform-tour-explainer": "EXP-008",
+  "spokesperson-platform-demo": "DEMO-001",
+  "motion-graphics-platform-demo": "DEMO-002",
+  "ai-platform-demo": "DEMO-003",
+  "marketing-1": "MKT-001",
+  "marketing-2": "MKT-002",
+  "marketing-3": "MKT-003",
+  "marketing-4": "MKT-004",
+  "marketing-5": "MKT-005",
+  "marketing-6": "MKT-006",
+  "marketing-7": "MKT-007",
+  "marketing-8": "MKT-008",
+  "marketing-9": "MKT-009",
+  "marketing-10": "MKT-010",
+  "marketing-11": "MKT-011",
+  "marketing-12": "MKT-012",
+  "marketing-13": "MKT-013",
+  "marketing-14": "MKT-014",
+  "marketing-15": "MKT-015",
+  "marketing-16": "MKT-016",
+  "marketing-17": "MKT-017",
+  "marketing-18": "MKT-018",
+  "marketing-19": "MKT-019",
+  "marketing-20": "MKT-020",
+  "marketing-21": "MKT-021",
+  "feature-animations-7": "FA-001",
+  "feature-animations-15": "FA-002",
+  "feature-animations-23": "FA-003",
+  "ai-first-saas-pack": "PACK-001",
+  "complete-video-stack": "PACK-002",
+  "new-essential": "PACK-003",
+  "new-growth": "PACK-004",
+  "classic-starter": "PACK-005",
+  "classic-growth": "PACK-006",
+  "classic-pro": "PACK-007",
+  "classic-complete": "PACK-008",
+  "mix-core": "PACK-009",
+  "mix-pro": "PACK-010",
+  "editing-starter": "EDIT-01",
+  "editing-growth": "EDIT-02",
+  "editing-scale": "EDIT-03",
+};
+
+/* The display code for a product's descriptive slug (e.g. "EXP-014"), or
+ * null if it has none yet. */
+export const codeFor = (slug: string): string | null => productCodes[slug] ?? null;
+
+/* The checkout sku for a descriptive slug: the code, lowercased
+ * ("exp-014"), so /checkout/<sku> is the stable, rename-proof URL. Falls
+ * back to the slug itself if no code is assigned. Note: subscription plans
+ * keep their own sku (tied to a Stripe price) and are handled separately. */
+export const skuFor = (slug: string): string =>
+  (productCodes[slug] ?? slug).toLowerCase();
+
+/* ---------------------------------------------------------------- */
+/* The sellable catalog: one derived source of truth                  */
+/* ---------------------------------------------------------------- */
+
+/* Every thing sold on-domain, derived from the catalog above so it can
+ * never drift. It feeds two consumers: `nativeCheckoutSkus` (which buy
+ * buttons route internally) and the products-table sync in /admin (which
+ * seeds each row's authoritative price). Add a video or pack to the
+ * catalog and it appears here; run "Sync from catalog" in admin and it
+ * is live for checkout. `kind` lets the checkout page tailor its copy. */
+export type SellableKind = "video" | "pack" | "bundle" | "subscription";
+
+export type SellableProduct = {
+  sku: string;
+  /* the display code (EXP-014); same string as the sku, upper-cased, for
+     one-time products. null only if no code is assigned yet. */
+  code: string | null;
+  name: string;
+  description: string | null;
+  priceCents: number;
+  type: "one_time" | "subscription";
+  kind: SellableKind;
+  metadata: Record<string, unknown>;
+};
+
+const oneTimeSellables: SellableProduct[] = [
+  /* finished, individually-priced new videos (the coming-soon ones ship
+     with their pack and become sellable when their preview lands) */
+  ...premadeVideos
+    .filter((v) => !v.comingSoon && v.preview)
+    .map((v): SellableProduct => ({
+      sku: skuFor(v.slug),
+      code: codeFor(v.slug),
+      name: v.title,
+      description: v.capability ? `${v.format}. ${v.capability}.` : v.format,
+      priceCents: v.price * 100,
+      type: "one_time",
+      kind: "video",
+      metadata: {
+        kind: "video",
+        code: codeFor(v.slug),
+        format: v.format,
+        capability: v.capability,
+        video_type: v.type,
+      },
+    })),
+  /* the classic library plus the three feature-animation packs */
+  ...oldVideos.map((v): SellableProduct => {
+    const isPack = v.type === "Feature Animation";
+    return {
+      sku: skuFor(v.slug),
+      code: codeFor(v.slug),
+      name: v.title,
+      description: isPack ? (v.subtitle ?? null) : null,
+      priceCents: v.price * 100,
+      type: "one_time",
+      kind: isPack ? "pack" : "video",
+      metadata: isPack
+        ? { kind: "pack", code: codeFor(v.slug), format: v.type, video_count: v.packCount ?? null }
+        : { kind: "video", code: codeFor(v.slug), format: v.type },
+    };
+  }),
+  /* premade packs (AI First SaaS Pack and any future pack) */
+  ...premadePacks.map((p): SellableProduct => ({
+    sku: skuFor(p.slug),
+    code: codeFor(p.slug),
+    name: p.name,
+    description: p.tagline,
+    priceCents: (p.price ?? 0) * 100,
+    type: "one_time",
+    kind: "pack",
+    metadata: { kind: "pack", code: codeFor(p.slug), video_count: p.count ?? null },
+  })),
+  /* the Complete Video Stack */
+  {
+    sku: skuFor(videoStack.sku),
+    code: codeFor(videoStack.sku),
+    name: videoStack.name,
+    description: videoStack.tagline,
+    priceCents: videoStack.price * 100,
+    type: "one_time",
+    kind: "pack",
+    metadata: {
+      kind: "pack",
+      code: codeFor(videoStack.sku),
+      video_count: videoStack.totalCount,
+      delivery_days: videoStack.deliveryDays,
+    },
+  },
+  /* the eight video bundles (New / Classic / Mix tiers) */
+  ...bundleCategories.flatMap((c) =>
+    c.tiers.map((t): SellableProduct => ({
+      sku: skuFor(t.slug),
+      code: codeFor(t.slug),
+      name: `${c.name}: ${t.name}`,
+      description: t.items.map((i) => i.label).join(", "),
+      priceCents: t.price * 100,
+      type: "one_time",
+      kind: "bundle",
+      metadata: {
+        kind: "bundle",
+        code: codeFor(t.slug),
+        category: c.slug,
+        delivery_days: t.deliveryDays,
+      },
+    })),
+  ),
+];
+
+/* Subscriptions keep their own sku (tied to a Stripe price id) so the
+ * catalog sync never re-keys them; they still carry a display code. */
+const subscriptionSellables: SellableProduct[] = editingPlans.map(
+  (p): SellableProduct => ({
+    sku: p.sku,
+    code: codeFor(p.sku),
+    name: `Editing: ${p.name}`,
+    description: null,
+    priceCents: p.price * 100,
+    type: "subscription",
+    kind: "subscription",
+    metadata: {
+      kind: "subscription",
+      code: codeFor(p.sku),
+      long_form: p.longForm,
+      short_form: p.shortForm,
+      featured: p.featured,
+    },
+  }),
+);
+
+/* Dedupe by sku (first wins), so a slug shared across the catalog can
+ * never produce two conflicting products rows. */
+export const sellableProducts: SellableProduct[] = [
+  ...oneTimeSellables,
+  ...subscriptionSellables,
+].reduce<SellableProduct[]>((acc, p) => {
+  if (!acc.some((x) => x.sku === p.sku)) acc.push(p);
+  return acc;
+}, []);
+
+/* One-time products the catalog sync should create/manage (subscriptions
+ * are seeded once, by hand, with their Stripe price id). */
+export const oneTimeSellableProducts: SellableProduct[] = sellableProducts.filter(
+  (p) => p.type === "one_time",
+);
+
+/* Build-time integrity gate: every sellable product must resolve to a product
+ * code. A null code means its slug is orphaned (e.g. a pack-video title was
+ * edited, breaking the slugify()-derived key), which would 404 its checkout and
+ * drop the code from every card. Throwing here fails `next build` with a clear
+ * message instead of silently shipping a dead buy button. This validates at
+ * build; the same data at runtime has already passed, so it never throws live. */
+for (const p of sellableProducts) {
+  if (!p.code) {
+    throw new Error(
+      `[catalog] "${p.name}" (sku "${p.sku}") has no product code: its slug is not in productCodes. ` +
+        `Add a productCodes entry or fix the slug so /checkout/${p.sku} resolves.`,
+    );
+  }
+}
+
+/* Which skus the on-domain checkout serves. Derived, so it always matches
+ * the catalog and the seeded products. */
+export const nativeCheckoutSkus = new Set<string>(
+  sellableProducts.map((p) => p.sku),
+);

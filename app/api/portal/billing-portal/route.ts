@@ -29,7 +29,15 @@ export async function POST(req: Request) {
     });
     return NextResponse.json({ url: session.url });
   } catch (err) {
-    // The Stripe billing portal must be activated in the dashboard first.
-    return NextResponse.json({ error: (err as Error).message }, { status: 502 });
+    // The Stripe billing portal must be activated in the dashboard first. Log
+    // the real Stripe reason server-side, but never leak it to the customer.
+    console.error("billing portal session failed:", (err as Error).message);
+    return NextResponse.json(
+      {
+        error:
+          "Billing is temporarily unavailable. Please email hi@ghlvideo.com and we'll sort it out.",
+      },
+      { status: 502 },
+    );
   }
 }

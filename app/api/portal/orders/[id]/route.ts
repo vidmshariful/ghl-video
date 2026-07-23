@@ -18,7 +18,7 @@ export async function GET(
   const db = supabaseAdmin();
   const { data: o } = await db
     .from("orders")
-    .select("*, product:products(name)")
+    .select("*, product:products(name, sku, metadata)")
     .eq("id", id)
     .maybeSingle();
   if (!o || o.customer_email !== email) {
@@ -31,11 +31,16 @@ export async function GET(
     .eq("order_id", id)
     .order("created_at", { ascending: false });
 
-  const product = o.product as unknown as { name: string } | null;
+  const product = o.product as unknown as {
+    name: string;
+    sku: string;
+    metadata: { code?: string } | null;
+  } | null;
   return NextResponse.json({
     order: {
       id: o.id,
       productName: product?.name ?? null,
+      productCode: product?.metadata?.code ?? product?.sku?.toUpperCase() ?? null,
       amountCents: o.amount_cents,
       currency: o.currency,
       status: o.status,

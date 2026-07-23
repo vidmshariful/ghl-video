@@ -4,7 +4,7 @@ import { Reveal, RevealItem } from "@/components/Reveal";
 import { ReviewCard } from "@/components/ReviewCard";
 import { SectionChip } from "@/components/SectionChip";
 import { SectionGlow } from "@/components/SectionGlow";
-import { home, cta, clients, rating, googleReviewsUrl } from "@/lib/site";
+import { home, cta, rating, googleReviewsUrl } from "@/lib/site";
 
 /*
  * Real Google reviews, verbatim. The feed used to auto-scroll, which

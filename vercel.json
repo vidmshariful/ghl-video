@@ -99,6 +99,26 @@
       "source": "/refund-policy/",
       "destination": "/legal/refund/",
       "permanent": true
+    },
+    {
+      "source": "/terms",
+      "destination": "/legal/terms/",
+      "permanent": true
+    },
+    {
+      "source": "/terms/",
+      "destination": "/legal/terms/",
+      "permanent": true
+    },
+    {
+      "source": "/refund",
+      "destination": "/legal/refund/",
+      "permanent": true
+    },
+    {
+      "source": "/refund/",
+      "destination": "/legal/refund/",
+      "permanent": true
     }
   ]
 }

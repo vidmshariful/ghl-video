@@ -6,7 +6,6 @@ import { Reveal, RevealItem } from "@/components/Reveal";
 import { SectionChip } from "@/components/SectionChip";
 import { SectionGlow } from "@/components/SectionGlow";
 import { home, clips, posters, clipWindows } from "@/lib/site";
-import type { Accent } from "@/components/Eyebrow";
 
 /*
  * The three services as named product panels, alternating direction,

@@ -7,10 +7,13 @@ import { supabaseAdmin } from "./supabase-admin";
  * amount. metadata carries per-product config (tags, delivery, upsell).
  */
 export type ProductMetadata = {
+  kind?: "video" | "pack" | "bundle" | "subscription";
+  code?: string;
   tier?: string;
   video_count?: number;
   format?: string;
   capability?: string;
+  category?: string;
   delivery_days?: number;
   bump_eligible?: boolean;
   upsell_sku?: string;

@@ -7,6 +7,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { MediaFrame } from "@/components/MediaFrame";
 import {
   checkoutHref,
+  codeFor,
   collab,
   cta,
   featureAnimations,
@@ -14,6 +15,7 @@ import {
   oldVideoTypes,
   premadePacks,
   premadeVideos,
+  skuFor,
   videoStack,
   type CollabVersion,
   type PremadePack,
@@ -40,6 +42,9 @@ type BrowseVideo = {
   previewNote: string | null;
   previewCtaLabel: string | null;
   orderUrl: string;
+  /* preview-only cards buy their parent pack: its native checkout sku.
+     null for individually-sold videos, which buy by their own slug. */
+  checkoutSku: string | null;
 };
 
 type FilterDef = {
@@ -70,6 +75,7 @@ const newReady: BrowseVideo[] = premadeVideos
     previewNote: null,
     previewCtaLabel: null,
     orderUrl: v.orderUrl,
+    checkoutSku: null,
   }));
 
 const newGroups: FilterDef[] = [
@@ -98,6 +104,7 @@ const oldClassic: BrowseVideo[] = oldVideos
     previewNote: null,
     previewCtaLabel: null,
     orderUrl: v.orderUrl,
+    checkoutSku: null,
   }));
 
 const oldBrowse: BrowseVideo[] = oldClassic;
@@ -133,6 +140,7 @@ const featureBrowse: BrowseVideo[] = featureAnimations.map((f) => ({
   previewNote: "Included in every feature-animation pack, branded to you.",
   previewCtaLabel: "See the packs",
   orderUrl: "https://order.ghlvideo.com/feature-animations-15",
+  checkoutSku: "feature-animations-15",
 }));
 
 /* the Complete Video Stack's pre-decided line-up: our HighLevel team's
@@ -147,7 +155,7 @@ const stackByType = (type: string) =>
 
 const stackPicks: BrowseVideo[] = [
   ...stackByType("Explainer").slice(0, 2),
-  ...stackByType("Demo").filter((v) => v.slug === "demo-v3-6708"),
+  ...stackByType("Demo").filter((v) => v.slug === "ai-platform-demo"),
   ...stackByType("Short Explainer").slice(0, 20),
   ...stackByType("Marketing").slice(0, 15),
   ...featureBrowse.slice(0, 15),
@@ -158,6 +166,7 @@ const stackPicks: BrowseVideo[] = [
   previewNote: "Part of the Complete Video Stack, branded to your platform.",
   previewCtaLabel: "Order Now",
   orderUrl: videoStack.orderUrl,
+  checkoutSku: videoStack.sku,
 }));
 
 const stackGroups: FilterDef[] = [
@@ -186,11 +195,15 @@ function BuyVideoLink({
   label = "Order Now",
   className = "",
 }: {
-  video: { slug: string; orderUrl: string };
+  video: { slug: string; orderUrl: string; checkoutSku?: string | null };
   label?: string;
   className?: string;
 }) {
-  const dest = checkoutHref(video.slug, video.orderUrl);
+  // a preview-only card buys its parent pack by that pack's sku; an
+  // individually-sold video buys by its own slug via checkoutHref.
+  const dest = video.checkoutSku
+    ? { href: `/checkout/${skuFor(video.checkoutSku)}`, external: false }
+    : checkoutHref(video.slug, video.orderUrl);
   const cls = `tap group/btn inline-flex items-center gap-1.5 whitespace-nowrap rounded-[3px] bg-brand-gradient px-4 py-2 text-body-sm font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] transition-all duration-200 hover:brightness-110 active:scale-[0.98] ${className}`;
   const inner = (
     <>
@@ -355,6 +368,9 @@ function LibraryCard({
      description, not a repeat of the type/capability shown on the video */
   const descriptor =
     video.subtitle && video.subtitle !== video.subTag ? video.subtitle : null;
+  /* the permanent product code, shown so a buyer and the team can name the
+     exact video. Preview-only cards (bundle contents) have none. */
+  const code = codeFor(video.slug);
 
   return (
     <div className="group/card flex h-full flex-col">
@@ -399,7 +415,12 @@ function LibraryCard({
       <div className="flex flex-1 border-b border-hair px-1 pb-4 pt-3.5">
         <div className="flex w-full items-start justify-between gap-4">
           <div className="min-w-0">
-            <h3 className="font-display text-h4 font-semibold leading-snug tracking-[-0.01em] text-ink">
+            {code && (
+              <p className="font-mono text-label uppercase tracking-[0.12em] text-gold/80 [font-variant-numeric:tabular-nums]">
+                {code}
+              </p>
+            )}
+            <h3 className="mt-1 font-display text-h4 font-semibold leading-snug tracking-[-0.01em] text-ink">
               {video.title}
             </h3>
             {descriptor && (
@@ -899,20 +920,18 @@ function FeaturePriceCard({ pack }: { pack: (typeof featurePacks)[number] }) {
       <p className="mt-2 text-body-sm leading-relaxed text-muted">
         {pack.subtitle}
       </p>
-      <a
-        href={pack.orderUrl}
-        target="_blank"
-        rel="noopener"
+      <Link
+        href={`/checkout/${skuFor(pack.slug)}`}
         className="group/btn mt-4 inline-flex items-center justify-center gap-1.5 rounded-[3px] bg-brand-gradient px-4 py-2.5 text-body-sm font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
       >
-        Order Now 
+        Order Now
         <span
           aria-hidden="true"
           className="transition-transform duration-200 group-hover/btn:translate-x-0.5"
         >
           &rarr;
         </span>
-      </a>
+      </Link>
 
       {/* what's included: closed by default, opens on click */}
       <button
@@ -1020,7 +1039,7 @@ function BundleView({
   count,
   price,
   anchorPrice,
-  orderUrl,
+  sku,
   ctaLabel,
   overviewNote,
   summaryItems,
@@ -1034,7 +1053,7 @@ function BundleView({
   count: number | null;
   price: number | null;
   anchorPrice?: number | null;
-  orderUrl: string | null;
+  sku: string | null;
   ctaLabel: string;
   overviewNote: string;
   summaryItems: BundleSummaryItem[];
@@ -1043,7 +1062,7 @@ function BundleView({
   previewGroups: FilterDef[];
   previewNote?: string | null;
 }) {
-  const canOrder = Boolean(price && orderUrl);
+  const canOrder = Boolean(price && sku);
   return (
     <div>
       {/* header band: value anchor + one CTA */}
@@ -1070,10 +1089,8 @@ function BundleView({
                   ${(price ?? 0).toLocaleString("en-US")}
                 </span>
               </span>
-              <a
-                href={orderUrl ?? "#"}
-                target="_blank"
-                rel="noopener"
+              <Link
+                href={`/checkout/${skuFor(sku ?? "")}`}
                 className="group inline-flex items-center gap-2 whitespace-nowrap rounded-[3px] bg-brand-gradient px-6 py-3 text-body font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.28)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98]"
               >
                 {ctaLabel}
@@ -1083,7 +1100,7 @@ function BundleView({
                 >
                   &rarr;
                 </span>
-              </a>
+              </Link>
             </>
           ) : (
             <Link
@@ -1185,7 +1202,7 @@ function VideoStackView() {
       count={s.totalCount}
       price={s.price}
       anchorPrice={s.anchorPrice}
-      orderUrl={s.orderUrl}
+      sku={s.sku}
       ctaLabel="Order Now"
       overviewNote={`A walkthrough of the full stack from our team. Every format below ships branded to your platform, delivered in ${s.deliveryDays} days.`}
       summaryItems={s.formats.map((f) => ({
@@ -1223,6 +1240,7 @@ function PackBundleView({ pack }: { pack: PremadePack }) {
       previewNote: `Included in the ${pack.name}, branded to your platform.`,
       previewCtaLabel: "Order Now",
       orderUrl: pack.orderUrl ?? cta.bookACall.href,
+      checkoutSku: pack.slug,
     })),
   );
   const previewGroups: FilterDef[] = [
@@ -1245,7 +1263,7 @@ function PackBundleView({ pack }: { pack: PremadePack }) {
       count={pack.count}
       price={pack.price}
       anchorPrice={pack.anchorPrice}
-      orderUrl={pack.orderUrl}
+      sku={pack.slug}
       ctaLabel="Order Now"
       overviewNote="A walkthrough of the pack from our team, branded to your platform. Every video below is included."
       summaryItems={summaryItems}

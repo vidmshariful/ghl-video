@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Button } from "@/components/Button";
 import { DrawnBorder } from "@/components/DrawnBorder";
 import { FaqList } from "@/components/FaqList";
@@ -10,7 +11,7 @@ import { SectionGlow } from "@/components/SectionGlow";
 import { SectionHead } from "@/components/SectionHead";
 import { PageHero } from "@/components/pages/PageHero";
 import { faqSchema, serviceSchema } from "@/lib/schema";
-import { cta, oldVideos, pages } from "@/lib/site";
+import { codeFor, cta, oldVideos, pages, skuFor } from "@/lib/site";
 
 /*
  * Preserved ranking URL: this page holds #1 for "gohighlevel demo video"
@@ -82,23 +83,21 @@ export default function DemoVideoPage() {
                     className="flex flex-wrap items-center justify-between gap-x-8 gap-y-3 border-t border-hair px-6 py-5 first:border-t-0 md:px-8"
                   >
                     <div className="min-w-0">
-                      <p className="font-display text-h4 font-semibold text-ink">
-                        {v.title}
-                      </p>
-                      {v.subtitle && (
-                        <p className="mt-1 font-mono text-label uppercase text-dim">
-                          {v.subtitle}
+                      {codeFor(v.slug) && (
+                        <p className="font-mono text-label uppercase tracking-[0.12em] text-gold/80 [font-variant-numeric:tabular-nums]">
+                          {codeFor(v.slug)}
                         </p>
                       )}
+                      <p className="mt-1 font-display text-h4 font-semibold text-ink">
+                        {v.title}
+                      </p>
                     </div>
                     <div className="flex shrink-0 items-center gap-5">
                       <span className="font-mono text-price text-gold [font-variant-numeric:tabular-nums]">
                         ${v.price.toLocaleString("en-US")}
                       </span>
-                      <a
-                        href={v.orderUrl}
-                        target="_blank"
-                        rel="noopener"
+                      <Link
+                        href={`/checkout/${skuFor(v.slug)}`}
                         className="tap group/btn inline-flex items-center gap-1.5 whitespace-nowrap rounded-[3px] bg-brand-gradient px-4 py-2 text-body-sm font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
                       >
                         Order Now
@@ -108,7 +107,7 @@ export default function DemoVideoPage() {
                         >
                           &rarr;
                         </span>
-                      </a>
+                      </Link>
                     </div>
                   </li>
                 ))}

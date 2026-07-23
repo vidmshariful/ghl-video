@@ -5,6 +5,7 @@ export type View =
   | "orders"
   | "subscriptions"
   | "products"
+  | "bumps"
   | "customers"
   | "code"
   | "pages"

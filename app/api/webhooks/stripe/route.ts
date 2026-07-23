@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { stripe } from "@/lib/checkout/stripe";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
-import { syncPaidOrderToHighLevel, syncSubscriptionToHighLevel } from "@/lib/checkout/fulfill";
+import { syncSubscriptionToHighLevel } from "@/lib/checkout/fulfill";
+import { settlePaidIntent } from "@/lib/checkout/settle";
 
 export const runtime = "nodejs";
 
@@ -78,47 +79,11 @@ async function handleSucceeded(
   db: ReturnType<typeof supabaseAdmin>,
   pi: Stripe.PaymentIntent,
 ) {
-  const { data: order } = await db
-    .from("orders")
-    .select("*")
-    .eq("stripe_payment_intent_id", pi.id)
-    .maybeSingle();
-  if (!order) return; // unknown intent
-
-  // Mark paid exactly once. The conditional update flips only on the first
-  // delivery; the payment_succeeded event is logged the same one time.
-  if (order.status !== "paid") {
-    const { data: flipped } = await db
-      .from("orders")
-      .update({
-        status: "paid",
-        paid_at: new Date().toISOString(),
-        invoice_number:
-          order.invoice_number ??
-          `GV-${(order.id as string).replace(/-/g, "").slice(0, 8).toUpperCase()}`,
-      })
-      .eq("id", order.id)
-      .neq("status", "paid")
-      .select()
-      .maybeSingle();
-    if (flipped) {
-      order.status = "paid";
-      order.highlevel_opportunity_id = flipped.highlevel_opportunity_id;
-      await db.from("order_events").insert({
-        order_id: order.id,
-        event_type: "payment_succeeded",
-        payload: { stripe_payment_intent_id: pi.id, amount_cents: pi.amount },
-      });
-    }
-  }
-
-  // Fulfill: re-entrant, gated on the opportunity not yet existing. A retry
-  // that finds the order paid-but-unsynced re-runs this idempotently. On
-  // failure, throw so the webhook returns non-2xx and Stripe re-delivers.
-  if (order.status === "paid" && !order.highlevel_opportunity_id) {
-    const result = await syncPaidOrderToHighLevel(db, order);
-    if (!result.ok) throw new Error(result.error);
-  }
+  // Mark paid (idempotent) AND fulfill (re-entrant, gated on the opportunity
+  // not yet existing). On a sync failure, throw so the webhook returns non-2xx
+  // and Stripe re-delivers. Shared with the confirmation-page reconcile.
+  const { syncError } = await settlePaidIntent(db, pi, { fulfill: true });
+  if (syncError) throw new Error(syncError);
 }
 
 async function handleFailed(

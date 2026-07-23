@@ -96,21 +96,18 @@ export async function addTags(contactId: string, tags: string[]): Promise<void> 
   });
 }
 
-export async function createOpportunity(input: {
+async function createOpportunityIn(input: {
   contactId: string;
   name: string;
   monetaryValue: number;
+  pipelineId: string;
+  pipelineStageId: string;
 }): Promise<string> {
-  const pipelineId = process.env.HIGHLEVEL_PIPELINE_ID;
-  const pipelineStageId = process.env.HIGHLEVEL_STAGE_ID;
-  if (!pipelineId || !pipelineStageId) {
-    throw new Error("Missing HIGHLEVEL_PIPELINE_ID / HIGHLEVEL_STAGE_ID");
-  }
   const j = await hlFetch("/opportunities/", {
     method: "POST",
     body: JSON.stringify({
-      pipelineId,
-      pipelineStageId,
+      pipelineId: input.pipelineId,
+      pipelineStageId: input.pipelineStageId,
       locationId: locationId(),
       contactId: input.contactId,
       name: input.name,
@@ -122,6 +119,28 @@ export async function createOpportunity(input: {
   const id = (opp.id as string) ?? (j.id as string);
   if (!id) throw new Error(`HL createOpportunity: no id in ${JSON.stringify(j).slice(0, 200)}`);
   return id;
+}
+
+export async function createOpportunity(input: {
+  contactId: string;
+  name: string;
+  monetaryValue: number;
+}): Promise<string> {
+  const pipelineId = process.env.HIGHLEVEL_PIPELINE_ID;
+  const pipelineStageId = process.env.HIGHLEVEL_STAGE_ID;
+  if (!pipelineId || !pipelineStageId) {
+    throw new Error("Missing HIGHLEVEL_PIPELINE_ID / HIGHLEVEL_STAGE_ID");
+  }
+  return createOpportunityIn({ ...input, pipelineId, pipelineStageId });
+}
+
+/* Attach a note to a contact (used to carry a lead's free-text project brief). */
+export async function addNote(contactId: string, body: string): Promise<void> {
+  if (!body.trim()) return;
+  await hlFetch(`/contacts/${contactId}/notes`, {
+    method: "POST",
+    body: JSON.stringify({ body }),
+  });
 }
 
 /**
@@ -149,6 +168,46 @@ export async function syncOrderToHighLevel(input: {
     contactId,
     name: input.opportunityName,
     monetaryValue: input.amountDollars,
+  });
+  return { contactId, opportunityId };
+}
+
+// Website quote leads land in "0. Setter Pipeline" / "New Lead" by default;
+// override either in Vercel to reconfigure without a code change.
+const LEAD_PIPELINE_ID = () =>
+  process.env.HIGHLEVEL_LEAD_PIPELINE_ID || "xPCPS2JiczcBOhQrZdXF";
+const LEAD_STAGE_ID = () =>
+  process.env.HIGHLEVEL_LEAD_STAGE_ID || "88340841-cbe0-49fa-8e66-cb5a4a00880c";
+
+/**
+ * Sync a pre-sale website lead (quote request) into HighLevel: upsert the
+ * contact, tag it (tags fire the CRM's lead workflows), attach the project
+ * brief as a note, and open an opportunity in the setter pipeline's New Lead
+ * stage. Throws on any failure so the caller can tell the visitor to retry.
+ */
+export async function syncLeadToHighLevel(input: {
+  email: string;
+  name?: string;
+  phone?: string;
+  company?: string;
+  tags: string[];
+  note?: string;
+  opportunityName: string;
+}): Promise<{ contactId: string; opportunityId: string }> {
+  const contactId = await upsertContact({
+    email: input.email,
+    name: input.name,
+    phone: input.phone,
+    company: input.company,
+  });
+  await addTags(contactId, input.tags);
+  if (input.note) await addNote(contactId, input.note);
+  const opportunityId = await createOpportunityIn({
+    contactId,
+    name: input.opportunityName,
+    monetaryValue: 0,
+    pipelineId: LEAD_PIPELINE_ID(),
+    pipelineStageId: LEAD_STAGE_ID(),
   });
   return { contactId, opportunityId };
 }

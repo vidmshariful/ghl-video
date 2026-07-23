@@ -1,11 +1,11 @@
 /*
- * Legal documents, ported VERBATIM from the live WordPress site
- * (privacy-policy, terms-and-conditions, refund-policy) with
- * typographic normalization only (no em or en dashes). FLAG: the live
- * legal copy names "Motion Magic Production LLC" / "Magic Motion
- * Production LLC" as the operating entity while the new brand line is
- * "A brand of Vidiosa LLC". Shariful's counsel must reconcile the
- * entity references before launch; do not edit them in code.
+ * Legal documents, ported from the live WordPress site (privacy-policy,
+ * terms-and-conditions, refund-policy) with typographic normalization only
+ * (no em or en dashes). Operating legal entity is Magic Motion Production LLC
+ * (GHL Video is its DBA / brand); this is the entity used for the A2P and
+ * payment registration, so all three documents name it consistently. The
+ * footer's "A brand of Vidiosa LLC" is brand-family narrative only, not the
+ * contracting entity.
  */
 
 export type LegalItem = { t: "p" | "li"; text: string };
@@ -178,7 +178,7 @@ export const legalDocs: Record<string, LegalDoc> = {
           },
           {
             "t": "p",
-            "text": "Motion Magic Production LLC. Email: hi@ghlvideo.com. Website: www.ghlvideo.com"
+            "text": "Magic Motion Production LLC. Email: hi@ghlvideo.com. Website: www.ghlvideo.com"
           }
         ]
       }
@@ -193,7 +193,7 @@ export const legalDocs: Record<string, LegalDoc> = {
         "items": [
           {
             "t": "p",
-            "text": "Welcome to ghlvideo.com, a service operated by Motion Magic Production LLC (\"Company,\" \"we,\" \"our,\" or \"us\"), a registered business in the United States. This document outlines the terms and conditions governing the use of our website and services. By accessing our website or using any of our services, you agree to be legally bound by these Terms and Conditions. If you do not agree with these terms, please refrain from using our website and services."
+            "text": "Welcome to ghlvideo.com, a service operated by Magic Motion Production LLC (\"Company,\" \"we,\" \"our,\" or \"us\"), a registered business in the United States. This document outlines the terms and conditions governing the use of our website and services. By accessing our website or using any of our services, you agree to be legally bound by these Terms and Conditions. If you do not agree with these terms, please refrain from using our website and services."
           }
         ]
       },
@@ -202,7 +202,7 @@ export const legalDocs: Record<string, LegalDoc> = {
         "items": [
           {
             "t": "p",
-            "text": "Motion Magic Production LLC provides professional video production services tailored to the needs of businesses. These services include, but are not limited to, conceptualizing video ideas, writing scripts, editing, adding motion graphics and animations, recording voice-overs, and delivering final video products in various formats. Our Video-as-a-Service (VaaS) offering allows businesses to integrate ongoing video content production into their broader marketing and product strategies. All services are customized based on client requirements and are governed by project-specific agreements."
+            "text": "Magic Motion Production LLC provides professional video production services tailored to the needs of businesses. These services include, but are not limited to, conceptualizing video ideas, writing scripts, editing, adding motion graphics and animations, recording voice-overs, and delivering final video products in various formats. Our Video-as-a-Service (VaaS) offering allows businesses to integrate ongoing video content production into their broader marketing and product strategies. All services are customized based on client requirements and are governed by project-specific agreements."
           }
         ]
       },
@@ -238,7 +238,7 @@ export const legalDocs: Record<string, LegalDoc> = {
         "items": [
           {
             "t": "p",
-            "text": "Unless otherwise agreed in writing, Motion Magic Production LLC retains full ownership of all raw project files, footage, templates, and source materials used in the production process. Upon full payment of the project, the client is granted a non-exclusive, non-transferable license to use the final deliverables for their intended purpose. This license does not grant rights to resell, sublicense, or commercially distribute the content to third parties without prior written consent. Unauthorized use or reproduction of our content is strictly prohibited and may result in legal action."
+            "text": "Unless otherwise agreed in writing, Magic Motion Production LLC retains full ownership of all raw project files, footage, templates, and source materials used in the production process. Upon full payment of the project, the client is granted a non-exclusive, non-transferable license to use the final deliverables for their intended purpose. This license does not grant rights to resell, sublicense, or commercially distribute the content to third parties without prior written consent. Unauthorized use or reproduction of our content is strictly prohibited and may result in legal action."
           }
         ]
       },
@@ -274,7 +274,7 @@ export const legalDocs: Record<string, LegalDoc> = {
         "items": [
           {
             "t": "p",
-            "text": "To the fullest extent permitted by law, Motion Magic Production LLC and its affiliates shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including but not limited to loss of revenue, profits, or data, arising from your use of our services. Our total liability for any claim arising out of or related to these terms or services shall not exceed the total fees paid by the client for the specific project giving rise to the claim."
+            "text": "To the fullest extent permitted by law, Magic Motion Production LLC and its affiliates shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including but not limited to loss of revenue, profits, or data, arising from your use of our services. Our total liability for any claim arising out of or related to these terms or services shall not exceed the total fees paid by the client for the specific project giving rise to the claim."
           }
         ]
       },
@@ -283,7 +283,7 @@ export const legalDocs: Record<string, LegalDoc> = {
         "items": [
           {
             "t": "p",
-            "text": "You agree to indemnify, defend, and hold harmless Motion Magic Production LLC, its directors, employees, agents, and partners from any claims, damages, losses, liabilities, costs, or expenses (including legal fees) arising out of or related to your use of our services, your breach of these terms, or any violation of applicable laws or third-party rights."
+            "text": "You agree to indemnify, defend, and hold harmless Magic Motion Production LLC, its directors, employees, agents, and partners from any claims, damages, losses, liabilities, costs, or expenses (including legal fees) arising out of or related to your use of our services, your breach of these terms, or any violation of applicable laws or third-party rights."
           }
         ]
       },
@@ -338,7 +338,7 @@ export const legalDocs: Record<string, LegalDoc> = {
           },
           {
             "t": "p",
-            "text": "Motion Magic Production LLC. Email: hi@ghlvideo.com. Website: www.ghlvideo.com"
+            "text": "Magic Motion Production LLC. Email: hi@ghlvideo.com. Website: www.ghlvideo.com"
           }
         ]
       }
@@ -353,7 +353,7 @@ export const legalDocs: Record<string, LegalDoc> = {
         "items": [
           {
             "t": "p",
-            "text": "At Motion Magic Production LLC, we are committed to delivering high-quality video content and a smooth client experience. This Refund Policy outlines the circumstances under which a client may request a refund for services purchased via ghlvideo.com."
+            "text": "At Magic Motion Production LLC, we are committed to delivering high-quality video content and a smooth client experience. This Refund Policy outlines the circumstances under which a client may request a refund for services purchased via ghlvideo.com."
           },
           {
             "t": "p",
@@ -489,7 +489,7 @@ export const legalDocs: Record<string, LegalDoc> = {
           },
           {
             "t": "p",
-            "text": "Motion Magic Production LLC. Email: hi@ghlvideo.com. Website: www.ghlvideo.com"
+            "text": "Magic Motion Production LLC. Email: hi@ghlvideo.com. Website: www.ghlvideo.com"
           }
         ]
       }

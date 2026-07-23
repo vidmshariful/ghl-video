@@ -26,7 +26,12 @@ export async function POST(
   }
 
   try {
-    await stripe().refunds.create({ payment_intent: order.stripe_payment_intent_id });
+    // Idempotency key: a double-click or retry returns the same refund instead
+    // of issuing a second one.
+    await stripe().refunds.create(
+      { payment_intent: order.stripe_payment_intent_id },
+      { idempotencyKey: `refund_${order.id}` },
+    );
   } catch (err) {
     return NextResponse.json(
       { error: `Stripe refund failed: ${(err as Error).message}` },
@@ -34,11 +39,21 @@ export async function POST(
     );
   }
 
-  await db.from("orders").update({ status: "refunded" }).eq("id", id);
-  await db.from("order_events").insert({
-    order_id: id,
-    event_type: "refunded",
-    payload: { by: admin.email },
-  });
+  // Conditional flip (only the first refund of a paid order wins) closes the
+  // check-then-act race and logs the event exactly once.
+  const { data: flipped } = await db
+    .from("orders")
+    .update({ status: "refunded" })
+    .eq("id", id)
+    .eq("status", "paid")
+    .select("id")
+    .maybeSingle();
+  if (flipped) {
+    await db.from("order_events").insert({
+      order_id: id,
+      event_type: "refunded",
+      payload: { by: admin.email },
+    });
+  }
   return NextResponse.json({ ok: true });
 }
