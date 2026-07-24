@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Logo } from "@/components/Logo";
-import { CheckoutProgress } from "@/components/CheckoutProgress";
+import { CheckoutProgress } from "@/components/checkout/CheckoutProgress";
 
 /* the real team, so "Need help?" is a real face, not a stock stand-in */
 const TEAM = [

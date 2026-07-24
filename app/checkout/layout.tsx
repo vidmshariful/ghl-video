@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getChrome } from "@/lib/chrome";
-import { CheckoutHeader } from "@/components/CheckoutHeader";
+import { CheckoutHeader } from "@/components/checkout/CheckoutHeader";
 import { PageFrame } from "@/components/PageFrame";
 
 /* Checkout lives outside the (site) route group: no marketing nav, no

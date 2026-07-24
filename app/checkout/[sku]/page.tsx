@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getActiveProductBySku } from "@/lib/checkout/products";
 import { getApplicableBumps } from "@/lib/checkout/bumps";
-import { CheckoutTrust } from "@/components/CheckoutTrust";
+import { CheckoutTrust } from "@/components/checkout/CheckoutTrust";
 import { RuledBox } from "@/components/RuledBox";
 import { clients, rating } from "@/lib/site";
 import { CheckoutClient } from "./CheckoutClient";

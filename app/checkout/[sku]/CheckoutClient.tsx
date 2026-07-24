@@ -9,7 +9,7 @@ import {
   useElements,
 } from "@stripe/react-stripe-js";
 import { useRouter } from "next/navigation";
-import { SecurePaymentsBand } from "@/components/SecurePaymentsBand";
+import { SecurePaymentsBand } from "@/components/checkout/SecurePaymentsBand";
 
 /*
  * On-domain checkout, a two-step accordion inside one card. The buyer fills

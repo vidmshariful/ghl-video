@@ -1,4 +1,4 @@
-import { PaymentMarks } from "@/components/PaymentMarks";
+import { PaymentMarks } from "@/components/checkout/PaymentMarks";
 
 /* Reassurance strip that sits just below the Pay button, inside the payment
  * box: the secure-payment promise, the processor, and the accepted card
