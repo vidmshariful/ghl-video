@@ -96,7 +96,7 @@ export function Hero() {
             {/* copy panel */}
             <div className="flex flex-col p-8 md:p-12 lg:p-14">
               <motion.div {...fadeUp(0.05)}>
-                <span className="inline-flex items-center gap-2.5 rounded-[4px] border border-hair/50 bg-canvas/60 py-2 pl-2.5 pr-3.5">
+                <span className="inline-flex items-center gap-2.5 rounded-card border border-hair/50 bg-canvas/60 py-2 pl-2.5 pr-3.5">
                   <GhlMark className="h-4 w-auto" />
                   <span aria-hidden="true" className="h-3.5 w-px bg-hair" />
                   <span className="font-mono text-label uppercase tracking-[0.14em] text-dim">

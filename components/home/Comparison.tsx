@@ -13,7 +13,7 @@ function Cross({ className = "" }: { className?: string }) {
       <path
         d="M3 3l6 6M9 3l-6 6"
         fill="none"
-        stroke="#ff6b6b"
+        stroke="var(--error)"
         strokeWidth="1.8"
         strokeLinecap="round"
       />
@@ -41,9 +41,9 @@ function Check({ className = "" }: { className?: string }) {
 }
 
 const themCard =
-  "flex h-full items-start gap-3 rounded-[10px] border border-[#ff6b6b]/[0.15] bg-[#ff6b6b]/[0.05] px-5 py-4 text-body text-dim";
+  "flex h-full items-start gap-3 rounded-card border border-error/[0.15] bg-error/[0.05] px-5 py-4 text-body text-dim";
 const usCard =
-  "flex h-full items-start gap-3 rounded-[10px] border border-green/[0.28] bg-green/[0.08] px-5 py-4 text-body font-medium text-ink";
+  "flex h-full items-start gap-3 rounded-card border border-green/[0.28] bg-green/[0.08] px-5 py-4 text-body font-medium text-ink";
 
 /*
  * Head to head, them vs us: two columns of tinted cards. The generalist

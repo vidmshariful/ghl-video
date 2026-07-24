@@ -56,7 +56,7 @@ export function HeroReviewer({
         {/* the player popup, above the avatar, with a downward arrow */}
         {open && (
           <div className="absolute bottom-full left-0 z-30 mb-3 w-64">
-            <div className="overflow-hidden rounded-[6px] border border-hair bg-card shadow-[0_24px_60px_-24px_rgba(0,0,0,0.95)]">
+            <div className="overflow-hidden rounded-card border border-hair bg-card shadow-[0_24px_60px_-24px_rgba(0,0,0,0.95)]">
               <div className="relative aspect-video bg-canvas">
                 {video ? (
                   <video

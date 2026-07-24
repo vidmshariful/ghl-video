@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Eyebrow } from "@/components/Eyebrow";
 import { Reveal, RevealItem } from "@/components/Reveal";
+import { SectionChip } from "@/components/SectionChip";
 import { SectionGlow } from "@/components/SectionGlow";
 import { home } from "@/lib/site";
 
@@ -17,8 +18,8 @@ export function AudienceSplit() {
       <div className="shell relative">
         <Reveal>
           <RevealItem>
-            <Eyebrow accent="muted">{audiences.eyebrow}</Eyebrow>
-            <h2 className="mt-4 max-w-[16ch] font-display text-h2 text-ink">
+            <SectionChip label={audiences.eyebrow} />
+            <h2 className="mt-6 max-w-[16ch] font-display text-h2 text-ink">
               Which one are you?
             </h2>
           </RevealItem>
