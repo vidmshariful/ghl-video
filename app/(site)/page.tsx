@@ -5,6 +5,7 @@ import { Manifesto } from "@/components/home/Manifesto";
 import { ShowreelMoment } from "@/components/home/ShowreelMoment";
 import { ClientWall } from "@/components/home/ClientWall";
 import { Comparison } from "@/components/home/Comparison";
+import { AudienceSplit } from "@/components/home/AudienceSplit";
 import { VideoTestimonials } from "@/components/home/VideoTestimonials";
 import { Testimonials } from "@/components/home/Testimonials";
 import { Faq } from "@/components/home/Faq";
@@ -31,6 +32,8 @@ export default function Home() {
       <div className="theme-light">
         <Comparison />
       </div>
+      {/* the two ICPs route themselves before the proof runs */}
+      <AudienceSplit />
       <VideoTestimonials />
       <div className="theme-light">
         {/* the team lives on About; it ran on both pages with the same
