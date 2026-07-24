@@ -9,7 +9,6 @@ export const pages = {
       headline: "Branded HighLevel videos,",
       accent: "ready when you are.",
       lede: "Browse the full library. Order any video on its own, or take a pack and save. Every one is white-labeled to your SaaS.",
-      priceSignal: "Videos $495 to $995",
     },
     grid: {
       chip: "The library",

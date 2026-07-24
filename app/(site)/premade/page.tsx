@@ -66,7 +66,6 @@ export default function PremadePage() {
         headline={p.hero.headline}
         accent={p.hero.accent}
         lede={p.hero.lede}
-        signal={p.hero.priceSignal}
       >
         <Button href="#videos">See the videos</Button>
         <Button href={cta.bookACall.href} variant="ghost">
