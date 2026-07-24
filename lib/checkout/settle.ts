@@ -5,6 +5,11 @@ import { syncPaidOrderToHighLevel } from "@/lib/checkout/fulfill";
 
 type DB = ReturnType<typeof supabaseAdmin>;
 
+/* Sentinel stored in highlevel_opportunity_id while a sync is in flight, so
+ * the claim is a single conditional update. A crash mid-sync can strand it;
+ * the admin resync action treats it as not-synced and recovers. */
+export const HL_SYNC_CLAIM = "sync-in-progress";
+
 /*
  * Settle a succeeded PaymentIntent onto its order. This is the ONE place that
  * turns a paid intent into a paid order, shared by two callers so they can
@@ -124,11 +129,31 @@ export async function settlePaidIntent(
     !order.highlevel_opportunity_id &&
     !flaggedMismatch
   ) {
-    try {
-      const result = await syncPaidOrderToHighLevel(db, order);
-      if (!result.ok) syncError = result.error;
-    } catch (err) {
-      syncError = (err as Error).message;
+    // Claim the sync atomically before running it: two concurrent deliveries
+    // of the same event would both pass a plain read check, and HighLevel
+    // would get two opportunities. Only the claim winner syncs; a failed sync
+    // releases the claim so the next delivery retries.
+    const { data: claimed } = await db
+      .from("orders")
+      .update({ highlevel_opportunity_id: HL_SYNC_CLAIM })
+      .eq("id", order.id)
+      .is("highlevel_opportunity_id", null)
+      .select("id")
+      .maybeSingle();
+    if (claimed) {
+      try {
+        const result = await syncPaidOrderToHighLevel(db, order);
+        if (!result.ok) syncError = result.error;
+      } catch (err) {
+        syncError = (err as Error).message;
+      }
+      if (syncError) {
+        await db
+          .from("orders")
+          .update({ highlevel_opportunity_id: null })
+          .eq("id", order.id)
+          .eq("highlevel_opportunity_id", HL_SYNC_CLAIM);
+      }
     }
   }
 

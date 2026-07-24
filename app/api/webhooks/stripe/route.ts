@@ -57,6 +57,10 @@ export async function POST(req: Request) {
       await handleSucceeded(db, event.data.object as Stripe.PaymentIntent);
     } else if (event.type === "payment_intent.payment_failed") {
       await handleFailed(db, event.data.object as Stripe.PaymentIntent);
+    } else if (event.type === "charge.refunded") {
+      await handleChargeRefunded(db, event.data.object as Stripe.Charge);
+    } else if (event.type === "charge.dispute.created") {
+      await handleDisputeCreated(db, event.data.object as Stripe.Dispute);
     } else if (
       event.type === "customer.subscription.created" ||
       event.type === "customer.subscription.updated"
@@ -82,8 +86,178 @@ async function handleSucceeded(
   // Mark paid (idempotent) AND fulfill (re-entrant, gated on the opportunity
   // not yet existing). On a sync failure, throw so the webhook returns non-2xx
   // and Stripe re-delivers. Shared with the confirmation-page reconcile.
-  const { syncError } = await settlePaidIntent(db, pi, { fulfill: true });
+  const first = await settlePaidIntent(db, pi, { fulfill: true });
+  const status = first.status;
+  let syncError = first.syncError;
+
+  // Money captured with no order row: finalize never landed (crash
+  // mid-checkout, or a client confirmed the raw secret). Reconstruct a
+  // durable order from the intent so a charge never goes unrecorded, then
+  // settle it normally. Intents without a recognizable sku (created by some
+  // other integration on this Stripe account) are logged and left alone.
+  if (status === "unknown") {
+    const recovered = await recoverOrphanPaidIntent(db, pi);
+    if (recovered) {
+      ({ syncError } = await settlePaidIntent(db, pi, { fulfill: true }));
+    }
+  }
+
   if (syncError) throw new Error(syncError);
+}
+
+async function recoverOrphanPaidIntent(
+  db: ReturnType<typeof supabaseAdmin>,
+  pi: Stripe.PaymentIntent,
+): Promise<boolean> {
+  const sku = typeof pi.metadata?.sku === "string" ? pi.metadata.sku : "";
+  const { data: product } = sku
+    ? await db.from("products").select("*").eq("sku", sku).maybeSingle()
+    : { data: null };
+  if (!product) {
+    console.error(
+      `[webhook] paid intent ${pi.id} has no order and no recognizable sku ("${sku}"); not recovered`,
+    );
+    return false;
+  }
+
+  let email = (
+    (typeof pi.metadata?.customer_email === "string" ? pi.metadata.customer_email : "") ||
+    pi.receipt_email ||
+    ""
+  )
+    .toLowerCase()
+    .trim();
+  if (!email && typeof pi.latest_charge === "string") {
+    try {
+      const charge = await stripe().charges.retrieve(pi.latest_charge);
+      email = (charge.billing_details?.email ?? "").toLowerCase().trim();
+    } catch {}
+  }
+  if (!email) email = `unknown+${pi.id.toLowerCase()}@recovered.ghlvideo.com`;
+
+  await db
+    .from("customers")
+    .upsert({ email }, { onConflict: "email", ignoreDuplicates: true });
+  const { data: customer } = await db
+    .from("customers")
+    .select("id")
+    .eq("email", email)
+    .maybeSingle();
+  if (!customer) {
+    console.error(`[webhook] could not create customer for orphan intent ${pi.id}`);
+    return false;
+  }
+
+  const chargedCents = pi.amount_received || pi.amount;
+  const { data: order, error: orderErr } = await db
+    .from("orders")
+    .insert({
+      product_id: product.id,
+      customer_id: customer.id,
+      customer_email: email,
+      amount_cents: chargedCents,
+      currency: pi.currency ?? product.currency,
+      status: "pending",
+      stripe_payment_intent_id: pi.id,
+      metadata: { sku: product.sku, base_cents: product.price_cents, recovered: true },
+    })
+    .select("id")
+    .single();
+  if (orderErr || !order) {
+    // A concurrent delivery may have recovered it first; that's success here.
+    if (orderErr?.code === "23505") return true;
+    console.error(
+      `[webhook] failed to recover orphan intent ${pi.id}: ${orderErr?.message ?? "no row"}`,
+    );
+    return false;
+  }
+
+  console.error(`[webhook] recovered orphan paid intent ${pi.id} as order ${order.id}`);
+  await db.from("order_events").insert({
+    order_id: order.id,
+    event_type: "order_recovered",
+    payload: { stripe_payment_intent_id: pi.id, amount_cents: chargedCents },
+  });
+  return true;
+}
+
+async function handleChargeRefunded(
+  db: ReturnType<typeof supabaseAdmin>,
+  charge: Stripe.Charge,
+) {
+  // Covers refunds issued from the Stripe dashboard, which never touch the
+  // admin refund route. Idempotent with it: the conditional flip wins once.
+  const piId =
+    typeof charge.payment_intent === "string"
+      ? charge.payment_intent
+      : charge.payment_intent?.id;
+  if (!piId) return;
+  const { data: order } = await db
+    .from("orders")
+    .select("id, status")
+    .eq("stripe_payment_intent_id", piId)
+    .maybeSingle();
+  if (!order) return;
+
+  if (charge.refunded) {
+    const { data: flipped } = await db
+      .from("orders")
+      .update({ status: "refunded" })
+      .eq("id", order.id)
+      .eq("status", "paid")
+      .select("id")
+      .maybeSingle();
+    if (flipped) {
+      await db.from("order_events").insert({
+        order_id: order.id,
+        event_type: "refunded",
+        payload: { source: "stripe", amount_cents: charge.amount_refunded },
+      });
+    }
+  } else if (charge.amount_refunded > 0) {
+    await db.from("order_events").insert({
+      order_id: order.id,
+      event_type: "partial_refund",
+      payload: { source: "stripe", amount_cents: charge.amount_refunded },
+    });
+  }
+}
+
+async function handleDisputeCreated(
+  db: ReturnType<typeof supabaseAdmin>,
+  dispute: Stripe.Dispute,
+) {
+  const piId =
+    typeof dispute.payment_intent === "string"
+      ? dispute.payment_intent
+      : dispute.payment_intent?.id;
+  if (!piId) return;
+  const { data: order } = await db
+    .from("orders")
+    .select("id, metadata")
+    .eq("stripe_payment_intent_id", piId)
+    .maybeSingle();
+  if (!order) {
+    console.error(`[webhook] dispute ${dispute.id} has no matching order (intent ${piId})`);
+    return;
+  }
+  console.error(`[webhook] dispute ${dispute.id} opened on order ${order.id}`);
+  await db
+    .from("orders")
+    .update({
+      metadata: { ...((order.metadata as Record<string, unknown> | null) ?? {}), disputed: true },
+    })
+    .eq("id", order.id);
+  await db.from("order_events").insert({
+    order_id: order.id,
+    event_type: "dispute_created",
+    payload: {
+      dispute_id: dispute.id,
+      reason: dispute.reason,
+      amount_cents: dispute.amount,
+      status: dispute.status,
+    },
+  });
 }
 
 async function handleFailed(
@@ -135,9 +309,24 @@ async function handleSubscription(
     })
     .eq("id", row.id);
 
-  // First activation: tag the customer in HighLevel once (flagged, not thrown).
+  // First activation: tag the customer in HighLevel once (flagged, not
+  // thrown). Claimed atomically: created + updated events can arrive nearly
+  // simultaneously on activation, and both would pass a plain read check.
+  // A failed sync writes metadata without the claim key, releasing it.
   if (sub.status === "active" && !row.metadata?.hl_synced) {
-    await syncSubscriptionToHighLevel(db, row);
+    const { data: claimed } = await db
+      .from("subscriptions")
+      .update({
+        metadata: {
+          ...((row.metadata as Record<string, unknown> | null) ?? {}),
+          hl_synced: "claimed",
+        },
+      })
+      .eq("id", row.id)
+      .is("metadata->>hl_synced", null)
+      .select("id")
+      .maybeSingle();
+    if (claimed) await syncSubscriptionToHighLevel(db, row);
   }
 }
 

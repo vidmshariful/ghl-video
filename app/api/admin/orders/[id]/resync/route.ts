@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { verifyAdmin } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { syncPaidOrderToHighLevel } from "@/lib/checkout/fulfill";
+import { HL_SYNC_CLAIM } from "@/lib/checkout/settle";
 
 export const runtime = "nodejs";
 
@@ -21,7 +22,9 @@ export async function POST(
   if (order.status !== "paid") {
     return NextResponse.json({ error: "Only paid orders sync to HighLevel." }, { status: 400 });
   }
-  if (order.highlevel_opportunity_id) {
+  // A stranded in-flight claim (crash mid-sync) counts as not-synced here, so
+  // this action is also the recovery path for stuck claims.
+  if (order.highlevel_opportunity_id && order.highlevel_opportunity_id !== HL_SYNC_CLAIM) {
     return NextResponse.json({ ok: true, alreadySynced: true });
   }
 
