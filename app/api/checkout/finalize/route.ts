@@ -68,13 +68,48 @@ export async function POST(req: Request) {
   const db = supabaseAdmin();
 
   // Idempotent: a double-submit (or a retry) reuses the order already made for
-  // this intent instead of violating the unique intent-id constraint.
+  // this intent instead of violating the unique intent-id constraint. A retry
+  // may carry different bumps, so a still-unpaid order is re-derived and the
+  // intent re-stamped; the intent can never be confirmed against a stale total.
   const { data: existing } = await db
     .from("orders")
-    .select("id")
+    .select("id, status, amount_cents")
     .eq("stripe_payment_intent_id", paymentIntentId)
     .maybeSingle();
-  if (existing) return NextResponse.json({ orderId: existing.id });
+  if (existing) {
+    if (existing.status === "pending" || existing.status === "failed") {
+      await db
+        .from("orders")
+        .update({
+          amount_cents: amountCents,
+          metadata: {
+            sku: product.sku,
+            base_cents: product.price_cents,
+            bumps: bumps.map((b) => ({ id: b.id, name: b.name, price_cents: b.priceCents })),
+          },
+        })
+        .eq("id", existing.id)
+        .in("status", ["pending", "failed"]);
+      try {
+        await stripe().paymentIntents.update(paymentIntentId, {
+          amount: amountCents,
+          receipt_email: email,
+          metadata: { sku: product.sku, customer_email: email, bump_cents: String(bumpsCents) },
+        });
+      } catch {
+        // The intent may have reached a terminal state in the meantime; the
+        // settle-time amount check catches any real divergence.
+      }
+      if (existing.amount_cents !== amountCents) {
+        await db.from("order_events").insert({
+          order_id: existing.id,
+          event_type: "intent_restamped",
+          payload: { from_cents: existing.amount_cents, to_cents: amountCents },
+        });
+      }
+    }
+    return NextResponse.json({ orderId: existing.id });
+  }
 
   // Upsert the customer, but never overwrite an existing row's details with an
   // unverified request.
@@ -102,6 +137,23 @@ export async function POST(req: Request) {
     await db.from("customers").update({ stripe_customer_id: stripeCustomerId }).eq("id", customer.id);
   }
 
+  // Stamp the intent with the authoritative amount, the customer, and the
+  // buyer's email BEFORE the order exists. Order matters: if this update
+  // fails, no order is written and the retry re-stamps, so a buyer can never
+  // confirm an intent carrying a stale (base-only) amount. Stamping the email
+  // here also means a paid intent always identifies its buyer, even if the
+  // order insert below fails and webhook recovery has to reconstruct it.
+  await stripe().paymentIntents.update(paymentIntentId, {
+    amount: amountCents,
+    customer: stripeCustomerId,
+    receipt_email: email,
+    metadata: {
+      sku: product.sku,
+      customer_email: email,
+      bump_cents: String(bumpsCents),
+    },
+  });
+
   const { data: order, error: orderErr } = await db
     .from("orders")
     .insert({
@@ -121,22 +173,25 @@ export async function POST(req: Request) {
     .select()
     .single();
   if (orderErr || !order) {
+    // A concurrent double-submit can race past the existing-order check and
+    // lose on the unique intent-id constraint; reuse the winner's order.
+    if (orderErr?.code === "23505") {
+      const { data: raced } = await db
+        .from("orders")
+        .select("id")
+        .eq("stripe_payment_intent_id", paymentIntentId)
+        .maybeSingle();
+      if (raced) return NextResponse.json({ orderId: raced.id });
+    }
     return NextResponse.json({ error: "Could not complete checkout." }, { status: 500 });
   }
 
-  // Stamp the intent with the authoritative amount, the customer, and the order
-  // id so wallets charge the right total and receipts land.
-  await stripe().paymentIntents.update(paymentIntentId, {
-    amount: amountCents,
-    customer: stripeCustomerId,
-    receipt_email: email,
-    metadata: {
-      sku: product.sku,
-      order_id: order.id,
-      customer_email: email,
-      bump_cents: String(bumpsCents),
-    },
-  });
+  // Best-effort back-link (Stripe merges metadata keys); never blocks checkout.
+  try {
+    await stripe().paymentIntents.update(paymentIntentId, {
+      metadata: { order_id: order.id },
+    });
+  } catch {}
 
   await db.from("order_events").insert({
     order_id: order.id,
