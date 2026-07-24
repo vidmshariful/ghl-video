@@ -10,10 +10,10 @@ import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 export async function verifyAdmin(req: Request): Promise<{ email: string } | null> {
   const email = await getSessionEmail(req);
   if (!email) return null;
-  const { data } = await supabaseAdmin()
-    .from("admins")
-    .select("email")
-    .eq("email", email)
-    .maybeSingle();
-  return data ? { email } : null;
+  // Case-insensitive like the is_admin() RLS function, so a row seeded with
+  // any casing still gates the same. The allowlist is a handful of rows, so
+  // reading it whole beats wrestling ilike wildcard escaping.
+  const { data } = await supabaseAdmin().from("admins").select("email");
+  const ok = (data ?? []).some((r) => (r.email ?? "").toLowerCase() === email.toLowerCase());
+  return ok ? { email } : null;
 }

@@ -21,8 +21,13 @@ import {
  * garbage, the build falls back to the static values in lib/site.ts.
  * The website can never break because the backend had a bad day.
  */
-export const SB_URL = "https://xdarleyimthsnareuoxl.supabase.co";
+/* Env-first (NEXT_PUBLIC_ vars inline into both server and client bundles at
+ * build), so rotating the anon key is an env flip + redeploy, no code edit.
+ * The committed values are the working fallback. */
+export const SB_URL =
+  process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://xdarleyimthsnareuoxl.supabase.co";
 export const SB_ANON =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhkYXJsZXlpbXRoc25hcmV1b3hsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ1NzI2NzAsImV4cCI6MjEwMDE0ODY3MH0.x0rM_RbjlFi9tvA7XTf74NVDDkagICkEPQcQyeaean8";
 
 type LinkRow = {

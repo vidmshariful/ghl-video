@@ -173,11 +173,18 @@ export async function syncOrderToHighLevel(input: {
 }
 
 // Website quote leads land in "0. Setter Pipeline" / "New Lead" by default;
-// override either in Vercel to reconfigure without a code change.
-const LEAD_PIPELINE_ID = () =>
-  process.env.HIGHLEVEL_LEAD_PIPELINE_ID || "xPCPS2JiczcBOhQrZdXF";
-const LEAD_STAGE_ID = () =>
-  process.env.HIGHLEVEL_LEAD_STAGE_ID || "88340841-cbe0-49fa-8e66-cb5a4a00880c";
+// override either in Vercel to reconfigure without a code change. The
+// fallback is loud in the logs so a missing prod var is noticed, not silent.
+const LEAD_PIPELINE_ID = () => {
+  const v = process.env.HIGHLEVEL_LEAD_PIPELINE_ID;
+  if (!v) console.warn("[highlevel] HIGHLEVEL_LEAD_PIPELINE_ID unset; using default setter pipeline");
+  return v || "xPCPS2JiczcBOhQrZdXF";
+};
+const LEAD_STAGE_ID = () => {
+  const v = process.env.HIGHLEVEL_LEAD_STAGE_ID;
+  if (!v) console.warn("[highlevel] HIGHLEVEL_LEAD_STAGE_ID unset; using default New Lead stage");
+  return v || "88340841-cbe0-49fa-8e66-cb5a4a00880c";
+};
 
 /**
  * Sync a pre-sale website lead (quote request) into HighLevel: upsert the

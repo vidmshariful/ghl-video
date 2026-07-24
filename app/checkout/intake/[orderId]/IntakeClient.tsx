@@ -236,7 +236,7 @@ export function IntakeClient({ orderId }: { orderId: string }) {
               <a href={data.intake.logoUrl} target="_blank" rel="noopener" className="text-gold hover:underline">
                 View
               </a>{" "}
-              — choose a file to replace it.
+              or choose a file to replace it.
             </p>
           ) : null}
           <input ref={logoRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml,application/pdf" className={fileCls} />
@@ -247,7 +247,7 @@ export function IntakeClient({ orderId }: { orderId: string }) {
           <span className={labelCls}>Dashboard / platform screenshots</span>
           {data?.intake?.screenshotUrls?.length ? (
             <p className="mb-2 text-body-sm text-muted">
-              {data.intake.screenshotUrls.length} on file — choosing new files replaces them.
+              {data.intake.screenshotUrls.length} on file. Choosing new files replaces them.
             </p>
           ) : null}
           <input ref={shotsRef} type="file" multiple accept="image/png,image/jpeg,image/webp" className={fileCls} />

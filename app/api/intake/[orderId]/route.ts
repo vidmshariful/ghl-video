@@ -46,7 +46,10 @@ async function loadOrder(db: DB, id: string) {
 
 async function signOne(db: DB, path: string | null): Promise<string | null> {
   if (!path) return null;
-  const { data } = await db.storage.from("intake").createSignedUrl(path, 3600);
+  // SVGs are welcome as logo sources (vector masters) but are served as a
+  // download: rendered inline they can execute script on the storage origin.
+  const opts = path.toLowerCase().endsWith(".svg") ? { download: true } : undefined;
+  const { data } = await db.storage.from("intake").createSignedUrl(path, 3600, opts);
   return data?.signedUrl ?? null;
 }
 
@@ -101,6 +104,14 @@ export async function POST(
   const db = supabaseAdmin();
   const order = await loadOrder(db, orderId);
   if (!order) return NextResponse.json({ error: "Not found." }, { status: 404 });
+  // pending stays open (a buyer can land here while the webhook is still
+  // settling), but dead orders take no more uploads or edits.
+  if (order.status === "failed" || order.status === "refunded") {
+    return NextResponse.json(
+      { error: "This order is closed and its brief can no longer be edited." },
+      { status: 409 },
+    );
+  }
 
   let form: FormData;
   try {
