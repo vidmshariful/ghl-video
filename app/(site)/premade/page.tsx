@@ -13,7 +13,9 @@ import { SectionGlow } from "@/components/SectionGlow";
 import { SectionHead } from "@/components/SectionHead";
 import { VideoBundles } from "@/components/VideoBundles";
 import { PageHero } from "@/components/pages/PageHero";
+import { ProcessTimeline } from "@/components/pages/ProcessTimeline";
 import { ProofStrip } from "@/components/pages/ProofStrip";
+import { TrustStrip } from "@/components/home/TrustStrip";
 import { faqSchema, productCatalogSchema, serviceSchema } from "@/lib/schema";
 import { cta, pages, sellableProducts, site } from "@/lib/site";
 
@@ -66,6 +68,9 @@ export default function PremadePage() {
           {cta.bookACall.label}
         </Button>
       </PageHero>
+
+      {/* trusted-by logo strip, directly under the hero */}
+      <TrustStrip />
 
       {/* light zone: the catalog and the spec sections read on paper */}
       <div className="theme-light">
@@ -132,39 +137,22 @@ export default function PremadePage() {
         </div>
       </RuledSection>
 
-      {/* how it works: ruled box, numbered sequence */}
-      <RuledSection
-        bpIdx={5}
-        index={5}
-        chip={p.how.chip}
-        headline={p.how.headline}
-        accent={p.how.accent}
-      >
-        <Reveal className="grid gap-px bg-hair sm:grid-cols-3">
-          {p.how.steps.map((s, i) => (
-            <RevealItem key={s.title} className="h-full">
-              <div
-                data-cell
-                className="group/cell flex h-full flex-col bg-canvas p-8 transition-colors duration-300 hover:bg-surface"
-              >
-                <div className="flex items-start justify-between">
-                  <DrawnIcon name={howIcons[i]} />
-                  {/* index dim, gold icon leads: one accent per cell */}
-                  <span className="font-mono text-label uppercase text-dim">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                </div>
-                <h3 className="mt-5 font-display text-h4 font-semibold tracking-[-0.01em] text-ink">
-                  {s.title}
-                </h3>
-                <p className="mt-2 max-w-[var(--measure-body)] text-body leading-relaxed text-muted">
-                  {s.line}
-                </p>
-              </div>
-            </RevealItem>
-          ))}
-        </Reveal>
-      </RuledSection>
+      {/* how it works: a connected scroll timeline */}
+      <section data-bp-idx="5" className="relative overflow-x-clip section-pad">
+        <SectionGlow position="right" />
+        <div className="shell relative">
+          <SectionHead
+            index={5}
+            chip={p.how.chip}
+            headline={p.how.headline}
+            accent={p.how.accent}
+            center
+          />
+          <div className="mt-14 md:mt-16">
+            <ProcessTimeline steps={p.how.steps} icons={howIcons} />
+          </div>
+        </div>
+      </section>
 
       </div>
 

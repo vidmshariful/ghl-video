@@ -1,28 +1,12 @@
 /*
- * One ambient glow per section, behind the header, so transitions have
- * depth instead of hard black gaps. Intrinsic radial falloff (no blur
- * filter), so the gradient is already transparent wherever the parent
- * section clips it: no visible seams on the dark canvas. The parent
- * section must be `relative overflow-hidden`. Purely decorative.
+ * Section glow is retired (client direction, July 2026): the marketing
+ * body is a clean near-black, and the only ambient glow lives in the hero
+ * (see HeroAtmosphere). This component now renders nothing so the many
+ * existing `<SectionGlow />` call sites keep compiling without a glow.
  */
-
-const positions = {
-  left: "-left-56 -top-56",
-  right: "-right-56 -top-56",
-} as const;
-
-export function SectionGlow({
-  position = "left",
-}: {
-  position?: keyof typeof positions;
+export function SectionGlow(_props?: {
+  position?: "left" | "right";
 }) {
-  return (
-    <div
-      aria-hidden="true"
-      className={`section-glow pointer-events-none absolute h-[36rem] w-[56rem] ${positions[position]}`}
-      style={{
-        background: `radial-gradient(closest-side, var(--glow-gold), transparent 72%)`,
-      }}
-    />
-  );
+  void _props;
+  return null;
 }

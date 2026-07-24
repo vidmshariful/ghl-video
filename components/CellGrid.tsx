@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { DrawnIcon, type IconName } from "@/components/DrawnIcon";
 import { Reveal, RevealItem } from "@/components/Reveal";
 /*
@@ -17,6 +18,9 @@ export function CellGrid({
     icon?: IconName;
     title: string;
     line: string;
+    /* an optional richer graphic (DrawnArt / illustration); when present
+       it leads the cell in place of the single stroke icon */
+    art?: ReactNode;
   }[];
   columns?: 2 | 3;
   numbered?: boolean;
@@ -35,16 +39,20 @@ export function CellGrid({
             data-cell
             className="group/cell flex h-full flex-col bg-canvas p-7 transition-colors duration-300 hover:bg-surface md:p-8"
           >
-            <div className="flex items-start justify-between">
-              {item.icon && <DrawnIcon name={item.icon} />}
-              {numbered && (
-                /* the index recedes to dim: the gold icon is the one
-                   accent per cell, so the number no longer competes */
-                <span className="font-mono text-label uppercase text-dim">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-              )}
-            </div>
+            {item.art ? (
+              <div className="mb-1">{item.art}</div>
+            ) : (
+              <div className="flex items-start justify-between">
+                {item.icon && <DrawnIcon name={item.icon} />}
+                {numbered && (
+                  /* the index recedes to dim: the gold icon is the one
+                     accent per cell, so the number no longer competes */
+                  <span className="font-mono text-label uppercase text-dim">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                )}
+              </div>
+            )}
             <h3 className="mt-5 font-display text-h4 font-semibold tracking-[-0.01em] text-ink">
               {item.title}
             </h3>

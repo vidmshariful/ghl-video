@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Button } from "@/components/Button";
 import { CellGrid } from "@/components/CellGrid";
+import { DrawnArt } from "@/components/DrawnArt";
 import { RuleList } from "@/components/RuleList";
 import { FitCards } from "@/components/FitCards";
 import { DrawnBorder } from "@/components/DrawnBorder";
 import { FaqList } from "@/components/FaqList";
 import { MediaCard } from "@/components/MediaCard";
-import { MediaFrame } from "@/components/MediaFrame";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { ReviewCard } from "@/components/ReviewCard";
 import { RuledSection } from "@/components/RuledSection";
@@ -15,18 +16,12 @@ import { SectionHead } from "@/components/SectionHead";
 import { JsonLd } from "@/components/JsonLd";
 import { GetStarted } from "@/components/pages/GetStarted";
 import { PageHero } from "@/components/pages/PageHero";
+import { ProcessTimeline } from "@/components/pages/ProcessTimeline";
+import { TrustStrip } from "@/components/home/TrustStrip";
 import { faqSchema, serviceSchema } from "@/lib/schema";
-import {
-  clips,
-  clipWindows,
-  cta,
-  home,
-  newSamples,
-  pages,
-  posters,
-} from "@/lib/site";
+import { cta, home, newSamples, pages } from "@/lib/site";
 
-const craftIcons = ["zap", "message", "crosshair"] as const;
+const craftArt = ["hook", "story", "conversion"] as const;
 const processIcons = ["crosshair", "pen-line", "mic", "clapperboard", "message", "package-check"] as const;
 const differenceIcons = ["globe", "building", "zap"] as const;
 
@@ -79,6 +74,9 @@ export default function CustomPage() {
         </Button>
       </PageHero>
 
+      {/* trusted-by logo strip, directly under the hero */}
+      <TrustStrip />
+
       {/* 2. who it is for: audience cards, not a for/not-for list */}
       <section data-bp-idx="2" className="relative section-pad">
         <DrawnBorder />
@@ -106,25 +104,30 @@ export default function CustomPage() {
         intro={p.craft.intro}
       >
         <CellGrid
-          items={p.craft.items.map((c, i) => ({ ...c, icon: craftIcons[i] }))}
+          items={p.craft.items.map((c, i) => ({
+            ...c,
+            art: <DrawnArt name={craftArt[i]} />,
+          }))}
           framed={false}
         />
       </RuledSection>
 
-      {/* 4. the process */}
-      <RuledSection
-        bpIdx={4}
-        index={4}
-        chip={p.process.chip}
-        headline={p.process.headline}
-        accent={p.process.accent}
-      >
-        <CellGrid
-          items={p.process.steps.map((s, i) => ({ ...s, icon: processIcons[i] }))}
-          numbered
-          framed={false}
-        />
-      </RuledSection>
+      {/* 4. the process: a connected scroll timeline */}
+      <section data-bp-idx="4" className="relative overflow-x-clip section-pad">
+        <SectionGlow position="right" />
+        <div className="shell relative">
+          <SectionHead
+            index={4}
+            chip={p.process.chip}
+            headline={p.process.headline}
+            accent={p.process.accent}
+            center
+          />
+          <div className="mt-14 md:mt-16">
+            <ProcessTimeline steps={p.process.steps} icons={processIcons} />
+          </div>
+        </div>
+      </section>
 
       {/* 5. pricing: the four formats, then how the number is arrived at */}
       <section data-bp-idx="5" className="relative overflow-x-clip section-pad">
@@ -138,37 +141,55 @@ export default function CustomPage() {
             intro={p.formats.intro}
           />
           <Reveal className="mt-12 grid gap-px overflow-hidden rounded-card border border-hair bg-hair md:grid-cols-2">
-            {p.formats.items.map((f) => {
-              const key = f.mediaKey as keyof typeof clips;
-              const win = clipWindows[key];
-              return (
-                <RevealItem key={f.name} className="h-full">
-                  <div
-                    data-cell
-                    className="group/cell flex h-full flex-col bg-canvas p-6 transition-colors duration-300 hover:bg-surface md:p-7"
-                  >
-                    {/* PLACEHOLDER sample: real format samples swap in.
-                        No in-frame caption: the name and price read below. */}
-                    <MediaFrame
-                      src={clips[key]}
-                      poster={posters[key]}
-                      label={`${f.name} sample`}
-                      tint
-                      {...(win ? { startAt: win.startAt, endAt: win.endAt } : {})}
-                    />
-                    <div className="flex flex-wrap items-baseline justify-between gap-3 pt-6">
-                      <h3 className="font-display text-h3 text-ink">{f.name}</h3>
-                      <p className="font-mono text-price text-gold [font-variant-numeric:tabular-nums]">
-                        from ${f.from.toLocaleString("en-US")}
-                      </p>
-                    </div>
-                    <p className="max-w-[var(--measure-body)] pt-2 text-body text-muted">
-                      {f.line}
+            {p.formats.items.map((f) => (
+              <RevealItem key={f.name} className="h-full">
+                <div
+                  data-cell
+                  className="group/cell flex h-full flex-col bg-canvas p-7 transition-colors duration-300 hover:bg-surface md:p-8"
+                >
+                  <div className="flex flex-wrap items-baseline justify-between gap-3">
+                    <h3 className="font-display text-h3 text-ink">{f.name}</h3>
+                    <p className="font-mono text-price text-gold [font-variant-numeric:tabular-nums]">
+                      from ${f.from.toLocaleString("en-US")}
                     </p>
                   </div>
-                </RevealItem>
-              );
-            })}
+                  <p className="mt-3 max-w-[var(--measure-body)] text-body text-muted">
+                    {f.line}
+                  </p>
+                  <ul className="mt-6 flex-1">
+                    {f.includes.map((item) => (
+                      <li
+                        key={item}
+                        className="flex items-start gap-3 border-t border-hair py-3 first:border-t-0 first:pt-0"
+                      >
+                        <svg
+                          viewBox="0 0 12 12"
+                          className="mt-[3px] h-3 w-3 shrink-0"
+                          aria-hidden="true"
+                        >
+                          <path
+                            d="M2 6.2 4.8 9 10 3.4"
+                            fill="none"
+                            stroke="var(--gold)"
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                        <span className="text-body text-muted">{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    href={cta.requestQuote.href}
+                    className="mt-7 inline-flex items-center gap-2 self-start font-mono text-label uppercase tracking-[0.1em] text-gold transition-opacity hover:opacity-70"
+                  >
+                    {cta.requestQuote.label}
+                    <span aria-hidden="true">&#8594;</span>
+                  </Link>
+                </div>
+              </RevealItem>
+            ))}
           </Reveal>
 
           {/* how the number is arrived at: the floors are real, the

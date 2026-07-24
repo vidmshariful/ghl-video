@@ -1,54 +1,31 @@
 import { Button } from "@/components/Button";
-import { DrawnBorder } from "@/components/DrawnBorder";
-import { Reveal, RevealItem } from "@/components/Reveal";
 import { ReviewCard } from "@/components/ReviewCard";
 import { SectionChip } from "@/components/SectionChip";
-import { SectionGlow } from "@/components/SectionGlow";
-import { home, cta, rating, googleReviewsUrl } from "@/lib/site";
+import { Reveal, RevealItem } from "@/components/Reveal";
+import { home, googleReviewsUrl } from "@/lib/site";
 
 /*
- * Real Google reviews, verbatim. The feed used to auto-scroll, which
- * meant nobody could actually read the proof. Now it is a static,
- * scannable masonry with a trust bar up top: read at your own pace,
- * every review visible, nothing sliding away.
+ * Real Google reviews as a calm vertical feed. Left: the pitch and a
+ * single "Review us" CTA, nothing else. Right: one column of review
+ * cards scrolling up forever, three to four in view, the top and bottom
+ * masked so only the centre is in focus. Pauses on hover; static under
+ * reduced motion. The visible run is duplicated for a seamless loop; the
+ * duplicate is hidden from assistive tech so the proof is read once.
  */
-
-/* the review figures, and only those: "teams served" is the client
- * wall's line, and it was being said here for the third time */
-function TrustBar() {
-  const stats = [
-    { v: rating, l: "on Google", stars: true },
-    { v: "17", l: "5-star reviews" },
-  ];
-  return (
-    <div className="grid grid-cols-2 divide-x divide-hair overflow-hidden rounded-card border border-hair bg-surface">
-      {stats.map((s) => (
-        <div key={s.l} className="px-4 py-4">
-          <div className="flex items-baseline gap-2">
-            <span className="font-mono text-price font-bold leading-none text-gold [font-variant-numeric:tabular-nums]">
-              {s.v}
-            </span>
-          </div>
-          <p className="mt-1.5 font-mono text-label uppercase text-dim">{s.l}</p>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 export function Testimonials() {
   const { reviews } = home;
+  const mask =
+    "linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent)";
   return (
     <section
       data-bp-idx="6"
       aria-labelledby="reviews-heading"
       className="relative overflow-hidden section-pad"
     >
-      <DrawnBorder />
-      <SectionGlow position="left" />
-      <div className="shell relative">
-        <div className="grid items-start gap-10 lg:grid-cols-12 lg:gap-12">
-          <Reveal className="lg:col-span-5 lg:sticky lg:top-28">
+      <div className="shell">
+        <div className="grid gap-12 lg:grid-cols-2 lg:items-center lg:gap-16">
+          {/* left: pitch + one CTA */}
+          <Reveal>
             <RevealItem>
               <SectionChip index={6} label={reviews.chip} />
               <h2
@@ -61,41 +38,41 @@ export function Testimonials() {
               <p className="mt-4 max-w-[var(--measure-lede)] text-lede text-muted">
                 {reviews.ratingLine}
               </p>
-              <div className="mt-8">
-                <TrustBar />
-              </div>
-              <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
-                <Button href={cta.bookACall.href} variant="primary">
-                  {cta.bookACall.label}
+              <div className="mt-9">
+                <Button href={googleReviewsUrl} external>
+                  Review us
                 </Button>
-                <a
-                  href={googleReviewsUrl}
-                  target="_blank"
-                  rel="noopener"
-                  className="group inline-flex items-center gap-2 text-body font-semibold text-gold"
-                >
-                  Read all 17 on Google
-                  <span
-                    aria-hidden="true"
-                    className="transition-transform duration-200 group-hover:translate-x-1"
-                  >
-                    &rarr;
-                  </span>
-                </a>
               </div>
             </RevealItem>
           </Reveal>
 
-          {/* static, scannable masonry: every review readable at once */}
-          <Reveal className="lg:col-span-7">
-            <RevealItem>
-              <div className="columns-1 gap-5 sm:columns-2">
+          {/* right: vertical review marquee, centre in focus */}
+          <div
+            className="marquee-v-wrap relative h-[30rem] overflow-hidden lg:h-[34rem]"
+            style={{ maskImage: mask, WebkitMaskImage: mask }}
+          >
+            <div className="marquee-v flex flex-col">
+              {reviews.items.map((r) => (
+                <ReviewCard
+                  key={r.name}
+                  quote={r.quote}
+                  name={r.name}
+                  className="mb-4"
+                />
+              ))}
+              {/* duplicate run for the seamless loop, hidden from a11y */}
+              <div aria-hidden="true" className="contents">
                 {reviews.items.map((r) => (
-                  <ReviewCard key={r.name} quote={r.quote} name={r.name} className="mb-5" />
+                  <ReviewCard
+                    key={`dup-${r.name}`}
+                    quote={r.quote}
+                    name={r.name}
+                    className="mb-4"
+                  />
                 ))}
               </div>
-            </RevealItem>
-          </Reveal>
+            </div>
+          </div>
         </div>
       </div>
     </section>

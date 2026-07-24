@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { SectionChip } from "@/components/SectionChip";
-import { SectionGlow } from "@/components/SectionGlow";
+import { HeroAtmosphere } from "@/components/HeroAtmosphere";
 
 /* Registration mark: a circled dot where the boundary rule crosses
  * the page-frame verticals, like a plotter aligning the sheet. */
@@ -46,7 +46,7 @@ export function PageHero({
 }) {
   return (
     <section data-bp-idx="1" className="relative overflow-x-clip hero-pad">
-      <SectionGlow position="left" />
+      <HeroAtmosphere />
       <div className="shell relative pb-14 text-center md:pb-16">
         {top && <div className="mb-11">{top}</div>}
         <div className="flex flex-wrap items-center justify-center gap-3">

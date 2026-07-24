@@ -11,12 +11,16 @@ import type { ReactNode } from "react";
 type Variant = "primary" | "hero" | "ghost";
 type Size = "md" | "lg";
 
-const gradient =
-  "bg-brand-gradient text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.35),inset_0_-1px_0_rgba(0,0,0,0.15),0_0_28px_rgba(0,204,0,0.28)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.4),inset_0_-1px_0_rgba(0,0,0,0.15),0_0_44px_rgba(0,204,0,0.45)] hover:brightness-[1.07]";
+/* Body buttons are a deep, restful fill (client direction): the bright
+ * gold-to-green gradient was too light on the eye across the page. The nav
+ * "Book a Call" and the library / Order Now buttons keep the gradient
+ * (they are hand-rolled, not this component). `ghost` stays transparent. */
+const deep =
+  "border border-hair text-ink bg-[linear-gradient(180deg,#181b23,#0f1116)] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] hover:border-gold/50 hover:text-gold hover:bg-[linear-gradient(180deg,#1c2029,#12141a)]";
 
 const variants: Record<Variant, string> = {
-  primary: gradient,
-  hero: gradient,
+  primary: deep,
+  hero: deep,
   ghost:
     "border border-hair text-ink hover:border-gold/60 hover:text-gold bg-transparent",
 };
@@ -54,14 +58,9 @@ export function Button({
     </span>
   );
 
-  /* the sheen sweep rides the gradient (every non-ghost button) */
-  const sheen =
-    variant !== "ghost" ? (
-      <span
-        aria-hidden="true"
-        className="btn-sheen pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-      />
-    ) : null;
+  /* no sheen: the deep body button stays understated (the bright sweep
+     belonged to the gradient) */
+  const sheen = null;
 
   if (external) {
     return (

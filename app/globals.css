@@ -4,14 +4,19 @@
 /* Locked brand tokens (CLAUDE.md section 4). These do not change.     */
 /* ------------------------------------------------------------------ */
 :root {
+  /* native controls, scrollbars, and form widgets render dark */
+  color-scheme: dark;
+
   /* brand */
   --gold: #fcc000;
   --blue: #0090fc;
   --green: #00cc00;
   --brand-gradient: linear-gradient(100deg, #fcc000, #00cc00);
 
-  /* the ambient section glow. One accent: every glow is gold. */
+  /* ambient section + page glow: a gold shoulder easing into green.
+     Green is atmosphere only; gold still leads every accent. */
   --glow-gold: rgba(252, 192, 0, 0.1);
+  --glow-green: rgba(0, 204, 0, 0.06);
 
   /* Two reading measures, and only two. Prose caps had drifted to nine
      values between 26ch and 72ch: at the narrow end they squeezed body
@@ -167,15 +172,20 @@ body {
   overflow-x: clip;
 }
 
-/* film grain so the dark never goes flat */
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 80;
-  pointer-events: none;
-  opacity: 0.028;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+/* the body stays a clean near-black. Grunge is scoped to the hero now
+   (client direction): `grunge` is the reduced film grain that
+   HeroAtmosphere paints inside the hero section only. */
+@utility grunge {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.06;
+}
+
+/* Task 2: every marketing section is separated by a full-width hairline.
+   The hero (first section) sits under the header, which already rules
+   off, so it is excluded. */
+#main > section:not(:first-of-type),
+#main > div > section {
+  border-top: 1px solid var(--hair);
 }
 
 /* A thumb needs a 44px target; a mouse pointer does not, and forcing 44
@@ -483,6 +493,25 @@ p {
   .drift-b,
   .drift-c {
     animation: none;
+  }
+}
+
+/* GHL Video mark: the three-blade pinwheel breathes a soft brand glow */
+@keyframes ghl-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 1.5px rgba(0, 152, 253, 0.5))
+      drop-shadow(0 0 2px rgba(0, 208, 1, 0.4));
+  }
+  50% {
+    filter: drop-shadow(0 0 4px rgba(0, 152, 253, 0.75))
+      drop-shadow(0 0 5px rgba(0, 208, 1, 0.6))
+      drop-shadow(0 0 6px rgba(255, 197, 3, 0.45));
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ghl-mark {
+    animation: ghl-glow 3.4s ease-in-out infinite;
   }
 }
 

@@ -15,6 +15,8 @@ export function RuledSection({
   headline,
   accent,
   intro,
+  action,
+  className = "",
   children,
 }: {
   bpIdx: number;
@@ -23,10 +25,20 @@ export function RuledSection({
   headline: string;
   accent: string;
   intro?: string;
+  /* when set, the header becomes a left-aligned title block with this
+     control pinned to the right, instead of the centered header */
+  action?: ReactNode;
+  /* extra classes on the <section>, e.g. to trim padding where this frame
+     meets an adjacent framed section */
+  className?: string;
   children: ReactNode;
 }) {
+  const split = action !== undefined;
   return (
-    <section data-bp-idx={bpIdx} className="relative overflow-x-clip section-pad">
+    <section
+      data-bp-idx={bpIdx}
+      className={`relative overflow-x-clip section-pad ${className}`}
+    >
       <div className="shell">
         <div className="relative border border-hair">
           {/* the box's rules extend edge to edge */}
@@ -47,21 +59,39 @@ export function RuledSection({
             aria-hidden="true"
             className="hatch pointer-events-none absolute inset-y-0 left-full ml-px w-[var(--rail-gutter)]"
           />
-          {/* header cell, centered */}
-          <Reveal className="border-b border-hair px-6 py-12 text-center md:py-14">
-            <RevealItem>
-              <SectionChip index={index} label={chip} />
-              <h2 className="mx-auto mt-6 max-w-[26ch] font-display text-h2 text-ink">
-                {headline}{" "}
-                <span className="text-gradient">{accent}</span>
-              </h2>
-              {intro && (
-                <p className="mx-auto mt-5 max-w-[var(--measure-lede)] text-lede text-muted">
-                  {intro}
-                </p>
-              )}
-            </RevealItem>
-          </Reveal>
+          {/* header cell: centered by default, or a left title block with
+              a right-pinned action when `action` is provided */}
+          {split ? (
+            <Reveal className="flex flex-col gap-6 border-b border-hair px-6 py-10 md:flex-row md:items-end md:justify-between md:px-8 md:py-12">
+              <RevealItem className="max-w-2xl">
+                <SectionChip index={index} label={chip} />
+                <h2 className="mt-6 font-display text-h2 text-ink">
+                  {headline} <span className="text-gradient">{accent}</span>
+                </h2>
+                {intro && (
+                  <p className="mt-4 max-w-[var(--measure-lede)] text-lede text-muted">
+                    {intro}
+                  </p>
+                )}
+              </RevealItem>
+              <RevealItem className="shrink-0">{action}</RevealItem>
+            </Reveal>
+          ) : (
+            <Reveal className="border-b border-hair px-6 py-12 text-center md:py-14">
+              <RevealItem>
+                <SectionChip index={index} label={chip} />
+                <h2 className="mx-auto mt-6 max-w-[26ch] font-display text-h2 text-ink">
+                  {headline}{" "}
+                  <span className="text-gradient">{accent}</span>
+                </h2>
+                {intro && (
+                  <p className="mx-auto mt-5 max-w-[var(--measure-lede)] text-lede text-muted">
+                    {intro}
+                  </p>
+                )}
+              </RevealItem>
+            </Reveal>
+          )}
           {children}
         </div>
       </div>

@@ -23,11 +23,11 @@ export function ServicePanels() {
         <Reveal className="text-center">
           <RevealItem>
             <SectionChip index={2} label={services.chip} />
-            <h2 id="services-heading" className="mx-auto mt-6 max-w-[18ch] font-display text-h2 text-ink">
+            <h2 id="services-heading" className="mt-6 font-display text-h2 text-ink lg:whitespace-nowrap">
               {services.headline}{" "}
               <span className="text-gradient">{services.accent}</span>
             </h2>
-            <p className="mx-auto mt-4 max-w-[var(--measure-lede)] text-lede text-muted">
+            <p className="mx-auto mt-4 text-lede text-muted lg:whitespace-nowrap">
               {services.intro}
             </p>
           </RevealItem>
@@ -37,12 +37,12 @@ export function ServicePanels() {
             slides over it, previous crowns peeking above */}
         <div className="mt-14 flex flex-col gap-6">
           {services.panels.map((panel, i) => {
-            /* media and copy are DIRECT grid children so both stretch
-               to the row height; sides alternate via order utilities */
-            const flip = i % 2 === 1;
+            /* media and copy are DIRECT grid children so both stretch to
+               the row height; every card keeps the same orientation:
+               copy left, media right (no alternating) */
             const media = (
               <div
-                className={`relative min-h-[15rem] p-3 lg:min-h-0 ${flip ? "lg:order-1" : ""}`}
+                className="relative min-h-[15rem] p-3 lg:min-h-0"
               >
                 <MediaFrame
                   src={clips[panel.mediaKey as keyof typeof clips]}
@@ -56,7 +56,7 @@ export function ServicePanels() {
               </div>
             );
             const copy = (
-              <div className={`p-8 md:p-12 ${flip ? "lg:order-2" : ""}`}>
+              <div className="flex flex-col justify-center p-8 md:p-12">
                 <p
                   className={"font-mono text-label uppercase text-gold"}
                 >

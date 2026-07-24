@@ -496,7 +496,7 @@ export const googleReviewsUrl =
  * the marquee, full colour on hover). The full set also composes the
  * client-wall collage on the homepage. */
 export const trustLogos = Array.from(
-  { length: 26 },
+  { length: 40 },
   (_, i) => `/logos/logo-${String(i + 1).padStart(2, "0")}.png`,
 );
 
@@ -557,10 +557,15 @@ export const home = {
     /* REAL Google review, quoted verbatim */
     testimonial: {
       quote:
-        "Great quality and quick turnaround! Will definitely work with again!",
-      name: "Ryan Maule",
+        "Super easy process, Easy to deal with, and the video delivered was as advertised.",
+      name: "Dominic",
       source: "Google review",
       photo: null as string | null,
+      /* Dominic Bavaro's real on-camera cut, same clip as the first
+         Client Stories card (founderVideos[0], Dom / Emma.io). Loops
+         muted inside the avatar; plays with sound in the click popup. */
+      video: founderVideos[0] as string | null,
+      poster: null as string | null,
     },
   },
 
@@ -616,11 +621,11 @@ export const home = {
   },
 
   manifesto: {
-    eyebrow: "The problem",
+    eyebrow: "About GHL Video",
     statement:
-      "Your prospects judge your SaaS before they ever try it. A Loom demo and a DIY explainer tell them everything they need to know, and not in your favor.",
-    /* the phrase lifted into gold; must be a substring of statement */
-    emphasis: "before they ever try it",
+      "GHL Video is video infrastructure built only for HighLevel. Since 2019, 800+ SaaS founders have used us to turn video from a cost line into demos closed, churn cut, and authority earned.",
+    /* the positioning phrase lifted into gold; must be a substring */
+    emphasis: "built only for HighLevel",
     contrast: {
       bad: "A Loom demo or a DIY explainer",
       good: "A branded GHL Video",
@@ -648,24 +653,34 @@ export const home = {
     chip: "Client stories",
     headline: "Founders,",
     accent: "on camera.",
+    intro:
+      "Founders behind some of the fastest-growing tools on HighLevel, in their own words.",
+    /* summary: a very short editorial takeaway of each review, shown
+       under the clip and above the name */
     items: [
       {
         name: "Dominic Bavaro",
         company: "Emma.io",
         src: founderVideos[0],
         poster: null,
+        summary:
+          "One form, seven days later, an explainer that made his offer land instantly.",
       },
       {
         name: "Ryan Maule",
         company: "AI Clinic Assist",
         src: founderVideos[2],
         poster: null,
+        summary:
+          "Owns a video team, still outsourced his HighLevel content and gained leads and profit.",
       },
       {
         name: "David Allen Neron",
         company: "NeoLuxLabs",
         src: founderVideos[1],
         poster: null,
+        summary:
+          "Abandoned his own Premiere Pro edit the moment their demo landed.",
       },
     ],
   },
@@ -700,6 +715,8 @@ export const home = {
 
   work: {
     eyebrow: "The work",
+    intro:
+      "A slice of recent work across premade, custom, and editing. Every frame plays.",
     /* One featured piece plus two supporting clips, all hover-play. Our
      * newest real videos: the AI-first master and two feature cuts. */
     pieces: [
@@ -726,7 +743,8 @@ export const home = {
 
   comparison: {
     eyebrow: "Head to head",
-    headline: "Why HighLevel founders pick GHL Video.",
+    headline: "Why HighLevel founders pick",
+    accent: "GHL Video.",
     intro:
       "The difference between a generalist vendor and a team that lives in your platform.",
     othersLabel: "Everyone else",
@@ -986,24 +1004,48 @@ export const pages = {
           from: 1500,
           line: "Short, punchy, conversion-first. Built to stop the scroll and sell the click.",
           mediaKey: "sampleC",
+          includes: [
+            "Script and hook written for the scroll",
+            "Custom voiceover",
+            "Motion graphics, captions, and sound",
+            "Cut for every aspect ratio",
+          ],
         },
         {
           name: "Explainer",
           from: 2500,
           line: "Your positioning in 60 to 90 seconds. The video that does the first sales call for you.",
           mediaKey: "featured",
+          includes: [
+            "Script and storyboard, approved by you",
+            "Voiceover in your language and accent",
+            "Full animation, 60 to 90 seconds",
+            "Built to run your first sales call",
+          ],
         },
         {
           name: "Demo",
           from: 3500,
           line: "Your actual platform, captured and narrated so prospects see the product win.",
           mediaKey: "sampleA",
+          includes: [
+            "Your live platform captured on screen",
+            "Narrated feature by feature",
+            "On-screen callouts and your branding",
+            "Chaptered for sales and onboarding",
+          ],
         },
         {
           name: "Onboarding Series",
           from: 5000,
           line: "A full walkthrough series that cuts support tickets and activates new users.",
           mediaKey: "sampleB",
+          includes: [
+            "A full multi-video walkthrough set",
+            "Consistent branding across episodes",
+            "Voiceover and captions throughout",
+            "Built to cut your support tickets",
+          ],
         },
       ],
     },

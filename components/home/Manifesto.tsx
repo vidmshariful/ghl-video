@@ -1,87 +1,94 @@
+"use client";
+
+import { useRef, type ReactNode } from "react";
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useGSAP } from "@gsap/react";
 import { Button } from "@/components/Button";
-import { DrawnBorder } from "@/components/DrawnBorder";
-import { Reveal, RevealItem } from "@/components/Reveal";
-import { SectionGlow } from "@/components/SectionGlow";
 import { home, cta } from "@/lib/site";
 
+gsap.registerPlugin(ScrollTrigger);
+
+/* token colours as literals: GSAP tweens concrete hex, not var() */
+const DIM = "#5A6076";
+const INK = "#EEF0F6";
+const GOLD = "#FCC000";
+
 /*
- * The problem statement, now a bounded panel on the grid instead of a
- * paragraph adrift in a void. Left: eyebrow, the sting with its key
- * phrase in gold, the CTA. Right: a quiet Loom-vs-branded contrast so
- * the claim carries proof, not just volume.
+ * About GHL Video: one large, centred positioning statement that colours
+ * in word by word as it scrolls through view (the "built only for
+ * HighLevel" phrase settling on gold), then a single CTA into the premade
+ * library. No box, no counterweight. Reduced motion shows it fully lit.
  */
 export function Manifesto() {
   const { manifesto } = home;
-  const idx = manifesto.statement.indexOf(manifesto.emphasis);
-  const before = idx >= 0 ? manifesto.statement.slice(0, idx) : manifesto.statement;
-  const after = idx >= 0 ? manifesto.statement.slice(idx + manifesto.emphasis.length) : "";
+  const root = useRef<HTMLDivElement>(null);
+
+  const emphStart = manifesto.statement.indexOf(manifesto.emphasis);
+  const emphEnd =
+    emphStart >= 0 ? emphStart + manifesto.emphasis.length : -1;
+
+  /* Tokenise the WHOLE statement on spaces so punctuation stays welded to
+     its word. A token is emphasised when it begins inside the emphasis
+     character range, so its trailing punctuation rides along in gold. */
+  const words: ReactNode[] = [];
+  let key = 0;
+  let cursor = 0;
+  for (const w of manifesto.statement.split(" ")) {
+    const emph = emphStart >= 0 && cursor >= emphStart && cursor < emphEnd;
+    words.push(
+      <span key={key++} className="mf-word" data-emph={emph ? "" : undefined}>
+        {w}
+      </span>,
+    );
+    words.push(<span key={key++}> </span>);
+    cursor += w.length + 1;
+  }
+
+  useGSAP(
+    () => {
+      const els = gsap.utils.toArray<HTMLElement>(".mf-word");
+      const lit = (el: HTMLElement) =>
+        el.dataset.emph !== undefined ? GOLD : INK;
+
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        els.forEach((el) => (el.style.color = lit(el)));
+        return;
+      }
+
+      gsap.fromTo(
+        els,
+        { color: DIM },
+        {
+          color: (_i: number, el: HTMLElement) => lit(el),
+          ease: "none",
+          stagger: 0.4,
+          scrollTrigger: {
+            trigger: root.current,
+            start: "top 80%",
+            end: "bottom 66%",
+            scrub: 0.4,
+          },
+        },
+      );
+    },
+    { scope: root },
+  );
 
   return (
-    <section className="relative overflow-x-clip section-pad-sm">
-      <DrawnBorder />
-      <SectionGlow position="right" />
-      <div className="shell relative">
-        <Reveal>
-          <RevealItem>
-            <div className="grid overflow-hidden rounded-card border border-hair bg-canvas lg:grid-cols-[1.6fr_1fr]">
-              {/* the sting */}
-              <div className="p-8 md:p-12 lg:p-14">
-                <p className="font-mono text-label uppercase text-gold">
-                  [ {manifesto.eyebrow} ]
-                </p>
-                <p className="mt-6 max-w-[26ch] font-display text-[clamp(1.5rem,2.9vw,2.375rem)] font-semibold leading-[1.18] tracking-tight text-ink">
-                  {before}
-                  {idx >= 0 && (
-                    <span className="text-gradient">{manifesto.emphasis}</span>
-                  )}
-                  {after}
-                </p>
-                <div className="mt-9">
-                  <Button href={cta.bookACall.href} variant="primary">
-                    {cta.bookACall.label}
-                  </Button>
-                </div>
-              </div>
-
-              {/* the quiet contrast: two cells split the column height */}
-              <div className="flex flex-col gap-px bg-hair lg:border-l lg:border-hair">
-                <div className="flex flex-1 flex-col justify-center bg-canvas p-8 md:p-10">
-                  <p className="font-mono text-label uppercase text-dim">
-                    What they see now
-                  </p>
-                  <p className="mt-3 flex items-baseline gap-2.5 text-body text-muted">
-                    <span aria-hidden="true" className="font-mono text-dim">
-                      &times;
-                    </span>
-                    {manifesto.contrast.bad}
-                  </p>
-                </div>
-                <div className="flex flex-1 flex-col justify-center bg-canvas p-8 md:p-10">
-                  <p className="font-mono text-label uppercase text-gold">
-                    What they could see
-                  </p>
-                  <p className="mt-3 flex items-baseline gap-2.5 text-body font-medium text-ink">
-                    <svg
-                      viewBox="0 0 12 12"
-                      className="h-3 w-3 shrink-0 translate-y-[0.15em]"
-                      aria-hidden="true"
-                    >
-                      <path
-                        d="M2 6.2 4.8 9 10 3.4"
-                        fill="none"
-                        stroke="var(--gold)"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    {manifesto.contrast.good}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </RevealItem>
-        </Reveal>
+    <section className="relative overflow-x-clip section-pad">
+      <div
+        ref={root}
+        className="shell relative flex flex-col items-center text-center"
+      >
+        <p className="mx-auto max-w-[24ch] font-display text-[clamp(1.75rem,3.6vw,3rem)] font-semibold leading-[1.16] tracking-tight text-dim sm:max-w-[34ch] lg:max-w-[44ch]">
+          {words}
+        </p>
+        <div className="mt-10">
+          <Button href={cta.seePremade.href} variant="primary">
+            {cta.seePremade.label}
+          </Button>
+        </div>
       </div>
     </section>
   );

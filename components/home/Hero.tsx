@@ -1,11 +1,12 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/Button";
+import { HeroReviewer } from "@/components/home/HeroReviewer";
+import { GhlMark } from "@/components/GhlMark";
+import { HeroAtmosphere } from "@/components/HeroAtmosphere";
 import { MediaFrame } from "@/components/MediaFrame";
 import { Panel } from "@/components/Panel";
-import { SectionChip } from "@/components/SectionChip";
 import { home, cta } from "@/lib/site";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -63,23 +64,8 @@ export function Hero() {
        optical point. Matching the numbers would make them look less
        alike, not more. */
     <section data-bp-idx="1" className="relative overflow-x-clip pt-28 pb-14 md:pt-32">
-      {/* ambient: one gold and one green field behind the hero card */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -left-40 top-6 h-[30rem] w-[46rem]"
-        style={{
-          background:
-            "radial-gradient(closest-side, rgba(252,192,0,0.09), transparent 72%)",
-        }}
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -right-40 -top-24 h-[32rem] w-[48rem]"
-        style={{
-          background:
-            "radial-gradient(closest-side, rgba(0,204,0,0.09), transparent 72%)",
-        }}
-      />
+      {/* the one place with ambient colour + grain: reduced, hero only */}
+      <HeroAtmosphere />
 
       <div className="shell relative">
         <Panel className="overflow-hidden">
@@ -110,7 +96,13 @@ export function Hero() {
             {/* copy panel */}
             <div className="flex flex-col p-8 md:p-12 lg:p-14">
               <motion.div {...fadeUp(0.05)}>
-                <SectionChip index={1} label={home.hero.eyebrow} />
+                <span className="inline-flex items-center gap-2.5 rounded-[4px] border border-hair/50 bg-canvas/60 py-2 pl-2.5 pr-3.5">
+                  <GhlMark className="h-4 w-auto" />
+                  <span aria-hidden="true" className="h-3.5 w-px bg-hair" />
+                  <span className="font-mono text-label uppercase tracking-[0.14em] text-dim">
+                    {home.hero.eyebrow}
+                  </span>
+                </span>
               </motion.div>
 
               <h1 className="mt-8 font-display text-hero text-ink">
@@ -144,23 +136,13 @@ export function Hero() {
                   mobile it re-renders after the media so the moving
                   work appears right after the CTAs */}
               <motion.div {...fadeUp(0.69)} className="mt-auto hidden pt-10 lg:block">
-                <div className="flex items-center gap-5 border-t border-hair pt-6">
-                  <Avatar
-                    name={home.hero.testimonial.name}
-                    photo={home.hero.testimonial.photo}
-                    size="lg"
-                  />
-                  <div aria-hidden="true" className="h-12 w-px shrink-0 bg-hair" />
-                  <div>
-                    <p className="max-w-[var(--measure-body)] text-body leading-relaxed text-muted">
-                      {home.hero.testimonial.quote}
-                    </p>
-                    <p className="mt-2 font-mono text-label uppercase text-dim">
-                      {home.hero.testimonial.name} /{" "}
-                      {home.hero.testimonial.source}
-                    </p>
-                  </div>
-                </div>
+                <HeroReviewer
+                  name={home.hero.testimonial.name}
+                  quote={home.hero.testimonial.quote}
+                  source={home.hero.testimonial.source}
+                  video={home.hero.testimonial.video}
+                  poster={home.hero.testimonial.poster}
+                />
               </motion.div>
             </div>
 
@@ -185,23 +167,13 @@ export function Hero() {
 
             {/* mobile-only client voice, after the media */}
             <motion.div {...fadeUp(0.69)} className="px-8 pb-8 lg:hidden">
-              <div className="flex items-center gap-5 border-t border-hair pt-6">
-                <Avatar
-                  name={home.hero.testimonial.name}
-                  photo={home.hero.testimonial.photo}
-                  size="lg"
-                />
-                <div aria-hidden="true" className="h-12 w-px shrink-0 bg-hair" />
-                <div>
-                  <p className="max-w-[var(--measure-body)] text-body leading-relaxed text-muted">
-                    {home.hero.testimonial.quote}
-                  </p>
-                  <p className="mt-2 font-mono text-label uppercase text-dim">
-                    {home.hero.testimonial.name} /{" "}
-                    {home.hero.testimonial.source}
-                  </p>
-                </div>
-              </div>
+              <HeroReviewer
+                name={home.hero.testimonial.name}
+                quote={home.hero.testimonial.quote}
+                source={home.hero.testimonial.source}
+                video={home.hero.testimonial.video}
+                poster={home.hero.testimonial.poster}
+              />
             </motion.div>
           </div>
         </Panel>

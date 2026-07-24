@@ -14,6 +14,8 @@ import { RuledSection } from "@/components/RuledSection";
 import { SectionHead } from "@/components/SectionHead";
 import { JsonLd } from "@/components/JsonLd";
 import { PageHero } from "@/components/pages/PageHero";
+import { ProcessTimeline } from "@/components/pages/ProcessTimeline";
+import { TrustStrip } from "@/components/home/TrustStrip";
 import { faqSchema, serviceSchema } from "@/lib/schema";
 import {
   clips,
@@ -68,6 +70,9 @@ export default function EditingPage() {
         </Button>
       </PageHero>
 
+      {/* trusted-by logo strip, directly under the hero */}
+      <TrustStrip />
+
       {/* 2. who it is for: audience cards, not a for/not-for list */}
       <section data-bp-idx="2" className="relative section-pad">
         <DrawnBorder />
@@ -103,20 +108,22 @@ export default function EditingPage() {
         />
       </RuledSection>
 
-      {/* 4. how it works */}
-      <RuledSection
-        bpIdx={4}
-        index={4}
-        chip={p.how.chip}
-        headline={p.how.headline}
-        accent={p.how.accent}
-      >
-        <CellGrid
-          items={p.how.steps.map((s, i) => ({ ...s, icon: howIcons[i] }))}
-          numbered
-          framed={false}
-        />
-      </RuledSection>
+      {/* 4. how it works: a connected scroll timeline */}
+      <section data-bp-idx="4" className="relative overflow-x-clip section-pad">
+        <SectionGlow position="right" />
+        <div className="shell relative">
+          <SectionHead
+            index={4}
+            chip={p.how.chip}
+            headline={p.how.headline}
+            accent={p.how.accent}
+            center
+          />
+          <div className="mt-14 md:mt-16">
+            <ProcessTimeline steps={p.how.steps} icons={howIcons} />
+          </div>
+        </div>
+      </section>
 
       {/* 5. the plans */}
       <section
