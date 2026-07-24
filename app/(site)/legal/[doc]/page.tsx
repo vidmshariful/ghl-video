@@ -52,8 +52,7 @@ export default async function LegalPage({
         <div aria-hidden="true" className="h-px w-full bg-hair" />
       </section>
 
-      {/* the document reads on paper */}
-      <div className="theme-light">
+      <div>
         <section className="relative section-pad-sm">
           <div className="shell">
             <div className="mx-auto max-w-3xl">

@@ -91,7 +91,7 @@ export default function WorkPage() {
         </div>
       </section>
 
-      <div className="theme-light">
+      <div>
       <section data-bp-idx="4" className="relative section-pad-sm">
         <div className="shell">
           <CrossSell

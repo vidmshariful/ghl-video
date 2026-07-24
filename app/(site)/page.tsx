@@ -27,20 +27,14 @@ export default function Home() {
       <Manifesto />
       <ShowreelMoment />
       <ClientWall />
-      {/* hybrid theme: proof-and-people band reads on paper; heroes
-          and the footer stay dark (client hard rule) */}
-      <div className="theme-light">
-        <Comparison />
-      </div>
+      <Comparison />
       {/* the two ICPs route themselves before the proof runs */}
       <AudienceSplit />
       <VideoTestimonials />
-      <div className="theme-light">
-        {/* the team lives on About; it ran on both pages with the same
-            "Full time, in house" heading, so About owns it now */}
-        <Testimonials />
-        <Faq />
-      </div>
+      {/* the team lives on About; it ran on both pages with the same
+          "Full time, in house" heading, so About owns it now */}
+      <Testimonials />
+      <Faq />
       <FounderNote />
       <ClosingCta />
     </>

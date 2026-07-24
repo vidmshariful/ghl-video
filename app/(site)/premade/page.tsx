@@ -76,8 +76,7 @@ export default function PremadePage() {
       {/* trusted-by logo strip, directly under the hero */}
       <TrustStrip />
 
-      {/* light zone: the catalog and the spec sections read on paper */}
-      <div className="theme-light">
+      <div>
       {/* the library: packs and the filterable catalog */}
       <section
         id="videos"

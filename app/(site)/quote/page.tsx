@@ -23,8 +23,7 @@ export default function QuotePage() {
         lede={q.lede}
       />
 
-      {/* light zone: the form */}
-      <div className="theme-light">
+      <div>
         <section data-bp-idx="2" className="relative section-pad-sm">
           <div className="shell">
             <div className="mx-auto max-w-3xl">

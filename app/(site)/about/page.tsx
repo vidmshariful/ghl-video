@@ -48,8 +48,7 @@ export default function AboutPage() {
         </Button>
       </PageHero>
 
-      {/* light zone: the story */}
-      <div className="theme-light">
+      <div>
       <section data-bp-idx="2" className="relative section-pad">
         <div className="shell">
           <div className="grid items-start gap-12 lg:grid-cols-[1fr_1.1fr]">
@@ -116,8 +115,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* light zone: the people and the proof */}
-      <div className="theme-light">
+      <div>
       <TeamSection index={4} />
 
       {/* clients */}

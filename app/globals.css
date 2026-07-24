@@ -140,8 +140,8 @@
 
 /* The site is full-dark (client direction, July 2026): a gold-to-green
    gradient is nearly invisible on white, and the gradient is now the
-   single highlight treatment, so the hybrid light zones were retired.
-   `.theme-light` wrappers left in the markup are inert. */
+   single highlight treatment, so the hybrid light zones were retired and
+   the old `.theme-light` wrappers have been removed from the markup. */
 
 /* ------------------------------------------------------------------ */
 /* Base                                                                */
