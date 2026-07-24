@@ -41,7 +41,6 @@ type BrowseVideo = {
   /* what a preview-only card says in place of a price + buy button */
   previewNote: string | null;
   previewCtaLabel: string | null;
-  orderUrl: string;
   /* preview-only cards buy their parent pack: its native checkout sku.
      null for individually-sold videos, which buy by their own slug. */
   checkoutSku: string | null;
@@ -74,7 +73,6 @@ const newReady: BrowseVideo[] = premadeVideos
     previewOnly: false,
     previewNote: null,
     previewCtaLabel: null,
-    orderUrl: v.orderUrl,
     checkoutSku: null,
   }));
 
@@ -103,7 +101,6 @@ const oldClassic: BrowseVideo[] = oldVideos
     previewOnly: false,
     previewNote: null,
     previewCtaLabel: null,
-    orderUrl: v.orderUrl,
     checkoutSku: null,
   }));
 
@@ -139,7 +136,6 @@ const featureBrowse: BrowseVideo[] = featureAnimations.map((f) => ({
   previewOnly: true,
   previewNote: "Included in every feature-animation pack, branded to you.",
   previewCtaLabel: "See the packs",
-  orderUrl: "https://order.ghlvideo.com/feature-animations-15",
   checkoutSku: "feature-animations-15",
 }));
 
@@ -164,8 +160,7 @@ const stackPicks: BrowseVideo[] = [
   price: 0,
   previewOnly: true,
   previewNote: "Part of the Complete Video Stack, branded to your platform.",
-  previewCtaLabel: "Order Now",
-  orderUrl: videoStack.orderUrl,
+  previewCtaLabel: cta.orderPremade,
   checkoutSku: videoStack.sku,
 }));
 
@@ -192,21 +187,23 @@ const stackGroups: FilterDef[] = [
 
 function BuyVideoLink({
   video,
-  label = "Order Now",
+  label = cta.orderPremade,
   className = "",
 }: {
-  video: { slug: string; orderUrl: string; checkoutSku?: string | null };
+  video: { slug: string; checkoutSku?: string | null };
   label?: string;
   className?: string;
 }) {
   // a preview-only card buys its parent pack by that pack's sku; an
   // individually-sold video buys by its own slug via checkoutHref.
-  const dest = video.checkoutSku
-    ? { href: `/checkout/${skuFor(video.checkoutSku)}`, external: false }
-    : checkoutHref(video.slug, video.orderUrl);
-  const cls = `tap group/btn inline-flex items-center gap-1.5 whitespace-nowrap rounded-[3px] bg-brand-gradient px-4 py-2 text-body-sm font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] transition-all duration-200 hover:brightness-110 active:scale-[0.98] ${className}`;
-  const inner = (
-    <>
+  const href = video.checkoutSku
+    ? `/checkout/${skuFor(video.checkoutSku)}`
+    : checkoutHref(video.slug);
+  return (
+    <Link
+      href={href}
+      className={`tap group/btn inline-flex items-center gap-1.5 whitespace-nowrap rounded-[3px] bg-brand-gradient px-4 py-2 text-body-sm font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] transition-all duration-200 hover:brightness-110 active:scale-[0.98] ${className}`}
+    >
       {label}
       <span
         aria-hidden="true"
@@ -214,17 +211,6 @@ function BuyVideoLink({
       >
         &rarr;
       </span>
-    </>
-  );
-  // native checkout stays on-domain (same tab); external order pages open
-  // in a new tab as before.
-  return dest.external ? (
-    <a href={dest.href} target="_blank" rel="noopener" className={cls}>
-      {inner}
-    </a>
-  ) : (
-    <Link href={dest.href} className={cls}>
-      {inner}
     </Link>
   );
 }
@@ -924,7 +910,7 @@ function FeaturePriceCard({ pack }: { pack: (typeof featurePacks)[number] }) {
         href={`/checkout/${skuFor(pack.slug)}`}
         className="group/btn mt-4 inline-flex items-center justify-center gap-1.5 rounded-[3px] bg-brand-gradient px-4 py-2.5 text-body-sm font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
       >
-        Order Now
+        {cta.orderPremade}
         <span
           aria-hidden="true"
           className="transition-transform duration-200 group-hover/btn:translate-x-0.5"
@@ -1203,7 +1189,7 @@ function VideoStackView() {
       price={s.price}
       anchorPrice={s.anchorPrice}
       sku={s.sku}
-      ctaLabel="Order Now"
+      ctaLabel={cta.orderPremade}
       overviewNote={`A walkthrough of the full stack from our team. Every format below ships branded to your platform, delivered in ${s.deliveryDays} days.`}
       summaryItems={s.formats.map((f) => ({
         name: f.name,
@@ -1238,8 +1224,7 @@ function PackBundleView({ pack }: { pack: PremadePack }) {
       realPoster: null,
       previewOnly: true,
       previewNote: `Included in the ${pack.name}, branded to your platform.`,
-      previewCtaLabel: "Order Now",
-      orderUrl: pack.orderUrl ?? cta.bookACall.href,
+      previewCtaLabel: cta.orderPremade,
       checkoutSku: pack.slug,
     })),
   );
@@ -1264,7 +1249,7 @@ function PackBundleView({ pack }: { pack: PremadePack }) {
       price={pack.price}
       anchorPrice={pack.anchorPrice}
       sku={pack.slug}
-      ctaLabel="Order Now"
+      ctaLabel={cta.orderPremade}
       overviewNote="A walkthrough of the pack from our team, branded to your platform. Every video below is included."
       summaryItems={summaryItems}
       footNote={pack.count ? `${pack.count} videos. One order.` : null}
@@ -1359,18 +1344,30 @@ function VersionLightbox({
               </span>
             </p>
           </div>
-          <a
-            href={version.url}
-            target="_blank"
-            rel="noopener"
-            {...(version.cta === "download" ? { download: "" } : {})}
-            className="group inline-flex items-center gap-2 whitespace-nowrap rounded-[3px] bg-brand-gradient px-6 py-3 text-body font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
-          >
-            {version.cta === "download" ? "Download free" : "Buy now"}
-            <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-0.5">
-              &rarr;
-            </span>
-          </a>
+          {version.cta === "download" && version.url ? (
+            <a
+              href={version.url}
+              target="_blank"
+              rel="noopener"
+              download=""
+              className="group inline-flex items-center gap-2 whitespace-nowrap rounded-[3px] bg-brand-gradient px-6 py-3 text-body font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
+            >
+              Download free
+              <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-0.5">
+                &rarr;
+              </span>
+            </a>
+          ) : (
+            <Link
+              href={checkoutHref(version.checkoutSlug ?? version.slug)}
+              className="group inline-flex items-center gap-2 whitespace-nowrap rounded-[3px] bg-brand-gradient px-6 py-3 text-body font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
+            >
+              {cta.orderPremade}
+              <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-0.5">
+                &rarr;
+              </span>
+            </Link>
+          )}
         </div>
       </div>
     </div>,

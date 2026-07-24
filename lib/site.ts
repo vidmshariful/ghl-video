@@ -11,7 +11,6 @@ export const site = {
   name: "GHL Video",
   url: "https://ghlvideo.com",
   email: "hi@ghlvideo.com",
-  orderBase: "https://order.ghlvideo.com",
   tagline: "Video built for HighLevel SaaS. Fast, custom, done.",
   description:
     "The video studio built only for the HighLevel ecosystem: a white-label premade library, custom production with published starting prices, and monthly editing for HighLevel creators. 800+ teams served, rated 5.0 on Google.",
@@ -118,8 +117,6 @@ export const clipWindows: Partial<
 /* Services and pricing (locked)                                        */
 /* ------------------------------------------------------------------ */
 
-export const premadePrice = 495; // legacy flat price, kept for reference
-
 /* The premade catalog's video types; filters use them. "Feature
  * Explainer" is the short, single-feature cut (formerly "Short
  * Explainer"); "Explainer" is now reserved for the master and pitch. */
@@ -171,12 +168,10 @@ export type PremadePack = {
   count: number | null;
   price: number | null;
   anchorPrice?: number | null;
-  orderUrl: string | null;
   categories: PackCategory[];
 };
 
-/* One pack at launch: the AI First SaaS Pack (real). FLAG: the
- * order.ghlvideo.com checkout URL is a PLACEHOLDER SKU. Five of the
+/* One pack at launch: the AI First SaaS Pack (real). Five of the
  * nine videos are in production and marked comingSoon. */
 export const premadePacks: PremadePack[] = [
   {
@@ -187,7 +182,6 @@ export const premadePacks: PremadePack[] = [
     count: 9,
     price: 1995,
     anchorPrice: 3495,
-    orderUrl: "https://order.ghlvideo.com/ai-first-saas-pack",
     categories: [
       {
         name: "Master Explainer",
@@ -322,7 +316,6 @@ export type PremadeVideo = {
   price: number;
   preview: string | null;
   poster: string | null;
-  orderUrl: string;
   comingSoon: boolean;
 };
 
@@ -340,7 +333,6 @@ const packVideos: PremadeVideo[] = premadePacks
       price: premadeTypePrice[v.type],
       preview: v.src,
       poster: v.poster,
-      orderUrl: `https://order.ghlvideo.com/${slug}`,
       comingSoon: v.comingSoon ?? false,
     });
     return acc;
@@ -360,31 +352,23 @@ const standaloneNew: PremadeVideo[] = [
     preview:
       "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a56fa0fbaf5f6da40287c33.mp4",
     poster: null,
-    orderUrl: "https://order.ghlvideo.com/hl-full-pitch-video",
     comingSoon: false,
   },
 ];
 
 export const premadeVideos: PremadeVideo[] = [...packVideos, ...standaloneNew];
 
-/* Every premade video and pack is sold on-domain now. `nativeCheckoutSkus`
- * is derived at the end of this file from `sellableProducts` (the single
- * source that also seeds the products table), so adding a video or pack to
- * the catalog above automatically routes it to native checkout. */
+/* Everything is sold on-domain: the external order.ghlvideo.com pages are
+ * retired. `sellableProducts` (end of this file) is the single source that
+ * seeds the products table, so adding a video or pack to the catalog above
+ * makes its /checkout/<sku> page live after "Sync from catalog" in admin. */
 
-/** Where a video's buy button points: internal /checkout for native SKUs,
- *  the external order page as a fallback for anything not yet in the set. */
-export function checkoutHref(
-  slug: string,
-  orderUrl: string,
-): { href: string; external: boolean } {
-  // the checkout sku is the product code (skuFor), so /checkout/<sku> is the
-  // stable, rename-proof URL. Fall back to the external order page only for
-  // anything not yet in the native set.
-  const sku = skuFor(slug);
-  return nativeCheckoutSkus.has(sku)
-    ? { href: `/checkout/${sku}`, external: false }
-    : { href: orderUrl, external: true };
+/** The on-domain checkout URL for a premade catalog slug. The sku is the
+ *  product code (skuFor), so /checkout/<sku> is the stable, rename-proof
+ *  URL. Subscription plans link `/checkout/<plan.sku>` directly instead:
+ *  their sku is tied to a Stripe price and never goes through skuFor. */
+export function checkoutHref(slug: string): string {
+  return `/checkout/${skuFor(slug)}`;
 }
 
 /* Look up a video's individual price and checkout by title (packs use
@@ -420,7 +404,6 @@ export const editingPlans = [
     longFormNote: "up to 15 min each",
     shortForm: 4,
     featured: false,
-    orderUrl: "https://order.ghlvideo.com/editing-starter",
   },
   {
     name: "Growth",
@@ -430,7 +413,6 @@ export const editingPlans = [
     longForm: 4,
     shortForm: 8,
     featured: true,
-    orderUrl: "https://order.ghlvideo.com/editing-growth",
   },
   {
     name: "Scale",
@@ -441,7 +423,6 @@ export const editingPlans = [
     shortForm: 16,
     featured: false,
     note: "priority queue",
-    orderUrl: "https://order.ghlvideo.com/editing-scale",
   },
 ] as const;
 
@@ -1646,7 +1627,6 @@ export type OldVideo = {
   poster: string | null;
   /* feature animation ships as bundles, not single clips */
   packCount?: number;
-  orderUrl: string;
 };
 
 /* The classic library: real videos, prices, and order links scraped
@@ -1660,7 +1640,6 @@ export const oldVideos: OldVideo[] = [
     price: 195,
     preview: "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/69245a77e7b09410bd133ff1.mp4",
     poster: "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/692465f32a7927601442fefa.png",
-    orderUrl: "https://order.ghlvideo.com/short-explainer-videos",
   },
   {
     slug: "conversational-ai",
@@ -1669,7 +1648,6 @@ export const oldVideos: OldVideo[] = [
     price: 195,
     preview: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/69245a77e4747c43d6c3c90a.mp4",
     poster: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/692464a546b2e70b577e712f.png",
-    orderUrl: "https://order.ghlvideo.com/short-explainer-videos",
   },
   {
     slug: "voice-ai",
@@ -1678,7 +1656,6 @@ export const oldVideos: OldVideo[] = [
     price: 195,
     preview: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/69245a77a6fefe33ec381509.mp4",
     poster: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/692466fee4747cbfe4c5205d.png",
-    orderUrl: "https://order.ghlvideo.com/short-explainer-videos",
   },
   {
     slug: "content-ai",
@@ -1687,7 +1664,6 @@ export const oldVideos: OldVideo[] = [
     price: 195,
     preview: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/69245a77c61b11848f07eabe.mp4",
     poster: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/692468ffdb7e0bd7c2cd27bc.png",
-    orderUrl: "https://order.ghlvideo.com/short-explainer-videos",
   },
   {
     slug: "all-in-one-inbox",
@@ -1696,7 +1672,6 @@ export const oldVideos: OldVideo[] = [
     price: 195,
     preview: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/6924575646b2e7aacf7d02c4.mp4",
     poster: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/692469ca2a79272f77437347.png",
-    orderUrl: "https://order.ghlvideo.com/short-explainer-videos",
   },
   {
     slug: "opportunity-pipeline",
@@ -1705,7 +1680,6 @@ export const oldVideos: OldVideo[] = [
     price: 195,
     preview: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/692457c1e4747c7804c38571.mp4",
     poster: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/69246a8ae4747c9786c5acdb.png",
-    orderUrl: "https://order.ghlvideo.com/short-explainer-videos",
   },
   {
     slug: "automation-builder",
@@ -1714,7 +1688,6 @@ export const oldVideos: OldVideo[] = [
     price: 195,
     preview: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/69245a77eb10142d5ef2f43e.mp4",
     poster: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/69246b69db7e0b1492cd948d.png",
-    orderUrl: "https://order.ghlvideo.com/short-explainer-videos",
   },
   {
     slug: "reputation-manager",
@@ -1723,7 +1696,6 @@ export const oldVideos: OldVideo[] = [
     price: 195,
     preview: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/69245a77c61b1109b807eabd.mp4",
     poster: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/69246c7b2a792753cf43edce.png",
-    orderUrl: "https://order.ghlvideo.com/short-explainer-videos",
   },
   {
     slug: "email-builder",
@@ -1732,7 +1704,6 @@ export const oldVideos: OldVideo[] = [
     price: 195,
     preview: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/69245a77e7b09463ed133ff2.mp4",
     poster: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/69246d6ce4747c7665c60b29.png",
-    orderUrl: "https://order.ghlvideo.com/short-explainer-videos",
   },
   {
     slug: "contact-management",
@@ -1741,7 +1712,6 @@ export const oldVideos: OldVideo[] = [
     price: 195,
     preview: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/69245a77e4747cc227c3c914.mp4",
     poster: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/69246e6637de76e16cdaf7dd.png",
-    orderUrl: "https://order.ghlvideo.com/short-explainer-videos",
   },
   {
     slug: "calender-booking",
@@ -1750,7 +1720,6 @@ export const oldVideos: OldVideo[] = [
     price: 195,
     preview: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/69245a77eb1014bee9f2f43f.mp4",
     poster: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/69246f14c61b1148ac0a6a46.png",
-    orderUrl: "https://order.ghlvideo.com/short-explainer-videos",
   },
   {
     slug: "two-way-texting",
@@ -1759,7 +1728,6 @@ export const oldVideos: OldVideo[] = [
     price: 195,
     preview: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/69245a77a6fefe3433381508.mp4",
     poster: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/69246faae7b0944e5615e569.png",
-    orderUrl: "https://order.ghlvideo.com/short-explainer-videos",
   },
   {
     slug: "social-media-planner",
@@ -1768,7 +1736,6 @@ export const oldVideos: OldVideo[] = [
     price: 195,
     preview: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/69245a77e7b09458aa133ff3.mp4",
     poster: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/6924708fe4747c2a64c6725f.png",
-    orderUrl: "https://order.ghlvideo.com/short-explainer-videos",
   },
   {
     slug: "call-tracking-recording",
@@ -1777,7 +1744,6 @@ export const oldVideos: OldVideo[] = [
     price: 195,
     preview: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/69245a77a5fc8de865c15246.mp4",
     poster: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/69247153e7b094be04163a8a.png",
-    orderUrl: "https://order.ghlvideo.com/short-explainer-videos",
   },
   {
     slug: "payment-invoicing",
@@ -1786,7 +1752,6 @@ export const oldVideos: OldVideo[] = [
     price: 195,
     preview: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/69245a77db7e0b067ccb886d.mp4",
     poster: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/6924722feb10142442f5ec1a.png",
-    orderUrl: "https://order.ghlvideo.com/short-explainer-videos",
   },
   {
     slug: "missed-call-text-back",
@@ -1795,7 +1760,6 @@ export const oldVideos: OldVideo[] = [
     price: 195,
     preview: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/692457c1eb1014870df2a5fc.mp4",
     poster: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/6924738feb10141a3ef617af.png",
-    orderUrl: "https://order.ghlvideo.com/short-explainer-videos",
   },
   {
     slug: "mobile-app",
@@ -1804,7 +1768,6 @@ export const oldVideos: OldVideo[] = [
     price: 195,
     preview: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/69245a77a5fc8d78bdc15247.mp4",
     poster: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/692474d846b2e7c69880b607.png",
-    orderUrl: "https://order.ghlvideo.com/short-explainer-videos",
   },
   {
     slug: "live-chat-widget",
@@ -1813,7 +1776,6 @@ export const oldVideos: OldVideo[] = [
     price: 195,
     preview: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/69245a77e7b094693e133ff4.mp4",
     poster: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/6924758be7b0944e0316cec6.png",
-    orderUrl: "https://order.ghlvideo.com/short-explainer-videos",
   },
   {
     slug: "membership",
@@ -1822,7 +1784,6 @@ export const oldVideos: OldVideo[] = [
     price: 195,
     preview: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/69245a7846b2e7165f7d57ed.mp4",
     poster: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/692476e146b2e71f2480fa0b.png",
-    orderUrl: "https://order.ghlvideo.com/short-explainer-videos",
   },
   {
     slug: "power-dialer",
@@ -1831,7 +1792,6 @@ export const oldVideos: OldVideo[] = [
     price: 195,
     preview: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/69245a772a7927b97c41be11.mp4",
     poster: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/692477eddb7e0b52a9cf3ead.png",
-    orderUrl: "https://order.ghlvideo.com/short-explainer-videos",
   },
   {
     slug: "reporting",
@@ -1840,7 +1800,6 @@ export const oldVideos: OldVideo[] = [
     price: 195,
     preview: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/69245a77a5fc8d02f1c15241.mp4",
     poster: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/692478dee4747cb6b4c79b3e.png",
-    orderUrl: "https://order.ghlvideo.com/short-explainer-videos",
   },
   {
     slug: "forms-surveys",
@@ -1849,7 +1808,6 @@ export const oldVideos: OldVideo[] = [
     price: 195,
     preview: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/69245a77c61b1140f407eabc.mp4",
     poster: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/692479bca6fefe107e3c1e93.png",
-    orderUrl: "https://order.ghlvideo.com/short-explainer-videos",
   },
   {
     slug: "comparison-video",
@@ -1858,7 +1816,6 @@ export const oldVideos: OldVideo[] = [
     price: 195,
     preview: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/6924573cdb7e0b0562cb32ac.mp4",
     poster: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/69248052a5fc8d2701c6502a.png",
-    orderUrl: "https://order.ghlvideo.com/short-explainer-videos",
   },
   {
     slug: "everything-in-one-place",
@@ -1867,7 +1824,6 @@ export const oldVideos: OldVideo[] = [
     price: 195,
     preview: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/6924573ddb7e0bee2dcb32b6.mp4",
     poster: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/69248165a6fefea3d93d3bdc.png",
-    orderUrl: "https://order.ghlvideo.com/short-explainer-videos",
   },
   {
     slug: "all-in-one-platform",
@@ -1876,7 +1832,6 @@ export const oldVideos: OldVideo[] = [
     price: 195,
     preview: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/6924573d2a79270107416550.mp4",
     poster: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/6924826be7b094452518a887.png",
-    orderUrl: "https://order.ghlvideo.com/short-explainer-videos",
   },
   {
     slug: "funnel-website-builder",
@@ -1885,7 +1840,6 @@ export const oldVideos: OldVideo[] = [
     price: 195,
     preview: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/6989e2a5634d0ac17424c13c.mp4",
     poster: "https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/6989e2b37305aad971f1d1dd.png",
-    orderUrl: "https://order.ghlvideo.com/short-explainer-videos",
   },
   {
     slug: "all-in-one-platform-explainer",
@@ -1894,7 +1848,6 @@ export const oldVideos: OldVideo[] = [
     price: 395,
     wistiaId: "trdqye7g5q",
     poster: "https://embed-ssl.wistia.com/deliveries/2804d0c1b80062a75c5d54de622c9e9a.jpg?image_crop_resized=960x540",
-    orderUrl: "https://order.ghlvideo.com/all-in-one-platform-explainer",
   },
   {
     slug: "ai-employee-explainer",
@@ -1903,7 +1856,6 @@ export const oldVideos: OldVideo[] = [
     price: 395,
     wistiaId: "gq4rntluy4",
     poster: "https://embed-ssl.wistia.com/deliveries/ff1732dc84ecb4ebff55d486acb0e05942e69bcb.jpg?image_crop_resized=960x540",
-    orderUrl: "https://order.ghlvideo.com/ai-employee-explainer",
   },
   {
     slug: "reputation-management-explainer",
@@ -1912,7 +1864,6 @@ export const oldVideos: OldVideo[] = [
     price: 395,
     wistiaId: "rvgcfdknv0",
     poster: "https://embed-ssl.wistia.com/deliveries/9c1761630837e74003b299dfb4c5bb4f.jpg?image_crop_resized=960x540",
-    orderUrl: "https://order.ghlvideo.com/reputation-management-explainer",
   },
   {
     slug: "social-media-planner-explainer",
@@ -1921,7 +1872,6 @@ export const oldVideos: OldVideo[] = [
     price: 395,
     wistiaId: "9v0ca9v97y",
     poster: "https://embed-ssl.wistia.com/deliveries/2e7502573dedf87ad08321d39571c611.jpg?image_crop_resized=960x540",
-    orderUrl: "https://order.ghlvideo.com/social-media-planner-explainer",
   },
   {
     slug: "automated-outreach-explainer",
@@ -1930,7 +1880,6 @@ export const oldVideos: OldVideo[] = [
     price: 395,
     wistiaId: "8uhjekncqh",
     poster: "https://embed-ssl.wistia.com/deliveries/266e4085228e4583a5b49f7178c19478.jpg?image_crop_resized=960x540",
-    orderUrl: "https://order.ghlvideo.com/automated-outreach-explainer",
   },
   {
     slug: "complete-platform-tour-explainer",
@@ -1939,7 +1888,6 @@ export const oldVideos: OldVideo[] = [
     price: 395,
     wistiaId: "nyv9u91be2",
     poster: "https://embed-ssl.wistia.com/deliveries/63b213ac1651cc07ce3b26cc0b8fc17e.jpg?image_crop_resized=960x540",
-    orderUrl: "https://order.ghlvideo.com/complete-platform-tour-explainer",
   },
   {
     slug: "spokesperson-platform-demo",
@@ -1948,7 +1896,6 @@ export const oldVideos: OldVideo[] = [
     price: 495,
     wistiaId: "6mji3qgjed",
     poster: "https://embed-ssl.wistia.com/deliveries/a6901634240c08a0dbc820ffe6796daab414b057.jpg?image_crop_resized=960x540",
-    orderUrl: "https://order.ghlvideo.com/spokesperson-platform-demo",
   },
   {
     slug: "motion-graphics-platform-demo",
@@ -1957,7 +1904,6 @@ export const oldVideos: OldVideo[] = [
     price: 495,
     wistiaId: "5rltwdyq6h",
     poster: "https://embed-ssl.wistia.com/deliveries/192fb8589c66bb490a277524bd075e56.jpg?image_crop_resized=960x540",
-    orderUrl: "https://order.ghlvideo.com/motion-graphics-platform-demo",
   },
   {
     slug: "ai-platform-demo",
@@ -1966,7 +1912,6 @@ export const oldVideos: OldVideo[] = [
     price: 995,
     wistiaId: "kvxz5zjd6j",
     poster: "https://embed-ssl.wistia.com/deliveries/2ef47e87e0771057f43fcccc95946f07.jpg?image_crop_resized=960x540",
-    orderUrl: "https://order.ghlvideo.com/ai-platform-demo",
   },
   {
     slug: "marketing-1",
@@ -1976,7 +1921,6 @@ export const oldVideos: OldVideo[] = [
     price: 97,
     wistiaId: "nbi34xekmw",
     poster: "https://embed-ssl.wistia.com/deliveries/e17cd1f16c5fcd9c9ef4a6c89596a34dda8289ed.jpg?image_crop_resized=960x540",
-    orderUrl: "https://order.ghlvideo.com/marketing-video",
   },
   {
     slug: "marketing-2",
@@ -1986,7 +1930,6 @@ export const oldVideos: OldVideo[] = [
     price: 97,
     wistiaId: "s2wgkvxnfq",
     poster: "https://embed-ssl.wistia.com/deliveries/e4e5b01da18be2471df0825ca4328ad9847e6a9f.jpg?image_crop_resized=960x540",
-    orderUrl: "https://order.ghlvideo.com/marketing-video",
   },
   {
     slug: "marketing-3",
@@ -1996,7 +1939,6 @@ export const oldVideos: OldVideo[] = [
     price: 97,
     wistiaId: "3r3fqinoul",
     poster: "https://embed-ssl.wistia.com/deliveries/75e51a08d0f1ae2b6cc49bd62f33d28e145eb33f.jpg?image_crop_resized=960x540",
-    orderUrl: "https://order.ghlvideo.com/marketing-video",
   },
   {
     slug: "marketing-4",
@@ -2006,7 +1948,6 @@ export const oldVideos: OldVideo[] = [
     price: 97,
     wistiaId: "817t6o0tea",
     poster: "https://embed-ssl.wistia.com/deliveries/a7066f3584d89d2bdf19cd01aca848ea912ef3d6.jpg?image_crop_resized=960x540",
-    orderUrl: "https://order.ghlvideo.com/marketing-video",
   },
   {
     slug: "marketing-5",
@@ -2016,7 +1957,6 @@ export const oldVideos: OldVideo[] = [
     price: 97,
     wistiaId: "2v4kk70uvu",
     poster: "https://embed-ssl.wistia.com/deliveries/89c02ddeb1961bff83aa60275570d538bb7d0fd0.jpg?image_crop_resized=960x540",
-    orderUrl: "https://order.ghlvideo.com/marketing-video",
   },
   {
     slug: "marketing-6",
@@ -2026,7 +1966,6 @@ export const oldVideos: OldVideo[] = [
     price: 97,
     wistiaId: "oeoi4dio20",
     poster: "https://embed-ssl.wistia.com/deliveries/c2fadd3928a0bc812bdfc35fa9ecacf79dea7321.jpg?image_crop_resized=960x540",
-    orderUrl: "https://order.ghlvideo.com/marketing-video",
   },
   {
     slug: "marketing-7",
@@ -2036,7 +1975,6 @@ export const oldVideos: OldVideo[] = [
     price: 97,
     wistiaId: "6uw4jp0vhe",
     poster: "https://embed-ssl.wistia.com/deliveries/037511fc16dc3c5c77036441680ad7b04ec95117.jpg?image_crop_resized=960x540",
-    orderUrl: "https://order.ghlvideo.com/marketing-video",
   },
   {
     slug: "marketing-8",
@@ -2046,7 +1984,6 @@ export const oldVideos: OldVideo[] = [
     price: 97,
     wistiaId: "ovahf5ewua",
     poster: "https://embed-ssl.wistia.com/deliveries/ecc8bffb124417fc8f5f6687f8dca2983cb8a44a.jpg?image_crop_resized=960x540",
-    orderUrl: "https://order.ghlvideo.com/marketing-video",
   },
   {
     slug: "marketing-9",
@@ -2056,7 +1993,6 @@ export const oldVideos: OldVideo[] = [
     price: 97,
     wistiaId: "2ct1tot3ef",
     poster: "https://embed-ssl.wistia.com/deliveries/46a88a1e8c0f7a306709eb4113bdb0f0b6ff7356.jpg?image_crop_resized=960x540",
-    orderUrl: "https://order.ghlvideo.com/marketing-video",
   },
   {
     slug: "marketing-10",
@@ -2066,7 +2002,6 @@ export const oldVideos: OldVideo[] = [
     price: 97,
     wistiaId: "nc774vi0yh",
     poster: "https://embed-ssl.wistia.com/deliveries/104b4b5437e9ab4a558b6132de685ee2e9796004.jpg?image_crop_resized=960x540",
-    orderUrl: "https://order.ghlvideo.com/marketing-video",
   },
   {
     slug: "marketing-11",
@@ -2076,7 +2011,6 @@ export const oldVideos: OldVideo[] = [
     price: 97,
     wistiaId: "p5i16fiy6p",
     poster: "https://embed-ssl.wistia.com/deliveries/f9539298ae2f085787f562f0b8ec9e8e26a313e0.jpg?image_crop_resized=960x540",
-    orderUrl: "https://order.ghlvideo.com/marketing-video",
   },
   {
     slug: "marketing-12",
@@ -2086,7 +2020,6 @@ export const oldVideos: OldVideo[] = [
     price: 97,
     wistiaId: "suma3wivbs",
     poster: "https://embed-ssl.wistia.com/deliveries/6fbe9c7f1ebbdac5b0d69dadb6a0b76196bcddea.jpg?image_crop_resized=960x540",
-    orderUrl: "https://order.ghlvideo.com/marketing-video",
   },
   {
     slug: "marketing-13",
@@ -2096,7 +2029,6 @@ export const oldVideos: OldVideo[] = [
     price: 97,
     wistiaId: "arrmpjo06f",
     poster: "https://embed-ssl.wistia.com/deliveries/a4338ed8872d8cf1f80c5c3f4b766d8638b9a512.jpg?image_crop_resized=960x540",
-    orderUrl: "https://order.ghlvideo.com/marketing-video",
   },
   {
     slug: "marketing-14",
@@ -2106,7 +2038,6 @@ export const oldVideos: OldVideo[] = [
     price: 97,
     wistiaId: "se0l38otjw",
     poster: "https://embed-ssl.wistia.com/deliveries/648d6de26ce9be062a0c6e917ce9c13f5f586aa3.jpg?image_crop_resized=960x540",
-    orderUrl: "https://order.ghlvideo.com/marketing-video",
   },
   {
     slug: "marketing-15",
@@ -2116,7 +2047,6 @@ export const oldVideos: OldVideo[] = [
     price: 97,
     wistiaId: "rhygf5ydrb",
     poster: "https://embed-ssl.wistia.com/deliveries/a5eae6e9ad97508c4ba9c15a14f9f28ec29fb48c.jpg?image_crop_resized=960x540",
-    orderUrl: "https://order.ghlvideo.com/marketing-video",
   },
   {
     slug: "marketing-16",
@@ -2126,7 +2056,6 @@ export const oldVideos: OldVideo[] = [
     price: 97,
     wistiaId: "b3shffthjf",
     poster: "https://embed-ssl.wistia.com/deliveries/7a8b9a1c739acdb4d34069968550895f8c21ead3.jpg?image_crop_resized=960x540",
-    orderUrl: "https://order.ghlvideo.com/marketing-video",
   },
   {
     slug: "marketing-17",
@@ -2136,7 +2065,6 @@ export const oldVideos: OldVideo[] = [
     price: 97,
     wistiaId: "lo295ze83h",
     poster: "https://embed-ssl.wistia.com/deliveries/1c082490a2b694de31cab49c381b06e02cd06f30.jpg?image_crop_resized=960x540",
-    orderUrl: "https://order.ghlvideo.com/marketing-video",
   },
   {
     slug: "marketing-18",
@@ -2146,7 +2074,6 @@ export const oldVideos: OldVideo[] = [
     price: 97,
     wistiaId: "5w5n8nm1lf",
     poster: "https://embed-ssl.wistia.com/deliveries/74e0f679185fc9ae6ab9932bf36e7638bab24d2d.jpg?image_crop_resized=960x540",
-    orderUrl: "https://order.ghlvideo.com/marketing-video",
   },
   {
     slug: "marketing-19",
@@ -2156,7 +2083,6 @@ export const oldVideos: OldVideo[] = [
     price: 97,
     wistiaId: "ii7box3zo6",
     poster: "https://embed-ssl.wistia.com/deliveries/0f0bf3e602dc589ab37a277b1e333c38779fce61.jpg?image_crop_resized=960x540",
-    orderUrl: "https://order.ghlvideo.com/marketing-video",
   },
   {
     slug: "marketing-20",
@@ -2166,7 +2092,6 @@ export const oldVideos: OldVideo[] = [
     price: 97,
     wistiaId: "ljci4puk7y",
     poster: "https://embed-ssl.wistia.com/deliveries/20376156a2ff589867c2469834231743451ba2a2.jpg?image_crop_resized=960x540",
-    orderUrl: "https://order.ghlvideo.com/marketing-video",
   },
   {
     slug: "marketing-21",
@@ -2176,7 +2101,6 @@ export const oldVideos: OldVideo[] = [
     price: 97,
     wistiaId: "w7o6w939hc",
     poster: "https://embed-ssl.wistia.com/deliveries/dfe5db3673aa7a82bb936198c1636a22ef6d7aae.jpg?image_crop_resized=960x540",
-    orderUrl: "https://order.ghlvideo.com/marketing-video",
   },
   {
     slug: "feature-animations-7",
@@ -2186,7 +2110,6 @@ export const oldVideos: OldVideo[] = [
     price: 495,
     poster: null,
     packCount: 7,
-    orderUrl: "https://order.ghlvideo.com/feature-animations-7",
   },
   {
     slug: "feature-animations-15",
@@ -2196,7 +2119,6 @@ export const oldVideos: OldVideo[] = [
     price: 895,
     poster: null,
     packCount: 15,
-    orderUrl: "https://order.ghlvideo.com/feature-animations-15",
   },
   {
     slug: "feature-animations-23",
@@ -2206,7 +2128,6 @@ export const oldVideos: OldVideo[] = [
     price: 1295,
     poster: null,
     packCount: 23,
-    orderUrl: "https://order.ghlvideo.com/feature-animations-23",
   },
 ];
 
@@ -2414,9 +2335,8 @@ export const featureAnimations: FeatureAnimation[] = [
 
 /* ---------------------------------------------------------------- */
 /* The Complete Video Stack: the everything bundle, 53 branded videos
- * across five formats at one price. A pack tab of its own, sold on
- * order.ghlvideo.com/highlevel-video-stack. Per-format "value" figures
- * are the anchor the live sales page frames the $1,995 against. */
+ * across five formats at one price, sold on-domain by its sku. Per-format
+ * "value" figures are the anchor the sales page frames the $1,995 against. */
 export type StackFormat = {
   name: string;
   count: number;
@@ -2436,7 +2356,10 @@ export type CollabVersion = {
   name: string;
   price: number; // 0 = free download
   cta: "buy" | "download";
-  url: string;
+  /* download versions link out (the free white-label cut); buy versions
+     sell on-domain via checkoutSlug and carry no external url */
+  url: string | null;
+  checkoutSlug?: string;
   wistiaId: string | null; // preview; null = no example yet
   note: string;
 };
@@ -2476,7 +2399,8 @@ export const collab = {
           name: "Logo Only",
           price: 97,
           cta: "buy",
-          url: "https://order.ghlvideo.com/hl-full-pitch-video",
+          url: null,
+          checkoutSlug: "hl-pitch-logo-only",
           wistiaId: "pyvywzfmao",
           note: "Your logo dropped into the dashboard.",
         },
@@ -2485,7 +2409,9 @@ export const collab = {
           name: "Complete Brand Customization",
           price: 495,
           cta: "buy",
-          url: "https://order.ghlvideo.com/hl-full-pitch-video",
+          url: null,
+          /* the same product as the standalone pitch in the new library */
+          checkoutSlug: "highlevel-official-full-platform-pitch",
           wistiaId: "x8drp1z4u8",
           note: "Your logo, colors, and brand name in the voiceover.",
         },
@@ -2494,7 +2420,8 @@ export const collab = {
           name: "UK / Australian Accent",
           price: 595,
           cta: "buy",
-          url: "https://order.ghlvideo.com/hl-full-pitch-video",
+          url: null,
+          checkoutSlug: "hl-pitch-uk-accent",
           wistiaId: "yon4baclgn",
           note: "Full rebrand, re-voiced in a UK or Australian accent.",
         },
@@ -2503,7 +2430,8 @@ export const collab = {
           name: "Dutch Edition",
           price: 695,
           cta: "buy",
-          url: "https://order.ghlvideo.com/hl-full-pitch-video",
+          url: null,
+          checkoutSlug: "hl-pitch-dutch",
           wistiaId: null,
           note: "Full rebrand, localized in Dutch.",
         },
@@ -2512,7 +2440,8 @@ export const collab = {
           name: "Spanish Edition",
           price: 695,
           cta: "buy",
-          url: "https://order.ghlvideo.com/hl-full-pitch-video",
+          url: null,
+          checkoutSlug: "hl-pitch-spanish",
           wistiaId: null,
           note: "Full rebrand, localized in Spanish.",
         },
@@ -2537,7 +2466,6 @@ export type BundleTier = {
   deliveryDays: number;
   featured: boolean;
   items: BundleItem[];
-  orderUrl: string;
 };
 export type BundleCategory = {
   slug: string;
@@ -2563,7 +2491,6 @@ export const bundleCategories: BundleCategory[] = [
         anchorPrice: 1380,
         deliveryDays: 7,
         featured: false,
-        orderUrl: "https://order.ghlvideo.com/ghlv-new-essential",
         items: [
           { label: "1× Explainer", library: NEW },
           { label: "2× Short Explainer", library: NEW },
@@ -2577,7 +2504,6 @@ export const bundleCategories: BundleCategory[] = [
         anchorPrice: 2265,
         deliveryDays: 10,
         featured: true,
-        orderUrl: "https://order.ghlvideo.com/ghlv-new-growth",
         items: [
           { label: "1× Explainer", library: NEW },
           { label: "4× Short Explainer", library: NEW },
@@ -2600,7 +2526,6 @@ export const bundleCategories: BundleCategory[] = [
         anchorPrice: 1570,
         deliveryDays: 7,
         featured: false,
-        orderUrl: "https://order.ghlvideo.com/ghlv-bundle1",
         items: [
           { label: "1× Explainer", library: CLASSIC },
           { label: "1× Short Explainer", library: CLASSIC },
@@ -2615,7 +2540,6 @@ export const bundleCategories: BundleCategory[] = [
         anchorPrice: 4225,
         deliveryDays: 10,
         featured: false,
-        orderUrl: "https://order.ghlvideo.com/ghlv-bundle2",
         items: [
           { label: "2× Explainer", library: CLASSIC },
           { label: "5× Short Explainer", library: CLASSIC },
@@ -2631,7 +2555,6 @@ export const bundleCategories: BundleCategory[] = [
         anchorPrice: 7370,
         deliveryDays: 10,
         featured: true,
-        orderUrl: "https://order.ghlvideo.com/ghlv-bundle3",
         items: [
           { label: "4× Explainer", library: CLASSIC },
           { label: "10× Short Explainer", library: CLASSIC },
@@ -2647,7 +2570,6 @@ export const bundleCategories: BundleCategory[] = [
         anchorPrice: 12755,
         deliveryDays: 14,
         featured: false,
-        orderUrl: "https://order.ghlvideo.com/ghlv-bundle4",
         items: [
           { label: "All 6× Explainer", library: CLASSIC },
           { label: "All 26× Short Explainer", library: CLASSIC },
@@ -2671,7 +2593,6 @@ export const bundleCategories: BundleCategory[] = [
         anchorPrice: 6350,
         deliveryDays: 10,
         featured: true,
-        orderUrl: "https://order.ghlvideo.com/ghlv-mix1",
         items: [
           { label: "1× Explainer", library: NEW },
           { label: "Full Platform Pitch", library: NEW },
@@ -2689,7 +2610,6 @@ export const bundleCategories: BundleCategory[] = [
         anchorPrice: 10025,
         deliveryDays: 14,
         featured: false,
-        orderUrl: "https://order.ghlvideo.com/ghlv-mix2",
         items: [
           { label: "1× Explainer", library: NEW },
           { label: "4× Short Explainer", library: NEW },
@@ -2716,7 +2636,6 @@ export const videoStack = {
   anchorPrice: 55000,
   totalCount: 53,
   deliveryDays: 10,
-  orderUrl: "https://order.ghlvideo.com/highlevel-video-stack",
   preview:
     "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/69ac022b618c8d761f4a667b.mp4",
   formats: [
@@ -2821,6 +2740,12 @@ export const productCodes: Record<string, string> = {
   "editing-starter": "EDIT-01",
   "editing-growth": "EDIT-02",
   "editing-scale": "EDIT-03",
+  /* the collab pitch versions sold individually (Complete Brand
+     Customization reuses the standalone pitch's code) */
+  "hl-pitch-logo-only": "PITCH-001",
+  "hl-pitch-uk-accent": "PITCH-002",
+  "hl-pitch-dutch": "PITCH-003",
+  "hl-pitch-spanish": "PITCH-004",
 };
 
 /* The display code for a product's descriptive slug (e.g. "EXP-014"), or
@@ -2880,6 +2805,28 @@ const oneTimeSellables: SellableProduct[] = [
         video_type: v.type,
       },
     })),
+  /* the collab pitch versions sold on-domain. Complete Brand Customization
+     shares the standalone pitch's sku and is deduped below (first wins),
+     so it never produces a second products row. */
+  ...collab.projects.flatMap((proj) =>
+    proj.versions
+      .filter((v) => v.cta === "buy" && v.checkoutSlug)
+      .map((v): SellableProduct => ({
+        sku: skuFor(v.checkoutSlug!),
+        code: codeFor(v.checkoutSlug!),
+        name: `${proj.name}: ${v.name}`,
+        description: v.note,
+        priceCents: v.price * 100,
+        type: "one_time",
+        kind: "video",
+        metadata: {
+          kind: "video",
+          code: codeFor(v.checkoutSlug!),
+          format: "Full Platform Pitch",
+          video_type: "Explainer",
+        },
+      })),
+  ),
   /* the classic library plus the three feature-animation packs */
   ...oldVideos.map((v): SellableProduct => {
     const isPack = v.type === "Feature Animation";

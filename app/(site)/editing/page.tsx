@@ -51,7 +51,11 @@ export default function EditingPage() {
             description:
               "Your in-house HighLevel editor on a monthly plan. Send raw footage, get back publish-ready edits from a HighLevel-fluent team. No contracts, unlimited revisions.",
             path: "/editing/",
-            offers: { lowPrice: 595, highPrice: 1795, count: 3 },
+            offers: {
+              lowPrice: Math.min(...editingPlans.map((pl) => pl.price)),
+              highPrice: Math.max(...editingPlans.map((pl) => pl.price)),
+              count: editingPlans.length,
+            },
           }),
           faqSchema(p.faq.items),
         ]}

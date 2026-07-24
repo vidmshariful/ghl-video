@@ -40,6 +40,7 @@ export default function PremadePage() {
       price: prod.priceCents / 100,
       url: `${site.url}/checkout/${prod.sku}`,
     }));
+  const prices = catalog.map((c) => c.price);
   return (
     <>
       <JsonLd
@@ -49,7 +50,11 @@ export default function PremadePage() {
             description:
               "The premade HighLevel video library: explainers, demos, ads, and animated GIFs, plus complete packs. Branded to your SaaS and delivered in days.",
             path: "/premade/",
-            offers: { lowPrice: 495 },
+            offers: {
+              lowPrice: Math.min(...prices),
+              highPrice: Math.max(...prices),
+              count: catalog.length,
+            },
           }),
           faqSchema(p.faq.items),
           productCatalogSchema(catalog),

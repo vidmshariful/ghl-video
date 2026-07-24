@@ -19,7 +19,7 @@ import { PageHero } from "@/components/pages/PageHero";
 import { ProcessTimeline } from "@/components/pages/ProcessTimeline";
 import { TrustStrip } from "@/components/home/TrustStrip";
 import { faqSchema, serviceSchema } from "@/lib/schema";
-import { cta, home, newSamples, pages } from "@/lib/site";
+import { cta, customFormats, home, newSamples, pages } from "@/lib/site";
 
 const craftArt = ["hook", "story", "conversion"] as const;
 const processIcons = ["crosshair", "pen-line", "mic", "clapperboard", "message", "package-check"] as const;
@@ -53,7 +53,10 @@ export default function CustomPage() {
             description:
               "Custom video built from scratch for your platform and your ICP: ads, explainers, demos, and onboarding series, with published starting prices and a fixed quote before production.",
             path: "/custom-video/",
-            offers: { lowPrice: 1500, count: 4 },
+            offers: {
+              lowPrice: Math.min(...customFormats.map((f) => f.from)),
+              count: customFormats.length,
+            },
           }),
           faqSchema(p.faq.items),
         ]}

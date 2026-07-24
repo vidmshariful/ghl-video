@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Checklist } from "@/components/Checklist";
-import { checkoutHref } from "@/lib/site";
+import { cta } from "@/lib/site";
 
 type Plan = {
   name: string;
@@ -13,7 +13,6 @@ type Plan = {
   shortForm: number;
   featured: boolean;
   note?: string;
-  orderUrl: string;
 };
 
 /*
@@ -67,33 +66,26 @@ export function PricingTier({
         </span>
       </p>
       <Checklist items={lines} className="mt-6 flex-1" />
-      <StartEditingCta sku={plan.sku} orderUrl={plan.orderUrl} />
+      <StartEditingCta sku={plan.sku} />
     </div>
   );
 }
 
-function StartEditingCta({ sku, orderUrl }: { sku: string; orderUrl: string }) {
-  const dest = checkoutHref(sku, orderUrl);
-  const cls =
-    "group mt-7 inline-flex items-center justify-center gap-2 rounded-[3px] bg-brand-gradient px-6 py-3.5 text-body font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.25)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98]";
-  const inner = (
-    <>
-      Start editing
+function StartEditingCta({ sku }: { sku: string }) {
+  // Subscription plans link their sku directly: it is tied to a Stripe
+  // price and never goes through skuFor (see lib/site.ts).
+  return (
+    <Link
+      href={`/checkout/${sku}`}
+      className="group mt-7 inline-flex items-center justify-center gap-2 rounded-[3px] bg-brand-gradient px-6 py-3.5 text-body font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.25)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98]"
+    >
+      {cta.startEditing}
       <span
         aria-hidden="true"
         className="transition-transform duration-200 group-hover:translate-x-0.5"
       >
         &rarr;
       </span>
-    </>
-  );
-  return dest.external ? (
-    <a href={dest.href} target="_blank" rel="noopener" className={cls}>
-      {inner}
-    </a>
-  ) : (
-    <Link href={dest.href} className={cls}>
-      {inner}
     </Link>
   );
 }

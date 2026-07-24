@@ -372,7 +372,7 @@ function VideoForm({
         </label>
         <label className="sm:col-span-2">
           <span className={lab}>Checkout link</span>
-          <input value={v.checkout_url} onChange={(e) => set("checkout_url", e.target.value)} className={field} placeholder="https://order.ghlvideo.com/..." />
+          <input value={v.checkout_url} onChange={(e) => set("checkout_url", e.target.value)} className={field} placeholder="/checkout/sku" />
         </label>
         <label className="sm:col-span-2">
           <span className={lab}>Notes</span>

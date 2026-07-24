@@ -38,7 +38,11 @@ export default function DemoVideoPage() {
             description:
               "A branded walkthrough of the HighLevel platform: your logo, dashboard theme, and voiceover, with full commercial rights.",
             path: "/highlevel-demo-video/",
-            offers: { lowPrice: 495, highPrice: 995, count: demos.length },
+            offers: {
+              lowPrice: Math.min(...demos.map((d) => d.price)),
+              highPrice: Math.max(...demos.map((d) => d.price)),
+              count: demos.length,
+            },
           }),
           faqSchema(p.faq.items),
         ]}
@@ -100,7 +104,7 @@ export default function DemoVideoPage() {
                         href={`/checkout/${skuFor(v.slug)}`}
                         className="tap group/btn inline-flex items-center gap-1.5 whitespace-nowrap rounded-[3px] bg-brand-gradient px-4 py-2 text-body-sm font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
                       >
-                        Order Now
+                        {cta.orderPremade}
                         <span
                           aria-hidden="true"
                           className="transition-transform duration-200 group-hover/btn:translate-x-0.5"

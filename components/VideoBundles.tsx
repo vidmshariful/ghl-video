@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { bundleCategories, skuFor, type BundleTier } from "@/lib/site";
+import { bundleCategories, cta, skuFor, type BundleTier } from "@/lib/site";
 
 /*
  * Video bundles in three flavors: New, Classic, and Mix. A segmented
@@ -81,7 +81,7 @@ function BundleCard({ tier }: { tier: BundleTier }) {
         href={`/checkout/${skuFor(tier.slug)}`}
         className="group mt-5 inline-flex items-center justify-center gap-2 rounded-[3px] bg-brand-gradient px-6 py-3.5 text-body font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.25)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98]"
       >
-        Order Now
+        {cta.orderPremade}
         <span
           aria-hidden="true"
           className="transition-transform duration-200 group-hover:translate-x-0.5"

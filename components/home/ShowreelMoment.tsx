@@ -6,7 +6,7 @@ import { createPortal } from "react-dom";
 import { MediaFrame } from "@/components/MediaFrame";
 import { RuledSection } from "@/components/RuledSection";
 import { Reveal, RevealItem } from "@/components/Reveal";
-import { checkoutHref, premadeVideos, type PremadeVideo } from "@/lib/site";
+import { checkoutHref, cta, premadeVideos, type PremadeVideo } from "@/lib/site";
 
 /* recent launches: the newest ready, sellable premade videos */
 const launches = premadeVideos
@@ -21,26 +21,18 @@ function BuyNow({
   video: PremadeVideo;
   className?: string;
 }) {
-  const dest = checkoutHref(video.slug, video.orderUrl);
-  const cls = `group/btn inline-flex items-center gap-1.5 whitespace-nowrap rounded-[3px] bg-brand-gradient px-6 py-3 text-body font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] transition-all duration-200 hover:brightness-110 active:scale-[0.98] ${className}`;
-  const inner = (
-    <>
-      Buy now
+  return (
+    <Link
+      href={checkoutHref(video.slug)}
+      className={`group/btn inline-flex items-center gap-1.5 whitespace-nowrap rounded-[3px] bg-brand-gradient px-6 py-3 text-body font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] transition-all duration-200 hover:brightness-110 active:scale-[0.98] ${className}`}
+    >
+      {cta.orderPremade}
       <span
         aria-hidden="true"
         className="transition-transform duration-200 group-hover/btn:translate-x-0.5"
       >
         &rarr;
       </span>
-    </>
-  );
-  return dest.external ? (
-    <a href={dest.href} target="_blank" rel="noopener" className={cls}>
-      {inner}
-    </a>
-  ) : (
-    <Link href={dest.href} className={cls}>
-      {inner}
     </Link>
   );
 }

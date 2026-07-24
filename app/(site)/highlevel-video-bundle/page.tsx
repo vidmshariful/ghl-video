@@ -11,7 +11,7 @@ import { SectionHead } from "@/components/SectionHead";
 import { VideoBundles } from "@/components/VideoBundles";
 import { PageHero } from "@/components/pages/PageHero";
 import { faqSchema, serviceSchema } from "@/lib/schema";
-import { cta, pages } from "@/lib/site";
+import { bundleCategories, cta, pages } from "@/lib/site";
 
 /*
  * Preserved ranking URL: this page holds #1 for "highlevel video bundle"
@@ -37,7 +37,15 @@ export default function VideoBundlePage() {
             description:
               "White-label video bundles for HighLevel SaaS: explainers, demos, and feature videos in one order, branded to your platform.",
             path: "/highlevel-video-bundle/",
-            offers: { lowPrice: 795 },
+            offers: {
+              lowPrice: Math.min(
+                ...bundleCategories.flatMap((c) => c.tiers.map((t) => t.price)),
+              ),
+              highPrice: Math.max(
+                ...bundleCategories.flatMap((c) => c.tiers.map((t) => t.price)),
+              ),
+              count: bundleCategories.reduce((n, c) => n + c.tiers.length, 0),
+            },
           }),
           faqSchema(p.faq.items),
         ]}
