@@ -6,9 +6,10 @@ import { syncProductsFromCatalog } from "@/lib/checkout/sync-products";
 export const runtime = "nodejs";
 
 /*
- * Seed the products table from the catalog. Admin-only, insert-only, and
- * idempotent: run it after adding a video or pack to lib/site.ts and the
- * new one-time SKUs get their products row (existing rows are preserved).
+ * Sync the products table from the catalog (lib/site.ts). Admin-only and
+ * idempotent: new one-time SKUs get a row, existing catalog SKUs take the
+ * catalog's price/name/metadata so display and charge can never drift.
+ * The active switch and hand-created rows are never touched.
  */
 export async function POST(req: Request) {
   const admin = await verifyAdmin(req);

@@ -199,8 +199,9 @@ export function ProductsScreen() {
     load();
   }, []);
 
-  /* Create products rows for every one-time SKU in the catalog that does
-     not have one yet. Insert-only, so it never overwrites a price set here. */
+  /* Sync every one-time SKU from the site catalog: new SKUs get a row,
+     existing catalog SKUs take the catalog's price, name and metadata.
+     The active switch and hand-created rows are never touched. */
   async function sync() {
     setSyncing(true);
     setSyncMsg("");
@@ -211,8 +212,15 @@ export function ProductsScreen() {
       });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error ?? "Sync failed.");
+      const priceChanges = (j.updatedSkus ?? [])
+        .map(
+          (u: { sku: string; fromCents: number; toCents: number }) =>
+            `${u.sku} ${money(u.fromCents, "usd")} to ${money(u.toCents, "usd")}`,
+        )
+        .join(", ");
       setSyncMsg(
-        `Synced: ${j.inserted} added, ${j.skipped} already present. ${j.total} one-time SKUs in the catalog.`,
+        `Synced ${j.total} catalog SKUs: ${j.inserted} added, ${j.updated} updated, ${j.unchanged} unchanged.` +
+          (priceChanges ? ` Changes: ${priceChanges}.` : ""),
       );
       await load();
     } catch (e) {
@@ -261,9 +269,11 @@ export function ProductsScreen() {
       )}
 
       <div className="mt-4 rounded-[8px] border border-gold/30 bg-gold/[0.06] px-4 py-3 text-body-sm text-muted">
-        The marketing pages show their prices from the site code, separate from
-        this table. After changing a price here, tell Claude Code to update the
-        displayed price too, so the page and the checkout agree.
+        Catalog SKUs take their price from the site code: change it there,
+        deploy, then run Sync from catalog so the page and the checkout always
+        agree. A price edited directly here holds only until the next sync.
+        The active switch and products created here by hand are never
+        overwritten by a sync.
       </div>
 
       {err && <p className="mt-4 text-body-sm text-error">{err}</p>}
