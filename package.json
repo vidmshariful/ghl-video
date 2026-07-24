@@ -11,7 +11,8 @@
     "start": "next start",
     "lint": "eslint",
     "seed:subscriptions": "node scripts/seed-editing-subscriptions.mjs",
-    "migrate": "node scripts/apply-migrations.mjs"
+    "migrate": "node scripts/apply-migrations.mjs",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
@@ -27,6 +28,7 @@
     "stripe": "^22.3.2"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
