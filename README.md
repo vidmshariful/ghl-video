@@ -17,17 +17,21 @@ npm run dev
 
 Copy `.env.example` to `.env.local` and fill it in for the checkout/portal/webhook paths to work locally.
 
+Database schema lives in `supabase/migrations/` (ordered, idempotent). `npm run migrate` applies pending files and records them in `schema_migrations` (`--dry-run` to preview). `npm run seed:subscriptions` seeds the three editing plans in Stripe + the products table.
+
 ## Build & deploy
 
 ```bash
 npm run build   # standard Next.js server build (.next)
 ```
 
-Deploys to **Vercel** using the auto-detected Next.js preset — **do not set a custom output directory** (no `out/`). `vercel.json` holds the 301s from the old WordPress URLs (Vercel honors it); `public/_redirects` is a Cloudflare fallback and is ignored on Vercel.
+Deploys to **Vercel** using the auto-detected Next.js preset — **do not set a custom output directory** (no `out/`). `vercel.json` holds the 301s from the old WordPress URLs (Vercel honors it).
 
 ### Required production env vars (set in Vercel → Production)
 
-Server-only: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, `HIGHLEVEL_API_TOKEN`, `HIGHLEVEL_LOCATION_ID`, `HIGHLEVEL_PIPELINE_ID`, `HIGHLEVEL_STAGE_ID` (optional: `HIGHLEVEL_API_VERSION`).
+Server-only: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, `HIGHLEVEL_API_TOKEN`, `HIGHLEVEL_LOCATION_ID`, `HIGHLEVEL_PIPELINE_ID`, `HIGHLEVEL_STAGE_ID`, and recommended `HIGHLEVEL_LEAD_PIPELINE_ID` + `HIGHLEVEL_LEAD_STAGE_ID` (quote leads; unset falls back to hardcoded defaults with a log warning). Optional: `HIGHLEVEL_API_VERSION`.
 Client (`NEXT_PUBLIC_`): `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `NEXT_PUBLIC_SUPABASE_URL` (also read server-side — omitting it lets the marketing build pass but breaks checkout at runtime), and recommended `NEXT_PUBLIC_SITE_URL`.
 
-Use **live** Stripe keys from the site's own Stripe account, and register the production webhook at `https://ghlvideo.com/api/webhooks/stripe`.
+Use **live** Stripe keys from the site's own Stripe account, and register the production webhook at `https://ghlvideo.com/api/webhooks/stripe` subscribed to: `payment_intent.succeeded`, `payment_intent.payment_failed`, `charge.refunded`, `charge.dispute.created`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`.
+
+Rate limiting in `lib/rate-limit.ts` is per-instance (in-memory); the production backstop is a Vercel firewall rule plus Stripe Radar. Confirm both are configured before scaling spend.
