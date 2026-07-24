@@ -39,7 +39,7 @@ export function ClosingCta() {
                   {home.closing.lede}
                 </p>
                 <div className="mt-9 flex flex-wrap gap-4">
-                  <Button href={cta.bookACall.href} variant="primary">
+                  <Button href={cta.bookACall.href} variant="gradient">
                     {cta.bookACall.label}
                   </Button>
                   <Button href={cta.seePremade.href} variant="ghost">

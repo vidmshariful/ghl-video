@@ -3,24 +3,24 @@ import type { ReactNode } from "react";
 
 /*
  * One button system (client direction, July 2026):
- * - `primary` is the gold-to-green GRADIENT. The gradient is the
- *   signature, so it is the one and only primary button style. `hero`
- *   is kept as an alias so existing call sites still work.
+ * - `gradient` is the gold-to-green signature, reserved for the page's
+ *   money moments: the hero CTA and the closing CTA (plus the hand-rolled
+ *   nav and Order Now buttons). Everywhere else it would be too bright
+ *   across the page, which is why...
+ * - `primary` (alias `hero`) is the deep, restful body-button fill, and
  * - `ghost` is the quiet secondary.
  */
-type Variant = "primary" | "hero" | "ghost";
+type Variant = "primary" | "hero" | "gradient" | "ghost";
 type Size = "md" | "lg";
 
-/* Body buttons are a deep, restful fill (client direction): the bright
- * gold-to-green gradient was too light on the eye across the page. The nav
- * "Book a Call" and the library / Order Now buttons keep the gradient
- * (they are hand-rolled, not this component). `ghost` stays transparent. */
 const deep =
   "border border-hair text-ink bg-[linear-gradient(180deg,#181b23,#0f1116)] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] hover:border-gold/50 hover:text-gold hover:bg-[linear-gradient(180deg,#1c2029,#12141a)]";
 
 const variants: Record<Variant, string> = {
   primary: deep,
   hero: deep,
+  gradient:
+    "bg-brand-gradient text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.25)] hover:brightness-[1.07]",
   ghost:
     "border border-hair text-ink hover:border-gold/60 hover:text-gold bg-transparent",
 };
