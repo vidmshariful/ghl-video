@@ -6,7 +6,7 @@ import { home, googleReviewsUrl } from "@/lib/site";
 
 /*
  * Real Google reviews as a calm vertical feed. Left: the pitch and a
- * single "Review us" CTA, nothing else. Right: one column of review
+ * single read-our-reviews CTA, nothing else. Right: one column of review
  * cards scrolling up forever, three to four in view, the top and bottom
  * masked so only the centre is in focus. Pauses on hover; static under
  * reduced motion. The visible run is duplicated for a seamless loop; the
@@ -40,7 +40,7 @@ export function Testimonials() {
               </p>
               <div className="mt-9">
                 <Button href={googleReviewsUrl} external>
-                  Review us
+                  Read our reviews on Google
                 </Button>
               </div>
             </RevealItem>

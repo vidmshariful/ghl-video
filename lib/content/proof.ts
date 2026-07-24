@@ -4,7 +4,7 @@ import { aiPackClips } from "./premade";
 /* Homepage content                                                     */
 /* ------------------------------------------------------------------ */
 
-/* The live Google reviews for GHL Video (5.00, 17 reviews). */
+/* The live Google reviews for GHL Video. */
 export const googleReviewsUrl =
   "https://www.google.com/search?q=ghl+video#lrd=0x3755c3a3394f03b9:0x1f310bcbd31aa084,1";
 
@@ -326,7 +326,7 @@ export const home = {
     chip: "Proof",
     headline: "Rated 5.0 by",
     accent: "HighLevel founders.",
-    ratingLine: "17 reviews on Google, every one of them five stars.",
+    ratingLine: "Every review on Google, five stars.",
     items: [
       {
         quote:
