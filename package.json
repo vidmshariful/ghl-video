@@ -10,7 +10,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "seed:subscriptions": "node scripts/seed-editing-subscriptions.mjs"
+    "seed:subscriptions": "node scripts/seed-editing-subscriptions.mjs",
+    "migrate": "node scripts/apply-migrations.mjs"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
@@ -32,6 +33,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
+    "pg": "^8.22.0",
     "playwright": "^1.61.1",
     "tailwindcss": "^4",
     "typescript": "^5"
