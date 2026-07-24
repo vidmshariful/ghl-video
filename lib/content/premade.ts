@@ -238,7 +238,7 @@ const standaloneNew: PremadeVideo[] = [
     price: 495,
     preview:
       "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a56fa0fbaf5f6da40287c33.mp4",
-    poster: null,
+    poster: "/posters/hl-full-pitch.jpg",
     comingSoon: false,
   },
 ];

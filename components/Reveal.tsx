@@ -1,12 +1,17 @@
 "use client";
 
-import { motion, useReducedMotion, type Variants } from "framer-motion";
-import type { ReactNode } from "react";
+import { motion, useInView, useReducedMotion, type Variants } from "framer-motion";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 /*
  * Scroll reveal for GROUPS, not atoms (brief section 6). Wrap a whole
  * section header or card row in <Reveal>, mark the moving pieces with
  * <RevealItem>. Fires once, small translate, short duration.
+ *
+ * Hardened: the in-view observer is backed by a safety net that force-shows
+ * the group if it is on screen and the observer missed it (instant jumps,
+ * deep links, layout shifting under late-loading video). Content can never
+ * sit hidden in the viewport for more than a beat.
  */
 
 const group: Variants = {
@@ -21,13 +26,35 @@ export function Reveal({
   children: ReactNode;
   className?: string;
 }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, amount: 0.1 });
+  const [forced, setForced] = useState(false);
+  const shown = inView || forced;
+
+  useEffect(() => {
+    if (shown) return;
+    const check = () => {
+      const el = ref.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      if (r.top < window.innerHeight && r.bottom > 0) setForced(true);
+    };
+    check();
+    const iv = window.setInterval(check, 800);
+    window.addEventListener("scroll", check, { passive: true });
+    return () => {
+      window.clearInterval(iv);
+      window.removeEventListener("scroll", check);
+    };
+  }, [shown]);
+
   return (
     <motion.div
+      ref={ref}
       className={className}
       variants={group}
       initial="hidden"
-      whileInView="show"
-      viewport={{ once: true, margin: "-80px" }}
+      animate={shown ? "show" : "hidden"}
     >
       {children}
     </motion.div>
