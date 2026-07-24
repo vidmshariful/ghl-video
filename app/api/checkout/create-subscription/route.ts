@@ -66,14 +66,48 @@ export async function POST(req: Request) {
     await db.from("customers").update({ stripe_customer_id: stripeCustomerId }).eq("id", customer.id);
   }
 
-  const sub = await stripe().subscriptions.create({
-    customer: stripeCustomerId,
-    items: [{ price: priceId }],
-    payment_behavior: "default_incomplete",
-    payment_settings: { save_default_payment_method: "on_subscription" },
-    expand: ["latest_invoice.confirmation_secret"],
-    metadata: { sku, customer_email: email },
-  });
+  // Idempotent on retry: a double-submit or reload reuses the still-pending
+  // subscription created moments ago instead of stacking a new incomplete one
+  // (Stripe would only expire the extras ~23h later).
+  const { data: pending } = await db
+    .from("subscriptions")
+    .select("stripe_subscription_id")
+    .eq("customer_email", email)
+    .eq("product_id", product.id)
+    .eq("status", "incomplete")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (pending?.stripe_subscription_id) {
+    try {
+      const existing = await stripe().subscriptions.retrieve(pending.stripe_subscription_id, {
+        expand: ["latest_invoice.confirmation_secret"],
+      });
+      const existingInvoice = existing.latest_invoice as unknown as {
+        confirmation_secret?: { client_secret?: string };
+      } | null;
+      const existingSecret = existingInvoice?.confirmation_secret?.client_secret;
+      if (existing.status === "incomplete" && existingSecret) {
+        return NextResponse.json({ clientSecret: existingSecret, planName: product.name });
+      }
+    } catch {
+      // fall through and create a fresh subscription
+    }
+  }
+
+  const sub = await stripe().subscriptions.create(
+    {
+      customer: stripeCustomerId,
+      items: [{ price: priceId }],
+      payment_behavior: "default_incomplete",
+      payment_settings: { save_default_payment_method: "on_subscription" },
+      expand: ["latest_invoice.confirmation_secret"],
+      metadata: { sku, customer_email: email },
+    },
+    // Same-minute duplicates (double-click racing past the reuse check above)
+    // collapse onto one Stripe subscription.
+    { idempotencyKey: `create-sub_${customer.id}_${sku}_${Math.floor(Date.now() / 60_000)}` },
+  );
 
   // Current Stripe API (2026-...) carries the first invoice's client secret
   // on confirmation_secret, which the Payment Element confirms on-domain.
@@ -85,7 +119,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Could not start the subscription." }, { status: 500 });
   }
 
-  await db.from("subscriptions").insert({
+  const { error: rowErr } = await db.from("subscriptions").insert({
     customer_id: customer.id,
     customer_email: email,
     product_id: product.id,
@@ -98,6 +132,12 @@ export async function POST(req: Request) {
     interval: "month",
     metadata: { sku },
   });
+  if (rowErr && rowErr.code !== "23505") {
+    // Not fatal to the buyer (the webhook reconstructs missing rows from the
+    // subscription's metadata), but loud, because a live billing relationship
+    // briefly exists with no local record.
+    console.error(`[create-subscription] row insert failed for ${sub.id}: ${rowErr.message}`);
+  }
 
   return NextResponse.json({ clientSecret, planName: product.name });
 }

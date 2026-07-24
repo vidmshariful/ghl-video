@@ -287,12 +287,19 @@ async function handleSubscription(
   db: ReturnType<typeof supabaseAdmin>,
   sub: Stripe.Subscription,
 ) {
-  const { data: row } = await db
+  let { data: row } = await db
     .from("subscriptions")
     .select("*")
     .eq("stripe_subscription_id", sub.id)
     .maybeSingle();
-  if (!row) return; // created outside our flow
+  if (!row) {
+    // Our subscription (it carries our sku + email metadata) but no local
+    // row: the create-subscription insert failed after Stripe succeeded.
+    // Reconstruct it so a live billing relationship is never invisible.
+    // Subscriptions created outside our flow carry no sku and are skipped.
+    row = await recoverOrphanSubscription(db, sub);
+    if (!row) return;
+  }
 
   // current_period_end lives on the subscription in older API versions and
   // on each subscription item in the current one.
@@ -328,6 +335,69 @@ async function handleSubscription(
       .maybeSingle();
     if (claimed) await syncSubscriptionToHighLevel(db, row);
   }
+}
+
+async function recoverOrphanSubscription(
+  db: ReturnType<typeof supabaseAdmin>,
+  sub: Stripe.Subscription,
+) {
+  const sku = typeof sub.metadata?.sku === "string" ? sub.metadata.sku : "";
+  const email = (
+    typeof sub.metadata?.customer_email === "string" ? sub.metadata.customer_email : ""
+  )
+    .toLowerCase()
+    .trim();
+  if (!sku || !email) return null;
+
+  const { data: product } = await db
+    .from("products")
+    .select("*")
+    .eq("sku", sku)
+    .maybeSingle();
+  if (!product) return null;
+
+  await db.from("customers").upsert({ email }, { onConflict: "email", ignoreDuplicates: true });
+  const { data: customer } = await db
+    .from("customers")
+    .select("id")
+    .eq("email", email)
+    .maybeSingle();
+  if (!customer) return null;
+
+  const stripeCustomerId =
+    typeof sub.customer === "string" ? sub.customer : (sub.customer?.id ?? null);
+  const { data: inserted, error } = await db
+    .from("subscriptions")
+    .insert({
+      customer_id: customer.id,
+      customer_email: email,
+      product_id: product.id,
+      stripe_subscription_id: sub.id,
+      stripe_customer_id: stripeCustomerId,
+      status: sub.status,
+      plan_name: product.name,
+      amount_cents: product.price_cents,
+      currency: product.currency,
+      interval: "month",
+      metadata: { sku, recovered: true },
+    })
+    .select("*")
+    .single();
+  if (error) {
+    // A concurrent delivery may have recovered it first.
+    if (error.code === "23505") {
+      const { data: raced } = await db
+        .from("subscriptions")
+        .select("*")
+        .eq("stripe_subscription_id", sub.id)
+        .maybeSingle();
+      return raced;
+    }
+    console.error(`[webhook] failed to recover subscription ${sub.id}: ${error.message}`);
+    return null;
+  }
+  console.error(`[webhook] recovered subscription ${sub.id} for ${email}`);
+  return inserted;
 }
 
 async function handleSubscriptionDeleted(
