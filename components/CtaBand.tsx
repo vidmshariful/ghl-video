@@ -35,8 +35,9 @@ export function CtaBand({
         aria-hidden="true"
         className="pointer-events-none absolute inset-y-0 left-1/2 w-[min(100%-1.5rem,80.5rem)] -translate-x-1/2"
         style={{
+          /* gradient pick 16: blue corner, top left (client choice) */
           background:
-            "linear-gradient(135deg, rgba(252,192,0,0.09) 0%, rgba(252,192,0,0.025) 36%, rgba(8,9,13,0) 60%), linear-gradient(315deg, rgba(0,204,0,0.05) 0%, rgba(0,204,0,0.015) 30%, rgba(8,9,13,0) 52%), color-mix(in srgb, var(--surface) 55%, var(--canvas))",
+            "linear-gradient(135deg, rgba(0,144,252,0.13) 0%, rgba(0,144,252,0.035) 34%, rgba(8,9,13,0) 60%), var(--canvas)",
         }}
       >
         {/* the grain runs stronger here than the hero's 0.06: the light
