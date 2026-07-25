@@ -19,8 +19,8 @@ const BLUE = "0,144,252";
 type Sample = { name: string; css: string };
 
 const g = (rgb: string, a: number) => `rgba(${rgb},${a})`;
-const OFF = "rgba(8,9,13,0)";
-const BASE = "var(--canvas)";
+const OFF = "rgba(0,0,0,0)";
+const BASE = "#000";
 
 const samples: Sample[] = [
   {
@@ -126,7 +126,7 @@ function GradientBox({ sample, index }: { sample: Sample; index: number }) {
         </p>
         <h2 className="mt-4 font-display text-h3 text-ink">{sample.name}</h2>
         <p className="mx-auto mt-3 max-w-[70ch] font-mono text-label uppercase leading-relaxed text-dim">
-          {sample.css.replaceAll("var(--canvas)", "black")}
+          {sample.css}
         </p>
       </div>
     </section>

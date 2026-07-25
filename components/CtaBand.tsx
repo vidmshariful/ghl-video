@@ -37,7 +37,7 @@ export function CtaBand({
         style={{
           /* gradient pick 16: blue corner, top left (client choice) */
           background:
-            "linear-gradient(135deg, rgba(0,144,252,0.13) 0%, rgba(0,144,252,0.035) 34%, rgba(8,9,13,0) 60%), var(--canvas)",
+            "linear-gradient(135deg, rgba(0,144,252,0.13) 0%, rgba(0,144,252,0.035) 34%, rgba(0,0,0,0) 60%), #000",
         }}
       >
         {/* the grain runs stronger here than the hero's 0.06: the light
