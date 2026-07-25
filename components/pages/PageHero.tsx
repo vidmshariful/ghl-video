@@ -47,9 +47,10 @@ export function PageHero({
   return (
     <section data-bp-idx="1" className="relative overflow-x-clip hero-pad">
       {/* the section-box surface: same gradient system as the closing
-          band, boxed to the rails. The homepage hero keeps its own
+          band, boxed to the rails, starting below the fixed header so
+          nothing shows behind the nav. The homepage hero keeps its own
           HeroAtmosphere and stays out of this system on purpose. */}
-      <SectionGradient />
+      <SectionGradient belowHeader />
       <div className="shell relative pb-14 text-center md:pb-16">
         {top && <div className="mb-11">{top}</div>}
         <div className="flex flex-wrap items-center justify-center gap-3">
