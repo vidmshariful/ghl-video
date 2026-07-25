@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { SectionChip } from "@/components/SectionChip";
-import { HeroAtmosphere } from "@/components/HeroAtmosphere";
+import { SectionGradient } from "@/components/SectionGradient";
 
 /* Registration mark: a circled dot where the boundary rule crosses
  * the page-frame verticals, like a plotter aligning the sheet. */
@@ -46,7 +46,10 @@ export function PageHero({
 }) {
   return (
     <section data-bp-idx="1" className="relative overflow-x-clip hero-pad">
-      <HeroAtmosphere />
+      {/* the section-box surface: same gradient system as the closing
+          band, boxed to the rails. The homepage hero keeps its own
+          HeroAtmosphere and stays out of this system on purpose. */}
+      <SectionGradient />
       <div className="shell relative pb-14 text-center md:pb-16">
         {top && <div className="mb-11">{top}</div>}
         <div className="flex flex-wrap items-center justify-center gap-3">

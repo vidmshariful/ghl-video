@@ -1,5 +1,6 @@
 import { Button } from "@/components/Button";
 import { Reveal, RevealItem } from "@/components/Reveal";
+import { SectionGradient } from "@/components/SectionGradient";
 
 /*
  * The one closing band, identical on every page that sells (client
@@ -28,26 +29,8 @@ export function CtaBand({
       aria-labelledby="cta-band-heading"
       className="relative overflow-x-clip section-pad"
     >
-      {/* the gradient fills the frame-rail box and nothing more: same
-          geometry as PageFrame, so it stops exactly at the rails, top
-          rule to bottom rule. The grain rides inside it. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-y-0 left-1/2 w-[min(100%-1.5rem,80.5rem)] -translate-x-1/2"
-        style={{
-          /* gradient pick 16: blue corner, top left (client choice) */
-          background:
-            "linear-gradient(135deg, rgba(0,144,252,0.13) 0%, rgba(0,144,252,0.035) 34%, rgba(0,0,0,0) 60%), #000",
-        }}
-      >
-        {/* the grain runs stronger here than the hero's 0.06: the light
-            shoulder of the gradient is where the texture should read */}
-        <span
-          aria-hidden="true"
-          className="grunge absolute inset-0"
-          style={{ opacity: 0.15 }}
-        />
-      </div>
+      {/* the shared section-box surface: rails-boxed gradient + grain */}
+      <SectionGradient />
       <div className="shell relative text-center">
         <Reveal>
           <RevealItem>
