@@ -11,6 +11,7 @@ import { ReviewCard } from "@/components/ReviewCard";
 import { SectionGlow } from "@/components/SectionGlow";
 import { RuledSection } from "@/components/RuledSection";
 import { SectionHead } from "@/components/SectionHead";
+import { CtaBand } from "@/components/CtaBand";
 import { JsonLd } from "@/components/JsonLd";
 import { PricingCards } from "@/components/PricingCards";
 import { PageHero } from "@/components/pages/PageHero";
@@ -279,39 +280,13 @@ export default function EditingPage() {
         </div>
       </RuledSection>
 
-      {/* 10. closing */}
-      <section data-bp-idx="10" className="relative section-pad">
-        <DrawnBorder />
-        <div className="shell">
-          <Reveal className="text-center">
-            <RevealItem>
-              <h2 className="mx-auto max-w-[22ch] font-display text-h2 text-ink">
-                {p.closing.headline}{" "}
-                <span className="text-gradient">{p.closing.accent}</span>
-              </h2>
-              <div className="mt-8 flex flex-wrap justify-center gap-4">
-                <Button href="#plans">See the plans</Button>
-                <Button href={cta.bookACall.href} variant="ghost">
-                  {cta.bookACall.label}
-                </Button>
-              </div>
-              <ul className="mt-10 flex flex-wrap items-center justify-center gap-x-3 gap-y-2">
-                {p.closing.points.map((point) => (
-                  <li
-                    key={point}
-                    className="inline-flex items-center gap-2 rounded-full border border-hair bg-surface px-4 py-2 font-mono text-label uppercase text-muted"
-                  >
-                    <span aria-hidden="true" className="text-gold">
-                      &#43;
-                    </span>
-                    {point}
-                  </li>
-                ))}
-              </ul>
-            </RevealItem>
-          </Reveal>
-        </div>
-      </section>
+      <CtaBand
+        bpIdx={10}
+        headline={p.closing.headline}
+        accent={p.closing.accent}
+        sub={p.closing.sub}
+        cta={p.closing.cta}
+      />
     </>
   );
 }

@@ -4,6 +4,7 @@ import { Button } from "@/components/Button";
 import { DrawnBorder } from "@/components/DrawnBorder";
 import { DrawnIcon, type IconName } from "@/components/DrawnIcon";
 import { FaqList } from "@/components/FaqList";
+import { CtaBand } from "@/components/CtaBand";
 import { JsonLd } from "@/components/JsonLd";
 import { PremadeLibrary } from "@/components/PremadeLibrary";
 import { Reveal, RevealItem } from "@/components/Reveal";
@@ -241,16 +242,15 @@ export default function PremadePage() {
               <FaqList items={p.faq.items} />
             </RevealItem>
           </Reveal>
-          <Reveal className="mt-14 text-center">
-            <RevealItem>
-              <p className="text-lede text-muted">The call answers the rest.</p>
-              <div className="mt-6 flex justify-center">
-                <Button href={cta.bookACall.href}>{cta.bookACall.label}</Button>
-              </div>
-            </RevealItem>
-          </Reveal>
         </div>
       </section>
+      <CtaBand
+        bpIdx={8}
+        headline={p.closing.headline}
+        accent={p.closing.accent}
+        sub={p.closing.sub}
+        cta={p.closing.cta}
+      />
     </>
   );
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { CtaBand } from "@/components/CtaBand";
 import { Button } from "@/components/Button";
 import { DrawnBorder } from "@/components/DrawnBorder";
 import { MediaCard } from "@/components/MediaCard";
@@ -115,6 +116,13 @@ export default function WorkPage() {
         </div>
       </section>
       </div>
+      <CtaBand
+        bpIdx={5}
+        headline={p.closing.headline}
+        accent={p.closing.accent}
+        sub={p.closing.sub}
+        cta={p.closing.cta}
+      />
     </>
   );
 }

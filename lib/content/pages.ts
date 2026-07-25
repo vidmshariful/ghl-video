@@ -7,6 +7,12 @@ import { clips, posters } from "./media";
 
 export const pages = {
   premade: {
+    closing: {
+      headline: "Your videos are",
+      accent: "one order away.",
+      sub: "Pick a video or a pack, send your brand kit, and publish this week. Most orders land in 5 to 7 days.",
+      cta: { label: "See the videos", href: "#videos" },
+    },
     hero: {
       chip: "Premade Videos",
       headline: "Branded HighLevel videos,",
@@ -338,11 +344,8 @@ export const pages = {
     closing: {
       headline: "Ready for video",
       accent: "built for you?",
-      points: [
-        "Custom scope and quote",
-        "Built around your brand",
-        "Made for HighLevel",
-      ],
+      sub: "Send the brief or book the call. Either way you leave with a fixed quote and a real timeline.",
+      cta: { label: cta.requestQuote.label, href: cta.requestQuote.href },
     },
     fit: {
       chip: "Fit",
@@ -477,7 +480,8 @@ export const pages = {
     closing: {
       headline: "Stop editing.",
       accent: "Start publishing.",
-      points: ["No contracts", "Unlimited revisions", "Edits back in days"],
+      sub: "Pick your plan and send this week's footage. No contract, unlimited revisions, cancel anytime.",
+      cta: { label: "Start editing", href: "#plans" },
     },
     samples: {
       chip: "The difference",
@@ -579,6 +583,12 @@ export const pages = {
 
   /* /highlevel-demo-video/ : preserved ranking URL, rebuilt as a page */
   demo: {
+    closing: {
+      headline: "Stop demoing live.",
+      accent: "Let the video sell.",
+      sub: "Every demo ships white-labeled: your logo, your theme, your voiceover, full commercial rights.",
+      cta: { label: "See the versions", href: "#versions" },
+    },
     hero: {
       chip: "Demo Videos",
       headline: "Your platform, demoed",
@@ -633,6 +643,12 @@ export const pages = {
 
   /* /highlevel-video-bundle/ : preserved ranking URL, rebuilt as a page */
   bundles: {
+    closing: {
+      headline: "One order.",
+      accent: "A full video funnel.",
+      sub: "Pick the bundle that fits, send one brand kit, and every video ships white-labeled together.",
+      cta: { label: "See the bundles", href: "#bundles" },
+    },
     hero: {
       chip: "Video Bundles",
       headline: "Every funnel stage,",
@@ -673,6 +689,12 @@ export const pages = {
   },
 
   about: {
+    closing: {
+      headline: "Put a HighLevel-fluent team",
+      accent: "behind your brand.",
+      sub: "800+ SaaS founders already publish with us. See what that looks like for your platform.",
+      cta: { label: cta.bookACall.label, href: cta.bookACall.href },
+    },
     hero: {
       chip: "About",
       headline: "The original",
@@ -776,6 +798,12 @@ export const pages = {
   },
 
   work: {
+    closing: {
+      headline: "Want your platform",
+      accent: "in this reel?",
+      sub: "Everything here was built for a HighLevel brand like yours. The next one can carry your logo.",
+      cta: { label: cta.bookACall.label, href: cta.bookACall.href },
+    },
     hero: {
       chip: "Our work",
       headline: "Made for platforms",

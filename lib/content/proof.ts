@@ -388,12 +388,6 @@ export const home = {
     headline: "Stop selling with",
     accent: "Loom demos.",
     lede: "Talk to the original HighLevel-only video team about your next launch.",
-    /* a real sequence, so numbering carries information */
-    steps: [
-      { title: "Book", line: "Pick a time that fits." },
-      { title: "Scope", line: "We map your videos on the call." },
-      { title: "Receive", line: "Premade lands in 5 to 7 days." },
-    ],
   },
 } as const;
 

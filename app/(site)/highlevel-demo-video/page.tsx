@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/Button";
-import { DrawnBorder } from "@/components/DrawnBorder";
 import { FaqList } from "@/components/FaqList";
+import { CtaBand } from "@/components/CtaBand";
 import { JsonLd } from "@/components/JsonLd";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { RuleList } from "@/components/RuleList";
@@ -157,26 +157,13 @@ export default function DemoVideoPage() {
         </div>
       </RuledSection>
 
-      {/* 5. closing */}
-      <section data-bp-idx="5" className="relative section-pad">
-        <DrawnBorder />
-        <div className="shell">
-          <Reveal className="text-center">
-            <RevealItem>
-              <h2 className="mx-auto max-w-[22ch] font-display text-h2 text-ink">
-                Stop demoing live.{" "}
-                <span className="text-gradient">Let the video sell.</span>
-              </h2>
-              <div className="mt-8 flex flex-wrap justify-center gap-4">
-                <Button href="#versions">See the versions</Button>
-                <Button href={cta.bookACall.href} variant="ghost">
-                  {cta.bookACall.label}
-                </Button>
-              </div>
-            </RevealItem>
-          </Reveal>
-        </div>
-      </section>
+      <CtaBand
+        bpIdx={5}
+        headline={p.closing.headline}
+        accent={p.closing.accent}
+        sub={p.closing.sub}
+        cta={p.closing.cta}
+      />
     </>
   );
 }

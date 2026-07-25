@@ -10,8 +10,9 @@ import { VideoTestimonials } from "@/components/home/VideoTestimonials";
 import { Testimonials } from "@/components/home/Testimonials";
 import { Faq } from "@/components/home/Faq";
 import { FounderNote } from "@/components/home/FounderNote";
-import { ClosingCta } from "@/components/home/ClosingCta";
+import { CtaBand } from "@/components/CtaBand";
 
+import { cta, home } from "@/lib/site";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -36,7 +37,13 @@ export default function Home() {
       <Testimonials />
       <Faq />
       <FounderNote />
-      <ClosingCta />
+      <CtaBand
+        bpIdx={10}
+        headline={home.closing.headline}
+        accent={home.closing.accent}
+        sub={home.closing.lede}
+        cta={cta.bookACall}
+      />
     </>
   );
 }

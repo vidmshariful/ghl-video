@@ -7,6 +7,7 @@ import { SectionHead } from "@/components/SectionHead";
 import { Stat } from "@/components/Stat";
 import { TeamSection } from "@/components/home/TeamSection";
 import { FaqList } from "@/components/FaqList";
+import { CtaBand } from "@/components/CtaBand";
 import { JsonLd } from "@/components/JsonLd";
 import { PageHero } from "@/components/pages/PageHero";
 import { faqSchema } from "@/lib/schema";
@@ -228,6 +229,13 @@ export default function AboutPage() {
           </Reveal>
         </div>
       </section>
+      <CtaBand
+        bpIdx={8}
+        headline={p.closing.headline}
+        accent={p.closing.accent}
+        sub={p.closing.sub}
+        cta={p.closing.cta}
+      />
     </>
   );
 }
