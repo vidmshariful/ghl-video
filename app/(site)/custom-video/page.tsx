@@ -16,7 +16,7 @@ import { SectionHead } from "@/components/SectionHead";
 import { JsonLd } from "@/components/JsonLd";
 import { GetStarted } from "@/components/pages/GetStarted";
 import { PageHero } from "@/components/pages/PageHero";
-import { ProcessTimeline } from "@/components/pages/ProcessTimeline";
+import { ProcessSection } from "@/components/pages/ProcessSection";
 import { TrustStrip } from "@/components/home/TrustStrip";
 import { faqSchema, serviceSchema } from "@/lib/schema";
 import { cta, customFormats, home, newSamples, pages } from "@/lib/site";
@@ -116,21 +116,18 @@ export default function CustomPage() {
       </RuledSection>
 
       {/* 4. the process: a connected scroll timeline */}
-      <section data-bp-idx="4" className="relative overflow-x-clip section-pad">
-        <SectionGlow position="right" />
-        <div className="shell relative">
-          <SectionHead
-            index={4}
-            chip={p.process.chip}
-            headline={p.process.headline}
-            accent={p.process.accent}
-            center
-          />
-          <div className="mt-14 md:mt-16">
-            <ProcessTimeline steps={p.process.steps} icons={processIcons} />
-          </div>
-        </div>
-      </section>
+      <ProcessSection
+        bpIdx={4}
+        glow="right"
+        chip={p.process.chip}
+        headline={p.process.headline}
+        accent={p.process.accent}
+        intro={p.process.intro}
+        cta={p.process.cta}
+        video={p.process.video}
+        steps={p.process.steps}
+        icons={processIcons}
+      />
 
       {/* 5. pricing: the four formats, then how the number is arrived at */}
       <section data-bp-idx="5" className="relative overflow-x-clip section-pad">

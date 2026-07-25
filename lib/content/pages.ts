@@ -2,6 +2,9 @@
 /* Inner-page content                                                   */
 /* ------------------------------------------------------------------ */
 
+import { cta } from "./core";
+import { clips, posters } from "./media";
+
 export const pages = {
   premade: {
     hero: {
@@ -33,6 +36,16 @@ export const pages = {
       chip: "How it works",
       headline: "Order today,",
       accent: "publish this week.",
+      intro:
+        "Pick a video, send your brand kit, and publish. The whole process runs from your order page, and most videos land in 5 to 7 days.",
+      cta: { label: "See the videos", href: "#videos" },
+      /* PLACEHOLDER clip until the process walkthrough is cut; swap
+         src and poster only, the section stays the same. */
+      video: {
+        src: clips.premadeNew,
+        poster: posters.premadeNew,
+        label: "Watch how it works",
+      },
       steps: [
         {
           title: "Order",
@@ -188,6 +201,16 @@ export const pages = {
       chip: "The process",
       headline: "Six steps,",
       accent: "no surprises.",
+      intro:
+        "Six steps from brief to final files. You approve at every milestone, and the quote is fixed before production starts.",
+      cta: { label: cta.requestQuote.label, href: cta.requestQuote.href },
+      /* PLACEHOLDER clip until the process walkthrough is cut; swap
+         src and poster only, the section stays the same. */
+      video: {
+        src: clips.featured,
+        poster: posters.featured,
+        label: "Watch how it works",
+      },
       steps: [
         {
           title: "Scope",
@@ -486,6 +509,16 @@ export const pages = {
       chip: "How it works",
       headline: "Send footage,",
       accent: "get content.",
+      intro:
+        "Send raw footage, get back publish-ready edits, publish on schedule. The loop stays this short every single week.",
+      cta: { label: "See the plans", href: "#plans" },
+      /* PLACEHOLDER clip until the process walkthrough is cut; swap
+         src and poster only, the section stays the same. */
+      video: {
+        src: clips.sampleB,
+        poster: posters.sampleB,
+        label: "Watch how it works",
+      },
       steps: [
         {
           title: "Send",

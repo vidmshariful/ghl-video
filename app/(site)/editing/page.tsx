@@ -14,7 +14,7 @@ import { RuledSection } from "@/components/RuledSection";
 import { SectionHead } from "@/components/SectionHead";
 import { JsonLd } from "@/components/JsonLd";
 import { PageHero } from "@/components/pages/PageHero";
-import { ProcessTimeline } from "@/components/pages/ProcessTimeline";
+import { ProcessSection } from "@/components/pages/ProcessSection";
 import { TrustStrip } from "@/components/home/TrustStrip";
 import { faqSchema, serviceSchema } from "@/lib/schema";
 import {
@@ -113,21 +113,18 @@ export default function EditingPage() {
       </RuledSection>
 
       {/* 4. how it works: a connected scroll timeline */}
-      <section data-bp-idx="4" className="relative overflow-x-clip section-pad">
-        <SectionGlow position="right" />
-        <div className="shell relative">
-          <SectionHead
-            index={4}
-            chip={p.how.chip}
-            headline={p.how.headline}
-            accent={p.how.accent}
-            center
-          />
-          <div className="mt-14 md:mt-16">
-            <ProcessTimeline steps={p.how.steps} icons={howIcons} />
-          </div>
-        </div>
-      </section>
+      <ProcessSection
+        bpIdx={4}
+        glow="right"
+        chip={p.how.chip}
+        headline={p.how.headline}
+        accent={p.how.accent}
+        intro={p.how.intro}
+        cta={p.how.cta}
+        video={p.how.video}
+        steps={p.how.steps}
+        icons={howIcons}
+      />
 
       {/* 5. the plans */}
       <section

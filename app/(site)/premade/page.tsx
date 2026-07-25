@@ -13,7 +13,7 @@ import { SectionGlow } from "@/components/SectionGlow";
 import { SectionHead } from "@/components/SectionHead";
 import { VideoBundles } from "@/components/VideoBundles";
 import { PageHero } from "@/components/pages/PageHero";
-import { ProcessTimeline } from "@/components/pages/ProcessTimeline";
+import { ProcessSection } from "@/components/pages/ProcessSection";
 import { ProofStrip } from "@/components/pages/ProofStrip";
 import { TrustStrip } from "@/components/home/TrustStrip";
 import { faqSchema, productCatalogSchema, serviceSchema } from "@/lib/schema";
@@ -141,21 +141,18 @@ export default function PremadePage() {
       </RuledSection>
 
       {/* how it works: a connected scroll timeline */}
-      <section data-bp-idx="5" className="relative overflow-x-clip section-pad">
-        <SectionGlow position="right" />
-        <div className="shell relative">
-          <SectionHead
-            index={5}
-            chip={p.how.chip}
-            headline={p.how.headline}
-            accent={p.how.accent}
-            center
-          />
-          <div className="mt-14 md:mt-16">
-            <ProcessTimeline steps={p.how.steps} icons={howIcons} />
-          </div>
-        </div>
-      </section>
+      <ProcessSection
+        bpIdx={5}
+        glow="right"
+        chip={p.how.chip}
+        headline={p.how.headline}
+        accent={p.how.accent}
+        intro={p.how.intro}
+        cta={p.how.cta}
+        video={p.how.video}
+        steps={p.how.steps}
+        icons={howIcons}
+      />
 
       </div>
 
