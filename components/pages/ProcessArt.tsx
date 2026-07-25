@@ -25,13 +25,21 @@ const F = "var(--hair)"; /* faint lines and skeleton bars */
 const G = "var(--gold)"; /* the one accent */
 const OK = "var(--green)"; /* checks only */
 
-function Shell({ children, title }: { children: React.ReactNode; title: string }) {
+function Shell({
+  children,
+  title,
+  className = "",
+}: {
+  children: React.ReactNode;
+  title: string;
+  className?: string;
+}) {
   return (
     <svg
       viewBox="0 0 320 140"
       role="img"
       aria-label={title}
-      className="h-auto w-full"
+      className={`block h-auto w-full ${className}`}
       fill="none"
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -238,6 +246,16 @@ const titles: Record<ArtName, string> = {
   publish: "Published on schedule",
 };
 
-export function ProcessArt({ name }: { name: ArtName }) {
-  return <Shell title={titles[name]}>{art[name]}</Shell>;
+export function ProcessArt({
+  name,
+  className,
+}: {
+  name: ArtName;
+  className?: string;
+}) {
+  return (
+    <Shell title={titles[name]} className={className}>
+      {art[name]}
+    </Shell>
+  );
 }

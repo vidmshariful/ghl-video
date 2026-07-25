@@ -114,10 +114,10 @@ export function ProcessSection({
       <div className="shell relative">
         <div
           ref={root}
-          className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:gap-16"
+          className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1.1fr)] lg:gap-0"
         >
           {/* the pitch: pinned beside the rail on large screens */}
-          <div className="lg:sticky lg:top-28 lg:self-start">
+          <div className="lg:sticky lg:top-28 lg:self-start lg:pr-12">
             <SectionChip label={chip} />
             <h2 className="mt-6 max-w-[16ch] font-display text-h2 text-ink">
               {headline}{" "}
@@ -142,11 +142,17 @@ export function ProcessSection({
             </div>
           </div>
 
+          {/* hatched gutter: the same drafting-table seam as the hero */}
+          <div
+            aria-hidden="true"
+            className="hatch hidden w-6 border-x border-hair lg:block"
+          />
+
           {/* the rail: dashed track, inked by scroll, one node per step */}
-          <div className="relative">
+          <div className="relative lg:pl-12">
             <div
               aria-hidden="true"
-              className="ps-track pointer-events-none absolute bottom-10 left-[22px] top-10 w-px border-l border-dashed border-hair"
+              className="ps-track pointer-events-none absolute bottom-10 left-[22px] top-10 w-px border-l border-dashed border-hair lg:left-[70px]"
             >
               <span
                 className="ps-fill absolute inset-y-0 -left-px w-px origin-top"
@@ -172,9 +178,10 @@ export function ProcessSection({
                     <p className="mt-2 max-w-[var(--measure-body)] text-body leading-relaxed text-muted">
                       {s.line}
                     </p>
-                    {/* the step drawn as a scene, in the blueprint voice */}
-                    <div className="mt-5 overflow-hidden rounded-card border border-hair bg-canvas/50 p-2">
-                      <ProcessArt name={arts[i]} />
+                    {/* the step drawn as a scene, in the blueprint voice;
+                        capped small so the card stays tight */}
+                    <div className="mt-5 overflow-hidden rounded-card border border-hair bg-canvas/50 px-2 py-1.5">
+                      <ProcessArt name={arts[i]} className="mx-auto max-w-[300px]" />
                     </div>
                   </div>
                 </li>
