@@ -27,16 +27,20 @@ export function CtaBand({
       data-bp-idx={bpIdx}
       aria-labelledby="cta-band-heading"
       className="relative overflow-x-clip section-pad"
-      style={{
-        background:
-          "linear-gradient(135deg, rgba(252,192,0,0.14) 0%, rgba(252,192,0,0.04) 34%, rgba(8,9,13,0) 62%), linear-gradient(315deg, rgba(0,204,0,0.09) 0%, rgba(0,204,0,0.02) 30%, rgba(8,9,13,0) 55%), var(--surface)",
-      }}
     >
-      {/* the hero's film grain, over the gradient */}
-      <span
+      {/* the gradient fills the frame-rail box and nothing more: same
+          geometry as PageFrame, so it stops exactly at the rails, top
+          rule to bottom rule. The grain rides inside it. */}
+      <div
         aria-hidden="true"
-        className="grunge pointer-events-none absolute inset-0"
-      />
+        className="pointer-events-none absolute inset-y-0 left-1/2 w-[min(100%-1.5rem,80.5rem)] -translate-x-1/2"
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(252,192,0,0.14) 0%, rgba(252,192,0,0.04) 34%, rgba(8,9,13,0) 62%), linear-gradient(315deg, rgba(0,204,0,0.09) 0%, rgba(0,204,0,0.02) 30%, rgba(8,9,13,0) 55%), var(--surface)",
+        }}
+      >
+        <span aria-hidden="true" className="grunge absolute inset-0" />
+      </div>
       <div className="shell relative text-center">
         <Reveal>
           <RevealItem>
