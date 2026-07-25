@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Button } from "@/components/Button";
 import { CellGrid } from "@/components/CellGrid";
 import { DrawnArt } from "@/components/DrawnArt";
@@ -14,6 +13,7 @@ import { RuledSection } from "@/components/RuledSection";
 import { SectionGlow } from "@/components/SectionGlow";
 import { SectionHead } from "@/components/SectionHead";
 import { JsonLd } from "@/components/JsonLd";
+import { PricingCards } from "@/components/PricingCards";
 import { GetStarted } from "@/components/pages/GetStarted";
 import { PageHero } from "@/components/pages/PageHero";
 import { ProcessSection } from "@/components/pages/ProcessSection";
@@ -141,57 +141,21 @@ export default function CustomPage() {
             accent={p.formats.accent}
             intro={p.formats.intro}
           />
-          <Reveal className="mt-12 grid gap-px overflow-hidden rounded-card border border-hair bg-hair md:grid-cols-2">
-            {p.formats.items.map((f) => (
-              <RevealItem key={f.name} className="h-full">
-                <div
-                  data-cell
-                  className="group/cell flex h-full flex-col bg-canvas p-7 transition-colors duration-300 hover:bg-surface md:p-8"
-                >
-                  <div className="flex flex-wrap items-baseline justify-between gap-3">
-                    <h3 className="font-display text-h3 text-ink">{f.name}</h3>
-                    <p className="font-mono text-price text-gold [font-variant-numeric:tabular-nums]">
-                      from ${f.from.toLocaleString("en-US")}
-                    </p>
-                  </div>
-                  <p className="mt-3 max-w-[var(--measure-body)] text-body text-muted">
-                    {f.line}
-                  </p>
-                  <ul className="mt-6 flex-1">
-                    {f.includes.map((item) => (
-                      <li
-                        key={item}
-                        className="flex items-start gap-3 border-t border-hair py-3 first:border-t-0 first:pt-0"
-                      >
-                        <svg
-                          viewBox="0 0 12 12"
-                          className="mt-[3px] h-3 w-3 shrink-0"
-                          aria-hidden="true"
-                        >
-                          <path
-                            d="M2 6.2 4.8 9 10 3.4"
-                            fill="none"
-                            stroke="var(--gold)"
-                            strokeWidth="1.8"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                        <span className="text-body text-muted">{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <Link
-                    href={cta.requestQuote.href}
-                    className="mt-7 inline-flex items-center gap-2 self-start font-mono text-label uppercase tracking-[0.1em] text-gold transition-opacity hover:opacity-70"
-                  >
-                    {cta.requestQuote.label}
-                    <span aria-hidden="true">&#8594;</span>
-                  </Link>
-                </div>
-              </RevealItem>
-            ))}
-          </Reveal>
+          <div className="mt-12">
+            <PricingCards
+              columns={4}
+              cards={p.formats.items.map((f) => ({
+                name: f.name,
+                blurb: f.line,
+                priceLabel: `$${f.from.toLocaleString("en-US")}`,
+                priceNote: "starting price",
+                features: f.includes,
+                featured: f.name === "Explainer",
+                featuredLabel: f.name === "Explainer" ? "Most requested" : undefined,
+                cta: { label: cta.requestQuote.label, href: cta.requestQuote.href },
+              }))}
+            />
+          </div>
 
           {/* how the number is arrived at: the floors are real, the
               quote is fixed. This is the argument the price list makes

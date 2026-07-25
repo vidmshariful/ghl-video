@@ -291,6 +291,14 @@ export const editingPlans = [
     longFormNote: "up to 15 min each",
     shortForm: 4,
     featured: false,
+    blurb: "One channel, publishing steadily.",
+    features: [
+      "2 long-form videos, up to 15 min each",
+      "4 short-form videos",
+      "Unlimited revisions",
+      "No contract, cancel anytime",
+      "A HighLevel-fluent editing team",
+    ],
   },
   {
     name: "Growth",
@@ -300,6 +308,15 @@ export const editingPlans = [
     longForm: 4,
     shortForm: 8,
     featured: true,
+    blurb: "The weekly publishing engine.",
+    features: [
+      "Everything in Starter, plus:",
+      "4 long-form videos, up to 15 min each",
+      "8 short-form videos",
+      "Enough volume for a weekly schedule",
+      "Unlimited revisions",
+      "No contract, cancel anytime",
+    ],
   },
   {
     name: "Scale",
@@ -310,6 +327,15 @@ export const editingPlans = [
     shortForm: 16,
     featured: false,
     note: "priority queue",
+    blurb: "Multiple channels at full volume.",
+    features: [
+      "Everything in Growth, plus:",
+      "8 long-form videos, up to 15 min each",
+      "16 short-form videos",
+      "Priority queue, your edits jump the line",
+      "Unlimited revisions",
+      "No contract, cancel anytime",
+    ],
   },
 ] as const;
 

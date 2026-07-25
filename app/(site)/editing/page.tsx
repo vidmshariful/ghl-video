@@ -6,13 +6,13 @@ import { FitCards } from "@/components/FitCards";
 import { DrawnBorder } from "@/components/DrawnBorder";
 import { FaqList } from "@/components/FaqList";
 import { MediaFrame } from "@/components/MediaFrame";
-import { PricingTier } from "@/components/PricingTier";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { ReviewCard } from "@/components/ReviewCard";
 import { SectionGlow } from "@/components/SectionGlow";
 import { RuledSection } from "@/components/RuledSection";
 import { SectionHead } from "@/components/SectionHead";
 import { JsonLd } from "@/components/JsonLd";
+import { PricingCards } from "@/components/PricingCards";
 import { PageHero } from "@/components/pages/PageHero";
 import { ProcessSection } from "@/components/pages/ProcessSection";
 import { TrustStrip } from "@/components/home/TrustStrip";
@@ -141,13 +141,23 @@ export default function EditingPage() {
             headline={p.plans.headline}
             accent={p.plans.accent}
           />
-          <Reveal className="mt-14 grid gap-6 lg:grid-cols-3">
-            {editingPlans.map((plan) => (
-              <RevealItem key={plan.name} className="h-full">
-                <PricingTier plan={plan} featuredLabel={p.plans.featuredLabel} />
-              </RevealItem>
-            ))}
-          </Reveal>
+          <div className="mt-14">
+            <PricingCards
+              columns={3}
+              cards={editingPlans.map((plan) => ({
+                name: plan.name,
+                blurb: plan.blurb,
+                priceLabel: `$${plan.price.toLocaleString("en-US")}`,
+                priceNote: "/ month",
+                anchor: `$${plan.anchorPrice.toLocaleString("en-US")}`,
+                saveNote: `save ${Math.round((1 - plan.price / plan.anchorPrice) * 100)}%`,
+                features: plan.features,
+                featured: plan.featured,
+                featuredLabel: plan.featured ? p.plans.featuredLabel : undefined,
+                cta: { label: cta.startEditing, href: `/checkout/${plan.sku}` },
+              }))}
+            />
+          </div>
         </div>
       </section>
 

@@ -138,6 +138,8 @@ export const pages = {
             "Custom voiceover",
             "Motion graphics, captions, and sound",
             "Cut for every aspect ratio",
+            "Revisions until you approve it",
+            "Full commercial rights",
           ],
         },
         {
@@ -150,6 +152,9 @@ export const pages = {
             "Voiceover in your language and accent",
             "Full animation, 60 to 90 seconds",
             "Built to run your first sales call",
+            "Motion design matched to your brand",
+            "Revisions until you approve it",
+            "Full commercial rights",
           ],
         },
         {
@@ -162,6 +167,9 @@ export const pages = {
             "Narrated feature by feature",
             "On-screen callouts and your branding",
             "Chaptered for sales and onboarding",
+            "Voiceover in any language or accent",
+            "Revisions until you approve it",
+            "Full commercial rights",
           ],
         },
         {
@@ -174,6 +182,9 @@ export const pages = {
             "Consistent branding across episodes",
             "Voiceover and captions throughout",
             "Built to cut your support tickets",
+            "Scripts from your real setup flow",
+            "Revisions until you approve it",
+            "Full commercial rights",
           ],
         },
       ],
