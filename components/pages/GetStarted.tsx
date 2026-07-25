@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import Script from "next/script";
+import { useEffect, useState } from "react";
 import { QuoteForm } from "@/components/QuoteForm";
 
 /*
@@ -10,9 +9,14 @@ import { QuoteForm } from "@/components/QuoteForm";
  *
  * The quote tab renders the real quote form (the same one /quote runs,
  * posting to /api/quote); the call tab embeds the Custom Video Strategy
- * Call calendar from the contact page, with the same crop-and-resize
- * treatment BookingCalendars uses. The form reads best narrow, the
+ * Call calendar from the contact page. The form reads best narrow, the
  * calendar needs room, so each panel carries its own width.
+ *
+ * The calendar iframe mounts on the tab's first open and then STAYS
+ * mounted, and LeadConnector's resize script is injected fresh after
+ * the iframe exists: the script sizes the frame to each widget step
+ * (date grid, details form), which is what keeps the booking flow
+ * fully visible instead of clipped at a fixed height.
  */
 export type GetStartedTab = {
   key: string;
@@ -23,10 +27,33 @@ export type GetStartedTab = {
   calendarName?: string;
 };
 
+const LC_EMBED_SRC = "https://link.msgsndr.com/js/form_embed.js";
+
 export function GetStarted({ tabs }: { tabs: readonly GetStartedTab[] }) {
   const [active, setActive] = useState(tabs[0].key);
+  const [visited, setVisited] = useState<readonly string[]>([tabs[0].key]);
   const current = tabs.find((t) => t.key === active) ?? tabs[0];
-  const hasCalendar = tabs.some((t) => t.kind === "calendar");
+
+  const calendarOpen = tabs.some(
+    (t) => t.kind === "calendar" && visited.includes(t.key),
+  );
+
+  // Inject the resize script only once a calendar iframe is in the DOM.
+  // Re-appending makes it re-scan, so a frame mounted after page load is
+  // still picked up and sized to the widget's posted height.
+  useEffect(() => {
+    if (!calendarOpen) return;
+    document.querySelector(`script[src="${LC_EMBED_SRC}"]`)?.remove();
+    const s = document.createElement("script");
+    s.src = LC_EMBED_SRC;
+    s.async = true;
+    document.body.appendChild(s);
+  }, [calendarOpen]);
+
+  const open = (key: string) => {
+    setActive(key);
+    setVisited((v) => (v.includes(key) ? v : [...v, key]));
+  };
 
   return (
     <div>
@@ -45,7 +72,7 @@ export function GetStarted({ tabs }: { tabs: readonly GetStartedTab[] }) {
               id={`start-tab-${t.key}`}
               aria-selected={isActive}
               aria-controls={`start-panel-${t.key}`}
-              onClick={() => setActive(t.key)}
+              onClick={() => open(t.key)}
               className={`tap rounded-[3px] px-4 py-2 font-mono text-label uppercase transition-colors ${
                 isActive
                   ? "bg-gold/15 font-semibold text-gold"
@@ -58,9 +85,7 @@ export function GetStarted({ tabs }: { tabs: readonly GetStartedTab[] }) {
         })}
       </div>
 
-      {/* both panels stay in the DOM; only the active one displays. The
-          calendar iframe mounts only while its tab is active (keyed), so
-          the widget always measures itself against a visible panel. */}
+      {/* both panels stay in the DOM; only the active one displays */}
       {tabs.map((t) => (
         <div
           key={t.key}
@@ -78,7 +103,7 @@ export function GetStarted({ tabs }: { tabs: readonly GetStartedTab[] }) {
               <QuoteForm />
             </div>
           ) : (
-            t.key === current.key &&
+            visited.includes(t.key) &&
             t.calendarSlug && (
               <div className="mt-7 overflow-hidden rounded-card border border-hair bg-black">
                 {/* the widget page carries ~60px of its own dead padding on
@@ -98,13 +123,6 @@ export function GetStarted({ tabs }: { tabs: readonly GetStartedTab[] }) {
           )}
         </div>
       ))}
-
-      {hasCalendar && (
-        <Script
-          src="https://link.msgsndr.com/js/form_embed.js"
-          strategy="afterInteractive"
-        />
-      )}
     </div>
   );
 }
