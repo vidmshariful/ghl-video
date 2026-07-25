@@ -142,10 +142,12 @@ export function ProcessSection({
             </div>
           </div>
 
-          {/* hatched gutter: the same drafting-table seam as the hero */}
+          {/* the column split: one hairline, running from the section's top
+              border to its bottom border (negative margins cancel the
+              section padding exactly) */}
           <div
             aria-hidden="true"
-            className="hatch hidden w-6 border-x border-hair lg:block"
+            className="hidden w-px bg-hair lg:my-[calc(-1*clamp(5rem,8vw,7.5rem))] lg:block"
           />
 
           {/* the rail: dashed track, inked by scroll, one node per step */}
