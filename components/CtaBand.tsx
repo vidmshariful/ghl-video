@@ -36,10 +36,16 @@ export function CtaBand({
         className="pointer-events-none absolute inset-y-0 left-1/2 w-[min(100%-1.5rem,80.5rem)] -translate-x-1/2"
         style={{
           background:
-            "linear-gradient(135deg, rgba(252,192,0,0.14) 0%, rgba(252,192,0,0.04) 34%, rgba(8,9,13,0) 62%), linear-gradient(315deg, rgba(0,204,0,0.09) 0%, rgba(0,204,0,0.02) 30%, rgba(8,9,13,0) 55%), var(--surface)",
+            "linear-gradient(135deg, rgba(252,192,0,0.09) 0%, rgba(252,192,0,0.025) 36%, rgba(8,9,13,0) 60%), linear-gradient(315deg, rgba(0,204,0,0.05) 0%, rgba(0,204,0,0.015) 30%, rgba(8,9,13,0) 52%), color-mix(in srgb, var(--surface) 55%, var(--canvas))",
         }}
       >
-        <span aria-hidden="true" className="grunge absolute inset-0" />
+        {/* the grain runs stronger here than the hero's 0.06: the light
+            shoulder of the gradient is where the texture should read */}
+        <span
+          aria-hidden="true"
+          className="grunge absolute inset-0"
+          style={{ opacity: 0.15 }}
+        />
       </div>
       <div className="shell relative text-center">
         <Reveal>
