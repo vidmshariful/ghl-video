@@ -278,7 +278,8 @@ export const pages = {
       accent: "HighLevel brands.",
       intro: "A team that already knows the platform and the buyer.",
     },
-    /* 8. two ways in. PLACEHOLDER embeds until the HighLevel snippets land. */
+    /* 8. two ways in: the real quote form, and the contact page's
+       Custom Video Strategy Call calendar. */
     getStarted: {
       chip: "Your next step",
       headline: "Send the brief",
@@ -289,13 +290,15 @@ export const pages = {
         {
           key: "quote",
           label: "Request a Quote",
-          embedLabel: "Quote form",
-          note: "The quote form drops in here. A human reads it and replies with a fixed price and a timeline within 24 hours.",
+          kind: "quote",
+          note: "A human reads it and replies with a fixed price and a timeline within 24 hours.",
         },
         {
           key: "call",
           label: "Schedule a Discovery Call",
-          embedLabel: "Booking calendar",
+          kind: "calendar",
+          calendarSlug: "quick-questionsm04owt",
+          calendarName: "Custom Video Strategy Call",
           note: "Thirty minutes. You talk through what you sell and what you need, and you leave with the right format and the real price.",
         },
       ],
