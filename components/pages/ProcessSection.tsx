@@ -7,6 +7,7 @@ import { useGSAP } from "@gsap/react";
 import { Button } from "@/components/Button";
 import { DrawnIcon, type IconName } from "@/components/DrawnIcon";
 import { MediaFrame } from "@/components/MediaFrame";
+import { ProcessArt, type ArtName } from "@/components/pages/ProcessArt";
 import { SectionChip } from "@/components/SectionChip";
 import { SectionGlow } from "@/components/SectionGlow";
 
@@ -36,6 +37,7 @@ export function ProcessSection({
   video,
   steps,
   icons,
+  arts,
   glow = "right",
 }: {
   bpIdx: number;
@@ -47,6 +49,7 @@ export function ProcessSection({
   video: { src: string; poster: string | null; label: string };
   steps: readonly { title: string; line: string }[];
   icons: readonly IconName[];
+  arts: readonly ArtName[];
   glow?: "left" | "right";
 }) {
   const root = useRef<HTMLDivElement>(null);
@@ -169,6 +172,10 @@ export function ProcessSection({
                     <p className="mt-2 max-w-[var(--measure-body)] text-body leading-relaxed text-muted">
                       {s.line}
                     </p>
+                    {/* the step drawn as a scene, in the blueprint voice */}
+                    <div className="mt-5 overflow-hidden rounded-card border border-hair bg-canvas/50 p-2">
+                      <ProcessArt name={arts[i]} />
+                    </div>
                   </div>
                 </li>
               ))}

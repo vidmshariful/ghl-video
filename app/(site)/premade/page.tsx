@@ -150,6 +150,7 @@ export default function PremadePage() {
         intro={p.how.intro}
         cta={p.how.cta}
         video={p.how.video}
+        arts={["order", "brand-kit", "delivery"] as const}
         steps={p.how.steps}
         icons={howIcons}
       />

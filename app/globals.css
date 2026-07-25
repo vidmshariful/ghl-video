@@ -580,3 +580,136 @@ details[open]::details-content {
     transition: none;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Process-scene details (ProcessArt): tiny ambient movements inside    */
+/* the step illustrations. All of them sit behind the reduced-motion    */
+/* gate; without it every scene is a complete still.                    */
+/* ------------------------------------------------------------------ */
+@media (prefers-reduced-motion: no-preference) {
+  .ps-anim-dash {
+    animation: ps-dash-march 2.6s linear infinite;
+  }
+  .ps-anim-draw {
+    stroke-dasharray: 30;
+    stroke-dashoffset: 30;
+    animation: ps-draw-in 0.9s ease-out 0.4s forwards;
+  }
+  .ps-anim-grow {
+    transform-box: fill-box;
+    transform-origin: left center;
+    animation: ps-grow-x 2s ease-in-out 0.3s both;
+  }
+  .ps-anim-nudge {
+    animation: ps-nudge 3s ease-in-out infinite;
+  }
+  .ps-anim-blink {
+    animation: ps-blink 1.8s steps(2, start) infinite;
+  }
+  .ps-anim-slide {
+    animation: ps-slide 4s ease-in-out infinite alternate;
+  }
+  .ps-anim-pulse {
+    animation: ps-fade 1.2s ease-in-out infinite;
+  }
+  .ps-anim-pulse2 {
+    animation: ps-fade 1.2s ease-in-out 0.2s infinite;
+  }
+  .ps-anim-pulse3 {
+    animation: ps-fade 1.2s ease-in-out 0.4s infinite;
+  }
+  .ps-anim-bar1,
+  .ps-anim-bar2,
+  .ps-anim-bar3 {
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+  .ps-anim-bar1 {
+    animation: ps-breathe 1.6s ease-in-out infinite;
+  }
+  .ps-anim-bar2 {
+    animation: ps-breathe 1.6s ease-in-out 0.25s infinite;
+  }
+  .ps-anim-bar3 {
+    animation: ps-breathe 1.6s ease-in-out 0.5s infinite;
+  }
+  .ps-anim-pop {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: ps-pop 0.5s ease-out 0.5s both;
+  }
+  .ps-anim-pop2 {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: ps-pop 0.5s ease-out 0.9s both;
+  }
+}
+
+@keyframes ps-dash-march {
+  to {
+    stroke-dashoffset: -18;
+  }
+}
+@keyframes ps-draw-in {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes ps-grow-x {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes ps-nudge {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(-4px, -4px);
+  }
+}
+@keyframes ps-blink {
+  50% {
+    opacity: 0.25;
+  }
+}
+@keyframes ps-slide {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(72px);
+  }
+}
+@keyframes ps-fade {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@keyframes ps-breathe {
+  0%,
+  100% {
+    transform: scaleY(0.6);
+  }
+  50% {
+    transform: scaleY(1.15);
+  }
+}
+@keyframes ps-pop {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}

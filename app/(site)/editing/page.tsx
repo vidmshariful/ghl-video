@@ -122,6 +122,7 @@ export default function EditingPage() {
         intro={p.how.intro}
         cta={p.how.cta}
         video={p.how.video}
+        arts={["footage", "edit", "publish"] as const}
         steps={p.how.steps}
         icons={howIcons}
       />

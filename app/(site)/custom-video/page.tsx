@@ -125,6 +125,7 @@ export default function CustomPage() {
         intro={p.process.intro}
         cta={p.process.cta}
         video={p.process.video}
+        arts={["scope", "script", "voice", "production", "review", "delivery"] as const}
         steps={p.process.steps}
         icons={processIcons}
       />
