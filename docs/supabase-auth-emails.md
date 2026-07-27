@@ -74,21 +74,87 @@ Body:
 Subject:
 Confirm your email for GHL Video
 
-Body: (same shell; heading "Confirm your email", intro "Thanks for joining GHL Video. Confirm this email address to activate your account.", button "Confirm email")
+Body:
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#08090d;margin:0;padding:0;">
+  <tr><td align="center" style="padding:32px 16px;">
+    <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="width:480px;max-width:480px;">
+      <tr><td style="height:4px;background-color:#fcc000;background-image:linear-gradient(100deg,#fcc000,#00cc00);border-radius:6px 6px 0 0;font-size:0;line-height:0;">&nbsp;</td></tr>
+      <tr><td style="background-color:#12141b;border:1px solid #242736;border-top:0;border-radius:0 0 12px 12px;padding:34px 36px 30px;font-family:'Helvetica Neue',Arial,sans-serif;">
+        <img src="https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/65bfe9c70e904b34d226f243.png" width="150" alt="GHL Video" style="display:block;width:150px;max-width:150px;height:auto;border:0;margin:0 0 20px;">
+        <h1 style="margin:0 0 12px;font-size:22px;line-height:1.25;color:#eef0f6;font-weight:bold;">Confirm your email</h1>
+        <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#9096a8;">Thanks for joining GHL Video. Confirm this email address to activate your account.</p>
+        <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 26px;"><tr>
+          <td style="background-color:#fcc000;background-image:linear-gradient(100deg,#fcc000,#00cc00);border-radius:6px;">
+            <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:13px 28px;font-size:15px;font-weight:bold;color:#08090d;text-decoration:none;font-family:'Helvetica Neue',Arial,sans-serif;">Confirm email &rarr;</a>
+          </td>
+        </tr></table>
+        <p style="margin:0 0 4px;font-size:12px;line-height:1.5;color:#5a6076;">If the button does not work, copy and paste this link:</p>
+        <p style="margin:0;font-size:12px;line-height:1.5;word-break:break-all;"><a href="{{ .ConfirmationURL }}" style="color:#0090fc;">{{ .ConfirmationURL }}</a></p>
+      </td></tr>
+      <tr><td style="padding:18px 36px;font-family:'Helvetica Neue',Arial,sans-serif;">
+        <p style="margin:0;font-size:12px;line-height:1.6;color:#5a6076;">GHL Video, a brand of Vidiosa LLC. Questions? <a href="mailto:hi@ghlvideo.com" style="color:#9096a8;">hi@ghlvideo.com</a><br>If you did not request this, you can safely ignore this email.</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
 
 --------------------------------------------------------------------------------
 ## 4. Invite user
 Subject:
 You are invited to GHL Video
 
-Body: (same shell; heading "You are invited", intro "You have been invited to the GHL Video portal. Accept the invite to set up your account.", button "Accept invite")
+Body:
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#08090d;margin:0;padding:0;">
+  <tr><td align="center" style="padding:32px 16px;">
+    <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="width:480px;max-width:480px;">
+      <tr><td style="height:4px;background-color:#fcc000;background-image:linear-gradient(100deg,#fcc000,#00cc00);border-radius:6px 6px 0 0;font-size:0;line-height:0;">&nbsp;</td></tr>
+      <tr><td style="background-color:#12141b;border:1px solid #242736;border-top:0;border-radius:0 0 12px 12px;padding:34px 36px 30px;font-family:'Helvetica Neue',Arial,sans-serif;">
+        <img src="https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/65bfe9c70e904b34d226f243.png" width="150" alt="GHL Video" style="display:block;width:150px;max-width:150px;height:auto;border:0;margin:0 0 20px;">
+        <h1 style="margin:0 0 12px;font-size:22px;line-height:1.25;color:#eef0f6;font-weight:bold;">You are invited</h1>
+        <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#9096a8;">You have been invited to the GHL Video portal. Accept the invite to set up your account.</p>
+        <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 26px;"><tr>
+          <td style="background-color:#fcc000;background-image:linear-gradient(100deg,#fcc000,#00cc00);border-radius:6px;">
+            <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:13px 28px;font-size:15px;font-weight:bold;color:#08090d;text-decoration:none;font-family:'Helvetica Neue',Arial,sans-serif;">Accept invite &rarr;</a>
+          </td>
+        </tr></table>
+        <p style="margin:0 0 4px;font-size:12px;line-height:1.5;color:#5a6076;">If the button does not work, copy and paste this link:</p>
+        <p style="margin:0;font-size:12px;line-height:1.5;word-break:break-all;"><a href="{{ .ConfirmationURL }}" style="color:#0090fc;">{{ .ConfirmationURL }}</a></p>
+      </td></tr>
+      <tr><td style="padding:18px 36px;font-family:'Helvetica Neue',Arial,sans-serif;">
+        <p style="margin:0;font-size:12px;line-height:1.6;color:#5a6076;">GHL Video, a brand of Vidiosa LLC. Questions? <a href="mailto:hi@ghlvideo.com" style="color:#9096a8;">hi@ghlvideo.com</a></p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
 
 --------------------------------------------------------------------------------
 ## 5. Change email address
 Subject:
 Confirm your new email for GHL Video
 
-Body: (same shell; heading "Confirm your new email", intro "We got a request to change the email on your GHL Video account. Confirm this new address to complete the change.", button "Confirm new email")
+Body:
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#08090d;margin:0;padding:0;">
+  <tr><td align="center" style="padding:32px 16px;">
+    <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="width:480px;max-width:480px;">
+      <tr><td style="height:4px;background-color:#fcc000;background-image:linear-gradient(100deg,#fcc000,#00cc00);border-radius:6px 6px 0 0;font-size:0;line-height:0;">&nbsp;</td></tr>
+      <tr><td style="background-color:#12141b;border:1px solid #242736;border-top:0;border-radius:0 0 12px 12px;padding:34px 36px 30px;font-family:'Helvetica Neue',Arial,sans-serif;">
+        <img src="https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/65bfe9c70e904b34d226f243.png" width="150" alt="GHL Video" style="display:block;width:150px;max-width:150px;height:auto;border:0;margin:0 0 20px;">
+        <h1 style="margin:0 0 12px;font-size:22px;line-height:1.25;color:#eef0f6;font-weight:bold;">Confirm your new email</h1>
+        <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#9096a8;">We got a request to change the email on your GHL Video account. Confirm this new address to complete the change.</p>
+        <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 26px;"><tr>
+          <td style="background-color:#fcc000;background-image:linear-gradient(100deg,#fcc000,#00cc00);border-radius:6px;">
+            <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:13px 28px;font-size:15px;font-weight:bold;color:#08090d;text-decoration:none;font-family:'Helvetica Neue',Arial,sans-serif;">Confirm new email &rarr;</a>
+          </td>
+        </tr></table>
+        <p style="margin:0 0 4px;font-size:12px;line-height:1.5;color:#5a6076;">If the button does not work, copy and paste this link:</p>
+        <p style="margin:0;font-size:12px;line-height:1.5;word-break:break-all;"><a href="{{ .ConfirmationURL }}" style="color:#0090fc;">{{ .ConfirmationURL }}</a></p>
+      </td></tr>
+      <tr><td style="padding:18px 36px;font-family:'Helvetica Neue',Arial,sans-serif;">
+        <p style="margin:0;font-size:12px;line-height:1.6;color:#5a6076;">GHL Video, a brand of Vidiosa LLC. Questions? <a href="mailto:hi@ghlvideo.com" style="color:#9096a8;">hi@ghlvideo.com</a><br>If you did not request this, you can safely ignore this email.</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
 
 --------------------------------------------------------------------------------
 ## 6. Reauthentication  (shows a code, not a link)
