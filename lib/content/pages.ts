@@ -216,10 +216,10 @@ export const pages = {
       /* card statuses: published / ready to publish / in production */
       liveNote: "Published, ships in 5 days",
       statusReady: "Ready to publish",
-      statusProduction: "In production, launching",
+      statusProduction: "In production",
       draftTag: "Draft preview",
-      scheduleLabel: "In production",
-      atRelease: "at release",
+      readyTag: "Ready",
+      datePrefix: "Publishing",
     },
     price: {
       chip: "The launch price",
@@ -236,6 +236,13 @@ export const pages = {
         "Every future release in this pack included",
       ],
       autoNote: "Code AIFIRST30 applies automatically at checkout.",
+    },
+    proof: {
+      chip: "The proof",
+      headline: "From clients already",
+      accent: "running our videos.",
+      intro:
+        "Real Google reviews, every one five stars. You might even recognize a name or two.",
     },
     /* while the window runs, the public premade page shows the pack as
        client early access instead of a live buy button */

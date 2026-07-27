@@ -8,9 +8,11 @@ import { SectionGlow } from "@/components/SectionGlow";
 import { SectionHead } from "@/components/SectionHead";
 import { PageHero } from "@/components/pages/PageHero";
 import { LaunchCountdown } from "@/components/pages/LaunchCountdown";
+import { ReviewCard } from "@/components/ReviewCard";
 import {
   checkoutHref,
   cta,
+  home,
   pages,
   premadeBySlugTitle,
   premadePacks,
@@ -112,46 +114,82 @@ export default function AiFirstLaunchPage() {
   const discountCents = Math.round((regularCents * p.percent) / 100);
   const launchCents = regularCents - discountCents;
 
-  /* one library-style card for any watchable video (published or
-     supplied draft cut): preview, title, price, status. No single-buy
-     controls on this page; the pack is the offer. */
+  /* one library-style card for every video: preview (or the gradient
+     date panel while in production), title, price, status. The publish
+     date sits highlighted above the title, never inside the player.
+     No single-buy controls on this page; the pack is the offer. */
   const videoCard = (v: (typeof pack.categories)[number]["videos"][number]) => {
     const state = states[v.title];
     const price = premadeBySlugTitle[v.title]?.price ?? 495;
-    const isDraftClip = !v.src && Boolean(state?.src);
+    const src = v.src ?? state?.src;
+    const dateLine =
+      !v.src && state?.date
+        ? `${p.videos.datePrefix} ${fmtDate(state.date)}`
+        : null;
+    const cornerTag = !v.src && src
+      ? state?.kind === "ready"
+        ? p.videos.readyTag
+        : p.videos.draftTag
+      : null;
     const status = v.src
       ? p.videos.liveNote
       : state?.kind === "ready"
-        ? state.date
-          ? `${p.videos.statusReady}, ${fmtDate(state.date)}`
-          : p.videos.statusReady
-        : state?.date
-          ? `${p.videos.statusProduction} ${fmtDate(state.date)}`
-          : p.videos.scheduleLabel;
+        ? p.videos.statusReady
+        : p.videos.statusProduction;
     return (
       <div className="flex h-full flex-col">
-        <div className="relative">
-          <MediaFrame
-            src={(v.src ?? state?.src) as string}
-            poster={v.poster}
-            label={v.title}
-            tint
-            rounded="rounded-none"
-            caption={{ title: v.format, sub: status }}
-          />
-          {isDraftClip && (
-            <span className="absolute left-2 top-2 z-20 border border-hair bg-canvas/85 px-2.5 py-1 font-mono text-label uppercase tracking-[0.08em] text-gold">
-              {p.videos.draftTag}
+        {src ? (
+          <div className="relative">
+            <MediaFrame
+              src={src}
+              poster={v.poster}
+              label={v.title}
+              tint
+              rounded="rounded-none"
+              caption={{ title: v.format, sub: status }}
+            />
+            {cornerTag && (
+              <span className="absolute left-2 top-2 z-20 border border-hair bg-canvas/85 px-2.5 py-1 font-mono text-label uppercase tracking-[0.08em] text-gold">
+                {cornerTag}
+              </span>
+            )}
+          </div>
+        ) : (
+          /* in production: the date panel stands in for the preview */
+          <div className="relative flex aspect-video flex-col items-center justify-center border border-hair bg-[linear-gradient(135deg,rgba(0,144,252,0.16)_0%,rgba(0,144,252,0.05)_38%,rgba(0,0,0,0)_68%),#000]">
+            {state?.date && (
+              <p className="font-mono text-stat-lg font-bold leading-none text-gold [font-variant-numeric:tabular-nums]">
+                {fmtDate(state.date)}
+              </p>
+            )}
+            <p className="mt-2.5 font-mono text-label uppercase tracking-[0.14em] text-muted">
+              {p.videos.datePrefix}
+            </p>
+            <p className="absolute bottom-3 left-4 font-mono text-label uppercase text-dim">
+              {v.format} / {p.videos.statusProduction}
+            </p>
+          </div>
+        )}
+        <div className="flex-1 border-b border-hair px-1 pb-4 pt-3.5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              {dateLine && src && (
+                <p className="font-mono text-label uppercase tracking-[0.1em] text-gold">
+                  {dateLine}
+                </p>
+              )}
+              <h3
+                className={`min-w-0 font-display text-h4 font-semibold leading-snug tracking-[-0.01em] text-ink ${
+                  dateLine && src ? "mt-1" : ""
+                }`}
+              >
+                {v.title}
+              </h3>
+            </div>
+            <span className="shrink-0 font-mono text-body font-bold text-gold [font-variant-numeric:tabular-nums]">
+              ${price.toLocaleString("en-US")}
             </span>
-          )}
-        </div>
-        <div className="flex flex-1 items-start justify-between gap-4 border-b border-hair px-1 pb-4 pt-3.5">
-          <h3 className="min-w-0 font-display text-h4 font-semibold leading-snug tracking-[-0.01em] text-ink">
-            {v.title}
-          </h3>
-          <span className="shrink-0 font-mono text-body font-bold text-gold [font-variant-numeric:tabular-nums]">
-            ${price.toLocaleString("en-US")}
-          </span>
+          </div>
         </div>
       </div>
     );
@@ -193,78 +231,29 @@ export default function AiFirstLaunchPage() {
             intro={p.videos.intro}
           />
 
-          <div className="mt-12 grid items-start gap-x-8 gap-y-14 lg:grid-cols-2">
-            {singles.map((cat) => (
-              <div key={cat.name}>
-                <CatHead index={catIndex(cat.name)} name={cat.name} line={cat.line} />
-                <Reveal className="mt-7">
-                  <RevealItem>{videoCard(cat.videos[0])}</RevealItem>
-                </Reveal>
-              </div>
-            ))}
-          </div>
+          {/* each single-video category is its own full block, the card
+              centered large; the features fill a two-up grid below */}
+          {singles.map((cat) => (
+            <div key={cat.name} className="mt-12">
+              <CatHead index={catIndex(cat.name)} name={cat.name} line={cat.line} />
+              <Reveal className="mx-auto mt-7 max-w-3xl">
+                <RevealItem>{videoCard(cat.videos[0])}</RevealItem>
+              </Reveal>
+            </div>
+          ))}
 
-          {multis.map((cat) => {
-            const playable = cat.videos.filter(
-              (v) => v.src || states[v.title]?.src,
-            );
-            const scheduled = cat.videos.filter(
-              (v) => !v.src && !states[v.title]?.src,
-            );
-            return (
-              <div key={cat.name} className="mt-16">
-                <CatHead index={catIndex(cat.name)} name={cat.name} line={cat.line} />
-                <Reveal className="mt-7 grid items-stretch gap-x-8 gap-y-10 sm:grid-cols-2">
-                  {playable.map((v) => (
-                    <RevealItem key={v.title} className="h-full">
-                      {videoCard(v)}
-                    </RevealItem>
-                  ))}
-                </Reveal>
-
-                {scheduled.length > 0 && (
-                  <Reveal className="mt-12">
-                    <RevealItem>
-                      <p className="font-mono text-label uppercase tracking-[0.14em] text-dim">
-                        [ {p.videos.scheduleLabel} ]
-                      </p>
-                      <ul className="mt-2 border-b border-hair">
-                        {scheduled.map((v) => {
-                          const state = states[v.title];
-                          const single = premadeBySlugTitle[v.title];
-                          const price = single?.price ?? 495;
-                          return (
-                            <li
-                              key={v.title}
-                              className="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-1.5 border-t border-hair py-4"
-                            >
-                              <div className="flex min-w-0 flex-wrap items-baseline gap-x-4 gap-y-1">
-                                {state?.date && (
-                                  <span className="font-mono text-label uppercase text-gold [font-variant-numeric:tabular-nums]">
-                                    [ {fmtDate(state.date)} ]
-                                  </span>
-                                )}
-                                <span className="font-display text-h4 font-semibold leading-snug text-ink">
-                                  {v.title}
-                                </span>
-                                <span className="font-mono text-label uppercase text-dim">
-                                  {v.format}
-                                </span>
-                              </div>
-                              <span className="shrink-0 font-mono text-label uppercase text-muted [font-variant-numeric:tabular-nums]">
-                                ${price.toLocaleString("en-US")}{" "}
-                                <span className="text-dim">{p.videos.atRelease}</span>
-                              </span>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </RevealItem>
-                  </Reveal>
-                )}
-              </div>
-            );
-          })}
+          {multis.map((cat) => (
+            <div key={cat.name} className="mt-16">
+              <CatHead index={catIndex(cat.name)} name={cat.name} line={cat.line} />
+              <Reveal className="mt-7 grid items-stretch gap-x-8 gap-y-10 sm:grid-cols-2">
+                {cat.videos.map((v) => (
+                  <RevealItem key={v.title} className="h-full">
+                    {videoCard(v)}
+                  </RevealItem>
+                ))}
+              </Reveal>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -347,9 +336,31 @@ export default function AiFirstLaunchPage() {
         </div>
       </section>
 
-      {/* 4. closing */}
+      {/* 4. proof: the same real Google reviews the homepage quotes */}
+      <section data-bp-idx="4" className="relative section-pad">
+        <DrawnBorder />
+        <div className="shell">
+          <SectionHead
+            index={4}
+            chip={p.proof.chip}
+            headline={p.proof.headline}
+            accent={p.proof.accent}
+            intro={p.proof.intro}
+            center
+          />
+          <Reveal className="mt-12 grid items-start gap-5 md:grid-cols-2 lg:grid-cols-3">
+            {home.reviews.items.slice(0, 6).map((r) => (
+              <RevealItem key={r.name} className="h-full">
+                <ReviewCard quote={r.quote} name={r.name} className="h-full" />
+              </RevealItem>
+            ))}
+          </Reveal>
+        </div>
+      </section>
+
+      {/* 5. closing */}
       <CtaBand
-        bpIdx={4}
+        bpIdx={5}
         headline={p.closing.headline}
         accent={p.closing.accent}
         sub={p.closing.sub}
