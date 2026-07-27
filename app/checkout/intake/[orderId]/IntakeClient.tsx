@@ -13,8 +13,7 @@ type Existing = {
   brandName: string;
   primaryColor: string;
   accentColor: string;
-  voiceover: string;
-  brandGuidelinesUrl: string;
+  brandPronunciation: string;
   notes: string;
   logoUrl: string | null;
   screenshotUrls: string[];
@@ -25,8 +24,6 @@ type Loaded = {
   intakeCompleted: boolean;
   intake: Existing | null;
 };
-
-const VOICEOVERS = ["No preference", "Male", "Female"];
 
 const inputCls =
   "w-full rounded-[4px] border border-hair bg-canvas px-4 py-3 text-body text-ink placeholder:text-dim/70 focus:border-gold focus:outline-none";
@@ -44,8 +41,7 @@ export function IntakeClient({ orderId }: { orderId: string }) {
   const [brandName, setBrandName] = useState("");
   const [primaryColor, setPrimaryColor] = useState("#0090FC");
   const [accentColor, setAccentColor] = useState("#00CC00");
-  const [voiceover, setVoiceover] = useState("No preference");
-  const [brandGuidelinesUrl, setBrandGuidelinesUrl] = useState("");
+  const [brandPronunciation, setBrandPronunciation] = useState("");
   const [notes, setNotes] = useState("");
   const logoRef = useRef<HTMLInputElement>(null);
   const shotsRef = useRef<HTMLInputElement>(null);
@@ -63,8 +59,7 @@ export function IntakeClient({ orderId }: { orderId: string }) {
           setBrandName(j.intake.brandName || "");
           if (j.intake.primaryColor) setPrimaryColor(j.intake.primaryColor);
           if (j.intake.accentColor) setAccentColor(j.intake.accentColor);
-          setVoiceover(VOICEOVERS.includes(j.intake.voiceover) ? j.intake.voiceover : "No preference");
-          setBrandGuidelinesUrl(j.intake.brandGuidelinesUrl || "");
+          setBrandPronunciation(j.intake.brandPronunciation || "");
           setNotes(j.intake.notes || "");
         }
         setPhase("ready");
@@ -87,8 +82,7 @@ export function IntakeClient({ orderId }: { orderId: string }) {
       fd.set("brandName", brandName.trim());
       fd.set("primaryColor", primaryColor);
       fd.set("accentColor", accentColor);
-      fd.set("voiceover", voiceover);
-      fd.set("brandGuidelinesUrl", brandGuidelinesUrl.trim());
+      fd.set("brandPronunciation", brandPronunciation.trim());
       fd.set("notes", notes.trim());
       const logo = logoRef.current?.files?.[0];
       if (logo) fd.set("logo", logo);
@@ -161,8 +155,8 @@ export function IntakeClient({ orderId }: { orderId: string }) {
         </h1>
         <p className="mx-auto mt-3 max-w-[52ch] text-body leading-relaxed text-muted">
           This is what turns your order into your videos: your logo, colors,
-          dashboard screens, and voiceover preference. It takes about three
-          minutes, and the delivery clock starts once it is in.
+          dashboard screens, and how your brand name is said. It takes about
+          three minutes, and the delivery clock starts once it is in.
         </p>
       </header>
 
@@ -176,6 +170,20 @@ export function IntakeClient({ orderId }: { orderId: string }) {
             className={inputCls}
             placeholder="YourSaaS CRM"
           />
+        </label>
+
+        <label>
+          <span className={labelCls}>Add your brand name pronunciation</span>
+          <input
+            value={brandPronunciation}
+            onChange={(e) => setBrandPronunciation(e.target.value)}
+            className={inputCls}
+            placeholder="e.g. Vidiosa is said vih-dee-OH-sah"
+          />
+          <p className="mt-1.5 text-body-sm text-dim">
+            So the voiceover says your brand name exactly right. Leave it blank
+            if it reads the obvious way.
+          </p>
         </label>
 
         <div className="grid gap-6 sm:grid-cols-2">
@@ -217,17 +225,6 @@ export function IntakeClient({ orderId }: { orderId: string }) {
           </div>
         </div>
 
-        <label>
-          <span className={labelCls}>Voiceover preference</span>
-          <select value={voiceover} onChange={(e) => setVoiceover(e.target.value)} className={inputCls}>
-            {VOICEOVERS.map((v) => (
-              <option key={v} value={v}>
-                {v}
-              </option>
-            ))}
-          </select>
-        </label>
-
         <div>
           <span className={labelCls}>Your logo</span>
           {data?.intake?.logoUrl ? (
@@ -253,16 +250,6 @@ export function IntakeClient({ orderId }: { orderId: string }) {
           <input ref={shotsRef} type="file" multiple accept="image/png,image/jpeg,image/webp" className={fileCls} />
           <p className="mt-1.5 text-body-sm text-dim">Up to 8 images. The screens you want featured in the video.</p>
         </div>
-
-        <label>
-          <span className={labelCls}>Brand guidelines link (optional)</span>
-          <input
-            value={brandGuidelinesUrl}
-            onChange={(e) => setBrandGuidelinesUrl(e.target.value)}
-            className={inputCls}
-            placeholder="Figma, Google Drive, Notion, anywhere"
-          />
-        </label>
 
         <label>
           <span className={labelCls}>Anything else we should know</span>

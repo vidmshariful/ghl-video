@@ -181,8 +181,8 @@ function Paid({ detail, orderId }: { detail: Detail | null; orderId: string | nu
         </h2>
         <p className="mt-2 text-body text-muted">
           This is what turns your order into your videos: your logo, dashboard
-          theme, and voiceover preference. It takes about three minutes, and the
-          delivery clock starts once it is in.
+          theme, and how your brand name is said. It takes about three minutes,
+          and the delivery clock starts once it is in.
         </p>
         <Button href={orderId ? `/checkout/intake/${orderId}` : BRIEF_HREF} className="mt-5 w-full sm:w-auto">
           Start my branding brief

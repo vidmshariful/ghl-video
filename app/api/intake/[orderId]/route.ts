@@ -14,7 +14,6 @@ export const runtime = "nodejs";
  * anything but the UUID.
  */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const VOICEOVERS = ["Male", "Female", "No preference"];
 const ALLOWED = ["image/png", "image/jpeg", "image/webp", "image/svg+xml", "application/pdf"];
 const MAX_SHOTS = 8;
 
@@ -23,8 +22,7 @@ type Intake = {
   brandName: string;
   primaryColor: string;
   accentColor: string;
-  voiceover: string;
-  brandGuidelinesUrl: string;
+  brandPronunciation: string;
   notes: string;
   logoPath: string | null;
   screenshotPaths: string[];
@@ -124,9 +122,7 @@ export async function POST(
   const brandName = str("brandName", 160);
   const primaryColor = str("primaryColor", 32);
   const accentColor = str("accentColor", 32);
-  let voiceover = str("voiceover", 40);
-  if (!VOICEOVERS.includes(voiceover)) voiceover = "No preference";
-  const brandGuidelinesUrl = str("brandGuidelinesUrl", 500);
+  const brandPronunciation = str("brandPronunciation", 200);
   const notes = str("notes", 4000);
 
   if (!brandName) {
@@ -179,8 +175,7 @@ export async function POST(
     brandName,
     primaryColor,
     accentColor,
-    voiceover,
-    brandGuidelinesUrl,
+    brandPronunciation,
     notes,
     logoPath,
     screenshotPaths,

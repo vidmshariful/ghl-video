@@ -231,8 +231,7 @@ type Brief = {
   brandName: string;
   primaryColor: string;
   accentColor: string;
-  voiceover: string;
-  brandGuidelinesUrl: string;
+  brandPronunciation: string;
   notes: string;
   logoUrl: string | null;
   screenshotUrls: string[];
@@ -281,16 +280,10 @@ function BrandingBrief({ orderId }: { orderId: string }) {
               <span className="font-mono text-muted">{brief.accentColor}</span>
             </span>
           </div>
-          <div className="flex gap-2">
-            <span className={lab}>Voiceover:</span>
-            <span className="text-muted">{brief.voiceover}</span>
-          </div>
-          {brief.brandGuidelinesUrl ? (
+          {brief.brandPronunciation ? (
             <div className="flex gap-2">
-              <span className={lab}>Guidelines:</span>
-              <a href={brief.brandGuidelinesUrl} target="_blank" rel="noopener" className="break-all text-gold hover:underline">
-                {brief.brandGuidelinesUrl}
-              </a>
+              <span className={lab}>Say it:</span>
+              <span className="text-muted">{brief.brandPronunciation}</span>
             </div>
           ) : null}
           {brief.notes ? (

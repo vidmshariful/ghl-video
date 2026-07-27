@@ -239,7 +239,7 @@ function OrderDetailView({ id, onBack }: { id: string; onBack: () => void }) {
             <>
               <p className="mt-3 text-body text-muted">
                 One step to start production: your logo, colors, dashboard screens,
-                and voiceover preference.
+                and how your brand name is said.
               </p>
               <a
                 href={`/checkout/intake/${id}`}
