@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getActiveProductBySku } from "@/lib/checkout/products";
+import { ensureAuthAccount } from "@/lib/checkout/account";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { stripe } from "@/lib/checkout/stripe";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
@@ -58,6 +59,7 @@ export async function POST(req: Request) {
   await db.from("customers").upsert({ email, name, company, phone }, { onConflict: "email", ignoreDuplicates: true });
   const { data: customer } = await db.from("customers").select("*").eq("email", email).single();
   if (!customer) return NextResponse.json({ error: "Could not start checkout." }, { status: 500 });
+  await ensureAuthAccount(email); // portal account, best-effort
 
   let stripeCustomerId: string | null = customer.stripe_customer_id;
   if (!stripeCustomerId) {

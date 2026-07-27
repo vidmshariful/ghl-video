@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getActiveProductBySku } from "@/lib/checkout/products";
 import { resolveSelectedBumps } from "@/lib/checkout/bumps";
 import { checkCoupon } from "@/lib/checkout/coupons";
+import { ensureAuthAccount } from "@/lib/checkout/account";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { stripe } from "@/lib/checkout/stripe";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
@@ -154,6 +155,11 @@ export async function POST(req: Request) {
   if (custErr || !customer) {
     return NextResponse.json({ error: "Could not complete checkout." }, { status: 500 });
   }
+
+  // Give the buyer a portal account keyed to this email (best-effort, never
+  // blocks checkout). They set a password from the portal, or use the
+  // email-link fallback.
+  await ensureAuthAccount(email);
 
   let stripeCustomerId: string | null = customer.stripe_customer_id;
   if (!stripeCustomerId) {

@@ -59,23 +59,65 @@ function Shell({ children }: { children: React.ReactNode }) {
 }
 
 /* ---- login ---- */
+const LOGIN_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const authFieldCls =
+  "w-full rounded-[3px] border border-hair bg-surface px-4 py-3.5 text-body text-ink placeholder:text-dim focus:border-gold focus:outline-none";
+
 function LoginView() {
   const [email, setEmail] = useState("");
-  const [sent, setSent] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState<null | "password" | "reset" | "link">(null);
   const [err, setErr] = useState("");
+  const [notice, setNotice] = useState<string | null>(null);
 
-  async function send(e: React.FormEvent) {
+  const cleanEmail = () => email.trim().toLowerCase();
+  const needEmail = () => {
+    if (LOGIN_EMAIL_RE.test(cleanEmail())) return false;
+    setErr("Enter the email from your order first.");
+    return true;
+  };
+
+  async function signIn(e: React.FormEvent) {
     e.preventDefault();
-    setBusy(true);
+    if (busy) return;
+    setBusy("password");
+    setErr("");
+    const { error } = await supabase.auth.signInWithPassword({
+      email: cleanEmail(),
+      password,
+    });
+    setBusy(null);
+    if (error) {
+      setErr(
+        "That email and password did not match. New here or forgot it? Set your password below.",
+      );
+    }
+    // success: onAuthStateChange swaps this view for the portal
+  }
+
+  async function sendReset() {
+    if (busy || needEmail()) return;
+    setBusy("reset");
+    setErr("");
+    const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail(), {
+      redirectTo: `${window.location.origin}/portal/set-password`,
+    });
+    setBusy(null);
+    if (error) setErr(error.message);
+    else setNotice(`We sent a link to ${cleanEmail()}. Open it to set your password.`);
+  }
+
+  async function sendLink() {
+    if (busy || needEmail()) return;
+    setBusy("link");
     setErr("");
     const { error } = await supabase.auth.signInWithOtp({
-      email: email.trim().toLowerCase(),
+      email: cleanEmail(),
       options: { emailRedirectTo: `${window.location.origin}/portal`, shouldCreateUser: true },
     });
-    setBusy(false);
+    setBusy(null);
     if (error) setErr(error.message);
-    else setSent(true);
+    else setNotice(`We sent a one-click sign-in link to ${cleanEmail()}.`);
   }
 
   return (
@@ -83,39 +125,81 @@ function LoginView() {
       <div className="mx-auto max-w-md">
         <p className="font-mono text-label uppercase text-gold">[ Your portal ]</p>
         <h1 className="mt-4 font-display text-h2 text-ink">Sign in to your portal.</h1>
-        {sent ? (
+
+        {notice ? (
           <div className="mt-8 rounded-card border border-gold/40 bg-gold/[0.06] px-6 py-8">
             <p className="font-display text-h4 text-ink">Check your email.</p>
-            <p className="mt-2 text-body text-muted">
-              We sent a sign-in link to <span className="text-ink">{email}</span>. Click it and you are in. No
-              password needed.
-            </p>
+            <p className="mt-2 text-body text-muted">{notice}</p>
+            <button
+              type="button"
+              onClick={() => setNotice(null)}
+              className="tap mt-4 font-mono text-label uppercase text-muted transition-colors hover:text-gold"
+            >
+              Back to sign in
+            </button>
           </div>
         ) : (
-          <form onSubmit={send} className="mt-8 grid gap-4">
-            <p className="text-body text-muted">
-              Enter the email you used at checkout and we will send you a secure sign-in link.
-            </p>
-            <label className="grid gap-2">
-              <span className="font-mono text-label uppercase text-muted">Email</span>
-              <input
-                type="email"
-                required
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-[3px] border border-hair bg-surface px-4 py-3.5 text-body text-ink placeholder:text-dim focus:border-gold focus:outline-none"
-              />
-            </label>
-            {err && <p className="text-body-sm text-error">{err}</p>}
-            <button
-              type="submit"
-              disabled={busy}
-              className="tap mt-1 rounded-[3px] bg-brand-gradient px-8 py-3.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60"
-            >
-              {busy ? "Sending..." : "Email me a sign-in link"}
-            </button>
-          </form>
+          <>
+            <form onSubmit={signIn} className="mt-8 grid gap-4">
+              <p className="text-body text-muted">
+                Use the email from your order. First time here? Set your password
+                just below.
+              </p>
+              <label className="grid gap-2">
+                <span className="font-mono text-label uppercase text-muted">Email</span>
+                <input
+                  type="email"
+                  required
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className={authFieldCls}
+                />
+              </label>
+              <label className="grid gap-2">
+                <span className="font-mono text-label uppercase text-muted">Password</span>
+                <input
+                  type="password"
+                  required
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={authFieldCls}
+                />
+              </label>
+              {err && <p className="text-body-sm text-error">{err}</p>}
+              <button
+                type="submit"
+                disabled={busy !== null}
+                className="tap mt-1 rounded-[3px] bg-brand-gradient px-8 py-3.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60"
+              >
+                {busy === "password" ? "Signing in..." : "Sign in"}
+              </button>
+            </form>
+
+            <div className="mt-6 grid gap-3 border-t border-hair pt-6">
+              <button
+                type="button"
+                onClick={sendReset}
+                disabled={busy !== null}
+                className="tap text-left text-body-sm text-muted transition-colors hover:text-gold disabled:opacity-60"
+              >
+                {busy === "reset"
+                  ? "Sending..."
+                  : "First time here, or forgot your password? Set it by email"}
+              </button>
+              <button
+                type="button"
+                onClick={sendLink}
+                disabled={busy !== null}
+                className="tap text-left text-body-sm text-muted transition-colors hover:text-gold disabled:opacity-60"
+              >
+                {busy === "link"
+                  ? "Sending..."
+                  : "Prefer no password? Email me a one-click sign-in link"}
+              </button>
+            </div>
+          </>
         )}
       </div>
     </Shell>
