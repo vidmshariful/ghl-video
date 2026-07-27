@@ -20,7 +20,7 @@ export type StudioSlot = {
 export type StudioUpdate = {
   id: string;
   title: string;
-  status: "in_production" | "launched" | "announcement";
+  status: "selected" | "in_production" | "published";
   note: string | null;
   target_date: string | null;
   link_slug: string | null;
@@ -56,7 +56,7 @@ export async function getStudioSlots(): Promise<StudioSlot[]> {
   }
 }
 
-/** Published board entries, in-production and announcements first. */
+/** Published board entries across the three pipeline stages. */
 export async function getStudioUpdates(): Promise<StudioUpdate[]> {
   try {
     return await sb<StudioUpdate[]>(

@@ -44,13 +44,18 @@ export function CapacityChip({
       </span>
     );
   }
+  /* editing capacity is client intake, not production slots */
+  const line =
+    service === "editing"
+      ? `Accepting ${row.remaining} new ${row.remaining === 1 ? "client" : "clients"} ${period}`
+      : `${row.remaining} ${row.remaining === 1 ? "slot" : "slots"} left ${period}`;
   return (
     <span className="inline-flex items-center gap-2 rounded-full border border-gold/40 bg-gold/[0.08] px-4 py-2 font-mono text-label uppercase text-gold">
       <span
         aria-hidden="true"
         className="h-1.5 w-1.5 rounded-full bg-gold motion-safe:animate-pulse"
       />
-      {row.remaining} {row.remaining === 1 ? "slot" : "slots"} left {period}
+      {line}
     </span>
   );
 }

@@ -21,12 +21,19 @@ type SlotRow = {
 type UpdateRow = {
   id: string;
   title: string;
-  status: "in_production" | "launched" | "announcement";
+  status: "selected" | "in_production" | "published";
   note: string | null;
   target_date: string | null;
   link_slug: string | null;
   sort: number;
   published: boolean;
+};
+
+type RequestRow = {
+  id: string;
+  topic: string;
+  status: "new" | "selected" | "dismissed";
+  created_at: string;
 };
 
 const field =
@@ -36,13 +43,13 @@ const lab = "font-mono text-label uppercase text-muted";
 const SERVICE_NAMES: Record<SlotRow["service"], string> = {
   premade: "Premade Videos",
   custom: "Custom Production",
-  editing: "Video Editing",
+  editing: "Video Editing (new client spots)",
 };
 
 const STATUS_NAMES: Record<UpdateRow["status"], string> = {
+  selected: "Up next",
   in_production: "In production",
-  launched: "Launched",
-  announcement: "Announcement",
+  published: "Published",
 };
 
 function SlotEditor({ slot, onSaved }: { slot: SlotRow; onSaved: () => void }) {
@@ -204,13 +211,13 @@ function UpdateForm({
             onChange={(e) => set("status", e.target.value)}
             className={field}
           >
+            <option value="selected">Up next</option>
             <option value="in_production">In production</option>
-            <option value="launched">Launched</option>
-            <option value="announcement">Announcement</option>
+            <option value="published">Published</option>
           </select>
         </label>
         <label>
-          <span className={lab}>Target / launch date</span>
+          <span className={lab}>Target / published date</span>
           <input
             type="date"
             value={u.target}
@@ -228,7 +235,7 @@ function UpdateForm({
           />
         </label>
         <label>
-          <span className={lab}>Library slug (optional preview link)</span>
+          <span className={lab}>Library slug (Order Now link when published)</span>
           <input
             value={u.slug}
             onChange={(e) => set("slug", e.target.value)}
@@ -279,19 +286,22 @@ function UpdateForm({
 export function StudioScreen() {
   const [slots, setSlots] = useState<SlotRow[]>([]);
   const [updates, setUpdates] = useState<UpdateRow[]>([]);
+  const [requests, setRequests] = useState<RequestRow[]>([]);
   const [editing, setEditing] = useState<UpdateRow | "new" | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [err, setErr] = useState("");
 
   async function load() {
-    const [a, b] = await Promise.all([
+    const [a, b, c] = await Promise.all([
       supabase.from("studio_slots").select("*").order("service"),
       supabase.from("studio_updates").select("*").order("sort").order("updated_at", { ascending: false }),
+      supabase.from("studio_requests").select("*").order("created_at", { ascending: false }),
     ]);
-    if (a.error || b.error) setErr((a.error ?? b.error)!.message);
+    if (a.error || b.error || c.error) setErr((a.error ?? b.error ?? c.error)!.message);
     else {
       setSlots(a.data as SlotRow[]);
       setUpdates(b.data as UpdateRow[]);
+      setRequests(c.data as RequestRow[]);
     }
     setLoaded(true);
   }
@@ -306,6 +316,39 @@ export function StudioScreen() {
     else load();
   }
 
+  /* promote a visitor request onto the board as an Up next card */
+  async function promote(r: RequestRow) {
+    const ins = await supabase
+      .from("studio_updates")
+      .insert({ title: r.topic, status: "selected", published: true, sort: 0 });
+    if (ins.error) {
+      setErr(ins.error.message);
+      return;
+    }
+    const upd = await supabase
+      .from("studio_requests")
+      .update({ status: "selected" })
+      .eq("id", r.id);
+    if (upd.error) setErr(upd.error.message);
+    load();
+  }
+
+  async function setRequestStatus(r: RequestRow, status: RequestRow["status"]) {
+    const { error } = await supabase
+      .from("studio_requests")
+      .update({ status })
+      .eq("id", r.id);
+    if (error) setErr(error.message);
+    else load();
+  }
+
+  async function removeRequest(r: RequestRow) {
+    if (!confirm(`Delete the request "${r.topic}"?`)) return;
+    const { error } = await supabase.from("studio_requests").delete().eq("id", r.id);
+    if (error) setErr(error.message);
+    else load();
+  }
+
   if (!loaded) return <p className="text-body text-muted">Loading the studio board...</p>;
 
   return (
@@ -314,7 +357,8 @@ export function StudioScreen() {
       <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
         What /studio-insights shows. Slots are fully manual: set the total
         and remaining for each line, and set total to 0 to hide that card.
-        Changes go live within five minutes.
+        Visitor video requests queue below; move one to the board to show
+        it as Up next. Changes go live within five minutes.
       </p>
       {err && <p className="mt-4 text-body-sm text-error">{err}</p>}
 
@@ -325,8 +369,68 @@ export function StudioScreen() {
         ))}
       </div>
 
+      <h2 className="mt-10 font-display text-h4 font-semibold text-ink">
+        Video requests
+        {requests.some((r) => r.status === "new") && (
+          <span className="ml-2 font-mono text-label uppercase text-gold">
+            [ {requests.filter((r) => r.status === "new").length} new ]
+          </span>
+        )}
+      </h2>
+      <ul className="mt-4 overflow-hidden rounded-card border border-hair">
+        {requests.length === 0 && (
+          <li className="bg-canvas px-5 py-5 text-body text-muted">
+            No visitor requests yet. They arrive from the board on
+            /studio-insights.
+          </li>
+        )}
+        {requests.map((r) => (
+          <li
+            key={r.id}
+            className="flex flex-wrap items-center justify-between gap-3 border-t border-hair bg-canvas px-5 py-3.5 first:border-t-0"
+          >
+            <div className="min-w-0">
+              <p className={`text-body ${r.status === "new" ? "text-ink" : "text-dim"}`}>
+                {r.topic}
+              </p>
+              <p className="mt-0.5 font-mono text-label uppercase text-dim">
+                {r.created_at.slice(0, 10)}
+                {r.status !== "new" ? ` / ${r.status}` : ""}
+              </p>
+            </div>
+            <div className="flex shrink-0 gap-2">
+              {r.status === "new" && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => promote(r)}
+                    className="tap rounded-[3px] bg-brand-gradient px-4 py-2 text-body-sm font-semibold text-canvas transition-all hover:brightness-110"
+                  >
+                    Move to board
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRequestStatus(r, "dismissed")}
+                    className="tap rounded-[3px] border border-hair px-4 py-2 text-body-sm text-ink transition-colors hover:border-gold/60"
+                  >
+                    Dismiss
+                  </button>
+                </>
+              )}
+              <button
+                type="button"
+                onClick={() => removeRequest(r)}
+                className="tap rounded-[3px] border border-hair px-4 py-2 text-body-sm text-error transition-colors hover:border-error/60"
+              >
+                Delete
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
+
       <div className="mt-10 flex items-center justify-between">
-        <h2 className="font-display text-h4 font-semibold text-ink">Production board</h2>
+        <h2 className="font-display text-h4 font-semibold text-ink">Premade pipeline</h2>
         <button
           type="button"
           onClick={() => setEditing("new")}

@@ -7,27 +7,44 @@ import { RuledSection } from "@/components/RuledSection";
 import { SectionGlow } from "@/components/SectionGlow";
 import { SectionHead } from "@/components/SectionHead";
 import { PageHero } from "@/components/pages/PageHero";
-import { getStudioSlots, getStudioUpdates, type StudioSlot } from "@/lib/studio";
+import { StudioRequestForm } from "@/components/StudioRequestForm";
+import {
+  getStudioSlots,
+  getStudioUpdates,
+  type StudioSlot,
+  type StudioUpdate,
+} from "@/lib/studio";
 import { checkoutHref, cta, pages } from "@/lib/site";
 
 /*
  * The public studio board: open capacity per service line and the
- * production board, both managed from the admin Studio screen. ISR at
- * five minutes, so an admin save is live within one coffee.
+ * premade pipeline (request to published), both managed from the admin
+ * Studio screen. ISR at five minutes, so an admin save is live within
+ * one coffee.
  */
 export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: "Studio Insights",
   description:
-    "Inside the GHL Video studio: what the team is producing now, launch dates, and open capacity for premade, custom, and editing work.",
+    "Inside the GHL Video studio: the premade pipeline from request to published, plus open capacity for premade, custom, and editing work. Request the next library video.",
   alternates: { canonical: "/studio-insights/" },
 };
+
+const SERVICE_ORDER: StudioSlot["service"][] = ["premade", "custom", "editing"];
 
 const SERVICE_NAMES: Record<StudioSlot["service"], string> = {
   premade: "Premade Videos",
   custom: "Custom Production",
   editing: "Video Editing",
+};
+
+/* editing capacity is a client-intake number, not a production slot
+   count (client decision), so the unit line differs per service */
+const SLOT_UNITS: Record<StudioSlot["service"], string> = {
+  premade: "slots open",
+  custom: "slots open",
+  editing: "new client spots open",
 };
 
 /* deterministic date rendering (server + client agree) */
@@ -68,12 +85,15 @@ function SlotMeter({ total, remaining }: { total: number; remaining: number }) {
 
 export default async function StudioInsightsPage() {
   const p = pages.studio;
-  const [slots, updates] = await Promise.all([
+  const [rawSlots, updates] = await Promise.all([
     getStudioSlots(),
     getStudioUpdates(),
   ]);
-  const inWork = updates.filter((u) => u.status !== "launched");
-  const launched = updates.filter((u) => u.status === "launched");
+  const slots = [...rawSlots].sort(
+    (a, b) => SERVICE_ORDER.indexOf(a.service) - SERVICE_ORDER.indexOf(b.service),
+  );
+  const byStage = (stage: StudioUpdate["status"]) =>
+    updates.filter((u) => u.status === stage);
   const lastTouch = [...slots.map((s) => s.updated_at), ...updates.map((u) => u.updated_at)]
     .sort()
     .at(-1);
@@ -138,7 +158,7 @@ export default async function StudioInsightsPage() {
                           {s.remaining}
                         </span>
                         <span className="font-mono text-label uppercase text-muted">
-                          of {s.total} slots open
+                          of {s.total} {SLOT_UNITS[s.service]}
                         </span>
                       </p>
                       <div className="mt-4">
@@ -150,7 +170,7 @@ export default async function StudioInsightsPage() {
                       <div className="mt-6 flex-1" />
                       {soldOut ? (
                         <p className="text-body text-muted">
-                          This window is full. New orders queue for the next
+                          This window is full. New work queues for the next
                           one, or{" "}
                           <Link
                             href={cta.bookACall.href}
@@ -183,7 +203,8 @@ export default async function StudioInsightsPage() {
         </div>
       </section>
 
-      {/* the production board */}
+      {/* the premade pipeline: a four-stage board, request to published.
+          Only library videos live here; client projects never show. */}
       <RuledSection
         bpIdx={3}
         index={3}
@@ -192,74 +213,81 @@ export default async function StudioInsightsPage() {
         accent={p.board.accent}
         intro={p.board.intro}
       >
-        <div className="px-6 py-4 md:px-8">
-          {inWork.length === 0 ? (
-            <p className="py-6 text-body text-muted">{p.board.empty}</p>
-          ) : (
-            <ul>
-              {inWork.map((u) => (
-                <li
-                  key={u.id}
-                  className="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2 border-t border-hair py-5 first:border-t-0"
-                >
-                  <div className="min-w-0">
-                    <p className="font-mono text-label uppercase text-gold">
-                      {u.status === "announcement" ? "Announcement" : "In production"}
-                    </p>
-                    <p className="mt-1.5 font-display text-h4 font-semibold text-ink">
-                      {u.title}
-                    </p>
-                    {u.note && (
-                      <p className="mt-1 max-w-[var(--measure-body)] text-body text-muted">
-                        {u.note}
-                      </p>
-                    )}
-                  </div>
-                  {u.target_date && (
-                    <p className="shrink-0 font-mono text-label uppercase text-muted [font-variant-numeric:tabular-nums]">
-                      Target {fmtDate(u.target_date)}
-                    </p>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
+        <div className="grid lg:grid-cols-4">
+          {/* stage 1: the visitor request queue */}
+          <div className="flex flex-col p-6 md:p-7">
+            <p className="font-mono text-label uppercase tracking-[0.1em] text-ink">
+              {p.board.columns.request.label}
+            </p>
+            <p className="mt-3 text-body-sm text-muted">
+              {p.board.columns.request.blurb}
+            </p>
+            <div className="mt-5">
+              <StudioRequestForm />
+            </div>
+          </div>
 
-          {launched.length > 0 && (
-            <>
-              <p className="mt-8 border-t border-hair pt-6 font-mono text-label uppercase text-dim">
-                {p.board.launchedHeading}
-              </p>
-              <ul className="mt-1">
-                {launched.map((u) => (
-                  <li
-                    key={u.id}
-                    className="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2 border-t border-hair py-4 first:border-t-0"
+          {/* stages 2 to 4: admin-curated cards */}
+          {(
+            [
+              { stage: "selected", meta: "target" },
+              { stage: "in_production", meta: "target" },
+              { stage: "published", meta: "published" },
+            ] as const
+          ).map(({ stage, meta }) => {
+            const items = byStage(stage);
+            const col = p.board.columns[stage];
+            return (
+              <div
+                key={stage}
+                className="flex flex-col border-t border-dashed border-hair p-6 md:p-7 lg:border-l lg:border-t-0"
+              >
+                <p className="flex items-baseline justify-between gap-3 font-mono text-label uppercase tracking-[0.1em] text-ink">
+                  {col.label}
+                  <span
+                    className={`[font-variant-numeric:tabular-nums] ${
+                      items.length > 0 ? "text-gold" : "text-dim"
+                    }`}
                   >
-                    <div className="min-w-0">
-                      <p className="font-display text-h4 font-semibold text-ink">
-                        {u.title}
-                      </p>
-                      {u.link_slug && (
-                        <Link
-                          href={checkoutHref(u.link_slug)}
-                          className="mt-1 inline-flex items-center gap-1.5 font-mono text-label uppercase tracking-[0.1em] text-gold transition-opacity hover:opacity-70"
-                        >
-                          {cta.orderPremade}
-                          <span aria-hidden="true">&rarr;</span>
-                        </Link>
-                      )}
-                    </div>
-                    {u.target_date && (
-                      <p className="shrink-0 font-mono text-label uppercase text-dim [font-variant-numeric:tabular-nums]">
-                        Launched {fmtDate(u.target_date)}
-                      </p>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
+                    [ {String(items.length).padStart(2, "0")} ]
+                  </span>
+                </p>
+                {items.length === 0 ? (
+                  <p className="mt-5 border border-dashed border-hair p-4 text-body-sm text-dim">
+                    {col.empty}
+                  </p>
+                ) : (
+                  <ul className="mt-5 space-y-3">
+                    {items.map((u) => (
+                      <li key={u.id} className="border border-hair bg-card/40 p-4">
+                        <p className="font-display text-body font-semibold leading-snug text-ink">
+                          {u.title}
+                        </p>
+                        {u.note && (
+                          <p className="mt-1.5 text-body-sm text-muted">{u.note}</p>
+                        )}
+                        {u.target_date && (
+                          <p className="mt-2.5 font-mono text-label uppercase text-dim [font-variant-numeric:tabular-nums]">
+                            {meta === "published" ? "Published" : "Target"}{" "}
+                            {fmtDate(u.target_date)}
+                          </p>
+                        )}
+                        {stage === "published" && u.link_slug && (
+                          <Link
+                            href={checkoutHref(u.link_slug)}
+                            className="mt-2.5 inline-flex items-center gap-1.5 font-mono text-label uppercase tracking-[0.1em] text-gold transition-opacity hover:opacity-70"
+                          >
+                            {cta.orderPremade}
+                            <span aria-hidden="true">&rarr;</span>
+                          </Link>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            );
+          })}
         </div>
       </RuledSection>
 

@@ -107,7 +107,7 @@ export const pages = {
       chip: "Studio Insights",
       headline: "Inside the studio,",
       accent: "as it happens.",
-      lede: "What the team is producing, when it launches, and how much capacity is open right now. Updated from the studio, not a marketing calendar.",
+      lede: "What the team is producing, when it launches, and how much capacity is open right now. Updated from the studio, not a marketing calendar. Have a video in mind? Add it to the request queue below.",
     },
     capacity: {
       chip: "Open capacity",
@@ -125,18 +125,41 @@ export const pages = {
         "Capacity numbers are being set for this window. Check back shortly, or book a call and ask.",
     },
     board: {
-      chip: "The board",
-      headline: "What the team is",
-      accent: "working on.",
+      chip: "The premade pipeline",
+      headline: "New library videos,",
+      accent: "request to published.",
       intro:
-        "Live from production: current projects and their target dates. Launched work moves into the library.",
-      empty: "The board is being written for this window. Check back this week.",
-      launchedHeading: "Recently launched",
+        "This board is only the premade library: which topics made the cut, what is in production, and what just shipped. Client projects never show here, your work stays private.",
+      /* the four pipeline columns; requests are moderated, so nothing a
+         visitor types appears on the site until the team selects it */
+      columns: {
+        request: {
+          label: "Request a video",
+          blurb:
+            "Tell us the video your HighLevel offer is missing. The team reviews every topic and picks the next builds from this queue.",
+          placeholder: "Example: Missed call text back explainer",
+          submit: "Request this video",
+          done: "Request received. If the team selects it, it shows up in Up next.",
+          error: "Could not send that. Try again, or email hi@ghlvideo.com.",
+        },
+        selected: {
+          label: "Up next",
+          empty: "The next picks from the request queue land here.",
+        },
+        in_production: {
+          label: "In production",
+          empty: "Nothing on the desk right now.",
+        },
+        published: {
+          label: "Published",
+          empty: "Fresh launches land here.",
+        },
+      },
     },
     closing: {
-      headline: "Want your project",
-      accent: "on this board?",
-      sub: "Order a premade today or send the custom brief. Your slot is claimed the moment you do.",
+      headline: "Want a slot in",
+      accent: "the next window?",
+      sub: "Premade orders ship from the library today. Custom and editing slots go to whoever claims them first.",
       cta: { label: cta.bookACall.label, href: cta.bookACall.href },
     },
   },
