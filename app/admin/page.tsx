@@ -11,7 +11,9 @@ import { OrdersScreen } from "./OrdersScreen";
 import { SubscriptionsScreen } from "./SubscriptionsScreen";
 import { ProductsScreen } from "./ProductsScreen";
 import { BumpsScreen } from "./BumpsScreen";
+import { CouponsScreen } from "./CouponsScreen";
 import { CustomersScreen } from "./CustomersScreen";
+import { StudioScreen } from "./StudioScreen";
 
 /*
  * The managing area: /admin. Supabase Auth login, a sidebar, and one
@@ -600,7 +602,9 @@ export default function AdminPage() {
     { key: "subscriptions", label: "Subscriptions" },
     { key: "products", label: "Products & Pricing" },
     { key: "bumps", label: "Order Bumps" },
+    { key: "coupons", label: "Coupons" },
     { key: "customers", label: "Customers" },
+    { key: "studio", label: "Studio Insights" },
     { key: "code", label: "Header & Footer Code" },
     { key: "pages", label: "Pages" },
     { key: "videos", label: "Video List" },
@@ -661,8 +665,12 @@ export default function AdminPage() {
             <ProductsScreen />
           ) : view === "bumps" ? (
             <BumpsScreen />
+          ) : view === "coupons" ? (
+            <CouponsScreen />
           ) : view === "customers" ? (
             <CustomersScreen />
+          ) : view === "studio" ? (
+            <StudioScreen />
           ) : view === "code" ? (
             <CodeScreen />
           ) : view === "pages" ? (

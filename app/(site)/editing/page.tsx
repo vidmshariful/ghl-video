@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Button } from "@/components/Button";
+import { CapacityChip } from "@/components/CapacityChip";
 import { CellGrid } from "@/components/CellGrid";
 import { RuleList } from "@/components/RuleList";
 import { FitCards } from "@/components/FitCards";
@@ -73,6 +74,7 @@ export default function EditingPage() {
         <Button href={cta.bookACall.href} variant="ghost">
           {cta.bookACall.label}
         </Button>
+        <CapacityChip service="editing" />
       </PageHero>
 
       {/* trusted-by logo strip, directly under the hero */}

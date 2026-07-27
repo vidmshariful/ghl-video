@@ -102,6 +102,163 @@ export const pages = {
     },
   },
 
+  studio: {
+    hero: {
+      chip: "Studio Insights",
+      headline: "Inside the studio,",
+      accent: "as it happens.",
+      lede: "What the team is producing, when it launches, and how much capacity is open right now. Updated from the studio, not a marketing calendar. Have a video in mind? Add it to the request queue below.",
+    },
+    capacity: {
+      chip: "Open capacity",
+      headline: "Slots open",
+      accent: "right now.",
+      intro:
+        "Every line has a real production ceiling. When a line fills, new orders queue for the next window.",
+      /* the on-page action per service line */
+      links: {
+        premade: { label: "Order Now", href: "/premade/#videos" },
+        custom: { label: "Request a Quote", href: "/quote/" },
+        editing: { label: "Start editing", href: "/editing/#plans" },
+      },
+      empty:
+        "Capacity numbers are being set for this window. Check back shortly, or book a call and ask.",
+    },
+    board: {
+      chip: "The premade pipeline",
+      headline: "New library videos,",
+      accent: "request to published.",
+      intro:
+        "This board is only the premade library: which topics made the cut, what is in production, and what just shipped. Client projects never show here, your work stays private.",
+      /* the four pipeline columns; requests are moderated, so nothing a
+         visitor types appears on the site until the team selects it */
+      columns: {
+        request: {
+          label: "Request a video",
+          blurb:
+            "Tell us the video your HighLevel offer is missing. The team reviews every topic and picks the next builds from this queue.",
+          placeholder: "Example: Missed call text back explainer",
+          submit: "Request this video",
+          done: "Request received. If the team selects it, it shows up in Up next.",
+          error: "Could not send that. Try again, or email hi@ghlvideo.com.",
+        },
+        selected: {
+          label: "Up next",
+          empty: "The next picks from the request queue land here.",
+        },
+        in_production: {
+          label: "In production",
+          empty: "Nothing on the desk right now.",
+        },
+        published: {
+          label: "Published",
+          empty: "Fresh launches land here.",
+        },
+      },
+    },
+    closing: {
+      headline: "Want a slot in",
+      accent: "the next window?",
+      sub: "Premade orders ship from the library today. Custom and editing slots go to whoever claims them first.",
+      cta: { label: cta.bookACall.label, href: cta.bookACall.href },
+    },
+  },
+  /* The unlisted 72-hour existing-customer launch page for the AI First
+     SaaS Pack (/ai-first-launch/, noindex, reached only from the campaign
+     email). The code and deadline here mirror the AIFIRST30 row in the
+     coupons table; change both together or the page will promise what
+     checkout no longer honors. */
+  launch: {
+    hero: {
+      chip: "Existing clients only",
+      headline: "Your early window on",
+      accent: "the AI First SaaS Pack.",
+      lede: "You already run our videos in your funnel, so you get the full nine-video AI pack before the public does. 30% off with code AIFIRST30, for the next 72 hours only.",
+    },
+    code: "AIFIRST30",
+    percent: 30,
+    deadlineIso: "2026-07-30T14:00:00Z",
+    deadlineLabel: "July 30, 10 AM ET",
+    countdown: {
+      endsPrefix: "Offer ends",
+      videosLabel: "See the nine videos",
+      closedLine:
+        "This window has closed. The pack is still yours at the regular price.",
+      closedCtaLabel: "See the pack",
+      closedHref: "/premade/",
+    },
+    videos: {
+      chip: "The nine videos",
+      headline: "Every video in the pack,",
+      accent: "and where it stands.",
+      intro:
+        "Nine videos in three formats. Every published video also sells on its own at its regular price, but the 30% code is for the pack only.",
+      /* Campaign status for the five unpublished videos, keyed by catalog
+         title. Dates confirmed by Shariful (Jul 2026). The two preview
+         clips are draft cuts served from ClickUp attachments (~100MB
+         each); swap src to HighLevel-hosted compressed files when he
+         sends them, nothing else changes. */
+      states: {
+        "Social Media Planner + Content AI": {
+          kind: "draft",
+          src: "https://t9009190526.p.clickup-attachments.com/t9009190526/359f9e81-6e41-4b2e-937c-3c4b67f6e130/05.%20Social%20Media%20Planner%20(draft).mp4?open=true",
+          date: "2026-07-28",
+        },
+        "Lead-to-Close With AI": {
+          kind: "draft",
+          src: "https://t9009190526.p.clickup-attachments.com/t9009190526/6f30edf9-2066-4282-b161-ece60d06a5f4/Ai-First%20Platform%20Demo.mp4?open=true",
+          date: "2026-08-03",
+        },
+        "AI Website + Funnel Builder": { kind: "scheduled", date: "2026-07-30" },
+        "Ask AI, Your In-Platform Assistant": { kind: "scheduled", date: "2026-08-05" },
+        "Mobile App, Run Your Business From Your Phone": { kind: "scheduled", date: "2026-08-07" },
+      },
+      /* corner tags: published videos wear Ready, supplied draft cuts
+         wear Draft preview; in-production cards carry only their date */
+      draftTag: "Draft preview",
+      readyTag: "Ready",
+      datePrefix: "Publishing",
+    },
+    price: {
+      chip: "The launch price",
+      headline: "The math for",
+      accent: "the next 72 hours.",
+      tag: "Existing clients, 72 hours",
+      priceNote: "one time",
+      /* the value row is computed from the real per-video prices on the
+         page, so the math always adds up against the cards above it */
+      valueNote: "Bought one by one",
+      regularNote: "Public pack price",
+      yourNote: "Your price today",
+      saveNote: "You save",
+      includedLabel: "What is included",
+      cardFeatures: [
+        "All nine videos, branded to your SaaS",
+        "One master explainer, one platform demo, seven feature explainers",
+        "Published videos delivered in 5 days; new releases within 5 days of their date",
+        "Professional voiceover and full commercial rights",
+        "Every future release in this pack included",
+      ],
+      autoNote: "Code AIFIRST30 applies automatically at checkout.",
+    },
+    proof: {
+      chip: "The proof",
+      headline: "From clients already",
+      accent: "running our videos.",
+      intro:
+        "Real Google reviews, every one five stars. You might even recognize a name or two.",
+    },
+    /* while the window runs, the public premade page shows the pack as
+       client early access instead of a live buy button */
+    publicLock: {
+      note: "Existing-client early access until July 30",
+    },
+    closing: {
+      headline: "72 hours,",
+      accent: "then it goes public.",
+      sub: "Order in this window and the nine-video pack is yours at 30% off, branded to your SaaS as each video ships.",
+    },
+  },
   custom: {
     hero: {
       chip: "Custom Production",

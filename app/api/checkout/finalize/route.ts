@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getActiveProductBySku } from "@/lib/checkout/products";
 import { resolveSelectedBumps } from "@/lib/checkout/bumps";
+import { checkCoupon } from "@/lib/checkout/coupons";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { stripe } from "@/lib/checkout/stripe";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
@@ -63,7 +64,28 @@ export async function POST(req: Request) {
   }
 
   const { bumps, totalCents: bumpsCents } = await resolveSelectedBumps(product, bumpIds);
-  const amountCents = product.price_cents + bumpsCents;
+
+  // A coupon is re-validated at pay time; an invalid or expired code fails
+  // loudly here instead of silently charging the undiscounted price the
+  // buyer was not shown. The discount applies to the base price only.
+  const couponCode = asStr(payload.couponCode);
+  let discountCents = 0;
+  let couponMeta: { code: string; label: string; discount_cents: number } | null = null;
+  if (couponCode) {
+    const chk = await checkCoupon(couponCode, product.sku);
+    if (!chk.ok) {
+      return NextResponse.json({ error: chk.reason }, { status: 400 });
+    }
+    discountCents = chk.discountFor(product.price_cents);
+    couponMeta = { code: chk.code, label: chk.label, discount_cents: discountCents };
+  }
+
+  const amountCents = product.price_cents + bumpsCents - discountCents;
+  if (amountCents < 50) {
+    // Stripe's charge minimum; unreachable with the DB's discount bounds,
+    // kept as a hard floor anyway.
+    return NextResponse.json({ error: "Could not complete checkout." }, { status: 400 });
+  }
 
   const db = supabaseAdmin();
 
@@ -86,6 +108,7 @@ export async function POST(req: Request) {
             sku: product.sku,
             base_cents: product.price_cents,
             bumps: bumps.map((b) => ({ id: b.id, name: b.name, price_cents: b.priceCents })),
+            ...(couponMeta ? { coupon: couponMeta } : {}),
           },
         })
         .eq("id", existing.id)
@@ -94,7 +117,14 @@ export async function POST(req: Request) {
         await stripe().paymentIntents.update(paymentIntentId, {
           amount: amountCents,
           receipt_email: email,
-          metadata: { sku: product.sku, customer_email: email, bump_cents: String(bumpsCents) },
+          metadata: {
+            sku: product.sku,
+            customer_email: email,
+            bump_cents: String(bumpsCents),
+            // empty string deletes the key on a retry that dropped the code
+            coupon_code: couponMeta?.code ?? "",
+            discount_cents: couponMeta ? String(discountCents) : "",
+          },
         });
       } catch {
         // The intent may have reached a terminal state in the meantime; the
@@ -151,6 +181,8 @@ export async function POST(req: Request) {
       sku: product.sku,
       customer_email: email,
       bump_cents: String(bumpsCents),
+      coupon_code: couponMeta?.code ?? "",
+      discount_cents: couponMeta ? String(discountCents) : "",
     },
   });
 
@@ -168,6 +200,7 @@ export async function POST(req: Request) {
         sku: product.sku,
         base_cents: product.price_cents,
         bumps: bumps.map((b) => ({ id: b.id, name: b.name, price_cents: b.priceCents })),
+        ...(couponMeta ? { coupon: couponMeta } : {}),
       },
     })
     .select()
@@ -196,7 +229,11 @@ export async function POST(req: Request) {
   await db.from("order_events").insert({
     order_id: order.id,
     event_type: "intent_finalized",
-    payload: { stripe_payment_intent_id: paymentIntentId, amount_cents: amountCents },
+    payload: {
+      stripe_payment_intent_id: paymentIntentId,
+      amount_cents: amountCents,
+      ...(couponMeta ? { coupon_code: couponMeta.code, discount_cents: discountCents } : {}),
+    },
   });
 
   return NextResponse.json({ orderId: order.id });

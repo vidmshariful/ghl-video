@@ -18,10 +18,16 @@ export const metadata: Metadata = {
 
 export default async function CheckoutPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ sku: string }>;
+  searchParams: Promise<{ code?: string | string[] }>;
 }) {
   const { sku } = await params;
+  const sp = await searchParams;
+  /* campaign links carry ?code=; validated server-side on apply and again
+     at finalize, so the URL can never change what is charged */
+  const initialCouponCode = typeof sp.code === "string" ? sp.code.slice(0, 32) : null;
   const product = await getActiveProductBySku(sku);
   if (!product) notFound();
 
@@ -95,6 +101,7 @@ export default async function CheckoutPage({
               bumps={bumps}
               rating={rating}
               clients={clients}
+              initialCouponCode={product.type === "one_time" ? initialCouponCode : null}
             />
           </RuledBox>
         </div>

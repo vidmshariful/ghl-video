@@ -56,9 +56,36 @@ if (!files.length) {
   process.exit(1);
 }
 
+// Parse the connection string by hand: real-world passwords carry @ ! $
+// unencoded, which breaks URL parsing (the password bleeds into the host).
+// Split on the LAST @ so the credential part may contain anything.
+function parseDbUrl(raw) {
+  const m = raw.match(/^postgres(?:ql)?:\/\/(.*)@([^@]+)$/s);
+  if (!m) return { connectionString: raw };
+  const dec = (v) => {
+    try {
+      return decodeURIComponent(v);
+    } catch {
+      return v; // already-raw specials; use as-is
+    }
+  };
+  const i = m[1].indexOf(":");
+  const user = dec(i === -1 ? m[1] : m[1].slice(0, i));
+  const password = i === -1 ? undefined : dec(m[1].slice(i + 1));
+  const hm = m[2].match(/^([^:/]+)(?::(\d+))?\/(.+)$/);
+  if (!hm) return { connectionString: raw };
+  return {
+    user,
+    password,
+    host: hm[1],
+    port: hm[2] ? Number(hm[2]) : 5432,
+    database: hm[3].split("?")[0],
+  };
+}
+
 // Supabase's pooler terminates TLS with a cert node's default CA set may not
 // chain; the transport stays encrypted.
-const client = new pg.Client({ connectionString: DB_URL, ssl: { rejectUnauthorized: false } });
+const client = new pg.Client({ ...parseDbUrl(DB_URL), ssl: { rejectUnauthorized: false } });
 await client.connect();
 
 try {

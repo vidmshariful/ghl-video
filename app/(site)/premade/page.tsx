@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/Button";
+import { CapacityChip } from "@/components/CapacityChip";
 import { DrawnBorder } from "@/components/DrawnBorder";
 import { DrawnIcon, type IconName } from "@/components/DrawnIcon";
 import { FaqList } from "@/components/FaqList";
@@ -73,6 +74,7 @@ export default function PremadePage() {
         <Button href={cta.bookACall.href} variant="ghost">
           {cta.bookACall.label}
         </Button>
+        <CapacityChip service="premade" />
       </PageHero>
 
       {/* trusted-by logo strip, directly under the hero */}

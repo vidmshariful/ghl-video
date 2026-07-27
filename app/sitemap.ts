@@ -4,8 +4,9 @@ import { site } from "@/lib/site";
 
 export const dynamic = "force-static";
 
-/* stubs stay out until they carry real content (they are noindex) */
-const EXCLUDE = ["/blog/", "/resources/"];
+/* stubs stay out until they carry real content (they are noindex), and
+ * the unlisted campaign page never goes in */
+const EXCLUDE = ["/blog/", "/resources/", "/ai-first-launch/"];
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return sitePages
