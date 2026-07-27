@@ -75,17 +75,17 @@ function Check() {
   );
 }
 
-/* numbered category header, shared by both grid blocks */
+/* numbered category header: name, then its one-line pitch below */
 function CatHead({ index, name, line }: { index: number; name: string; line: string }) {
   return (
-    <Reveal className="flex flex-wrap items-baseline gap-x-4 gap-y-1 border-b border-hair pb-4">
+    <Reveal className="border-b border-hair pb-4">
       <RevealItem>
         <p className="font-mono text-label uppercase tracking-[0.14em] text-gold">
           [ 0{index} ] {name}
         </p>
-      </RevealItem>
-      <RevealItem className="min-w-0">
-        <p className="max-w-[var(--measure-body)] text-body-sm text-muted">{line}</p>
+        <p className="mt-2 max-w-[var(--measure-body)] text-body-sm text-muted">
+          {line}
+        </p>
       </RevealItem>
     </Reveal>
   );
@@ -114,11 +114,15 @@ export default function AiFirstLaunchPage() {
   const discountCents = Math.round((regularCents * p.percent) / 100);
   const launchCents = regularCents - discountCents;
 
-  /* one library-style card for every video: preview (or the gradient
-     date panel while in production), title, price, status. The publish
-     date sits highlighted above the title, never inside the player.
-     No single-buy controls on this page; the pack is the offer. */
-  const videoCard = (v: (typeof pack.categories)[number]["videos"][number]) => {
+  /* one library-style card for every video: a clean player (or the
+     gradient date panel while in production), then the numbered title
+     with the publish date highlighted above it, and the price. Corner
+     tags: published cuts wear Ready, supplied drafts wear Draft
+     preview. No single-buy controls; the pack is the offer. */
+  const videoCard = (
+    v: (typeof pack.categories)[number]["videos"][number],
+    num: number,
+  ) => {
     const state = states[v.title];
     const price = premadeBySlugTitle[v.title]?.price ?? 495;
     const src = v.src ?? state?.src;
@@ -126,16 +130,7 @@ export default function AiFirstLaunchPage() {
       !v.src && state?.date
         ? `${p.videos.datePrefix} ${fmtDate(state.date)}`
         : null;
-    const cornerTag = !v.src && src
-      ? state?.kind === "ready"
-        ? p.videos.readyTag
-        : p.videos.draftTag
-      : null;
-    const status = v.src
-      ? p.videos.liveNote
-      : state?.kind === "ready"
-        ? p.videos.statusReady
-        : p.videos.statusProduction;
+    const cornerTag = v.src ? p.videos.readyTag : src ? p.videos.draftTag : null;
     return (
       <div className="flex h-full flex-col">
         {src ? (
@@ -146,7 +141,6 @@ export default function AiFirstLaunchPage() {
               label={v.title}
               tint
               rounded="rounded-none"
-              caption={{ title: v.format, sub: status }}
             />
             {cornerTag && (
               <span className="absolute left-2 top-2 z-20 border border-hair bg-canvas/85 px-2.5 py-1 font-mono text-label uppercase tracking-[0.08em] text-gold">
@@ -156,7 +150,7 @@ export default function AiFirstLaunchPage() {
           </div>
         ) : (
           /* in production: the date panel stands in for the preview */
-          <div className="relative flex aspect-video flex-col items-center justify-center border border-hair bg-[linear-gradient(135deg,rgba(0,144,252,0.16)_0%,rgba(0,144,252,0.05)_38%,rgba(0,0,0,0)_68%),#000]">
+          <div className="flex aspect-video flex-col items-center justify-center border border-hair bg-[linear-gradient(135deg,rgba(0,144,252,0.16)_0%,rgba(0,144,252,0.05)_38%,rgba(0,0,0,0)_68%),#000]">
             {state?.date && (
               <p className="font-mono text-stat-lg font-bold leading-none text-gold [font-variant-numeric:tabular-nums]">
                 {fmtDate(state.date)}
@@ -164,9 +158,6 @@ export default function AiFirstLaunchPage() {
             )}
             <p className="mt-2.5 font-mono text-label uppercase tracking-[0.14em] text-muted">
               {p.videos.datePrefix}
-            </p>
-            <p className="absolute bottom-3 left-4 font-mono text-label uppercase text-dim">
-              {v.format} / {p.videos.statusProduction}
             </p>
           </div>
         )}
@@ -183,6 +174,9 @@ export default function AiFirstLaunchPage() {
                   dateLine && src ? "mt-1" : ""
                 }`}
               >
+                <span className="[font-variant-numeric:tabular-nums]">
+                  {String(num).padStart(2, "0")}:
+                </span>{" "}
                 {v.title}
               </h3>
             </div>
@@ -231,14 +225,17 @@ export default function AiFirstLaunchPage() {
             intro={p.videos.intro}
           />
 
-          {/* each single-video category is its own full block, the card
-              centered large; the features fill a two-up grid below */}
-          {singles.map((cat) => (
+          {/* each single-video category is its own block on a 50/50
+              grid, the card holding the left column; the features fill
+              a two-up grid below. Videos number 01..09 in page order. */}
+          {singles.map((cat, i) => (
             <div key={cat.name} className="mt-12">
               <CatHead index={catIndex(cat.name)} name={cat.name} line={cat.line} />
-              <Reveal className="mx-auto mt-7 max-w-3xl">
-                <RevealItem>{videoCard(cat.videos[0])}</RevealItem>
-              </Reveal>
+              <div className="mt-7 grid gap-8 lg:grid-cols-2">
+                <Reveal>
+                  <RevealItem>{videoCard(cat.videos[0], i + 1)}</RevealItem>
+                </Reveal>
+              </div>
             </div>
           ))}
 
@@ -246,9 +243,9 @@ export default function AiFirstLaunchPage() {
             <div key={cat.name} className="mt-16">
               <CatHead index={catIndex(cat.name)} name={cat.name} line={cat.line} />
               <Reveal className="mt-7 grid items-stretch gap-x-8 gap-y-10 sm:grid-cols-2">
-                {cat.videos.map((v) => (
+                {cat.videos.map((v, vi) => (
                   <RevealItem key={v.title} className="h-full">
-                    {videoCard(v)}
+                    {videoCard(v, singles.length + vi + 1)}
                   </RevealItem>
                 ))}
               </Reveal>

@@ -200,7 +200,7 @@ export const pages = {
          sends them, nothing else changes. */
       states: {
         "Social Media Planner + Content AI": {
-          kind: "ready",
+          kind: "draft",
           src: "https://t9009190526.p.clickup-attachments.com/t9009190526/359f9e81-6e41-4b2e-937c-3c4b67f6e130/05.%20Social%20Media%20Planner%20(draft).mp4?open=true",
           date: "2026-07-28",
         },
@@ -213,10 +213,8 @@ export const pages = {
         "Ask AI, Your In-Platform Assistant": { kind: "scheduled", date: "2026-08-05" },
         "Mobile App, Run Your Business From Your Phone": { kind: "scheduled", date: "2026-08-07" },
       },
-      /* card statuses: published / ready to publish / in production */
-      liveNote: "Published, ships in 5 days",
-      statusReady: "Ready to publish",
-      statusProduction: "In production",
+      /* corner tags: published videos wear Ready, supplied draft cuts
+         wear Draft preview; in-production cards carry only their date */
       draftTag: "Draft preview",
       readyTag: "Ready",
       datePrefix: "Publishing",
@@ -232,6 +230,7 @@ export const pages = {
       cardFeatures: [
         "All nine videos, branded to your SaaS",
         "One master explainer, one platform demo, seven feature explainers",
+        "Published videos delivered in 5 days; new releases within 5 days of their date",
         "Professional voiceover and full commercial rights",
         "Every future release in this pack included",
       ],
