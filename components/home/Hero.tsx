@@ -3,9 +3,9 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { Button } from "@/components/Button";
 import { HeroReviewer } from "@/components/home/HeroReviewer";
+import { HeroShowreel } from "@/components/home/HeroShowreel";
 import { GhlMark } from "@/components/GhlMark";
 import { HeroAtmosphere } from "@/components/HeroAtmosphere";
-import { MediaFrame } from "@/components/MediaFrame";
 import { Panel } from "@/components/Panel";
 import { home, cta } from "@/lib/site";
 
@@ -48,8 +48,6 @@ function HeadlineLine({
  */
 export function Hero() {
   const reduced = useReducedMotion();
-  const { work } = home;
-  const featured = work.pieces[0];
 
   const fadeUp = (delay: number) => ({
     initial: reduced ? false : { opacity: 0, y: 12 },
@@ -149,19 +147,18 @@ export function Hero() {
             {/* hatched gutter, the drafting-table seam */}
             <div className="hatch hidden w-6 border-x border-hair lg:block" />
 
-            {/* the work, playing */}
+            {/* the showreel, click to play with sound */}
             <motion.div
               className="relative min-h-[16rem] p-3 lg:min-h-[30rem]"
               initial={reduced ? false : { opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.8, delay: 0.35, ease: EASE }}
             >
-              <MediaFrame
-                src={featured.src}
-                poster={featured.poster}
-                label={`${featured.client}, ${featured.format}`}
-                caption={{ title: featured.format }}
-                className="!absolute inset-3 h-auto !aspect-auto"
+              <HeroShowreel
+                wistiaId={home.hero.showreel.wistiaId}
+                poster={home.hero.showreel.poster}
+                title={home.hero.showreel.title}
+                label={home.hero.showreel.label}
               />
             </motion.div>
 

@@ -72,6 +72,17 @@ export const home = {
     headline: "Video built for",
     headlineAccent: "HighLevel SaaS.",
     lede: "Premade videos when speed matters, custom production when it has to be yours, and monthly editing for creators who publish every week.",
+    /* the homepage showreel: real Wistia video (share link
+       ghlvideo.wistia.com/s/7mad9txrz6rxgg6, media amnpqlznhd). The
+       thumbnail fills the hero panel; clicking plays it with sound in a
+       lightbox, same embed as the library's Wistia videos. */
+    showreel: {
+      wistiaId: "amnpqlznhd",
+      poster:
+        "https://embed-ssl.wistia.com/deliveries/5dd9f14b460ee3de660e921cf11895b14e901fb0.jpg?image_crop_resized=1280x720",
+      title: "the GHL Video showreel",
+      label: "Showreel",
+    },
     /* REAL Google review, quoted verbatim */
     testimonial: {
       quote:
