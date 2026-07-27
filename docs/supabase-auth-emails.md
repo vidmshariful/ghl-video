@@ -21,8 +21,8 @@ Body:
   <tr><td align="center" style="padding:32px 16px;">
     <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="width:480px;max-width:480px;">
       <tr><td style="height:4px;background-color:#fcc000;background-image:linear-gradient(100deg,#fcc000,#00cc00);border-radius:6px 6px 0 0;font-size:0;line-height:0;">&nbsp;</td></tr>
-      <tr><td style="background-color:#12141b;border:1px solid #242736;border-top:0;border-radius:0 0 12px 12px;padding:36px 36px 30px;font-family:'Helvetica Neue',Arial,sans-serif;">
-        <p style="margin:0 0 26px;font-size:16px;font-weight:bold;letter-spacing:1px;color:#eef0f6;">GHL <span style="color:#fcc000;">VIDEO</span></p>
+      <tr><td style="background-color:#12141b;border:1px solid #242736;border-top:0;border-radius:0 0 12px 12px;padding:34px 36px 30px;font-family:'Helvetica Neue',Arial,sans-serif;">
+        <img src="https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/65bfe9c70e904b34d226f243.png" width="150" alt="GHL Video" style="display:block;width:150px;max-width:150px;height:auto;border:0;margin:0 0 20px;">
         <h1 style="margin:0 0 12px;font-size:22px;line-height:1.25;color:#eef0f6;font-weight:bold;">Set your password</h1>
         <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#9096a8;">We got a request to set or reset the password for your GHL Video portal. Choose a new one below. This link is single use and expires soon.</p>
         <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 26px;"><tr>
@@ -50,8 +50,8 @@ Body:
   <tr><td align="center" style="padding:32px 16px;">
     <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="width:480px;max-width:480px;">
       <tr><td style="height:4px;background-color:#fcc000;background-image:linear-gradient(100deg,#fcc000,#00cc00);border-radius:6px 6px 0 0;font-size:0;line-height:0;">&nbsp;</td></tr>
-      <tr><td style="background-color:#12141b;border:1px solid #242736;border-top:0;border-radius:0 0 12px 12px;padding:36px 36px 30px;font-family:'Helvetica Neue',Arial,sans-serif;">
-        <p style="margin:0 0 26px;font-size:16px;font-weight:bold;letter-spacing:1px;color:#eef0f6;">GHL <span style="color:#fcc000;">VIDEO</span></p>
+      <tr><td style="background-color:#12141b;border:1px solid #242736;border-top:0;border-radius:0 0 12px 12px;padding:34px 36px 30px;font-family:'Helvetica Neue',Arial,sans-serif;">
+        <img src="https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/65bfe9c70e904b34d226f243.png" width="150" alt="GHL Video" style="display:block;width:150px;max-width:150px;height:auto;border:0;margin:0 0 20px;">
         <h1 style="margin:0 0 12px;font-size:22px;line-height:1.25;color:#eef0f6;font-weight:bold;">Sign in to your portal</h1>
         <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#9096a8;">Here is your one-click sign-in link for the GHL Video portal. It is single use and expires soon.</p>
         <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 26px;"><tr>
@@ -100,8 +100,8 @@ Body:
   <tr><td align="center" style="padding:32px 16px;">
     <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="width:480px;max-width:480px;">
       <tr><td style="height:4px;background-color:#fcc000;background-image:linear-gradient(100deg,#fcc000,#00cc00);border-radius:6px 6px 0 0;font-size:0;line-height:0;">&nbsp;</td></tr>
-      <tr><td style="background-color:#12141b;border:1px solid #242736;border-top:0;border-radius:0 0 12px 12px;padding:36px 36px 30px;font-family:'Helvetica Neue',Arial,sans-serif;">
-        <p style="margin:0 0 26px;font-size:16px;font-weight:bold;letter-spacing:1px;color:#eef0f6;">GHL <span style="color:#fcc000;">VIDEO</span></p>
+      <tr><td style="background-color:#12141b;border:1px solid #242736;border-top:0;border-radius:0 0 12px 12px;padding:34px 36px 30px;font-family:'Helvetica Neue',Arial,sans-serif;">
+        <img src="https://storage.googleapis.com/msgsndr/s3JXyf9P6cTSxG7NfF1B/media/65bfe9c70e904b34d226f243.png" width="150" alt="GHL Video" style="display:block;width:150px;max-width:150px;height:auto;border:0;margin:0 0 20px;">
         <h1 style="margin:0 0 12px;font-size:22px;line-height:1.25;color:#eef0f6;font-weight:bold;">Your verification code</h1>
         <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#9096a8;">Enter this code to confirm it is you.</p>
         <p style="margin:0 0 6px;font-size:30px;font-weight:bold;letter-spacing:6px;color:#fcc000;font-family:'Helvetica Neue',Arial,sans-serif;">{{ .Token }}</p>
