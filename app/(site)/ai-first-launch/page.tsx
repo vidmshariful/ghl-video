@@ -1,14 +1,12 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Button } from "@/components/Button";
 import { CtaBand } from "@/components/CtaBand";
 import { DrawnBorder } from "@/components/DrawnBorder";
 import { MediaCard } from "@/components/MediaCard";
 import { Reveal, RevealItem } from "@/components/Reveal";
-import { RuleList } from "@/components/RuleList";
-import { RuledSection } from "@/components/RuledSection";
 import { SectionGlow } from "@/components/SectionGlow";
 import { SectionHead } from "@/components/SectionHead";
-import Link from "next/link";
 import { PageHero } from "@/components/pages/PageHero";
 import { LaunchCountdown } from "@/components/pages/LaunchCountdown";
 import {
@@ -34,7 +32,11 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-type LaunchState = { kind: "ready" | "draft" | "scheduled"; date?: string; src?: string | null };
+type LaunchState = {
+  kind: "ready" | "draft" | "scheduled";
+  date?: string;
+  src?: string | null;
+};
 
 /* deterministic date rendering (server + client agree) */
 function fmtDate(iso: string): string {
@@ -52,6 +54,25 @@ const usd = (cents: number) =>
     minimumFractionDigits: cents % 100 === 0 ? 0 : 2,
     maximumFractionDigits: 2,
   });
+
+function Check() {
+  return (
+    <svg
+      viewBox="0 0 14 14"
+      className="mt-[5px] h-3.5 w-3.5 shrink-0"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M2.5 7.5l3 3 6-7"
+        stroke="var(--gold)"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
 /* right-aligned single-purchase block in a card's footer row */
 function SingleBuy({
@@ -87,43 +108,19 @@ function SingleBuy({
   );
 }
 
-function PipelineCard({
-  title,
-  format,
-  statusLabel,
-  dateLabel,
-  price,
-  priceLabel,
-}: {
-  title: string;
-  format: string;
-  statusLabel: string;
-  dateLabel: string | null;
-  price: number;
-  priceLabel: string;
-}) {
+/* numbered category header, shared by both grid blocks */
+function CatHead({ index, name, line }: { index: number; name: string; line: string }) {
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex aspect-video flex-col items-center justify-center gap-2 border border-dashed border-hair bg-surface/40 px-6 text-center">
-        {dateLabel && (
-          <p className="font-mono text-price font-bold leading-none text-gold [font-variant-numeric:tabular-nums]">
-            {dateLabel}
-          </p>
-        )}
-        <p className="font-mono text-label uppercase tracking-[0.1em] text-gold">
-          {statusLabel}
+    <Reveal className="flex flex-wrap items-baseline gap-x-4 gap-y-1 border-b border-hair pb-4">
+      <RevealItem>
+        <p className="font-mono text-label uppercase tracking-[0.14em] text-gold">
+          [ 0{index} ] {name}
         </p>
-      </div>
-      <div className="flex flex-1 items-start justify-between gap-4 border-b border-hair px-1 pb-4 pt-3.5">
-        <div className="min-w-0">
-          <h3 className="font-display text-h4 font-semibold leading-snug tracking-[-0.01em] text-ink">
-            {title}
-          </h3>
-          <p className="mt-1 font-mono text-label uppercase text-dim">{format}</p>
-        </div>
-        <SingleBuy price={price} label={priceLabel} />
-      </div>
-    </div>
+      </RevealItem>
+      <RevealItem className="min-w-0">
+        <p className="max-w-[var(--measure-body)] text-body-sm text-muted">{line}</p>
+      </RevealItem>
+    </Reveal>
   );
 }
 
@@ -137,6 +134,12 @@ export default function AiFirstLaunchPage() {
     return c ? [c] : [];
   });
   const states = p.videos.states as Record<string, LaunchState>;
+  /* single-video categories pair up side by side; multi-video ones get
+     their own full-width block */
+  const singles = categories.filter((c) => c.videos.length === 1);
+  const multis = categories.filter((c) => c.videos.length > 1);
+  const catIndex = (name: string) =>
+    categories.findIndex((c) => c.name === name) + 1;
 
   const orderHref = `${checkoutHref(pack.slug)}?code=${p.code}`;
   const anchorCents = (pack.anchorPrice ?? 0) * 100;
@@ -144,20 +147,52 @@ export default function AiFirstLaunchPage() {
   const discountCents = Math.round((regularCents * p.percent) / 100);
   const launchCents = regularCents - discountCents;
 
+  /* one card for any watchable video (published or supplied draft) */
+  const videoCard = (v: (typeof pack.categories)[number]["videos"][number]) => {
+    const state = states[v.title];
+    const single = premadeBySlugTitle[v.title];
+    const price = single?.price ?? 495;
+    const previewSub = state?.date
+      ? `${p.videos.previewNote}, ${p.videos.scheduledPrefix.toLowerCase()} ${fmtDate(state.date)}`
+      : p.videos.previewNote;
+    return (
+      <MediaCard
+        src={(v.src ?? state?.src) as string}
+        poster={v.poster}
+        title={v.title}
+        meta={v.format}
+        metaSub={v.src ? p.videos.liveNote : previewSub}
+        action={
+          <SingleBuy
+            price={price}
+            label={
+              v.src
+                ? p.videos.singleLabel
+                : `${p.videos.singleLabel}, ${p.videos.atRelease}`
+            }
+            href={v.src && single ? checkoutHref(single.slug) : undefined}
+          />
+        }
+      />
+    );
+  };
+
   return (
     <>
-      {/* 1. hero: the offer, the clock, the one button */}
+      {/* 1. hero: the offer, the clock, the code, the one button */}
       <PageHero
         chip={p.hero.chip}
         headline={p.hero.headline}
         accent={p.hero.accent}
         lede={p.hero.lede}
-        signal={`Code ${p.code}, 30% off`}
       >
         <LaunchCountdown
           deadlineIso={p.deadlineIso}
           deadlineLabel={p.deadlineLabel}
           endsPrefix={p.countdown.endsPrefix}
+          code={p.code}
+          codeLabel={p.countdown.codeLabel}
+          appliedNote={p.countdown.appliedNote}
           orderHref={orderHref}
           orderLabel={cta.orderPremade}
           videosLabel={p.countdown.videosLabel}
@@ -167,7 +202,8 @@ export default function AiFirstLaunchPage() {
         />
       </PageHero>
 
-      {/* 2. the nine videos and their pipeline states */}
+      {/* 2. the nine videos: single-video categories side by side and
+          big, then the features two-up, then the release schedule */}
       <section id="videos" data-bp-idx="2" className="relative scroll-mt-28 section-pad">
         <DrawnBorder />
         <div className="shell">
@@ -178,141 +214,168 @@ export default function AiFirstLaunchPage() {
             accent={p.videos.accent}
             intro={p.videos.intro}
           />
-          <div className="mt-12 grid gap-14">
-            {categories.map((cat, ci) => (
+
+          <div className="mt-12 grid items-start gap-x-8 gap-y-14 lg:grid-cols-2">
+            {singles.map((cat) => (
               <div key={cat.name}>
-                {/* category header: numbered, name, and its one-line pitch */}
-                <Reveal className="flex flex-wrap items-baseline gap-x-4 gap-y-1 border-b border-hair pb-4">
-                  <RevealItem>
-                    <p className="font-mono text-label uppercase tracking-[0.14em] text-gold">
-                      [ 0{ci + 1} ] {cat.name}
-                    </p>
-                  </RevealItem>
-                  <RevealItem className="min-w-0">
-                    <p className="max-w-[var(--measure-body)] text-body-sm text-muted">
-                      {cat.line}
-                    </p>
-                  </RevealItem>
-                </Reveal>
-                <Reveal className="mt-7 grid items-stretch gap-x-5 gap-y-8 md:grid-cols-2 lg:grid-cols-3">
-                  {cat.videos.map((v) => {
-                    const state = states[v.title];
-                    const single = premadeBySlugTitle[v.title];
-                    const price = single?.price ?? 495;
-                    /* a supplied draft cut carries its publish date */
-                    const previewSub = state?.date
-                      ? `${p.videos.previewNote}, ${p.videos.scheduledPrefix.toLowerCase()} ${fmtDate(state.date)}`
-                      : p.videos.previewNote;
-                    if (v.src || state?.src) {
-                      /* published, or a ready/draft preview whose clip has
-                         been supplied; singles sell only once published */
-                      return (
-                        <RevealItem key={v.title} className="h-full">
-                          <MediaCard
-                            src={(v.src ?? state?.src) as string}
-                            poster={v.poster}
-                            title={v.title}
-                            meta={v.format}
-                            metaSub={v.src ? p.videos.liveNote : previewSub}
-                            action={
-                              <SingleBuy
-                                price={price}
-                                label={v.src ? p.videos.singleLabel : p.videos.atRelease}
-                                href={
-                                  v.src && single ? checkoutHref(single.slug) : undefined
-                                }
-                              />
-                            }
-                          />
-                        </RevealItem>
-                      );
-                    }
-                    const scheduled = state?.kind === "scheduled" && state.date;
-                    return (
-                      <RevealItem key={v.title} className="h-full">
-                        <PipelineCard
-                          title={v.title}
-                          format={v.format}
-                          statusLabel={
-                            scheduled
-                              ? p.videos.scheduledPrefix
-                              : state?.kind === "draft"
-                                ? p.videos.draftLabel
-                                : p.videos.readyLabel
-                          }
-                          dateLabel={scheduled ? fmtDate(state.date!) : null}
-                          price={price}
-                          priceLabel={p.videos.atRelease}
-                        />
-                      </RevealItem>
-                    );
-                  })}
+                <CatHead index={catIndex(cat.name)} name={cat.name} line={cat.line} />
+                <Reveal className="mt-7">
+                  <RevealItem>{videoCard(cat.videos[0])}</RevealItem>
                 </Reveal>
               </div>
             ))}
           </div>
+
+          {multis.map((cat) => {
+            const playable = cat.videos.filter(
+              (v) => v.src || states[v.title]?.src,
+            );
+            const scheduled = cat.videos.filter(
+              (v) => !v.src && !states[v.title]?.src,
+            );
+            return (
+              <div key={cat.name} className="mt-16">
+                <CatHead index={catIndex(cat.name)} name={cat.name} line={cat.line} />
+                <Reveal className="mt-7 grid items-stretch gap-x-8 gap-y-10 sm:grid-cols-2">
+                  {playable.map((v) => (
+                    <RevealItem key={v.title} className="h-full">
+                      {videoCard(v)}
+                    </RevealItem>
+                  ))}
+                </Reveal>
+
+                {scheduled.length > 0 && (
+                  <Reveal className="mt-12">
+                    <RevealItem>
+                      <p className="font-mono text-label uppercase tracking-[0.14em] text-dim">
+                        [ {p.videos.scheduleLabel} ]
+                      </p>
+                      <ul className="mt-2 border-b border-hair">
+                        {scheduled.map((v) => {
+                          const state = states[v.title];
+                          const single = premadeBySlugTitle[v.title];
+                          const price = single?.price ?? 495;
+                          return (
+                            <li
+                              key={v.title}
+                              className="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-1.5 border-t border-hair py-4"
+                            >
+                              <div className="flex min-w-0 flex-wrap items-baseline gap-x-4 gap-y-1">
+                                {state?.date && (
+                                  <span className="font-mono text-label uppercase text-gold [font-variant-numeric:tabular-nums]">
+                                    [ {fmtDate(state.date)} ]
+                                  </span>
+                                )}
+                                <span className="font-display text-h4 font-semibold leading-snug text-ink">
+                                  {v.title}
+                                </span>
+                                <span className="font-mono text-label uppercase text-dim">
+                                  {v.format}
+                                </span>
+                              </div>
+                              <span className="shrink-0 font-mono text-label uppercase text-muted [font-variant-numeric:tabular-nums]">
+                                ${price.toLocaleString("en-US")}{" "}
+                                <span className="text-dim">{p.videos.atRelease}</span>
+                              </span>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </RevealItem>
+                  </Reveal>
+                )}
+              </div>
+            );
+          })}
         </div>
       </section>
 
-      {/* 3. the delivery promise, in plain rules */}
-      <RuledSection
-        bpIdx={3}
-        index={3}
-        chip={p.terms.chip}
-        headline={p.terms.headline}
-        accent={p.terms.accent}
-      >
-        <div className="px-6 py-6 md:px-8">
-          <RuleList items={p.terms.items} framed={false} />
-        </div>
-      </RuledSection>
-
-      {/* 4. the price story */}
-      <section data-bp-idx="4" className="relative overflow-x-clip section-pad">
+      {/* 3. the price story: the three delivery numbers, then the card */}
+      <section data-bp-idx="3" className="relative overflow-x-clip section-pad">
         <SectionGlow position="right" />
         <div className="shell relative">
           <SectionHead
-            index={4}
+            index={3}
             chip={p.price.chip}
             headline={p.price.headline}
             accent={p.price.accent}
             center
           />
-          <Reveal className="mx-auto mt-12 max-w-xl">
+
+          <Reveal className="mx-auto mt-12 max-w-3xl">
             <RevealItem>
-              <div className="border border-dashed border-hair p-8 text-center md:p-10">
-                <div className="grid gap-3">
-                  <p className="flex items-baseline justify-between gap-6 text-body text-dim">
-                    <span>{p.price.anchorNote}</span>
-                    <s className="font-mono [font-variant-numeric:tabular-nums]">
-                      {usd(anchorCents)}
-                    </s>
-                  </p>
-                  <p className="flex items-baseline justify-between gap-6 text-body text-muted">
-                    <span>{p.price.regularNote}</span>
-                    <s className="font-mono [font-variant-numeric:tabular-nums]">
+              <div className="grid gap-px overflow-hidden rounded-card border border-hair bg-hair sm:grid-cols-3">
+                {p.price.stats.map((s) => (
+                  <div key={s.l} className="bg-canvas px-6 py-7 text-center">
+                    <p className="font-mono text-price font-bold leading-none text-gold [font-variant-numeric:tabular-nums]">
+                      {s.v}
+                    </p>
+                    <p className="mt-2 font-mono text-label uppercase text-dim">{s.l}</p>
+                  </div>
+                ))}
+              </div>
+            </RevealItem>
+          </Reveal>
+
+          <Reveal className="mx-auto mt-10 max-w-xl">
+            <RevealItem>
+              <div className="relative flex flex-col border border-dashed border-hair bg-[linear-gradient(180deg,rgba(252,192,0,0.13),rgba(252,192,0,0.01)_70%)] p-7 md:p-8">
+                <span className="absolute -top-[13px] left-1/2 -translate-x-1/2 whitespace-nowrap border border-dashed border-gold/60 bg-canvas px-3 py-1 font-mono text-label uppercase text-gold">
+                  {p.price.tag}
+                </span>
+
+                <h3 className="font-display text-h3 text-ink">{pack.name}</h3>
+
+                <p className="mt-6 flex items-baseline gap-2">
+                  <span className="font-mono text-stat-lg font-bold leading-none text-gold [font-variant-numeric:tabular-nums]">
+                    {usd(launchCents)}
+                  </span>
+                  <span className="font-mono text-label uppercase text-dim">
+                    {p.price.priceNote}
+                  </span>
+                </p>
+                <p className="mt-3 flex flex-wrap items-baseline gap-x-5 gap-y-1">
+                  <span className="flex items-baseline gap-2">
+                    <span className="font-mono text-body text-dim line-through [font-variant-numeric:tabular-nums]">
                       {usd(regularCents)}
-                    </s>
-                  </p>
-                  <p className="flex items-baseline justify-between gap-6 border-t border-hair pt-4 text-body text-ink">
-                    <span>{p.price.yourNote}</span>
-                    <span className="font-display text-price font-semibold text-gold [font-variant-numeric:tabular-nums]">
-                      {usd(launchCents)}
                     </span>
-                  </p>
-                </div>
-                <p className="mt-5 text-body-sm text-muted">
-                  You save {usd(discountCents)} in this window.
+                    <span className="font-mono text-label uppercase text-muted">
+                      {p.price.regularNote}
+                    </span>
+                  </span>
+                  <span className="flex items-baseline gap-2">
+                    <span className="font-mono text-body text-dim line-through [font-variant-numeric:tabular-nums]">
+                      {usd(anchorCents)}
+                    </span>
+                    <span className="font-mono text-label uppercase text-muted">
+                      {p.price.anchorNote}
+                    </span>
+                  </span>
                 </p>
-                <p className="mx-auto mt-3 max-w-[46ch] text-body-sm text-muted">
-                  {p.price.deliveryNote}
+                <p className="mt-2 font-mono text-label uppercase text-gold">
+                  save {usd(discountCents)}
                 </p>
-                <div className="mt-7">
-                  <Button href={orderHref} variant="gradient" size="lg">
-                    {cta.orderPremade}
-                  </Button>
-                </div>
-                <p className="mt-4 font-mono text-label uppercase text-dim">
+
+                <div className="my-6 border-t border-dashed border-hair" aria-hidden="true" />
+
+                <ul className="space-y-3">
+                  {p.price.cardFeatures.map((f) => (
+                    <li key={f} className="flex items-start gap-3">
+                      <Check />
+                      <span className="text-body leading-relaxed text-muted">{f}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <Button
+                  href={orderHref}
+                  variant="gradient"
+                  size="md"
+                  className="mt-7 w-full"
+                >
+                  {cta.orderPremade}
+                </Button>
+                <p className="mt-4 text-center font-mono text-label uppercase text-dim">
                   {p.price.autoNote}
                 </p>
               </div>
@@ -321,9 +384,9 @@ export default function AiFirstLaunchPage() {
         </div>
       </section>
 
-      {/* 5. closing */}
+      {/* 4. closing */}
       <CtaBand
-        bpIdx={5}
+        bpIdx={4}
         headline={p.closing.headline}
         accent={p.closing.accent}
         sub={p.closing.sub}

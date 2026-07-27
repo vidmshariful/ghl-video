@@ -181,6 +181,8 @@ export const pages = {
     deadlineLabel: "July 30, 11:59 PM ET",
     countdown: {
       endsPrefix: "Offer ends",
+      codeLabel: "Your code",
+      appliedNote: "Applied automatically at checkout",
       videosLabel: "See the nine videos",
       closedLine:
         "This window has closed. The pack is still yours at the regular price.",
@@ -214,42 +216,33 @@ export const pages = {
         "Mobile App, Run Your Business From Your Phone": { kind: "scheduled", date: "2026-08-07" },
       },
       liveNote: "Published, ships in 5 days",
-      readyLabel: "Ready, preview landing here",
-      draftLabel: "Draft cut, preview landing here",
       previewNote: "Draft preview",
       scheduledPrefix: "Publishing",
+      scheduleLabel: "The release schedule",
       singleLabel: "Single video",
-      atRelease: "Single video, at release",
-    },
-    terms: {
-      chip: "How delivery works",
-      headline: "Order once,",
-      accent: "collect all nine.",
-      items: [
-        {
-          title: "Published videos",
-          line: "The four published videos are branded to your SaaS and delivered within 5 days of your order.",
-        },
-        {
-          title: "Videos still in production",
-          line: "Each remaining video is branded and delivered to you within 5 days of the date it publishes.",
-        },
-        {
-          title: "One price, the whole pack",
-          line: "Your order covers all nine videos. Anything that publishes after you order costs nothing extra.",
-        },
-      ],
+      atRelease: "at release",
     },
     price: {
       chip: "The launch price",
       headline: "The math for",
       accent: "the next 72 hours.",
+      /* the delivery promise, as the three numbers that matter */
+      stats: [
+        { v: "5 days", l: "to your branded videos" },
+        { v: "5 days", l: "from each new release" },
+        { v: "$0", l: "for videos that publish later" },
+      ],
+      tag: "Existing clients, 72 hours",
+      priceNote: "one time",
       anchorNote: "pack value",
       regularNote: "public pack price",
-      yourNote: "your price with code AIFIRST30",
-      deliveryNote:
-        "Published videos ship branded to your SaaS within 5 days of your order. Videos still in production arrive within 5 days of each release, covered by this one price.",
-      autoNote: "The code applies automatically at checkout.",
+      cardFeatures: [
+        "All nine videos, branded to your SaaS",
+        "One master explainer, one platform demo, seven feature explainers",
+        "Professional voiceover and full commercial rights",
+        "Every future release in this pack included",
+      ],
+      autoNote: "Code AIFIRST30 applies automatically at checkout.",
     },
     /* while the window runs, the public premade page shows the pack as
        client early access instead of a live buy button */
