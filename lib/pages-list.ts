@@ -25,6 +25,7 @@ export const sitePages: readonly SitePage[] = [
   { name: "Knowledge Hub", path: "/blog/", inNav: true, note: "stub, noindex" },
   { name: "Studio Insights", path: "/studio-insights/", inNav: true },
   { name: "Free Resources", path: "/resources/", inNav: true, note: "stub, noindex" },
+  { name: "AI First SaaS Pack Launch", path: "/ai-first-launch/", inNav: false, note: "unlisted campaign, noindex, email only" },
   { name: "Privacy Policy", path: "/legal/privacy/", inNav: false, note: "footer" },
   { name: "Terms", path: "/legal/terms/", inNav: false, note: "footer" },
   { name: "Refund Policy", path: "/legal/refund/", inNav: false, note: "footer" },

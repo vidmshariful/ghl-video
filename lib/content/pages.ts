@@ -163,6 +163,88 @@ export const pages = {
       cta: { label: cta.bookACall.label, href: cta.bookACall.href },
     },
   },
+  /* The unlisted 72-hour existing-customer launch page for the AI First
+     SaaS Pack (/ai-first-launch/, noindex, reached only from the campaign
+     email). The code and deadline here mirror the AIFIRST30 row in the
+     coupons table; change both together or the page will promise what
+     checkout no longer honors. */
+  launch: {
+    hero: {
+      chip: "Existing clients only",
+      headline: "Your early window on",
+      accent: "the AI First SaaS Pack.",
+      lede: "You already run our videos in your funnel, so you get the full nine-video AI pack before the public does. 30% off with code AIFIRST30, for the next 72 hours only.",
+    },
+    code: "AIFIRST30",
+    percent: 30,
+    deadlineIso: "2026-07-31T03:59:59Z",
+    deadlineLabel: "July 30, 11:59 PM ET",
+    countdown: {
+      endsPrefix: "Offer ends",
+      videosLabel: "See the nine videos",
+      closedLine:
+        "This window has closed. The pack is still yours at the regular price.",
+      closedCtaLabel: "See the pack",
+      closedHref: "/premade/",
+    },
+    videos: {
+      chip: "The nine videos",
+      headline: "Every video in the pack,",
+      accent: "and where it stands.",
+      intro:
+        "Four are published and ship branded to your SaaS within 5 days of your order. The rest are in production: each one is branded and delivered to you within 5 days of its release, at no extra charge.",
+      /* Campaign status for the five unpublished videos, keyed by catalog
+         title. PLACEHOLDER: the three scheduled dates below are stand-ins
+         until Shariful confirms the real targets; the ready and draft
+         previews get their video files when he sends them (data-only
+         swap: set src to the clip URL). */
+      states: {
+        "Social Media Planner + Content AI": { kind: "ready", src: null },
+        "Lead-to-Close With AI": { kind: "draft", src: null },
+        "AI Website + Funnel Builder": { kind: "scheduled", date: "2026-08-07" },
+        "Ask AI, Your In-Platform Assistant": { kind: "scheduled", date: "2026-08-14" },
+        "Mobile App, Run Your Business From Your Phone": { kind: "scheduled", date: "2026-08-21" },
+      },
+      liveNote: "Published, ships in 5 days",
+      readyLabel: "Ready, preview landing here",
+      draftLabel: "Draft cut, preview landing here",
+      scheduledPrefix: "Publishing",
+      pipelineNote: "Branded for you within 5 days of release",
+    },
+    terms: {
+      chip: "How delivery works",
+      headline: "Order once,",
+      accent: "collect all nine.",
+      items: [
+        {
+          title: "Published videos",
+          line: "The four published videos are branded to your SaaS and delivered within 5 days of your order.",
+        },
+        {
+          title: "Videos still in production",
+          line: "Each remaining video is branded and delivered to you within 5 days of the date it publishes.",
+        },
+        {
+          title: "One price, the whole pack",
+          line: "Your order covers all nine videos. Anything that publishes after you order costs nothing extra.",
+        },
+      ],
+    },
+    price: {
+      chip: "The launch price",
+      headline: "The math for",
+      accent: "the next 72 hours.",
+      anchorNote: "pack value",
+      regularNote: "public pack price",
+      yourNote: "your price with code AIFIRST30",
+      autoNote: "The code applies automatically at checkout.",
+    },
+    closing: {
+      headline: "72 hours,",
+      accent: "then it goes public.",
+      sub: "Order in this window and the nine-video pack is yours at 30% off, branded to your SaaS as each video ships.",
+    },
+  },
   custom: {
     hero: {
       chip: "Custom Production",
