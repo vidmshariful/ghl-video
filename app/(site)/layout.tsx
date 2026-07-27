@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { getChrome } from "@/lib/chrome";
 import { Header } from "@/components/Header";
+import { NoticeBar } from "@/components/NoticeBar";
 import { Footer } from "@/components/Footer";
 import { JsonLd } from "@/components/JsonLd";
 import { PageFrame } from "@/components/PageFrame";
 import { ScrollRuler } from "@/components/ScrollRuler";
 import { organizationSchema, websiteSchema } from "@/lib/schema";
-import { site } from "@/lib/site";
+import { site, siteNotice } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: {
@@ -46,14 +47,15 @@ export default async function SiteLayout({
       <JsonLd schema={[organizationSchema(), websiteSchema()]} />
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[110] focus:rounded-[3px] focus:bg-gold focus:px-4 focus:py-2.5 focus:text-body focus:font-semibold focus:text-canvas"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-12 focus:z-[110] focus:rounded-[3px] focus:bg-gold focus:px-4 focus:py-2.5 focus:text-body focus:font-semibold focus:text-canvas"
       >
         Skip to content
       </a>
+      {siteNotice ? <NoticeBar notice={siteNotice} /> : null}
       <PageFrame />
       <ScrollRuler />
-      <Header nav={chrome.nav} services={chrome.services} />
-      <main id="main" className="relative z-10 flex-1">
+      <Header nav={chrome.nav} services={chrome.services} hasNotice={!!siteNotice} />
+      <main id="main" className={`relative z-10 flex-1${siteNotice ? " pt-9" : ""}`}>
         {children}
       </main>
       <Footer chrome={chrome} />

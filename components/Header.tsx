@@ -324,9 +324,13 @@ function ResourcesMenu({
 export function Header({
   nav = staticNavLinks as unknown as { label: string; href: string }[],
   services = staticServices as unknown as ChromeService[],
+  hasNotice = false,
 }: {
   nav?: { label: string; href: string }[];
   services?: ChromeService[];
+  /* when the soft-launch notice bar is present, the header drops below
+     it (the page offset is bumped to match in the site layout) */
+  hasNotice?: boolean;
 }) {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
@@ -360,7 +364,7 @@ export function Header({
 
   return (
     <header
-      className={`fixed inset-x-0 top-0 z-50 border-b border-hair transition-all duration-300 ${
+      className={`fixed inset-x-0 ${hasNotice ? "top-9" : "top-0"} z-50 border-b border-hair transition-all duration-300 ${
         scrolled
           ? "bg-canvas/85 backdrop-blur-md"
           : "bg-canvas/40 backdrop-blur-sm"

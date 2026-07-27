@@ -72,6 +72,17 @@ export const otherBrands = [
   { name: "socialX", url: "https://socialx.studio", domain: "socialx.studio" },
 ] as const;
 
+/* Soft-launch notice bar across the top of every marketing page. Set
+   siteNotice to null to remove the bar (the header and page offset
+   collapse back automatically). `short` shows on mobile, `long` on
+   wider screens; the email renders as a mailto link after it. */
+export type SiteNotice = { short: string; long: string; email: string };
+export const siteNotice: SiteNotice | null = {
+  short: "Still improving the site. Contact",
+  long: "We're still improving the site. If anything goes wrong, contact us at",
+  email: "hi@ghlvideo.com",
+};
+
 /* Social profiles from the live site. TODO: LinkedIn URL pending from
  * Shariful (no profile found on the current site). */
 export const socials = [
