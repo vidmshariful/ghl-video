@@ -159,7 +159,19 @@ async function recoverOrphanPaidIntent(
       currency: pi.currency ?? product.currency,
       status: "pending",
       stripe_payment_intent_id: pi.id,
-      metadata: { sku: product.sku, base_cents: product.price_cents, recovered: true },
+      metadata: {
+        sku: product.sku,
+        base_cents: product.price_cents,
+        recovered: true,
+        ...(typeof pi.metadata?.coupon_code === "string" && pi.metadata.coupon_code
+          ? {
+              coupon: {
+                code: pi.metadata.coupon_code,
+                discount_cents: Number(pi.metadata.discount_cents) || 0,
+              },
+            }
+          : {}),
+      },
     })
     .select("id")
     .single();

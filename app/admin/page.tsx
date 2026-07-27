@@ -11,6 +11,7 @@ import { OrdersScreen } from "./OrdersScreen";
 import { SubscriptionsScreen } from "./SubscriptionsScreen";
 import { ProductsScreen } from "./ProductsScreen";
 import { BumpsScreen } from "./BumpsScreen";
+import { CouponsScreen } from "./CouponsScreen";
 import { CustomersScreen } from "./CustomersScreen";
 import { StudioScreen } from "./StudioScreen";
 
@@ -601,6 +602,7 @@ export default function AdminPage() {
     { key: "subscriptions", label: "Subscriptions" },
     { key: "products", label: "Products & Pricing" },
     { key: "bumps", label: "Order Bumps" },
+    { key: "coupons", label: "Coupons" },
     { key: "customers", label: "Customers" },
     { key: "studio", label: "Studio Insights" },
     { key: "code", label: "Header & Footer Code" },
@@ -663,6 +665,8 @@ export default function AdminPage() {
             <ProductsScreen />
           ) : view === "bumps" ? (
             <BumpsScreen />
+          ) : view === "coupons" ? (
+            <CouponsScreen />
           ) : view === "customers" ? (
             <CustomersScreen />
           ) : view === "studio" ? (

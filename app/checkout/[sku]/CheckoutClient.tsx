@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import {
   Elements,
@@ -83,7 +83,11 @@ type CommonProps = {
   bumps: CheckoutBump[];
   rating: string;
   clients: number;
+  /* a ?code= in the checkout URL (campaign links); auto-applied on load */
+  initialCouponCode?: string | null;
 };
+
+type AppliedCoupon = { code: string; label: string; discountCents: number };
 
 export function CheckoutClient(props: CommonProps) {
   return props.type === "subscription" ? (
@@ -107,6 +111,7 @@ function OneTimeCheckout({
   included,
   bumps,
   rating,
+  initialCouponCode,
 }: CommonProps) {
   const [details, setDetails] = useState<Details>(EMPTY);
   const [selected, setSelected] = useState<string[]>([]);
@@ -115,6 +120,43 @@ function OneTimeCheckout({
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
   const [initError, setInitError] = useState<string | null>(null);
+  const [coupon, setCoupon] = useState<AppliedCoupon | null>(null);
+  const [couponErr, setCouponErr] = useState<string | null>(null);
+  const [couponBusy, setCouponBusy] = useState(false);
+
+  /* display-time check only; /finalize re-validates at pay time */
+  const applyCoupon = useCallback(
+    async (raw: string) => {
+      const attempt = raw.trim();
+      if (!attempt) return;
+      setCouponBusy(true);
+      setCouponErr(null);
+      try {
+        const r = await fetch("/api/checkout/coupon", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: attempt, sku }),
+        });
+        const j = await r.json();
+        if (!r.ok) throw new Error(j.error ?? "Could not check that code.");
+        if (!j.valid) {
+          setCoupon(null);
+          setCouponErr(j.reason ?? "That code is not valid.");
+        } else {
+          setCoupon({ code: j.code, label: j.label, discountCents: j.discountCents });
+        }
+      } catch (err) {
+        setCouponErr((err as Error).message);
+      } finally {
+        setCouponBusy(false);
+      }
+    },
+    [sku],
+  );
+
+  useEffect(() => {
+    if (initialCouponCode) applyCoupon(initialCouponCode);
+  }, [initialCouponCode, applyCoupon]);
 
   useEffect(() => {
     let active = true;
@@ -141,7 +183,8 @@ function OneTimeCheckout({
 
   const chosen = bumps.filter((b) => selected.includes(b.id));
   const bumpsCents = chosen.reduce((s, b) => s + b.priceCents, 0);
-  const totalCents = priceCents + bumpsCents;
+  const discountCents = coupon?.discountCents ?? 0;
+  const totalCents = Math.max(0, priceCents + bumpsCents - discountCents);
   const totalLabel = money(totalCents, currency);
 
   const set =
@@ -177,6 +220,7 @@ function OneTimeCheckout({
                   paymentIntentId={paymentIntentId}
                   details={details}
                   selected={selected}
+                  couponCode={coupon?.code ?? null}
                   totalLabel={totalLabel}
                 />
               </Elements>
@@ -203,7 +247,114 @@ function OneTimeCheckout({
         currency={currency}
         totalLabel={totalLabel}
         rating={rating}
+        couponBox={
+          <CouponBox
+            coupon={coupon}
+            error={couponErr}
+            busy={couponBusy}
+            initialInput={initialCouponCode ?? ""}
+            onApply={applyCoupon}
+            onRemove={() => {
+              setCoupon(null);
+              setCouponErr(null);
+            }}
+          />
+        }
+        discount={
+          coupon
+            ? {
+                label: `Code ${coupon.code}, ${coupon.label}`,
+                amountLabel: `-${money(coupon.discountCents, currency)}`,
+              }
+            : null
+        }
       />
+    </div>
+  );
+}
+
+/* the "Have a code?" box in the order summary (one-time checkout only) */
+function CouponBox({
+  coupon,
+  error,
+  busy,
+  initialInput,
+  onApply,
+  onRemove,
+}: {
+  coupon: AppliedCoupon | null;
+  error: string | null;
+  busy: boolean;
+  initialInput: string;
+  onApply: (code: string) => void;
+  onRemove: () => void;
+}) {
+  const [open, setOpen] = useState(Boolean(initialInput));
+  const [input, setInput] = useState(initialInput.toUpperCase());
+
+  if (coupon) {
+    return (
+      <div className="mt-6 flex items-center justify-between gap-3 rounded-[8px] border border-dashed border-gold/60 bg-gold/[0.06] px-3.5 py-3">
+        <p className="min-w-0 text-body-sm">
+          <span className="font-mono font-semibold uppercase tracking-[0.08em] text-gold">
+            {coupon.code}
+          </span>{" "}
+          <span className="text-muted">applied, {coupon.label}</span>
+        </p>
+        <button
+          type="button"
+          onClick={onRemove}
+          className="tap shrink-0 font-mono text-label uppercase text-dim transition-colors hover:text-error"
+        >
+          Remove
+        </button>
+      </div>
+    );
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="tap mt-6 self-start font-mono text-label uppercase tracking-[0.08em] text-muted transition-colors hover:text-gold"
+      >
+        Have a code?
+      </button>
+    );
+  }
+
+  return (
+    <div className="mt-6">
+      <div className="flex gap-2">
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value.toUpperCase())}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              if (!busy) onApply(input);
+            }
+          }}
+          maxLength={32}
+          placeholder="CODE"
+          aria-label="Discount code"
+          className="w-full min-w-0 rounded-[4px] border border-hair bg-canvas px-3.5 py-2.5 font-mono text-body-sm uppercase tracking-[0.08em] text-ink placeholder:text-dim/70 focus:border-gold focus:outline-none"
+        />
+        <button
+          type="button"
+          onClick={() => onApply(input)}
+          disabled={busy || !input.trim()}
+          className="tap shrink-0 rounded-[4px] border border-gold/50 bg-gold/10 px-4 py-2.5 font-mono text-label uppercase text-gold transition-colors hover:bg-gold/20 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {busy ? "Checking" : "Apply"}
+        </button>
+      </div>
+      {error ? (
+        <p role="alert" className="mt-2 text-body-sm text-error">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -212,11 +363,13 @@ function PayBox({
   paymentIntentId,
   details,
   selected,
+  couponCode,
   totalLabel,
 }: {
   paymentIntentId: string;
   details: Details;
   selected: string[];
+  couponCode: string | null;
   totalLabel: string;
 }) {
   const stripe = useStripe();
@@ -234,7 +387,12 @@ function PayBox({
       const r = await fetch("/api/checkout/finalize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paymentIntentId, ...details, bumpIds: selected }),
+        body: JSON.stringify({
+          paymentIntentId,
+          ...details,
+          bumpIds: selected,
+          couponCode: couponCode ?? undefined,
+        }),
       });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error ?? "Could not complete checkout.");
@@ -581,6 +739,8 @@ function OrderSummary({
   currency,
   totalLabel,
   rating,
+  couponBox = null,
+  discount = null,
 }: {
   code: string | null;
   name: string;
@@ -595,6 +755,8 @@ function OrderSummary({
   currency: string;
   totalLabel: string;
   rating: string;
+  couponBox?: React.ReactNode;
+  discount?: { label: string; amountLabel: string } | null;
 }) {
   return (
     <aside className="flex h-full flex-col bg-canvas">
@@ -680,6 +842,7 @@ function OrderSummary({
 
         {/* totals pinned to the bottom so the card fills its height */}
         <div className="mt-auto">
+          {couponBox}
           <div className="mt-6 grid gap-2 border-t border-hair pt-5">
             <div className="flex items-baseline justify-between text-body-sm text-muted">
               <span>Subtotal</span>
@@ -691,6 +854,12 @@ function OrderSummary({
                 <span className="font-mono [font-variant-numeric:tabular-nums]">+{money(b.priceCents, currency)}</span>
               </div>
             ))}
+            {discount ? (
+              <div className="flex items-baseline justify-between text-body-sm text-gold">
+                <span className="truncate pr-3">{discount.label}</span>
+                <span className="font-mono [font-variant-numeric:tabular-nums]">{discount.amountLabel}</span>
+              </div>
+            ) : null}
           </div>
           <div className="mt-4 flex items-baseline justify-between border-t border-hair pt-4">
             <span className="font-display text-h4 text-ink">Total</span>
