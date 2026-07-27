@@ -74,12 +74,12 @@ export function LaunchCountdown({
           {units.map((u, i) => (
             <div
               key={u}
-              className="min-w-[4.6rem] border border-hair bg-surface/60 px-3 py-4 text-center [&:not(:first-child)]:border-l-0 md:min-w-[6rem] md:px-4 md:py-5"
+              className="min-w-[3.4rem] border border-hair bg-surface/60 px-2.5 py-3 text-center [&:not(:first-child)]:border-l-0 md:min-w-[4.3rem] md:px-3.5 md:py-3.5"
             >
-              <p className="font-mono text-[2.1rem] font-bold leading-none text-gold [font-variant-numeric:tabular-nums] md:text-[3rem]">
+              <p className="font-mono text-[1.5rem] font-bold leading-none text-gold [font-variant-numeric:tabular-nums] md:text-[2.1rem]">
                 {parts[i]}
               </p>
-              <p className="mt-2 font-mono text-label uppercase tracking-[0.12em] text-dim">
+              <p className="mt-1.5 font-mono text-label uppercase tracking-[0.12em] text-dim">
                 {u}
               </p>
             </div>

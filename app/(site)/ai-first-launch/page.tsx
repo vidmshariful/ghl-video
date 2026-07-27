@@ -308,35 +308,35 @@ export default function AiFirstLaunchPage() {
                 <div className="grid md:grid-cols-2">
                   {/* left: the math, as ruled rows that add up against
                       the per-video prices shown above */}
-                  <div className="p-7 md:p-9">
+                  <div className="min-w-0 p-5 md:p-9">
                     <h3 className="font-display text-h3 text-ink">{pack.name}</h3>
                     <div className="mt-7">
-                      <div className="flex items-baseline justify-between gap-6 py-3">
+                      <div className="flex items-baseline justify-between gap-4 py-3">
                         <span className="text-body text-muted">{p.price.valueNote}</span>
                         <s className="font-mono text-body text-dim [font-variant-numeric:tabular-nums]">
                           {usd(valueCents)}
                         </s>
                       </div>
-                      <div className="flex items-baseline justify-between gap-6 border-t border-dashed border-hair py-3">
+                      <div className="flex items-baseline justify-between gap-4 border-t border-dashed border-hair py-3">
                         <span className="text-body text-muted">{p.price.regularNote}</span>
                         <s className="font-mono text-body text-dim [font-variant-numeric:tabular-nums]">
                           {usd(regularCents)}
                         </s>
                       </div>
-                      <div className="flex items-baseline justify-between gap-6 border-t border-dashed border-hair py-4">
+                      <div className="flex items-baseline justify-between gap-4 border-t border-dashed border-hair py-4">
                         <span className="text-body font-medium text-ink">
                           {p.price.yourNote}
                         </span>
-                        <span className="flex items-baseline gap-2">
-                          <span className="font-mono text-stat-lg font-bold leading-none text-gold [font-variant-numeric:tabular-nums]">
+                        <span className="flex flex-col items-end">
+                          <span className="font-mono text-[1.75rem] font-bold leading-none text-gold [font-variant-numeric:tabular-nums] md:text-stat-lg">
                             {usd(launchCents)}
                           </span>
-                          <span className="font-mono text-label uppercase text-dim">
+                          <span className="mt-1 font-mono text-label uppercase text-dim">
                             {p.price.priceNote}
                           </span>
                         </span>
                       </div>
-                      <div className="flex items-baseline justify-between gap-6 border-t border-dashed border-hair py-3">
+                      <div className="flex items-baseline justify-between gap-4 border-t border-dashed border-hair py-3">
                         <span className="text-body text-muted">{p.price.saveNote}</span>
                         <span className="font-mono text-body font-semibold text-gold [font-variant-numeric:tabular-nums]">
                           {usd(discountCents)}, {p.percent}% off
@@ -346,7 +346,7 @@ export default function AiFirstLaunchPage() {
                   </div>
 
                   {/* right: what the order covers */}
-                  <div className="border-t border-dashed border-hair p-7 md:border-l md:border-t-0 md:p-9">
+                  <div className="min-w-0 border-t border-dashed border-hair p-5 md:border-l md:border-t-0 md:p-9">
                     <p className="font-mono text-label uppercase tracking-[0.12em] text-dim">
                       {p.price.includedLabel}
                     </p>
@@ -361,7 +361,7 @@ export default function AiFirstLaunchPage() {
                   </div>
                 </div>
 
-                <div className="border-t border-dashed border-hair p-7 md:px-9">
+                <div className="border-t border-dashed border-hair p-5 md:px-9 md:py-7">
                   <Button href={orderHref} variant="gradient" size="md" className="w-full">
                     {cta.orderPremade}
                   </Button>
