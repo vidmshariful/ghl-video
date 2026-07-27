@@ -220,6 +220,107 @@ function ServicesMenu({
   );
 }
 
+
+/* The Resources dropdown: Free Resources + Knowledge Hub under one tab
+ * (client direction, July 2026). Items come from the chrome nav rows so
+ * backend renames still apply; the grouping itself is code-level. */
+function ResourcesMenu({
+  items,
+  pathname,
+}: {
+  items: { label: string; href: string }[];
+  pathname: string | null;
+}) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const timer = useRef<number | null>(null);
+  const openNow = () => {
+    if (timer.current) window.clearTimeout(timer.current);
+    setOpen(true);
+  };
+  const scheduleClose = () => {
+    timer.current = window.setTimeout(() => setOpen(false), 140);
+  };
+  const active = items.some(
+    (i) => !!pathname?.startsWith(i.href.replace(/\/$/, "")),
+  );
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    const onDown = (e: PointerEvent) => {
+      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("pointerdown", onDown);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("pointerdown", onDown);
+    };
+  }, [open]);
+
+  useEffect(() => setOpen(false), [pathname]);
+
+  if (!items.length) return null;
+  return (
+    <div
+      ref={wrapRef}
+      className="relative"
+      onMouseEnter={openNow}
+      onMouseLeave={scheduleClose}
+    >
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls="resources-menu"
+        onClick={() => setOpen(!open)}
+        className="group/nl flex items-center gap-1.5"
+      >
+        <BracketLabel active={active || open}>Resources</BracketLabel>
+        <svg
+          viewBox="0 0 10 6"
+          aria-hidden="true"
+          className={`h-1.5 w-2.5 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+        >
+          <path
+            d="M1 1l4 4 4-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            className="text-muted"
+          />
+        </svg>
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            id="resources-menu"
+            initial={{ opacity: 0, y: 6, x: "-50%" }}
+            animate={{ opacity: 1, y: 0, x: "-50%" }}
+            exit={{ opacity: 0, y: 6, x: "-50%" }}
+            transition={{ duration: 0.18 }}
+            className="absolute left-1/2 top-full z-50 w-56 pt-4"
+          >
+            <div className="relative rounded-card border border-hair card-glass p-2 shadow-[0_24px_60px_rgba(0,0,0,0.5)]">
+              {items.map((i) => (
+                <Link
+                  key={i.href}
+                  href={i.href}
+                  className="block rounded-[3px] px-4 py-3 text-body text-ink transition-colors hover:bg-white/[0.05] hover:text-gold"
+                >
+                  {i.label}
+                </Link>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 export function Header({
   nav = staticNavLinks as unknown as { label: string; href: string }[],
   services = staticServices as unknown as ChromeService[],
@@ -230,6 +331,16 @@ export function Header({
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+
+  /* Free Resources + Knowledge Hub collapse into the Resources dropdown;
+     Studio Insights is guaranteed a spot even when the chrome rows drive
+     the nav and have not been updated yet. */
+  const RESOURCE_HREFS = ["/resources/", "/blog/"];
+  const resourceItems = nav.filter((i) => RESOURCE_HREFS.includes(i.href));
+  const flat = nav.filter((i) => !RESOURCE_HREFS.includes(i.href));
+  if (!flat.some((i) => i.href === "/studio-insights/")) {
+    flat.splice(1, 0, { label: "Studio Insights", href: "/studio-insights/" });
+  }
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -273,7 +384,7 @@ export function Header({
           aria-label="Main"
         >
           <ServicesMenu pathname={pathname} services={services} />
-          {nav.map((item) => (
+          {flat.map((item) => (
             <Link key={item.href} href={item.href} className="group/nl">
               <BracketLabel
                 active={!!pathname?.startsWith(item.href.replace(/\/$/, ""))}
@@ -282,6 +393,7 @@ export function Header({
               </BracketLabel>
             </Link>
           ))}
+          <ResourcesMenu items={resourceItems} pathname={pathname} />
         </nav>
 
         {/* zone: CTA */}
@@ -349,7 +461,7 @@ export function Header({
               <p className="pb-3 pt-8 font-mono text-label uppercase text-dim">
                 [ Explore ]
               </p>
-              {nav.map((item) => (
+              {[...flat, ...resourceItems].map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}

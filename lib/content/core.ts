@@ -44,6 +44,7 @@ export const navServices = [
 
 export const navLinks = [
   { label: "Our Work", href: "/work/" },
+  { label: "Studio Insights", href: "/studio-insights/" },
   { label: "About Us", href: "/about/" },
   { label: "Resources", href: "/resources/" },
   /* articles arrive from the HighLevel blog API; prerendered at build */
