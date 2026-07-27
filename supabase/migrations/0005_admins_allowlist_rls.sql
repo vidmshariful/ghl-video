@@ -66,6 +66,7 @@ create policy products_admin_update on public.products
 
 -- videos: admin all via is_admin()
 drop policy if exists "auth all videos" on public.videos;
+drop policy if exists videos_admin_all on public.videos;
 create policy videos_admin_all on public.videos
   for all to authenticated using (public.is_admin()) with check (public.is_admin());
 
