@@ -177,12 +177,10 @@ export const pages = {
     },
     code: "AIFIRST30",
     percent: 30,
-    deadlineIso: "2026-07-31T03:59:59Z",
-    deadlineLabel: "July 30, 11:59 PM ET",
+    deadlineIso: "2026-07-30T14:00:00Z",
+    deadlineLabel: "July 30, 10 AM ET",
     countdown: {
       endsPrefix: "Offer ends",
-      codeLabel: "Your code",
-      appliedNote: "Applied automatically at checkout",
       videosLabel: "See the nine videos",
       closedLine:
         "This window has closed. The pack is still yours at the regular price.",
@@ -215,23 +213,18 @@ export const pages = {
         "Ask AI, Your In-Platform Assistant": { kind: "scheduled", date: "2026-08-05" },
         "Mobile App, Run Your Business From Your Phone": { kind: "scheduled", date: "2026-08-07" },
       },
+      /* card statuses: published / ready to publish / in production */
       liveNote: "Published, ships in 5 days",
-      previewNote: "Draft preview",
-      scheduledPrefix: "Publishing",
-      scheduleLabel: "The release schedule",
-      singleLabel: "Single video",
+      statusReady: "Ready to publish",
+      statusProduction: "In production, launching",
+      draftTag: "Draft preview",
+      scheduleLabel: "In production",
       atRelease: "at release",
     },
     price: {
       chip: "The launch price",
       headline: "The math for",
       accent: "the next 72 hours.",
-      /* the delivery promise, as the three numbers that matter */
-      stats: [
-        { v: "5 days", l: "to your branded videos" },
-        { v: "5 days", l: "from each new release" },
-        { v: "$0", l: "for videos that publish later" },
-      ],
       tag: "Existing clients, 72 hours",
       priceNote: "one time",
       anchorNote: "pack value",

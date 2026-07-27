@@ -16,9 +16,6 @@ export function LaunchCountdown({
   deadlineIso,
   deadlineLabel,
   endsPrefix,
-  code,
-  codeLabel,
-  appliedNote,
   orderHref,
   orderLabel,
   videosLabel,
@@ -29,9 +26,6 @@ export function LaunchCountdown({
   deadlineIso: string;
   deadlineLabel: string;
   endsPrefix: string;
-  code: string;
-  codeLabel: string;
-  appliedNote: string;
   orderHref: string;
   orderLabel: string;
   videosLabel: string;
@@ -93,19 +87,6 @@ export function LaunchCountdown({
         </div>
         <p className="font-mono text-label uppercase tracking-[0.1em] text-muted">
           {endsPrefix} {deadlineLabel}
-        </p>
-      </div>
-
-      {/* the code, as the campaign's ticket */}
-      <div className="flex flex-col items-center border border-dashed border-gold/60 bg-gold/[0.05] px-10 py-4">
-        <p className="font-mono text-label uppercase tracking-[0.14em] text-dim">
-          {codeLabel}
-        </p>
-        <p className="mt-1 font-mono text-[1.6rem] font-bold uppercase tracking-[0.22em] text-gold md:text-[1.9rem]">
-          {code}
-        </p>
-        <p className="mt-1 font-mono text-label uppercase tracking-[0.06em] text-muted">
-          {appliedNote}
         </p>
       </div>
 

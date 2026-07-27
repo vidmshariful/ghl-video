@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Button } from "@/components/Button";
 import { CtaBand } from "@/components/CtaBand";
 import { DrawnBorder } from "@/components/DrawnBorder";
-import { MediaCard } from "@/components/MediaCard";
+import { MediaFrame } from "@/components/MediaFrame";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { SectionGlow } from "@/components/SectionGlow";
 import { SectionHead } from "@/components/SectionHead";
@@ -74,40 +73,6 @@ function Check() {
   );
 }
 
-/* right-aligned single-purchase block in a card's footer row */
-function SingleBuy({
-  price,
-  label,
-  href,
-}: {
-  price: number;
-  label: string;
-  href?: string;
-}) {
-  return (
-    <span className="flex shrink-0 flex-col items-end gap-1 text-right">
-      <span className="font-mono text-label uppercase text-dim">{label}</span>
-      <span className="font-mono text-body font-bold text-gold [font-variant-numeric:tabular-nums]">
-        ${price.toLocaleString("en-US")}
-      </span>
-      {href && (
-        <Link
-          href={href}
-          className="group inline-flex items-center gap-1.5 font-mono text-label uppercase tracking-[0.1em] text-gold transition-opacity hover:opacity-70"
-        >
-          {cta.orderPremade}
-          <span
-            aria-hidden="true"
-            className="transition-transform duration-200 group-hover:translate-x-0.5"
-          >
-            &rarr;
-          </span>
-        </Link>
-      )}
-    </span>
-  );
-}
-
 /* numbered category header, shared by both grid blocks */
 function CatHead({ index, name, line }: { index: number; name: string; line: string }) {
   return (
@@ -147,33 +112,48 @@ export default function AiFirstLaunchPage() {
   const discountCents = Math.round((regularCents * p.percent) / 100);
   const launchCents = regularCents - discountCents;
 
-  /* one card for any watchable video (published or supplied draft) */
+  /* one library-style card for any watchable video (published or
+     supplied draft cut): preview, title, price, status. No single-buy
+     controls on this page; the pack is the offer. */
   const videoCard = (v: (typeof pack.categories)[number]["videos"][number]) => {
     const state = states[v.title];
-    const single = premadeBySlugTitle[v.title];
-    const price = single?.price ?? 495;
-    const previewSub = state?.date
-      ? `${p.videos.previewNote}, ${p.videos.scheduledPrefix.toLowerCase()} ${fmtDate(state.date)}`
-      : p.videos.previewNote;
+    const price = premadeBySlugTitle[v.title]?.price ?? 495;
+    const isDraftClip = !v.src && Boolean(state?.src);
+    const status = v.src
+      ? p.videos.liveNote
+      : state?.kind === "ready"
+        ? state.date
+          ? `${p.videos.statusReady}, ${fmtDate(state.date)}`
+          : p.videos.statusReady
+        : state?.date
+          ? `${p.videos.statusProduction} ${fmtDate(state.date)}`
+          : p.videos.scheduleLabel;
     return (
-      <MediaCard
-        src={(v.src ?? state?.src) as string}
-        poster={v.poster}
-        title={v.title}
-        meta={v.format}
-        metaSub={v.src ? p.videos.liveNote : previewSub}
-        action={
-          <SingleBuy
-            price={price}
-            label={
-              v.src
-                ? p.videos.singleLabel
-                : `${p.videos.singleLabel}, ${p.videos.atRelease}`
-            }
-            href={v.src && single ? checkoutHref(single.slug) : undefined}
+      <div className="flex h-full flex-col">
+        <div className="relative">
+          <MediaFrame
+            src={(v.src ?? state?.src) as string}
+            poster={v.poster}
+            label={v.title}
+            tint
+            rounded="rounded-none"
+            caption={{ title: v.format, sub: status }}
           />
-        }
-      />
+          {isDraftClip && (
+            <span className="absolute left-2 top-2 z-20 border border-hair bg-canvas/85 px-2.5 py-1 font-mono text-label uppercase tracking-[0.08em] text-gold">
+              {p.videos.draftTag}
+            </span>
+          )}
+        </div>
+        <div className="flex flex-1 items-start justify-between gap-4 border-b border-hair px-1 pb-4 pt-3.5">
+          <h3 className="min-w-0 font-display text-h4 font-semibold leading-snug tracking-[-0.01em] text-ink">
+            {v.title}
+          </h3>
+          <span className="shrink-0 font-mono text-body font-bold text-gold [font-variant-numeric:tabular-nums]">
+            ${price.toLocaleString("en-US")}
+          </span>
+        </div>
+      </div>
     );
   };
 
@@ -185,14 +165,12 @@ export default function AiFirstLaunchPage() {
         headline={p.hero.headline}
         accent={p.hero.accent}
         lede={p.hero.lede}
+        signal={`Code ${p.code}, 30% off`}
       >
         <LaunchCountdown
           deadlineIso={p.deadlineIso}
           deadlineLabel={p.deadlineLabel}
           endsPrefix={p.countdown.endsPrefix}
-          code={p.code}
-          codeLabel={p.countdown.codeLabel}
-          appliedNote={p.countdown.appliedNote}
           orderHref={orderHref}
           orderLabel={cta.orderPremade}
           videosLabel={p.countdown.videosLabel}
@@ -302,22 +280,7 @@ export default function AiFirstLaunchPage() {
             center
           />
 
-          <Reveal className="mx-auto mt-12 max-w-3xl">
-            <RevealItem>
-              <div className="grid gap-px overflow-hidden rounded-card border border-hair bg-hair sm:grid-cols-3">
-                {p.price.stats.map((s) => (
-                  <div key={s.l} className="bg-canvas px-6 py-7 text-center">
-                    <p className="font-mono text-price font-bold leading-none text-gold [font-variant-numeric:tabular-nums]">
-                      {s.v}
-                    </p>
-                    <p className="mt-2 font-mono text-label uppercase text-dim">{s.l}</p>
-                  </div>
-                ))}
-              </div>
-            </RevealItem>
-          </Reveal>
-
-          <Reveal className="mx-auto mt-10 max-w-xl">
+          <Reveal className="mx-auto mt-12 max-w-xl">
             <RevealItem>
               <div className="relative flex flex-col border border-dashed border-hair bg-[linear-gradient(180deg,rgba(252,192,0,0.13),rgba(252,192,0,0.01)_70%)] p-7 md:p-8">
                 <span className="absolute -top-[13px] left-1/2 -translate-x-1/2 whitespace-nowrap border border-dashed border-gold/60 bg-canvas px-3 py-1 font-mono text-label uppercase text-gold">
