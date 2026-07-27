@@ -23,6 +23,7 @@ export const sitePages: readonly SitePage[] = [
   { name: "Contact / Book a Call", path: "/contact/", inNav: true },
   { name: "Request a Quote", path: "/quote/", inNav: false, note: "linked from CTAs only" },
   { name: "Knowledge Hub", path: "/blog/", inNav: true, note: "stub, noindex" },
+  { name: "Studio Insights", path: "/studio-insights/", inNav: true },
   { name: "Free Resources", path: "/resources/", inNav: true, note: "stub, noindex" },
   { name: "Privacy Policy", path: "/legal/privacy/", inNav: false, note: "footer" },
   { name: "Terms", path: "/legal/terms/", inNav: false, note: "footer" },

@@ -102,6 +102,44 @@ export const pages = {
     },
   },
 
+  studio: {
+    hero: {
+      chip: "Studio Insights",
+      headline: "Inside the studio,",
+      accent: "as it happens.",
+      lede: "What the team is producing, when it launches, and how much capacity is open right now. Updated from the studio, not a marketing calendar.",
+    },
+    capacity: {
+      chip: "Open capacity",
+      headline: "Slots open",
+      accent: "right now.",
+      intro:
+        "Every line has a real production ceiling. When a line fills, new orders queue for the next window.",
+      /* the on-page action per service line */
+      links: {
+        premade: { label: "Order Now", href: "/premade/#videos" },
+        custom: { label: "Request a Quote", href: "/quote/" },
+        editing: { label: "Start editing", href: "/editing/#plans" },
+      },
+      empty:
+        "Capacity numbers are being set for this window. Check back shortly, or book a call and ask.",
+    },
+    board: {
+      chip: "The board",
+      headline: "What the team is",
+      accent: "working on.",
+      intro:
+        "Live from production: current projects and their target dates. Launched work moves into the library.",
+      empty: "The board is being written for this window. Check back this week.",
+      launchedHeading: "Recently launched",
+    },
+    closing: {
+      headline: "Want your project",
+      accent: "on this board?",
+      sub: "Order a premade today or send the custom brief. Your slot is claimed the moment you do.",
+      cta: { label: cta.bookACall.label, href: cta.bookACall.href },
+    },
+  },
   custom: {
     hero: {
       chip: "Custom Production",
