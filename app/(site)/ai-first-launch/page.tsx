@@ -199,6 +199,10 @@ export default function AiFirstLaunchPage() {
                     const state = states[v.title];
                     const single = premadeBySlugTitle[v.title];
                     const price = single?.price ?? 495;
+                    /* a supplied draft cut carries its publish date */
+                    const previewSub = state?.date
+                      ? `${p.videos.previewNote}, ${p.videos.scheduledPrefix.toLowerCase()} ${fmtDate(state.date)}`
+                      : p.videos.previewNote;
                     if (v.src || state?.src) {
                       /* published, or a ready/draft preview whose clip has
                          been supplied; singles sell only once published */
@@ -209,13 +213,7 @@ export default function AiFirstLaunchPage() {
                             poster={v.poster}
                             title={v.title}
                             meta={v.format}
-                            metaSub={
-                              v.src
-                                ? p.videos.liveNote
-                                : state?.kind === "draft"
-                                  ? p.videos.draftLabel
-                                  : p.videos.readyLabel
-                            }
+                            metaSub={v.src ? p.videos.liveNote : previewSub}
                             action={
                               <SingleBuy
                                 price={price}

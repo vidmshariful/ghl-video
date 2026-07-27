@@ -194,20 +194,29 @@ export const pages = {
       intro:
         "Nine videos in three formats. Every published video also sells on its own at its regular price, but the 30% code is for the pack only.",
       /* Campaign status for the five unpublished videos, keyed by catalog
-         title. PLACEHOLDER: the three scheduled dates below are stand-ins
-         until Shariful confirms the real targets; the ready and draft
-         previews get their video files when he sends them (data-only
-         swap: set src to the clip URL). */
+         title. Dates confirmed by Shariful (Jul 2026). The two preview
+         clips are draft cuts served from ClickUp attachments (~100MB
+         each); swap src to HighLevel-hosted compressed files when he
+         sends them, nothing else changes. */
       states: {
-        "Social Media Planner + Content AI": { kind: "ready", src: null },
-        "Lead-to-Close With AI": { kind: "draft", src: null },
-        "AI Website + Funnel Builder": { kind: "scheduled", date: "2026-08-07" },
-        "Ask AI, Your In-Platform Assistant": { kind: "scheduled", date: "2026-08-14" },
-        "Mobile App, Run Your Business From Your Phone": { kind: "scheduled", date: "2026-08-21" },
+        "Social Media Planner + Content AI": {
+          kind: "ready",
+          src: "https://t9009190526.p.clickup-attachments.com/t9009190526/359f9e81-6e41-4b2e-937c-3c4b67f6e130/05.%20Social%20Media%20Planner%20(draft).mp4?open=true",
+          date: "2026-07-28",
+        },
+        "Lead-to-Close With AI": {
+          kind: "draft",
+          src: "https://t9009190526.p.clickup-attachments.com/t9009190526/6f30edf9-2066-4282-b161-ece60d06a5f4/Ai-First%20Platform%20Demo.mp4?open=true",
+          date: "2026-08-03",
+        },
+        "AI Website + Funnel Builder": { kind: "scheduled", date: "2026-07-30" },
+        "Ask AI, Your In-Platform Assistant": { kind: "scheduled", date: "2026-08-05" },
+        "Mobile App, Run Your Business From Your Phone": { kind: "scheduled", date: "2026-08-07" },
       },
       liveNote: "Published, ships in 5 days",
       readyLabel: "Ready, preview landing here",
       draftLabel: "Draft cut, preview landing here",
+      previewNote: "Draft preview",
       scheduledPrefix: "Publishing",
       singleLabel: "Single video",
       atRelease: "Single video, at release",
