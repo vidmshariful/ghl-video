@@ -75,16 +75,33 @@ function Check() {
   );
 }
 
-/* numbered category header: name, then its one-line pitch below */
-function CatHead({ index, name, line }: { index: number; name: string; line: string }) {
+/* numbered category header: the display-type name under its mono
+   index, the one-line pitch below, and the video count on the rail */
+function CatHead({
+  index,
+  name,
+  line,
+  count,
+}: {
+  index: number;
+  name: string;
+  line: string;
+  count: number;
+}) {
   return (
-    <Reveal className="border-b border-hair pb-4">
-      <RevealItem>
-        <p className="font-mono text-label uppercase tracking-[0.14em] text-gold">
-          [ 0{index} ] {name}
-        </p>
-        <p className="mt-2 max-w-[var(--measure-body)] text-body-sm text-muted">
-          {line}
+    <Reveal className="border-b border-hair pb-5">
+      <RevealItem className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
+        <div className="min-w-0">
+          <p className="font-mono text-label uppercase tracking-[0.14em] text-gold">
+            [ 0{index} ]
+          </p>
+          <h3 className="mt-2.5 font-display text-h3 text-ink">{name}</h3>
+          <p className="mt-2.5 max-w-[var(--measure-body)] text-body text-muted">
+            {line}
+          </p>
+        </div>
+        <p className="shrink-0 font-mono text-label uppercase text-dim">
+          [ {count} {count === 1 ? "video" : "videos"} ]
         </p>
       </RevealItem>
     </Reveal>
@@ -109,10 +126,14 @@ export default function AiFirstLaunchPage() {
     categories.findIndex((c) => c.name === name) + 1;
 
   const orderHref = `${checkoutHref(pack.slug)}?code=${p.code}`;
-  const anchorCents = (pack.anchorPrice ?? 0) * 100;
   const regularCents = (pack.price ?? 0) * 100;
   const discountCents = Math.round((regularCents * p.percent) / 100);
   const launchCents = regularCents - discountCents;
+  /* the bought-one-by-one value, summed from the same per-video prices
+     the cards above show, so the math always adds up on the page */
+  const valueCents = categories
+    .flatMap((c) => c.videos)
+    .reduce((s, v) => s + (premadeBySlugTitle[v.title]?.price ?? 495) * 100, 0);
 
   /* one library-style card for every video: a clean player (or the
      gradient date panel while in production), then the numbered title
@@ -223,14 +244,20 @@ export default function AiFirstLaunchPage() {
             headline={p.videos.headline}
             accent={p.videos.accent}
             intro={p.videos.intro}
+            center
           />
 
           {/* each single-video category is its own block on a 50/50
               grid, the card holding the left column; the features fill
               a two-up grid below. Videos number 01..09 in page order. */}
           {singles.map((cat, i) => (
-            <div key={cat.name} className="mt-12">
-              <CatHead index={catIndex(cat.name)} name={cat.name} line={cat.line} />
+            <div key={cat.name} className="mt-14">
+              <CatHead
+                index={catIndex(cat.name)}
+                name={cat.name}
+                line={cat.line}
+                count={cat.videos.length}
+              />
               <div className="mt-7 grid gap-8 lg:grid-cols-2">
                 <Reveal>
                   <RevealItem>{videoCard(cat.videos[0], i + 1)}</RevealItem>
@@ -241,7 +268,12 @@ export default function AiFirstLaunchPage() {
 
           {multis.map((cat) => (
             <div key={cat.name} className="mt-16">
-              <CatHead index={catIndex(cat.name)} name={cat.name} line={cat.line} />
+              <CatHead
+                index={catIndex(cat.name)}
+                name={cat.name}
+                line={cat.line}
+                count={cat.videos.length}
+              />
               <Reveal className="mt-7 grid items-stretch gap-x-8 gap-y-10 sm:grid-cols-2">
                 {cat.videos.map((v, vi) => (
                   <RevealItem key={v.title} className="h-full">
@@ -266,67 +298,77 @@ export default function AiFirstLaunchPage() {
             center
           />
 
-          <Reveal className="mx-auto mt-12 max-w-xl">
+          <Reveal className="mx-auto mt-12 max-w-4xl">
             <RevealItem>
-              <div className="relative flex flex-col border border-dashed border-hair bg-[linear-gradient(180deg,rgba(252,192,0,0.13),rgba(252,192,0,0.01)_70%)] p-7 md:p-8">
+              <div className="relative border border-dashed border-hair bg-[linear-gradient(180deg,rgba(252,192,0,0.13),rgba(252,192,0,0.01)_70%)]">
                 <span className="absolute -top-[13px] left-1/2 -translate-x-1/2 whitespace-nowrap border border-dashed border-gold/60 bg-canvas px-3 py-1 font-mono text-label uppercase text-gold">
                   {p.price.tag}
                 </span>
 
-                <h3 className="font-display text-h3 text-ink">{pack.name}</h3>
+                <div className="grid md:grid-cols-2">
+                  {/* left: the math, as ruled rows that add up against
+                      the per-video prices shown above */}
+                  <div className="p-7 md:p-9">
+                    <h3 className="font-display text-h3 text-ink">{pack.name}</h3>
+                    <div className="mt-7">
+                      <div className="flex items-baseline justify-between gap-6 py-3">
+                        <span className="text-body text-muted">{p.price.valueNote}</span>
+                        <s className="font-mono text-body text-dim [font-variant-numeric:tabular-nums]">
+                          {usd(valueCents)}
+                        </s>
+                      </div>
+                      <div className="flex items-baseline justify-between gap-6 border-t border-dashed border-hair py-3">
+                        <span className="text-body text-muted">{p.price.regularNote}</span>
+                        <s className="font-mono text-body text-dim [font-variant-numeric:tabular-nums]">
+                          {usd(regularCents)}
+                        </s>
+                      </div>
+                      <div className="flex items-baseline justify-between gap-6 border-t border-dashed border-hair py-4">
+                        <span className="text-body font-medium text-ink">
+                          {p.price.yourNote}
+                        </span>
+                        <span className="flex items-baseline gap-2">
+                          <span className="font-mono text-stat-lg font-bold leading-none text-gold [font-variant-numeric:tabular-nums]">
+                            {usd(launchCents)}
+                          </span>
+                          <span className="font-mono text-label uppercase text-dim">
+                            {p.price.priceNote}
+                          </span>
+                        </span>
+                      </div>
+                      <div className="flex items-baseline justify-between gap-6 border-t border-dashed border-hair py-3">
+                        <span className="text-body text-muted">{p.price.saveNote}</span>
+                        <span className="font-mono text-body font-semibold text-gold [font-variant-numeric:tabular-nums]">
+                          {usd(discountCents)}, {p.percent}% off
+                        </span>
+                      </div>
+                    </div>
+                  </div>
 
-                <p className="mt-6 flex items-baseline gap-2">
-                  <span className="font-mono text-stat-lg font-bold leading-none text-gold [font-variant-numeric:tabular-nums]">
-                    {usd(launchCents)}
-                  </span>
-                  <span className="font-mono text-label uppercase text-dim">
-                    {p.price.priceNote}
-                  </span>
-                </p>
-                <p className="mt-3 flex flex-wrap items-baseline gap-x-5 gap-y-1">
-                  <span className="flex items-baseline gap-2">
-                    <span className="font-mono text-body text-dim line-through [font-variant-numeric:tabular-nums]">
-                      {usd(regularCents)}
-                    </span>
-                    <span className="font-mono text-label uppercase text-muted">
-                      {p.price.regularNote}
-                    </span>
-                  </span>
-                  <span className="flex items-baseline gap-2">
-                    <span className="font-mono text-body text-dim line-through [font-variant-numeric:tabular-nums]">
-                      {usd(anchorCents)}
-                    </span>
-                    <span className="font-mono text-label uppercase text-muted">
-                      {p.price.anchorNote}
-                    </span>
-                  </span>
-                </p>
-                <p className="mt-2 font-mono text-label uppercase text-gold">
-                  save {usd(discountCents)}
-                </p>
+                  {/* right: what the order covers */}
+                  <div className="border-t border-dashed border-hair p-7 md:border-l md:border-t-0 md:p-9">
+                    <p className="font-mono text-label uppercase tracking-[0.12em] text-dim">
+                      {p.price.includedLabel}
+                    </p>
+                    <ul className="mt-5 space-y-3.5">
+                      {p.price.cardFeatures.map((f) => (
+                        <li key={f} className="flex items-start gap-3">
+                          <Check />
+                          <span className="text-body leading-relaxed text-muted">{f}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
 
-                <div className="my-6 border-t border-dashed border-hair" aria-hidden="true" />
-
-                <ul className="space-y-3">
-                  {p.price.cardFeatures.map((f) => (
-                    <li key={f} className="flex items-start gap-3">
-                      <Check />
-                      <span className="text-body leading-relaxed text-muted">{f}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                <Button
-                  href={orderHref}
-                  variant="gradient"
-                  size="md"
-                  className="mt-7 w-full"
-                >
-                  {cta.orderPremade}
-                </Button>
-                <p className="mt-4 text-center font-mono text-label uppercase text-dim">
-                  {p.price.autoNote}
-                </p>
+                <div className="border-t border-dashed border-hair p-7 md:px-9">
+                  <Button href={orderHref} variant="gradient" size="md" className="w-full">
+                    {cta.orderPremade}
+                  </Button>
+                  <p className="mt-4 text-center font-mono text-label uppercase text-dim">
+                    {p.price.autoNote}
+                  </p>
+                </div>
               </div>
             </RevealItem>
           </Reveal>

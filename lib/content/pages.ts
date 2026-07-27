@@ -225,8 +225,13 @@ export const pages = {
       accent: "the next 72 hours.",
       tag: "Existing clients, 72 hours",
       priceNote: "one time",
-      anchorNote: "pack value",
-      regularNote: "public pack price",
+      /* the value row is computed from the real per-video prices on the
+         page, so the math always adds up against the cards above it */
+      valueNote: "Bought one by one",
+      regularNote: "Public pack price",
+      yourNote: "Your price today",
+      saveNote: "You save",
+      includedLabel: "What is included",
       cardFeatures: [
         "All nine videos, branded to your SaaS",
         "One master explainer, one platform demo, seven feature explainers",
