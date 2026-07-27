@@ -9,4 +9,5 @@ export type View =
   | "customers"
   | "code"
   | "pages"
-  | "videos";
+  | "videos"
+  | "studio";
