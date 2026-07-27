@@ -37,6 +37,12 @@ export const pages = {
         "Brand-agnostic scripts, no competitor named",
         "Full commercial rights, no attribution",
       ],
+      /* PLACEHOLDER cuts, both: Shariful sends the real default/branded
+         pair of the same video later. Swap src and poster only. */
+      demo: {
+        defaultCut: { src: clips.featured, poster: posters.featured },
+        brandedCut: { src: clips.premadeNew, poster: posters.premadeNew },
+      },
     },
     how: {
       chip: "How it works",

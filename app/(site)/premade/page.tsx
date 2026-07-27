@@ -16,6 +16,7 @@ import { VideoBundles } from "@/components/VideoBundles";
 import { PageHero } from "@/components/pages/PageHero";
 import { ProcessSection } from "@/components/pages/ProcessSection";
 import { ProofStrip } from "@/components/pages/ProofStrip";
+import { WhiteLabelDemo } from "@/components/pages/WhiteLabelDemo";
 import { TrustStrip } from "@/components/home/TrustStrip";
 import { faqSchema, productCatalogSchema, serviceSchema } from "@/lib/schema";
 import { cta, pages, sellableProducts, site } from "@/lib/site";
@@ -123,8 +124,10 @@ export default function PremadePage() {
         </div>
       </section>
 
-      {/* what is included: a flat list of facts reads as a list, not a
-          wall of cards. Rule rows inside the ruled box. */}
+      {/* what is included: the claims on the left, the proof on the
+          right. The toggle flips the same video between the HighLevel
+          default cut and the branded cut, so white-label is something
+          the buyer does, not something they read. */}
       <RuledSection
         bpIdx={4}
         index={4}
@@ -132,12 +135,19 @@ export default function PremadePage() {
         headline={p.included.headline}
         accent={p.included.accent}
       >
-        <div className="px-6 py-8 md:px-8 md:py-10">
-          <RuleList
-            items={p.included.items.map((line) => ({ line }))}
-            columns={2}
-            framed={false}
-          />
+        <div className="grid gap-px bg-hair lg:grid-cols-[1fr_1.25fr]">
+          <div className="bg-canvas px-6 py-8 md:px-8">
+            <RuleList
+              items={p.included.items.map((line) => ({ line }))}
+              framed={false}
+            />
+          </div>
+          <div className="bg-canvas px-6 py-8 md:px-8 md:py-10">
+            <WhiteLabelDemo
+              defaultCut={p.included.demo.defaultCut}
+              brandedCut={p.included.demo.brandedCut}
+            />
+          </div>
         </div>
       </RuledSection>
 
