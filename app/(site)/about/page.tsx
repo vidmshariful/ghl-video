@@ -27,7 +27,7 @@ import {
 export const metadata: Metadata = {
   title: "About the HighLevel-Only Video Studio",
   description:
-    "The original HighLevel-only video studio: one niche, an in-house team, and 800+ HighLevel SaaS teams served. A brand of Vidiosa LLC.",
+    "The original HighLevel-only video studio. One niche, an in-house team, and 1000+ HighLevel SaaS clients served since 2020. A brand of Vidiosa LLC.",
   alternates: { canonical: "/about/" },
 };
 
@@ -155,7 +155,7 @@ export default function AboutPage() {
                   <Stat value={clients} suffix="+" />
                 </span>
                 <span className="mt-2 font-mono text-label uppercase text-dim">
-                  HighLevel SaaS teams
+                  HighLevel SaaS clients
                 </span>
                 <span className="mt-4 border-t border-hair pt-4 font-mono text-label uppercase text-muted underline-offset-4 group-hover:underline">
                   {rating} on Google &rarr;

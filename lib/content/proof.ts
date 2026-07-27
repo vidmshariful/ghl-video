@@ -141,9 +141,9 @@ export const home = {
   manifesto: {
     eyebrow: "About GHL Video",
     statement:
-      "GHL Video is video infrastructure built only for HighLevel. Since 2019, 800+ SaaS founders have used us to turn video from a cost line into demos closed, churn cut, and authority earned.",
+      "GHL Video exists to remove the video bottleneck that stops HighLevel SaaS founders from scaling MRR. Most resellers sell with amateur Loom demos, onboard without structured video, and put off professional production because the traditional route is slow, expensive, and complex.",
     /* the positioning phrase lifted into gold; must be a substring */
-    emphasis: "built only for HighLevel",
+    emphasis: "remove the video bottleneck",
     contrast: {
       bad: "A Loom demo or a DIY explainer",
       good: "A branded GHL Video",
@@ -156,7 +156,7 @@ export const home = {
     headline: "Full time, in house,",
     accent: "not outsourced.",
     intro:
-      "The same people work on your videos every time. That is what keeps quality and turnaround consistent.",
+      "The same people work on your videos every time, from one 4,500 sq ft studio. That is what keeps quality and turnaround consistent.",
     members: [
       { name: "Shariful Islam", role: "Founder & CEO", photo: "/people/shariful.jpg" as string | null },
       { name: "Mostafa Afzal", role: "COO", photo: "/people/mostafa.jpg" as string | null },
@@ -271,7 +271,7 @@ export const home = {
       {
         label: "Focus",
         others: "Video for anyone",
-        us: "Only HighLevel, since day one",
+        us: "Only HighLevel, since 2020",
       },
       {
         label: "Speed",
@@ -391,4 +391,4 @@ export const home = {
   },
 } as const;
 
-export const footerBlurb = "Video built for HighLevel SaaS. Fast, custom, done.";
+export const footerBlurb = "The video studio built only for HighLevel. Creating HighLevel white-label videos since 2020.";

@@ -137,10 +137,12 @@ Colors come pixel-exact from the logo and do not change:
   Request a Quote** (labels live in `cta` in site.ts; use those exports).
   Never "Get Started" or "Learn More". "Order for $495" is retired; prices
   span $97 to $3,495 and flat-$495 framing is dead.
-- Client count is **800+** everywhere. The one sanctioned year is
-  **"Since 2019"** as the authority line (client decision, July 2026);
-  no other years in customer copy. Never print the Google review count;
-  say every review is five stars instead.
+- Client count is **1000+** everywhere (never 800+ or 376+), and "teams"
+  is never a client-count word: use "clients" or "HighLevel SaaS". The
+  studio authority date is **2020**, phrased "creating HighLevel videos
+  since 2020" (client decision, July 2026); no other years in customer
+  copy. Never print the Google review count; say every review is five
+  stars instead.
 - Founder-to-founder voice: direct, outcome-led, no hype. The reader knows
   MRR, CAC, LTV, churn.
 - Footer brand line is "A brand of Vidiosa LLC" (brand-family narrative);

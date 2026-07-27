@@ -89,7 +89,7 @@ export function ClientWall() {
                   <span className="text-gradient">
                     <Stat value={clients} suffix="+" />
                   </span>{" "}
-                  HighLevel founders, and counting.
+                  SaaSPRENEUR and counting.
                 </h2>
               </div>
             </RevealItem>

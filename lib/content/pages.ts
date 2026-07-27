@@ -698,14 +698,14 @@ export const pages = {
     closing: {
       headline: "Put a HighLevel-fluent team",
       accent: "behind your brand.",
-      sub: "800+ SaaS founders already publish with us. See what that looks like for your platform.",
+      sub: "1000+ SaaS founders already publish with us. See what that looks like for your platform.",
       cta: { label: cta.bookACall.label, href: cta.bookACall.href },
     },
     hero: {
       chip: "About",
       headline: "The original",
       accent: "HighLevel-only video studio.",
-      lede: "One niche, one stack, 800+ HighLevel teams served. This page is the why.",
+      lede: "One niche, one stack, 1000+ HighLevel clients served. This page is the why.",
     },
     story: {
       chip: "The category",
@@ -753,7 +753,7 @@ export const pages = {
         },
         {
           q: "Why work only in the HighLevel ecosystem?",
-          a: "One platform, learned once, compounding across 800+ clients. You never brief us on what a snapshot or a subaccount is, so every project starts at your positioning instead of the basics.",
+          a: "One platform, learned once, compounding across 1000+ clients. You never brief us on what a snapshot or a subaccount is, so every project starts at your positioning instead of the basics.",
         },
       ],
     },

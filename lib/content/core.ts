@@ -4,10 +4,10 @@ export const site = {
   email: "hi@ghlvideo.com",
   tagline: "Video built for HighLevel SaaS. Fast, custom, done.",
   description:
-    "The video studio built only for the HighLevel ecosystem: a white-label premade library, custom production with published starting prices, and monthly editing for HighLevel creators. 800+ teams served, rated 5.0 on Google.",
+    "The video studio built only for the HighLevel ecosystem. White-label premade videos, custom production, and video editing service. 1000+ clients served, rated 5.0 on Google.",
 };
 
-export const clients = 800; // always rendered as "800+"
+export const clients = 1000; // always rendered as "1000+"
 export const rating = "5.0";
 
 export const namedClients = [
@@ -45,7 +45,7 @@ export const navServices = [
 export const navLinks = [
   { label: "Our Work", href: "/work/" },
   { label: "About Us", href: "/about/" },
-  { label: "Free Resources", href: "/resources/" },
+  { label: "Resources", href: "/resources/" },
   /* articles arrive from the HighLevel blog API; prerendered at build */
   { label: "Knowledge Hub", href: "/blog/" },
 ] as const;
