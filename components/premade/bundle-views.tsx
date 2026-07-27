@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { cta, skuFor, videoStack, type PremadePack } from "@/lib/site";
+import { cta, pages, skuFor, videoStack, type PremadePack } from "@/lib/site";
+import { EarlyAccessCta } from "./EarlyAccessCta";
 import {
   featureBrowse,
   oldClassic,
@@ -62,6 +63,7 @@ export function BundleView({
   previewVideos,
   previewGroups,
   previewNote,
+  lock = null,
 }: {
   name: string;
   tagline: string;
@@ -76,6 +78,10 @@ export function BundleView({
   previewVideos: BrowseVideo[];
   previewGroups: FilterDef[];
   previewNote?: string | null;
+  /* when set, the buy button stays locked (with this note) until the
+     deadline passes on the viewer's clock; used for client-only launch
+     windows */
+  lock?: { untilIso: string; note: string } | null;
 }) {
   const canOrder = Boolean(price && sku);
   return (
@@ -104,18 +110,27 @@ export function BundleView({
                   ${(price ?? 0).toLocaleString("en-US")}
                 </span>
               </span>
-              <Link
-                href={`/checkout/${skuFor(sku ?? "")}`}
-                className="group inline-flex items-center gap-2 whitespace-nowrap rounded-[3px] bg-brand-gradient px-6 py-3 text-body font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.28)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98]"
-              >
-                {ctaLabel}
-                <span
-                  aria-hidden="true"
-                  className="transition-transform duration-200 group-hover:translate-x-0.5"
+              {lock ? (
+                <EarlyAccessCta
+                  href={`/checkout/${skuFor(sku ?? "")}`}
+                  label={ctaLabel}
+                  untilIso={lock.untilIso}
+                  note={lock.note}
+                />
+              ) : (
+                <Link
+                  href={`/checkout/${skuFor(sku ?? "")}`}
+                  className="group inline-flex items-center gap-2 whitespace-nowrap rounded-[3px] bg-brand-gradient px-6 py-3 text-body font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.28)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98]"
                 >
-                  &rarr;
-                </span>
-              </Link>
+                  {ctaLabel}
+                  <span
+                    aria-hidden="true"
+                    className="transition-transform duration-200 group-hover:translate-x-0.5"
+                  >
+                    &rarr;
+                  </span>
+                </Link>
+              )}
             </>
           ) : (
             <Link
@@ -285,6 +300,12 @@ export function PackBundleView({ pack }: { pack: PremadePack }) {
       previewVideos={previewVideos}
       previewGroups={previewGroups}
       previewNote="Preview every video in the pack. Finished videos play now; the rest are in production and land as they release."
+      /* while the client-only launch window runs, the public buy button
+         stays locked; it reopens on its own when the deadline passes */
+      lock={{
+        untilIso: pages.launch.deadlineIso,
+        note: pages.launch.publicLock.note,
+      }}
     />
   );
 }

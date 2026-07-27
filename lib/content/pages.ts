@@ -192,7 +192,7 @@ export const pages = {
       headline: "Every video in the pack,",
       accent: "and where it stands.",
       intro:
-        "Four are published and ship branded to your SaaS within 5 days of your order. The rest are in production: each one is branded and delivered to you within 5 days of its release, at no extra charge.",
+        "Nine videos in three formats. Every published video also sells on its own at its regular price, but the 30% code is for the pack only.",
       /* Campaign status for the five unpublished videos, keyed by catalog
          title. PLACEHOLDER: the three scheduled dates below are stand-ins
          until Shariful confirms the real targets; the ready and draft
@@ -209,7 +209,8 @@ export const pages = {
       readyLabel: "Ready, preview landing here",
       draftLabel: "Draft cut, preview landing here",
       scheduledPrefix: "Publishing",
-      pipelineNote: "Branded for you within 5 days of release",
+      singleLabel: "Single video",
+      atRelease: "Single video, at release",
     },
     terms: {
       chip: "How delivery works",
@@ -237,7 +238,14 @@ export const pages = {
       anchorNote: "pack value",
       regularNote: "public pack price",
       yourNote: "your price with code AIFIRST30",
+      deliveryNote:
+        "Published videos ship branded to your SaaS within 5 days of your order. Videos still in production arrive within 5 days of each release, covered by this one price.",
       autoNote: "The code applies automatically at checkout.",
+    },
+    /* while the window runs, the public premade page shows the pack as
+       client early access instead of a live buy button */
+    publicLock: {
+      note: "Existing-client early access until July 30",
     },
     closing: {
       headline: "72 hours,",

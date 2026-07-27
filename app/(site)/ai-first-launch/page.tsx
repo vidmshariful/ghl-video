@@ -8,9 +8,16 @@ import { RuleList } from "@/components/RuleList";
 import { RuledSection } from "@/components/RuledSection";
 import { SectionGlow } from "@/components/SectionGlow";
 import { SectionHead } from "@/components/SectionHead";
+import Link from "next/link";
 import { PageHero } from "@/components/pages/PageHero";
 import { LaunchCountdown } from "@/components/pages/LaunchCountdown";
-import { checkoutHref, cta, pages, premadePacks } from "@/lib/site";
+import {
+  checkoutHref,
+  cta,
+  pages,
+  premadeBySlugTitle,
+  premadePacks,
+} from "@/lib/site";
 
 /*
  * The 72-hour existing-customer launch page for the AI First SaaS Pack.
@@ -46,18 +53,54 @@ const usd = (cents: number) =>
     maximumFractionDigits: 2,
   });
 
+/* right-aligned single-purchase block in a card's footer row */
+function SingleBuy({
+  price,
+  label,
+  href,
+}: {
+  price: number;
+  label: string;
+  href?: string;
+}) {
+  return (
+    <span className="flex shrink-0 flex-col items-end gap-1 text-right">
+      <span className="font-mono text-label uppercase text-dim">{label}</span>
+      <span className="font-mono text-body font-bold text-gold [font-variant-numeric:tabular-nums]">
+        ${price.toLocaleString("en-US")}
+      </span>
+      {href && (
+        <Link
+          href={href}
+          className="group inline-flex items-center gap-1.5 font-mono text-label uppercase tracking-[0.1em] text-gold transition-opacity hover:opacity-70"
+        >
+          {cta.orderPremade}
+          <span
+            aria-hidden="true"
+            className="transition-transform duration-200 group-hover:translate-x-0.5"
+          >
+            &rarr;
+          </span>
+        </Link>
+      )}
+    </span>
+  );
+}
+
 function PipelineCard({
   title,
   format,
   statusLabel,
   dateLabel,
-  note,
+  price,
+  priceLabel,
 }: {
   title: string;
   format: string;
   statusLabel: string;
   dateLabel: string | null;
-  note: string;
+  price: number;
+  priceLabel: string;
 }) {
   return (
     <div className="flex h-full flex-col">
@@ -71,12 +114,14 @@ function PipelineCard({
           {statusLabel}
         </p>
       </div>
-      <div className="flex flex-1 flex-col border-b border-hair px-1 pb-4 pt-3.5">
-        <h3 className="font-display text-h4 font-semibold leading-snug tracking-[-0.01em] text-ink">
-          {title}
-        </h3>
-        <p className="mt-1 font-mono text-label uppercase text-dim">{format}</p>
-        <p className="mt-2.5 text-body-sm text-muted">{note}</p>
+      <div className="flex flex-1 items-start justify-between gap-4 border-b border-hair px-1 pb-4 pt-3.5">
+        <div className="min-w-0">
+          <h3 className="font-display text-h4 font-semibold leading-snug tracking-[-0.01em] text-ink">
+            {title}
+          </h3>
+          <p className="mt-1 font-mono text-label uppercase text-dim">{format}</p>
+        </div>
+        <SingleBuy price={price} label={priceLabel} />
       </div>
     </div>
   );
@@ -85,7 +130,12 @@ function PipelineCard({
 export default function AiFirstLaunchPage() {
   const p = pages.launch;
   const pack = premadePacks[0];
-  const videos = pack.categories.flatMap((c) => c.videos);
+  /* the catalog's categories, in the campaign's presentation order */
+  const CATEGORY_ORDER = ["Master Explainer", "Platform Demo", "Feature Explainers"];
+  const categories = CATEGORY_ORDER.flatMap((name) => {
+    const c = pack.categories.find((x) => x.name === name);
+    return c ? [c] : [];
+  });
   const states = p.videos.states as Record<string, LaunchState>;
 
   const orderHref = `${checkoutHref(pack.slug)}?code=${p.code}`;
@@ -128,56 +178,81 @@ export default function AiFirstLaunchPage() {
             accent={p.videos.accent}
             intro={p.videos.intro}
           />
-          <Reveal className="mt-12 grid items-stretch gap-x-5 gap-y-8 md:grid-cols-2 lg:grid-cols-3">
-            {videos.map((v) => {
-              const state = states[v.title];
-              if (v.src) {
-                return (
-                  <RevealItem key={v.title} className="h-full">
-                    <MediaCard
-                      src={v.src}
-                      poster={v.poster}
-                      title={v.title}
-                      meta={v.format}
-                      metaSub={p.videos.liveNote}
-                    />
+          <div className="mt-12 grid gap-14">
+            {categories.map((cat, ci) => (
+              <div key={cat.name}>
+                {/* category header: numbered, name, and its one-line pitch */}
+                <Reveal className="flex flex-wrap items-baseline gap-x-4 gap-y-1 border-b border-hair pb-4">
+                  <RevealItem>
+                    <p className="font-mono text-label uppercase tracking-[0.14em] text-gold">
+                      [ 0{ci + 1} ] {cat.name}
+                    </p>
                   </RevealItem>
-                );
-              }
-              if (state?.src) {
-                /* a ready or draft preview whose clip has been supplied */
-                return (
-                  <RevealItem key={v.title} className="h-full">
-                    <MediaCard
-                      src={state.src}
-                      poster={v.poster}
-                      title={v.title}
-                      meta={v.format}
-                      metaSub={state.kind === "draft" ? p.videos.draftLabel : p.videos.readyLabel}
-                    />
+                  <RevealItem className="min-w-0">
+                    <p className="max-w-[var(--measure-body)] text-body-sm text-muted">
+                      {cat.line}
+                    </p>
                   </RevealItem>
-                );
-              }
-              const scheduled = state?.kind === "scheduled" && state.date;
-              return (
-                <RevealItem key={v.title} className="h-full">
-                  <PipelineCard
-                    title={v.title}
-                    format={v.format}
-                    statusLabel={
-                      scheduled
-                        ? p.videos.scheduledPrefix
-                        : state?.kind === "draft"
-                          ? p.videos.draftLabel
-                          : p.videos.readyLabel
+                </Reveal>
+                <Reveal className="mt-7 grid items-stretch gap-x-5 gap-y-8 md:grid-cols-2 lg:grid-cols-3">
+                  {cat.videos.map((v) => {
+                    const state = states[v.title];
+                    const single = premadeBySlugTitle[v.title];
+                    const price = single?.price ?? 495;
+                    if (v.src || state?.src) {
+                      /* published, or a ready/draft preview whose clip has
+                         been supplied; singles sell only once published */
+                      return (
+                        <RevealItem key={v.title} className="h-full">
+                          <MediaCard
+                            src={(v.src ?? state?.src) as string}
+                            poster={v.poster}
+                            title={v.title}
+                            meta={v.format}
+                            metaSub={
+                              v.src
+                                ? p.videos.liveNote
+                                : state?.kind === "draft"
+                                  ? p.videos.draftLabel
+                                  : p.videos.readyLabel
+                            }
+                            action={
+                              <SingleBuy
+                                price={price}
+                                label={v.src ? p.videos.singleLabel : p.videos.atRelease}
+                                href={
+                                  v.src && single ? checkoutHref(single.slug) : undefined
+                                }
+                              />
+                            }
+                          />
+                        </RevealItem>
+                      );
                     }
-                    dateLabel={scheduled ? fmtDate(state.date!) : null}
-                    note={p.videos.pipelineNote}
-                  />
-                </RevealItem>
-              );
-            })}
-          </Reveal>
+                    const scheduled = state?.kind === "scheduled" && state.date;
+                    return (
+                      <RevealItem key={v.title} className="h-full">
+                        <PipelineCard
+                          title={v.title}
+                          format={v.format}
+                          statusLabel={
+                            scheduled
+                              ? p.videos.scheduledPrefix
+                              : state?.kind === "draft"
+                                ? p.videos.draftLabel
+                                : p.videos.readyLabel
+                          }
+                          dateLabel={scheduled ? fmtDate(state.date!) : null}
+                          price={price}
+                          priceLabel={p.videos.atRelease}
+                        />
+                      </RevealItem>
+                    );
+                  })}
+                </Reveal>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -230,6 +305,9 @@ export default function AiFirstLaunchPage() {
                 </div>
                 <p className="mt-5 text-body-sm text-muted">
                   You save {usd(discountCents)} in this window.
+                </p>
+                <p className="mx-auto mt-3 max-w-[46ch] text-body-sm text-muted">
+                  {p.price.deliveryNote}
                 </p>
                 <div className="mt-7">
                   <Button href={orderHref} variant="gradient" size="lg">
