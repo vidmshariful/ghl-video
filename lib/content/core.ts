@@ -46,7 +46,8 @@ export const navLinks = [
   { label: "Our Work", href: "/work/" },
   { label: "Studio Insights", href: "/studio-insights/" },
   { label: "About Us", href: "/about/" },
-  { label: "Resources", href: "/resources/" },
+  /* Free Resources + Knowledge Hub collapse into the Resources dropdown */
+  { label: "Free Resources", href: "/resources/" },
   /* articles arrive from the HighLevel blog API; prerendered at build */
   { label: "Knowledge Hub", href: "/blog/" },
 ] as const;

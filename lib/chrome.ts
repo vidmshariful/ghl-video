@@ -7,37 +7,26 @@ import {
 } from "@/lib/site";
 
 /*
- * Site chrome from the backend: tracking scripts plus header and footer
- * links, managed in Supabase and read ONCE PER BUILD (static export, so
- * this fetch happens at build time, never in a visitor's browser).
+ * Site chrome: header nav, footer links, and the tracking + chat-widget
+ * scripts.
  *
- * The anon key below is public by design: it is Supabase's publishable
- * key, and row-level security limits it to SELECT on the two chrome
- * tables. Writes happen only through the Supabase dashboard login, and
- * every write fires the Vercel deploy hook (a database trigger), so
- * saving in the dashboard IS the publish button.
- *
- * FAILURE POLICY: if Supabase is unreachable, paused, or returns
- * garbage, the build falls back to the static values in lib/site.ts.
- * The website can never break because the backend had a bad day.
+ * HARD-CODED here (client decision, July 2026). These used to be read
+ * from Supabase at build time, but a slow or unreachable backend could
+ * bake incomplete chrome into a deploy (missing nav/footer, or the
+ * analytics and chat widget dropping out). They now live in code, so the
+ * header, footer, tracking, and chat widget always render. Editing them
+ * is a code change plus a deploy; the admin chrome/code screens no
+ * longer drive the live site.
  */
-/* Env-first (NEXT_PUBLIC_ vars inline into both server and client bundles at
- * build), so rotating the anon key is an env flip + redeploy, no code edit.
- * The committed values are the working fallback. */
+
+/* Public Supabase handles, still used by RUNTIME reads elsewhere (studio
+ * slots, capacity chips, portal + admin auth). Chrome itself no longer
+ * touches the database. Env-first so the anon key rotates with a redeploy. */
 export const SB_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://xdarleyimthsnareuoxl.supabase.co";
 export const SB_ANON =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhkYXJsZXlpbXRoc25hcmV1b3hsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ1NzI2NzAsImV4cCI6MjEwMDE0ODY3MH0.x0rM_RbjlFi9tvA7XTf74NVDDkagICkEPQcQyeaean8";
-
-type LinkRow = {
-  area: string;
-  label: string;
-  href: string;
-  sort: number;
-  enabled: boolean;
-  external: boolean;
-};
 
 export type ChromeService = {
   name: string;
@@ -56,9 +45,73 @@ export type SiteChrome = {
   legal: { label: string; href: string }[];
 };
 
-const FALLBACK: SiteChrome = {
-  headScripts: "",
-  bodyEndScripts: "",
+/* Injected at body start: Google Tag Manager, Google Ads gtag, and
+ * Hotjar. Kept verbatim from the previous backend config so analytics
+ * and conversion tracking are unchanged. */
+const HEAD_SCRIPTS = `<!-- GTM loader -->
+<script data-cfasync="false" data-pagespeed-no-defer type="text/javascript">
+(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'//www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-5LZRTLJJ');
+</script>
+
+<!-- GTM loader -->
+<script data-cfasync="false" data-pagespeed-no-defer type="text/javascript">
+(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'//www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-NPHWVF2V');
+</script>
+
+<!-- GTM loader -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-NPHWVF2V');</script>
+
+<!-- gtag config -->
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'AW-16454943179');
+</script>
+
+<!-- Hotjar -->
+<script>
+    (function(h,o,t,j,a,r){
+        h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
+        h._hjSettings={hjid:5195383,hjsv:6};
+        a=o.getElementsByTagName('head')[0];
+        r=o.createElement('script');r.async=1;
+        r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;
+        a.appendChild(r);
+    })(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');
+</script>
+
+<!-- gtag loader -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=AW-16454943179">
+</script>`;
+
+/* Injected at body end: the LeadConnector chat widget and the GTM
+ * noscript fallback. */
+const BODY_END_SCRIPTS = `<!-- LeadConnector widget -->
+<script src="https://widgets.leadconnectorhq.com/loader.js" data-resources-url="https://widgets.leadconnectorhq.com/chat-widget/loader.js" data-widget-id="66b215e292c831bcfeb2c0f4">
+ </script>
+
+<!-- GTM noscript -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-NPHWVF2V" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>`;
+
+/* The complete, hard-coded chrome. Nav, services, brands, and legal come
+ * from lib/site.ts; the footer company column and scripts are set here. */
+const CHROME: SiteChrome = {
+  headScripts: HEAD_SCRIPTS,
+  bodyEndScripts: BODY_END_SCRIPTS,
   nav: staticNavLinks.map((l) => ({ label: l.label, href: l.href })),
   services: staticNavServices.map((s) => ({
     name: s.name,
@@ -67,6 +120,7 @@ const FALLBACK: SiteChrome = {
     posterKey: s.posterKey,
   })),
   footerCompany: [
+    { label: "About", href: "/about/" },
     { label: "Contact", href: "/contact/" },
     { label: cta.bookACall.label, href: cta.bookACall.href },
     { label: "Request a Quote", href: "/quote/" },
@@ -75,72 +129,8 @@ const FALLBACK: SiteChrome = {
   legal: staticLegal.map((l) => ({ label: l.label, href: l.href })),
 };
 
-async function sb<T>(path: string): Promise<T> {
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 8000);
-  try {
-    const r = await fetch(`${SB_URL}/rest/v1/${path}`, {
-      headers: { apikey: SB_ANON, Authorization: `Bearer ${SB_ANON}` },
-      signal: ctrl.signal,
-      // build-time only: keeps the marketing pages statically generated in
-      // server mode. Chrome refreshes on rebuild (the DB write fires the
-      // Vercel deploy hook), exactly as it did under static export.
-      cache: "force-cache",
-    });
-    if (!r.ok) throw new Error(`supabase ${r.status}`);
-    return (await r.json()) as T;
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
+/* Async signature kept so the site layout's `await getChrome()` is
+ * unchanged; it just resolves the static value now, no fetch. */
 export async function getChrome(): Promise<SiteChrome> {
-  /* fallback drill: CHROME_OFFLINE=1 npx next build proves the site
-     builds correctly with the backend unreachable */
-  if (process.env.CHROME_OFFLINE === "1") return FALLBACK;
-  try {
-    const [settings, links] = await Promise.all([
-      sb<{ head_scripts: string; body_end_scripts: string }[]>(
-        "site_settings?select=head_scripts,body_end_scripts&id=eq.1",
-      ),
-      sb<LinkRow[]>(
-        "site_links?select=area,label,href,sort,enabled,external&enabled=is.true&order=sort.asc",
-      ),
-    ]);
-    const s = settings[0] ?? { head_scripts: "", body_end_scripts: "" };
-    const by = (area: string) => links.filter((r) => r.area === area);
-    const pick = (area: string, fb: { label: string; href: string }[]) => {
-      const rows = by(area).map((r) => ({ label: r.label, href: r.href }));
-      return rows.length ? rows : fb;
-    };
-    /* services keep their design-coupled fields (menu line, poster) from
-       the static config, matched by href; the backend controls label,
-       order, and visibility */
-    const services = by("services").map((r) => {
-      const match = staticNavServices.find((x) => x.href === r.href);
-      return {
-        name: r.label,
-        href: r.href,
-        line: match?.line ?? "",
-        posterKey: match?.posterKey ?? "sampleC",
-      };
-    });
-    return {
-      headScripts: s.head_scripts ?? "",
-      bodyEndScripts: s.body_end_scripts ?? "",
-      nav: pick("header", FALLBACK.nav),
-      services: services.length ? services : FALLBACK.services,
-      footerCompany: pick("footer_company", FALLBACK.footerCompany),
-      brands: by("footer_brands").length
-        ? by("footer_brands").map((r) => ({
-            name: r.label,
-            url: r.href,
-            domain: r.href.replace(/^https?:\/\//, "").replace(/\/$/, ""),
-          }))
-        : FALLBACK.brands,
-      legal: pick("legal", FALLBACK.legal),
-    };
-  } catch {
-    return FALLBACK;
-  }
+  return CHROME;
 }
