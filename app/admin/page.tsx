@@ -656,21 +656,41 @@ export default function AdminPage() {
       </div>
     );
 
-  const items: { key: View; label: string }[] = [
-    { key: "dashboard", label: "Dashboard" },
-    { key: "orders", label: "Orders" },
-    { key: "messages", label: "Messages" },
-    { key: "subscriptions", label: "Subscriptions" },
-    { key: "products", label: "Products & Pricing" },
-    { key: "bumps", label: "Order Bumps" },
-    { key: "coupons", label: "Coupons" },
-    { key: "links", label: "Buy Links" },
-    { key: "invoices", label: "Invoices" },
-    { key: "customers", label: "Customers" },
-    { key: "studio", label: "Studio Insights" },
-    { key: "code", label: "Header & Footer Code" },
-    { key: "pages", label: "Pages" },
-    { key: "videos", label: "Video List" },
+  const groups: { title: string; items: { key: View; label: string }[] }[] = [
+    { title: "Overview", items: [{ key: "dashboard", label: "Dashboard" }] },
+    {
+      title: "Sales",
+      items: [
+        { key: "orders", label: "Orders" },
+        { key: "invoices", label: "Invoices" },
+        { key: "subscriptions", label: "Subscriptions" },
+        { key: "links", label: "Buy Links" },
+        { key: "coupons", label: "Coupons" },
+      ],
+    },
+    {
+      title: "Clients",
+      items: [
+        { key: "messages", label: "Messages" },
+        { key: "customers", label: "Customers" },
+      ],
+    },
+    {
+      title: "Catalog",
+      items: [
+        { key: "products", label: "Products & Pricing" },
+        { key: "bumps", label: "Order Bumps" },
+        { key: "videos", label: "Video List" },
+      ],
+    },
+    {
+      title: "Site",
+      items: [
+        { key: "pages", label: "Pages" },
+        { key: "studio", label: "Studio Insights" },
+        { key: "code", label: "Header & Footer Code" },
+      ],
+    },
   ];
 
   return (
@@ -696,29 +716,57 @@ export default function AdminPage() {
 
       <div className="flex flex-1 flex-col md:flex-row">
         {/* side menu */}
-        <nav className="border-b border-hair bg-surface/50 p-4 md:w-64 md:border-b-0 md:border-r">
-          <ul className="flex gap-2 md:flex-col">
-            {items.map((item) => (
-              <li key={item.key}>
-                <button
-                  type="button"
-                  onClick={() => setView(item.key)}
-                  className={`tap flex w-full items-center justify-between gap-2 rounded-[6px] px-4 py-2.5 text-left text-body transition-colors ${
-                    view === item.key
-                      ? "bg-gold/15 font-semibold text-gold"
-                      : "text-muted hover:bg-white/[0.04] hover:text-ink"
-                  }`}
-                >
-                  <span>{item.label}</span>
-                  {item.key === "messages" && msgUnread > 0 ? (
-                    <span className="rounded-full bg-gold px-1.5 py-0.5 font-mono text-label font-bold text-canvas">
-                      {msgUnread}
-                    </span>
-                  ) : null}
-                </button>
-              </li>
+        <nav className="border-b border-hair bg-surface/50 p-4 md:w-64 md:shrink-0 md:border-b-0 md:border-r">
+          {/* mobile: one grouped dropdown to stay compact */}
+          <select
+            value={view}
+            onChange={(e) => setView(e.target.value as View)}
+            className="w-full rounded-[6px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none md:hidden"
+          >
+            {groups.map((group) => (
+              <optgroup key={group.title} label={group.title}>
+                {group.items.map((item) => (
+                  <option key={item.key} value={item.key}>
+                    {item.label}
+                    {item.key === "messages" && msgUnread > 0 ? ` (${msgUnread})` : ""}
+                  </option>
+                ))}
+              </optgroup>
             ))}
-          </ul>
+          </select>
+
+          {/* desktop: grouped sidebar */}
+          <div className="hidden flex-col md:flex">
+            {groups.map((group, gi) => (
+              <div key={group.title} className={gi > 0 ? "mt-5 border-t border-hair pt-5" : ""}>
+                <p className="mb-2 px-3 font-mono text-body-sm font-bold uppercase tracking-[0.14em] text-gold/70">
+                  {group.title}
+                </p>
+                <ul className="flex flex-col gap-0.5">
+                  {group.items.map((item) => (
+                    <li key={item.key}>
+                      <button
+                        type="button"
+                        onClick={() => setView(item.key)}
+                        className={`tap flex w-full items-center justify-between gap-2 rounded-[6px] px-3 py-2 text-left text-body-sm transition-colors ${
+                          view === item.key
+                            ? "bg-gold/15 font-semibold text-gold"
+                            : "text-muted hover:bg-white/[0.04] hover:text-ink"
+                        }`}
+                      >
+                        <span>{item.label}</span>
+                        {item.key === "messages" && msgUnread > 0 ? (
+                          <span className="rounded-full bg-gold px-1.5 py-0.5 font-mono text-label font-bold text-canvas">
+                            {msgUnread}
+                          </span>
+                        ) : null}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
         </nav>
 
         {/* content */}
