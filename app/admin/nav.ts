@@ -3,6 +3,7 @@
 export type View =
   | "dashboard"
   | "orders"
+  | "messages"
   | "subscriptions"
   | "products"
   | "bumps"

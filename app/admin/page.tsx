@@ -8,7 +8,9 @@ import { supabase } from "./client";
 import type { View } from "./nav";
 import { DashboardScreen } from "./DashboardScreen";
 import { OrdersScreen } from "./OrdersScreen";
+import { MessagesScreen } from "./MessagesScreen";
 import { SubscriptionsScreen } from "./SubscriptionsScreen";
+import { chatGet } from "@/components/chat/api";
 import { ProductsScreen } from "./ProductsScreen";
 import { BumpsScreen } from "./BumpsScreen";
 import { CouponsScreen } from "./CouponsScreen";
@@ -595,6 +597,7 @@ export default function AdminPage() {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [view, setView] = useState<View>("dashboard");
   const [loginError, setLoginError] = useState("");
+  const [msgUnread, setMsgUnread] = useState(0);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -613,6 +616,22 @@ export default function AdminPage() {
     }
     supabase.rpc("is_admin").then(({ data }) => setIsAdmin(data === true));
   }, [session]);
+
+  // Unread chat count for the Messages nav badge (studio side).
+  useEffect(() => {
+    if (!isAdmin) return;
+    let active = true;
+    const tick = async () => {
+      const j = await chatGet<{ unreadCount?: number }>("/api/admin/conversations");
+      if (active) setMsgUnread(j.unreadCount ?? 0);
+    };
+    tick();
+    const t = window.setInterval(tick, 20000);
+    return () => {
+      active = false;
+      window.clearInterval(t);
+    };
+  }, [isAdmin]);
 
   if (!ready) return null;
   if (!session) return <Login onError={setLoginError} error={loginError} />;
@@ -638,6 +657,7 @@ export default function AdminPage() {
   const items: { key: View; label: string }[] = [
     { key: "dashboard", label: "Dashboard" },
     { key: "orders", label: "Orders" },
+    { key: "messages", label: "Messages" },
     { key: "subscriptions", label: "Subscriptions" },
     { key: "products", label: "Products & Pricing" },
     { key: "bumps", label: "Order Bumps" },
@@ -679,13 +699,18 @@ export default function AdminPage() {
                 <button
                   type="button"
                   onClick={() => setView(item.key)}
-                  className={`tap w-full rounded-[6px] px-4 py-2.5 text-left text-body transition-colors ${
+                  className={`tap flex w-full items-center justify-between gap-2 rounded-[6px] px-4 py-2.5 text-left text-body transition-colors ${
                     view === item.key
                       ? "bg-gold/15 font-semibold text-gold"
                       : "text-muted hover:bg-white/[0.04] hover:text-ink"
                   }`}
                 >
-                  {item.label}
+                  <span>{item.label}</span>
+                  {item.key === "messages" && msgUnread > 0 ? (
+                    <span className="rounded-full bg-gold px-1.5 py-0.5 font-mono text-label font-bold text-canvas">
+                      {msgUnread}
+                    </span>
+                  ) : null}
                 </button>
               </li>
             ))}
@@ -698,6 +723,8 @@ export default function AdminPage() {
             <DashboardScreen onNavigate={setView} />
           ) : view === "orders" ? (
             <OrdersScreen />
+          ) : view === "messages" ? (
+            <MessagesScreen />
           ) : view === "subscriptions" ? (
             <SubscriptionsScreen />
           ) : view === "products" ? (

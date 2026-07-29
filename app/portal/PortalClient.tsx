@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Session } from "@supabase/supabase-js";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
+import { MessagesView } from "./MessagesView";
+import { chatGet } from "@/components/chat/api";
 
 /*
  * The customer portal at /portal. Magic-link login (passwordless), then the
@@ -269,7 +271,15 @@ function ProgressTracker({ stage }: { stage: string }) {
   );
 }
 
-function OrderDetailView({ id, onBack }: { id: string; onBack: () => void }) {
+function OrderDetailView({
+  id,
+  onBack,
+  onMessageStudio,
+}: {
+  id: string;
+  onBack: () => void;
+  onMessageStudio: (orderId: string) => void;
+}) {
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [updates, setUpdates] = useState<Update[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -389,6 +399,13 @@ function OrderDetailView({ id, onBack }: { id: string; onBack: () => void }) {
           </div>
         </div>
         <div className="mt-5 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => onMessageStudio(id)}
+            className="tap rounded-[3px] border border-gold/50 bg-gold/[0.06] px-4 py-2 font-mono text-label uppercase text-gold transition-colors hover:bg-gold/[0.12]"
+          >
+            Message the studio
+          </button>
           <a href="mailto:hi@ghlvideo.com" className="tap rounded-[3px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold">
             Email
           </a>
@@ -638,13 +655,31 @@ function SubscriptionsView() {
 
 /* ---- signed-in portal ---- */
 function Portal({ session }: { session: Session }) {
-  const [section, setSection] = useState<"orders" | "subscriptions">("orders");
+  const [section, setSection] = useState<"orders" | "messages" | "subscriptions">("orders");
   const [openOrder, setOpenOrder] = useState<string | null>(null);
+  const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
+  const [msgUnread, setMsgUnread] = useState(0);
+
+  // Poll the unread count so the Messages tab dot stays live from any section.
+  useEffect(() => {
+    let active = true;
+    const tick = async () => {
+      const j = await chatGet<{ unreadCount?: number }>("/api/portal/conversations");
+      if (active) setMsgUnread(j.unreadCount ?? 0);
+    };
+    tick();
+    const t = window.setInterval(tick, 20000);
+    return () => {
+      active = false;
+      window.clearInterval(t);
+    };
+  }, []);
 
   // Invoices tab hidden for launch (the invoice number is on each order); the
   // dedicated invoices view can ship post-launch.
   const tabs: [typeof section, string][] = [
     ["orders", "Orders"],
+    ["messages", "Messages"],
     ["subscriptions", "Subscriptions"],
   ];
 
@@ -665,11 +700,14 @@ function Portal({ session }: { session: Session }) {
               setSection(key);
               setOpenOrder(null);
             }}
-            className={`-mb-px border-b-2 pb-3 font-mono text-label uppercase transition-colors ${
+            className={`-mb-px flex items-center gap-2 border-b-2 pb-3 font-mono text-label uppercase transition-colors ${
               section === key ? "border-gold text-gold" : "border-transparent text-muted hover:text-ink"
             }`}
           >
             {label}
+            {key === "messages" && msgUnread > 0 ? (
+              <span className="h-2 w-2 rounded-full bg-gold" />
+            ) : null}
           </button>
         ))}
       </div>
@@ -677,10 +715,23 @@ function Portal({ session }: { session: Session }) {
       <div className="mt-8">
         {section === "orders" ? (
           openOrder ? (
-            <OrderDetailView id={openOrder} onBack={() => setOpenOrder(null)} />
+            <OrderDetailView
+              id={openOrder}
+              onBack={() => setOpenOrder(null)}
+              onMessageStudio={(orderId) => {
+                setPendingOrderId(orderId);
+                setSection("messages");
+              }}
+            />
           ) : (
             <OrdersList onOpen={setOpenOrder} />
           )
+        ) : section === "messages" ? (
+          <MessagesView
+            pendingOrderId={pendingOrderId}
+            onConsumePending={() => setPendingOrderId(null)}
+            onUnread={setMsgUnread}
+          />
         ) : (
           <SubscriptionsView />
         )}
