@@ -9,6 +9,7 @@ export type View =
   | "bumps"
   | "coupons"
   | "links"
+  | "invoices"
   | "customers"
   | "code"
   | "pages"
