@@ -202,16 +202,16 @@ export const pages = {
         "Social Media Planner + Content AI": {
           kind: "draft",
           src: "https://t9009190526.p.clickup-attachments.com/t9009190526/359f9e81-6e41-4b2e-937c-3c4b67f6e130/05.%20Social%20Media%20Planner%20(draft).mp4?open=true",
-          date: "2026-07-28",
+          date: "2026-07-30",
         },
         "Lead-to-Close With AI": {
           kind: "draft",
           src: "https://t9009190526.p.clickup-attachments.com/t9009190526/6f30edf9-2066-4282-b161-ece60d06a5f4/Ai-First%20Platform%20Demo.mp4?open=true",
-          date: "2026-08-03",
+          date: "2026-08-05",
         },
-        "AI Website + Funnel Builder": { kind: "scheduled", date: "2026-07-30" },
-        "Ask AI, Your In-Platform Assistant": { kind: "scheduled", date: "2026-08-05" },
-        "Mobile App, Run Your Business From Your Phone": { kind: "scheduled", date: "2026-08-07" },
+        "AI Website + Funnel Builder": { kind: "scheduled", date: "2026-07-31" },
+        "Ask AI, Your In-Platform Assistant": { kind: "scheduled", date: "2026-08-07" },
+        "Mobile App, Run Your Business From Your Phone": { kind: "scheduled", date: "2026-08-09" },
       },
       /* corner tags: published videos wear Ready, supplied draft cuts
          wear Draft preview; in-production cards carry only their date */
