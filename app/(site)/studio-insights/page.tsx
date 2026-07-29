@@ -260,6 +260,11 @@ export default async function StudioInsightsPage() {
                   <ul className="mt-5 space-y-3">
                     {items.map((u) => (
                       <li key={u.id} className="border border-hair bg-card/40 p-4">
+                        {u.format && (
+                          <span className="mb-2 inline-flex items-center rounded-[2px] border border-gold/30 bg-gold/[0.06] px-2 py-[3px] font-mono text-label uppercase tracking-[0.08em] text-gold">
+                            {u.format}
+                          </span>
+                        )}
                         <p className="font-display text-body font-semibold leading-snug text-ink">
                           {u.title}
                         </p>

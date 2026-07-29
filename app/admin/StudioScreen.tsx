@@ -22,6 +22,7 @@ type UpdateRow = {
   id: string;
   title: string;
   status: "selected" | "in_production" | "published";
+  format: string | null;
   note: string | null;
   target_date: string | null;
   link_slug: string | null;
@@ -149,6 +150,7 @@ function UpdateForm({
   const [u, setU] = useState({
     title: initial.title ?? "",
     status: initial.status ?? "in_production",
+    format: initial.format ?? "",
     note: initial.note ?? "",
     target: initial.target_date ?? "",
     slug: initial.link_slug ?? "",
@@ -170,6 +172,7 @@ function UpdateForm({
     const payload = {
       title: u.title.trim(),
       status: u.status,
+      format: u.format || null,
       note: u.note.trim() || null,
       target_date: u.target || null,
       link_slug: u.slug.trim() || null,
@@ -214,6 +217,19 @@ function UpdateForm({
             <option value="selected">Up next</option>
             <option value="in_production">In production</option>
             <option value="published">Published</option>
+          </select>
+        </label>
+        <label>
+          <span className={lab}>Video type</span>
+          <select
+            value={u.format}
+            onChange={(e) => set("format", e.target.value)}
+            className={field}
+          >
+            <option value="">None</option>
+            <option value="Explainer">Explainer</option>
+            <option value="Demo">Demo</option>
+            <option value="Marketing / Promo">Marketing / Promo</option>
           </select>
         </label>
         <label>
@@ -473,6 +489,7 @@ export function StudioScreen() {
               </p>
               <p className="mt-0.5 font-mono text-label uppercase text-muted">
                 {STATUS_NAMES[u.status]}
+                {u.format ? ` / ${u.format}` : ""}
                 {u.target_date ? ` / ${u.target_date}` : ""}
                 {u.note ? ` / ${u.note}` : ""}
               </p>

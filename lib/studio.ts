@@ -21,6 +21,7 @@ export type StudioUpdate = {
   id: string;
   title: string;
   status: "selected" | "in_production" | "published";
+  format: string | null;
   note: string | null;
   target_date: string | null;
   link_slug: string | null;
@@ -60,7 +61,7 @@ export async function getStudioSlots(): Promise<StudioSlot[]> {
 export async function getStudioUpdates(): Promise<StudioUpdate[]> {
   try {
     return await sb<StudioUpdate[]>(
-      "studio_updates?select=id,title,status,note,target_date,link_slug,sort,updated_at&published=is.true&order=sort.asc,updated_at.desc",
+      "studio_updates?select=id,title,status,format,note,target_date,link_slug,sort,updated_at&published=is.true&order=sort.asc,updated_at.desc",
     );
   } catch {
     return [];
