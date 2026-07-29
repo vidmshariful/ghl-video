@@ -28,16 +28,23 @@ import { StudioScreen } from "./StudioScreen";
 /* Login                                                             */
 /* ---------------------------------------------------------------- */
 function Login({ onError, error }: { onError: (m: string) => void; error: string }) {
+  const [mode, setMode] = useState<"signin" | "reset">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
+  const reset = mode === "reset";
+
+  const switchMode = (m: "signin" | "reset") => {
+    setMode(m);
+    onError("");
+    setNotice("");
+  };
 
   async function signIn(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     onError("");
-    setNotice("");
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) onError(error.message === "Invalid login credentials" ? "Wrong email or password." : error.message);
     setBusy(false);
@@ -45,8 +52,9 @@ function Login({ onError, error }: { onError: (m: string) => void; error: string
 
   /* set-first-time or forgot: sends the branded reset link. The set-password
      page establishes the session; the new password then works here too. */
-  async function sendReset() {
-    if (!email.trim()) return onError("Enter your email first, then reset.");
+  async function sendReset(e: React.FormEvent) {
+    e.preventDefault();
+    if (!email.trim()) return onError("Enter your email.");
     setBusy(true);
     onError("");
     setNotice("");
@@ -62,14 +70,16 @@ function Login({ onError, error }: { onError: (m: string) => void; error: string
   return (
     <div className="flex min-h-screen items-center justify-center px-6">
       <form
-        onSubmit={signIn}
+        onSubmit={reset ? sendReset : signIn}
         className="w-full max-w-sm rounded-card border border-hair bg-surface p-8"
       >
         <p className="font-display text-h4 font-semibold text-ink">
           GHL Video <span className="text-gradient">Site Admin</span>
         </p>
         <p className="mt-2 text-body-sm text-muted">
-          Sign in to manage the website.
+          {reset
+            ? "Enter your email and we will send a link to set your password."
+            : "Sign in to manage the website."}
         </p>
         <label className="mt-6 block">
           <span className="font-mono text-label uppercase text-muted">Email</span>
@@ -82,17 +92,19 @@ function Login({ onError, error }: { onError: (m: string) => void; error: string
             className="mt-2 w-full rounded-[3px] border border-hair bg-canvas px-4 py-3 text-body text-ink focus:border-gold focus:outline-none"
           />
         </label>
-        <label className="mt-4 block">
-          <span className="font-mono text-label uppercase text-muted">Password</span>
-          <input
-            type="password"
-            required
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="mt-2 w-full rounded-[3px] border border-hair bg-canvas px-4 py-3 text-body text-ink focus:border-gold focus:outline-none"
-          />
-        </label>
+        {!reset && (
+          <label className="mt-4 block">
+            <span className="font-mono text-label uppercase text-muted">Password</span>
+            <input
+              type="password"
+              required
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="mt-2 w-full rounded-[3px] border border-hair bg-canvas px-4 py-3 text-body text-ink focus:border-gold focus:outline-none"
+            />
+          </label>
+        )}
         {error && <p className="mt-4 text-body-sm text-error">{error}</p>}
         {notice && <p className="mt-4 text-body-sm text-gold">{notice}</p>}
         <button
@@ -100,15 +112,15 @@ function Login({ onError, error }: { onError: (m: string) => void; error: string
           disabled={busy}
           className="tap mt-6 w-full rounded-[3px] bg-brand-gradient px-6 py-3 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60"
         >
-          {busy ? "Signing in" : "Sign in"}
+          {reset ? (busy ? "Sending" : "Send reset link") : busy ? "Signing in" : "Sign in"}
         </button>
         <button
           type="button"
-          onClick={sendReset}
+          onClick={() => switchMode(reset ? "signin" : "reset")}
           disabled={busy}
           className="tap mt-4 w-full text-center font-mono text-label uppercase text-muted transition-colors hover:text-gold disabled:opacity-60"
         >
-          First time here, or forgot your password? Set it by email
+          {reset ? "Back to sign in" : "First time here, or forgot your password?"}
         </button>
       </form>
     </div>
