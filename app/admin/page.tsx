@@ -31,14 +31,32 @@ function Login({ onError, error }: { onError: (m: string) => void; error: string
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState("");
 
   async function signIn(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     onError("");
+    setNotice("");
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) onError(error.message === "Invalid login credentials" ? "Wrong email or password." : error.message);
     setBusy(false);
+  }
+
+  /* set-first-time or forgot: sends the branded reset link. The set-password
+     page establishes the session; the new password then works here too. */
+  async function sendReset() {
+    if (!email.trim()) return onError("Enter your email first, then reset.");
+    setBusy(true);
+    onError("");
+    setNotice("");
+    const { error } = await supabase.auth.resetPasswordForEmail(
+      email.trim().toLowerCase(),
+      { redirectTo: `${window.location.origin}/portal/set-password` },
+    );
+    setBusy(false);
+    if (error) onError(error.message);
+    else setNotice(`We sent a link to ${email.trim()}. Open it to set your password.`);
   }
 
   return (
@@ -76,12 +94,21 @@ function Login({ onError, error }: { onError: (m: string) => void; error: string
           />
         </label>
         {error && <p className="mt-4 text-body-sm text-error">{error}</p>}
+        {notice && <p className="mt-4 text-body-sm text-gold">{notice}</p>}
         <button
           type="submit"
           disabled={busy}
           className="tap mt-6 w-full rounded-[3px] bg-brand-gradient px-6 py-3 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60"
         >
           {busy ? "Signing in" : "Sign in"}
+        </button>
+        <button
+          type="button"
+          onClick={sendReset}
+          disabled={busy}
+          className="tap mt-4 w-full text-center font-mono text-label uppercase text-muted transition-colors hover:text-gold disabled:opacity-60"
+        >
+          First time here, or forgot your password? Set it by email
         </button>
       </form>
     </div>
