@@ -177,8 +177,8 @@ export const pages = {
     },
     code: "AIFIRST30",
     percent: 30,
-    deadlineIso: "2026-07-30T14:00:00Z",
-    deadlineLabel: "July 30, 10 AM ET",
+    deadlineIso: "2026-07-30T03:59:00Z",
+    deadlineLabel: "July 29, 11:59 PM ET",
     countdown: {
       endsPrefix: "Offer ends",
       videosLabel: "See the nine videos",
