@@ -8,6 +8,7 @@ export type View =
   | "products"
   | "bumps"
   | "coupons"
+  | "links"
   | "customers"
   | "code"
   | "pages"

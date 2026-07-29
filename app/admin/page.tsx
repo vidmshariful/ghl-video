@@ -14,6 +14,7 @@ import { chatGet } from "@/components/chat/api";
 import { ProductsScreen } from "./ProductsScreen";
 import { BumpsScreen } from "./BumpsScreen";
 import { CouponsScreen } from "./CouponsScreen";
+import { LinksScreen } from "./LinksScreen";
 import { CustomersScreen } from "./CustomersScreen";
 import { StudioScreen } from "./StudioScreen";
 
@@ -662,6 +663,7 @@ export default function AdminPage() {
     { key: "products", label: "Products & Pricing" },
     { key: "bumps", label: "Order Bumps" },
     { key: "coupons", label: "Coupons" },
+    { key: "links", label: "Links & Invoices" },
     { key: "customers", label: "Customers" },
     { key: "studio", label: "Studio Insights" },
     { key: "code", label: "Header & Footer Code" },
@@ -733,6 +735,8 @@ export default function AdminPage() {
             <BumpsScreen />
           ) : view === "coupons" ? (
             <CouponsScreen />
+          ) : view === "links" ? (
+            <LinksScreen />
           ) : view === "customers" ? (
             <CustomersScreen />
           ) : view === "studio" ? (
