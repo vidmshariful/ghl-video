@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { Session } from "@supabase/supabase-js";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
@@ -653,14 +653,157 @@ function SubscriptionsView() {
   );
 }
 
-/* ---- signed-in portal ---- */
+/* ---- signed-in portal (app shell) ---- */
+type PortalSection = "dashboard" | "orders" | "messages" | "subscriptions";
+
+function PageHeader({ title, subtitle }: { title: string; subtitle?: string }) {
+  return (
+    <div>
+      <h1 className="font-display text-h3 text-ink">{title}</h1>
+      {subtitle ? <p className="mt-2 text-body text-muted">{subtitle}</p> : null}
+    </div>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  accent,
+  onClick,
+}: {
+  label: string;
+  value: string;
+  accent?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="tap rounded-card border border-hair bg-surface px-5 py-4 text-left transition-colors hover:border-gold/40"
+    >
+      <p className="font-mono text-label uppercase text-dim">{label}</p>
+      <p
+        className={`mt-1 font-display text-h3 [font-variant-numeric:tabular-nums] ${
+          accent ? "text-gold" : "text-ink"
+        }`}
+      >
+        {value}
+      </p>
+    </button>
+  );
+}
+
+function PortalDashboard({
+  session,
+  unread,
+  onOpenOrder,
+  onGo,
+}: {
+  session: Session;
+  unread: number;
+  onOpenOrder: (id: string) => void;
+  onGo: (s: PortalSection) => void;
+}) {
+  const [orders, setOrders] = useState<OrderSummary[] | null>(null);
+  useEffect(() => {
+    authedFetch("/api/portal/orders")
+      .then((j) => setOrders(j.orders ?? []))
+      .catch(() => setOrders([]));
+  }, []);
+
+  const list = orders ?? [];
+  const active = list.filter((o) => o.status === "paid" && o.stage !== "delivered");
+  const delivered = list.filter((o) => o.stage === "delivered");
+  const latest = list[0] ?? null;
+  const num = (v: number) => (orders === null ? "—" : String(v));
+
+  const primary =
+    "tap inline-flex items-center gap-2 rounded-[3px] bg-brand-gradient px-6 py-3 text-body font-semibold text-canvas transition-all hover:brightness-110";
+  const ghost =
+    "tap inline-flex items-center gap-2 rounded-[3px] border border-hair px-6 py-3 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold";
+
+  return (
+    <div>
+      <p className="font-mono text-label uppercase text-gold">[ Your portal ]</p>
+      <h1 className="mt-3 font-display text-h2 text-ink">Welcome back.</h1>
+      <p className="mt-1 font-mono text-label uppercase text-dim">{session.user.email}</p>
+
+      <div className="mt-8 grid gap-4 sm:grid-cols-3">
+        <StatCard label="Active projects" value={num(active.length)} onClick={() => onGo("orders")} />
+        <StatCard
+          label="Unread messages"
+          value={String(unread)}
+          accent={unread > 0}
+          onClick={() => onGo("messages")}
+        />
+        <StatCard label="Delivered" value={num(delivered.length)} onClick={() => onGo("orders")} />
+      </div>
+
+      {latest ? (
+        <div className="mt-6 rounded-card border border-hair bg-surface p-6">
+          <p className="font-mono text-label uppercase text-muted">Latest project</p>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-4">
+            <div className="min-w-0">
+              {latest.productCode ? (
+                <p className="font-mono text-label uppercase tracking-[0.12em] text-gold/80">
+                  {latest.productCode}
+                </p>
+              ) : null}
+              <p className="mt-0.5 font-display text-h4 text-ink">{latest.productName ?? "Order"}</p>
+              <p className="mt-1 font-mono text-label uppercase text-dim">
+                {STAGES.find((s) => s.key === latest.stage)?.label ?? latest.stage}
+                {latest.invoiceNumber ? ` / ${latest.invoiceNumber}` : ""}
+              </p>
+            </div>
+            <button type="button" onClick={() => onOpenOrder(latest.id)} className={ghost}>
+              Open project
+            </button>
+          </div>
+        </div>
+      ) : orders !== null && list.length === 0 ? (
+        <div className="mt-6 rounded-card border border-hair bg-surface p-6">
+          <p className="font-display text-h4 text-ink">No projects yet.</p>
+          <p className="mt-2 text-body text-muted">
+            Browse the premade library or book a call to start a custom video.
+          </p>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <a href="/premade/" className={primary}>
+              Browse videos<span aria-hidden="true">&rarr;</span>
+            </a>
+            <a href="/contact/" className={ghost}>
+              Book a call
+            </a>
+          </div>
+        </div>
+      ) : null}
+
+      <p className="mt-10 font-mono text-label uppercase text-dim">Quick actions</p>
+      <div className="mt-3 flex flex-wrap gap-3">
+        <button type="button" onClick={() => onGo("messages")} className={ghost}>
+          Message the studio
+        </button>
+        <a href="/contact/" className={ghost}>
+          Book a call
+        </a>
+        <a href="/premade/" className={ghost}>
+          Browse videos
+        </a>
+        <a href="mailto:hi@ghlvideo.com" className={ghost}>
+          Email us
+        </a>
+      </div>
+    </div>
+  );
+}
+
 function Portal({ session }: { session: Session }) {
-  const [section, setSection] = useState<"orders" | "messages" | "subscriptions">("orders");
+  const [section, setSection] = useState<PortalSection>("dashboard");
   const [openOrder, setOpenOrder] = useState<string | null>(null);
   const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
   const [msgUnread, setMsgUnread] = useState(0);
 
-  // Poll the unread count so the Messages tab dot stays live from any section.
+  // Poll the unread count so the Messages badge stays live from any section.
   useEffect(() => {
     let active = true;
     const tick = async () => {
@@ -675,56 +818,72 @@ function Portal({ session }: { session: Session }) {
     };
   }, []);
 
-  // Invoices tab hidden for launch (the invoice number is on each order); the
-  // dedicated invoices view can ship post-launch.
-  const tabs: [typeof section, string][] = [
-    ["orders", "Orders"],
-    ["messages", "Messages"],
-    ["subscriptions", "Subscriptions"],
+  const go = (s: PortalSection) => {
+    setSection(s);
+    setOpenOrder(null);
+  };
+  const messageStudio = (orderId: string) => {
+    setPendingOrderId(orderId);
+    setSection("messages");
+  };
+
+  const nav: { key: PortalSection; label: string }[] = [
+    { key: "dashboard", label: "Dashboard" },
+    { key: "orders", label: "Orders" },
+    { key: "messages", label: "Messages" },
+    { key: "subscriptions", label: "Subscriptions" },
   ];
 
   return (
-    <Shell>
-      <div>
-        <p className="font-mono text-label uppercase text-gold">[ Your portal ]</p>
-        <h1 className="mt-3 font-display text-h2 text-ink">Welcome back.</h1>
-        <p className="mt-1 font-mono text-label uppercase text-dim">{session.user.email}</p>
-      </div>
+    <div className="flex flex-1 flex-col md:flex-row">
+      <nav className="border-b border-hair bg-surface/50 p-4 md:w-60 md:shrink-0 md:border-b-0 md:border-r">
+        <ul className="flex gap-2 overflow-x-auto md:flex-col md:overflow-visible">
+          {nav.map((item) => (
+            <li key={item.key}>
+              <button
+                type="button"
+                onClick={() => go(item.key)}
+                className={`tap flex items-center justify-between gap-2 whitespace-nowrap rounded-[6px] px-4 py-2.5 text-left text-body transition-colors md:w-full ${
+                  section === item.key
+                    ? "bg-gold/15 font-semibold text-gold"
+                    : "text-muted hover:bg-white/[0.04] hover:text-ink"
+                }`}
+              >
+                <span>{item.label}</span>
+                {item.key === "messages" && msgUnread > 0 ? (
+                  <span className="h-2 w-2 shrink-0 rounded-full bg-gold" />
+                ) : null}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </nav>
 
-      <div className="mt-8 flex gap-6 border-b border-hair">
-        {tabs.map(([key, label]) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => {
-              setSection(key);
-              setOpenOrder(null);
+      <section className="min-w-0 flex-1 p-6 md:p-10">
+        {section === "dashboard" ? (
+          <PortalDashboard
+            session={session}
+            unread={msgUnread}
+            onOpenOrder={(id) => {
+              setSection("orders");
+              setOpenOrder(id);
             }}
-            className={`-mb-px flex items-center gap-2 border-b-2 pb-3 font-mono text-label uppercase transition-colors ${
-              section === key ? "border-gold text-gold" : "border-transparent text-muted hover:text-ink"
-            }`}
-          >
-            {label}
-            {key === "messages" && msgUnread > 0 ? (
-              <span className="h-2 w-2 rounded-full bg-gold" />
-            ) : null}
-          </button>
-        ))}
-      </div>
-
-      <div className="mt-8">
-        {section === "orders" ? (
+            onGo={go}
+          />
+        ) : section === "orders" ? (
           openOrder ? (
             <OrderDetailView
               id={openOrder}
               onBack={() => setOpenOrder(null)}
-              onMessageStudio={(orderId) => {
-                setPendingOrderId(orderId);
-                setSection("messages");
-              }}
+              onMessageStudio={messageStudio}
             />
           ) : (
-            <OrdersList onOpen={setOpenOrder} />
+            <div>
+              <PageHeader title="Orders" subtitle="Your projects, delivery, and invoices." />
+              <div className="mt-6">
+                <OrdersList onOpen={setOpenOrder} />
+              </div>
+            </div>
           )
         ) : section === "messages" ? (
           <MessagesView
@@ -733,29 +892,100 @@ function Portal({ session }: { session: Session }) {
             onUnread={setMsgUnread}
           />
         ) : (
-          <SubscriptionsView />
+          <div>
+            <PageHeader title="Subscriptions" subtitle="Manage your editing plan and billing." />
+            <div className="mt-6">
+              <SubscriptionsView />
+            </div>
+          </div>
         )}
-      </div>
-    </Shell>
+      </section>
+    </div>
+  );
+}
+
+/* ---- top bar + profile menu ---- */
+function ProfileMenu({ email }: { email: string }) {
+  const [open, setOpen] = useState(false);
+  const [notice, setNotice] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onDown = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, []);
+
+  const initials = (email.trim()[0] ?? "?").toUpperCase();
+
+  async function changePassword() {
+    setNotice("Sending...");
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/portal/set-password/`,
+    });
+    setNotice(error ? error.message : "Check your email for a link to change your password.");
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className="tap flex items-center gap-2 rounded-full border border-hair py-1 pl-1 pr-2.5 transition-colors hover:border-gold/50"
+      >
+        <span className="grid h-7 w-7 place-items-center rounded-full bg-brand-gradient font-display text-label font-bold text-canvas">
+          {initials}
+        </span>
+        <span className="hidden max-w-[14rem] truncate font-mono text-label uppercase text-muted sm:inline">
+          {email}
+        </span>
+        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" className="text-dim">
+          <path
+            d="M5 8l5 5 5-5"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+      {open ? (
+        <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-card border border-hair bg-surface p-2 shadow-2xl">
+          <p className="break-all px-3 py-2 font-mono text-label uppercase text-dim">{email}</p>
+          <div className="my-1 border-t border-hair" />
+          <button
+            type="button"
+            onClick={changePassword}
+            className="tap w-full rounded-[4px] px-3 py-2 text-left text-body-sm text-muted transition-colors hover:bg-white/[0.04] hover:text-ink"
+          >
+            Change password
+          </button>
+          {notice ? <p className="px-3 py-1 text-body-sm text-gold">{notice}</p> : null}
+          <button
+            type="button"
+            onClick={() => supabase.auth.signOut()}
+            className="tap w-full rounded-[4px] px-3 py-2 text-left text-body-sm text-muted transition-colors hover:bg-white/[0.04] hover:text-error"
+          >
+            Sign out
+          </button>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
 function PortalTopBar({ session }: { session: Session | null }) {
   return (
-    <header className="flex items-center justify-between border-b border-hair bg-surface px-6 py-4">
+    <header className="flex items-center justify-between border-b border-hair bg-surface px-6 py-3">
       <Link href="/portal" className="font-display text-body font-bold text-ink">
         GHL <span className="text-gradient">VIDEO</span>
         <span className="ml-2 font-mono text-label uppercase text-muted">/ Portal</span>
       </Link>
-      {session ? (
-        <button
-          type="button"
-          onClick={() => supabase.auth.signOut()}
-          className="tap rounded-[3px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
-        >
-          Sign out
-        </button>
-      ) : null}
+      {session ? <ProfileMenu email={session.user.email ?? ""} /> : null}
     </header>
   );
 }

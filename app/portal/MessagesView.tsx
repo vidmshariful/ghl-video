@@ -106,6 +106,10 @@ export function MessagesView({
 
   return (
     <div>
+      <div className="mb-6">
+        <h1 className="font-display text-h3 text-ink">Messages</h1>
+        <p className="mt-2 text-body text-muted">Talk to your producer about anything.</p>
+      </div>
       <button
         type="button"
         onClick={() => (general ? setOpenId(general.id) : openByOrder(null))}
