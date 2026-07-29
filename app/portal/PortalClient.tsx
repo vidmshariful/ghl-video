@@ -106,7 +106,7 @@ function LoginView() {
       // success: onAuthStateChange swaps this view for the portal
     } else if (mode === "reset") {
       const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail(), {
-        redirectTo: `${window.location.origin}/portal/set-password`,
+        redirectTo: `${window.location.origin}/portal/set-password/`,
       });
       setBusy(false);
       if (error) setErr(error.message);
@@ -114,7 +114,7 @@ function LoginView() {
     } else {
       const { error } = await supabase.auth.signInWithOtp({
         email: cleanEmail(),
-        options: { emailRedirectTo: `${window.location.origin}/portal`, shouldCreateUser: true },
+        options: { emailRedirectTo: `${window.location.origin}/portal/`, shouldCreateUser: true },
       });
       setBusy(false);
       if (error) setErr(error.message);

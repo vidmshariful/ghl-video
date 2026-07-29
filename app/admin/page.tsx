@@ -60,7 +60,7 @@ function Login({ onError, error }: { onError: (m: string) => void; error: string
     setNotice("");
     const { error } = await supabase.auth.resetPasswordForEmail(
       email.trim().toLowerCase(),
-      { redirectTo: `${window.location.origin}/portal/set-password` },
+      { redirectTo: `${window.location.origin}/portal/set-password/` },
     );
     setBusy(false);
     if (error) onError(error.message);
