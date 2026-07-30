@@ -30,6 +30,7 @@ export function PageHero({
   divider = true,
   top,
   children,
+  note,
 }: {
   chip: string;
   headline: string;
@@ -43,6 +44,8 @@ export function PageHero({
   top?: ReactNode;
   /* CTA row */
   children?: ReactNode;
+  /* availability line, rendered as plain text centered under the CTA row */
+  note?: ReactNode;
 }) {
   return (
     <section data-bp-idx="1" className="relative overflow-x-clip hero-pad">
@@ -70,6 +73,7 @@ export function PageHero({
             {children}
           </div>
         )}
+        {note && <div className="mt-5 flex justify-center">{note}</div>}
       </div>
 
       {/* the boundary */}

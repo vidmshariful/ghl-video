@@ -69,12 +69,12 @@ export default function PremadePage() {
         headline={p.hero.headline}
         accent={p.hero.accent}
         lede={p.hero.lede}
+        note={<CapacityChip service="premade" />}
       >
         <Button href="#videos">See the videos</Button>
         <Button href={cta.bookACall.href} variant="ghost">
           {cta.bookACall.label}
         </Button>
-        <CapacityChip service="premade" />
       </PageHero>
 
       {/* trusted-by logo strip, directly under the hero */}

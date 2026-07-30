@@ -69,12 +69,12 @@ export default function EditingPage() {
         headline={p.hero.headline}
         accent={p.hero.accent}
         lede={p.hero.lede}
+        note={<CapacityChip service="editing" />}
       >
         <Button href="#plans">See the plans</Button>
         <Button href={cta.bookACall.href} variant="ghost">
           {cta.bookACall.label}
         </Button>
-        <CapacityChip service="editing" />
       </PageHero>
 
       {/* trusted-by logo strip, directly under the hero */}

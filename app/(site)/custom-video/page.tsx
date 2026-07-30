@@ -70,6 +70,7 @@ export default function CustomPage() {
         headline={p.hero.headline}
         accent={p.hero.accent}
         lede={p.hero.lede}
+        note={<CapacityChip service="custom" />}
       >
         <Button href={cta.requestQuote.href} variant="hero">
           {cta.requestQuote.label}
@@ -77,7 +78,6 @@ export default function CustomPage() {
         <Button href={cta.bookACall.href} variant="ghost">
           {cta.bookACall.label}
         </Button>
-        <CapacityChip service="custom" />
       </PageHero>
 
       {/* trusted-by logo strip, directly under the hero */}

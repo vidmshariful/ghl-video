@@ -38,7 +38,7 @@ export function CapacityChip({
   const period = row.period_label.toLowerCase();
   if (row.remaining === 0) {
     return (
-      <span className="inline-flex items-center gap-2 rounded-full border border-hair bg-surface/60 px-4 py-2 font-mono text-label uppercase text-muted">
+      <span className="inline-flex items-center gap-2 font-mono text-label uppercase tracking-[0.1em] text-muted">
         <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-dim" />
         Full for {period}, next window open
       </span>
@@ -50,7 +50,7 @@ export function CapacityChip({
       ? `Accepting ${row.remaining} new ${row.remaining === 1 ? "client" : "clients"} ${period}`
       : `${row.remaining} ${row.remaining === 1 ? "slot" : "slots"} left ${period}`;
   return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-gold/40 bg-gold/[0.08] px-4 py-2 font-mono text-label uppercase text-gold">
+    <span className="inline-flex items-center gap-2 font-mono text-label uppercase tracking-[0.1em] text-gold">
       <span
         aria-hidden="true"
         className="h-1.5 w-1.5 rounded-full bg-gold motion-safe:animate-pulse"
