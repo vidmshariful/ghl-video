@@ -27,6 +27,8 @@ export const aiPackClips = {
     "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a54fdf79c9b37b5fd24a134.mp4",
   reputation:
     "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a54fdf7baf5f6da40a950de.mp4",
+  social:
+    "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a6b613ca4c8a1a2c3bae6c2.mp4",
 } as const;
 
 export type PackVideo = {
@@ -119,9 +121,8 @@ export const premadePacks: PremadePack[] = [
             type: "Feature Explainer",
             format: "Feature Explainer",
             capability: "Social & Content",
-            src: null,
+            src: aiPackClips.social,
             poster: null,
-            comingSoon: true,
           },
           {
             title: "AI Website + Funnel Builder",

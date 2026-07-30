@@ -18,6 +18,7 @@ export const productCodes: Record<string, string> = {
   "ai-receptionist-conversational-ai": "SHORT-001",
   "unified-inbox-conversational-ai": "SHORT-002",
   "reputation-management-reviews-ai": "SHORT-003",
+  "social-media-planner-content-ai": "SHORT-030",
   "highlevel-official-full-platform-pitch": "EXP-002",
   "ai-employee": "SHORT-004",
   "conversational-ai": "SHORT-005",

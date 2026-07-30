@@ -209,17 +209,12 @@ export const pages = {
       accent: "and where it stands.",
       intro:
         "Nine videos in three formats. Every published video also sells on its own at its regular price, but the 30% code is for the pack only.",
-      /* Campaign status for the five unpublished videos, keyed by catalog
-         title. Dates confirmed by Shariful (Jul 2026). The two preview
-         clips are draft cuts served from ClickUp attachments (~100MB
-         each); swap src to HighLevel-hosted compressed files when he
-         sends them, nothing else changes. */
+      /* Campaign status for the still-unpublished videos, keyed by catalog
+         title. Dates confirmed by Shariful (Jul 2026). Remaining draft cuts
+         are served from ClickUp attachments (~100MB each); when one
+         publishes, move it to the catalog (aiPackClips + src) like Social
+         Media Planner, and drop its entry here. */
       states: {
-        "Social Media Planner + Content AI": {
-          kind: "draft",
-          src: "https://t9009190526.p.clickup-attachments.com/t9009190526/359f9e81-6e41-4b2e-937c-3c4b67f6e130/05.%20Social%20Media%20Planner%20(draft).mp4?open=true",
-          date: "2026-07-30",
-        },
         "Lead-to-Close With AI": {
           kind: "draft",
           src: "https://t9009190526.p.clickup-attachments.com/t9009190526/6f30edf9-2066-4282-b161-ece60d06a5f4/Ai-First%20Platform%20Demo.mp4?open=true",
