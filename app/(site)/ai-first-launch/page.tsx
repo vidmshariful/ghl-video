@@ -110,6 +110,7 @@ function CatHead({
 
 export default function AiFirstLaunchPage() {
   const p = pages.launch;
+  const ended: boolean = p.ended.on;
   const pack = premadePacks[0];
   /* the catalog's categories, in the campaign's presentation order */
   const CATEGORY_ORDER = ["Master Explainer", "Platform Demo", "Feature Explainers"];
@@ -217,8 +218,8 @@ export default function AiFirstLaunchPage() {
         chip={p.hero.chip}
         headline={p.hero.headline}
         accent={p.hero.accent}
-        lede={p.hero.lede}
-        signal={`Code ${p.code}, 30% off`}
+        lede={ended ? p.ended.lede : p.hero.lede}
+        signal={ended ? p.ended.signal : `Code ${p.code}, 30% off`}
       >
         <LaunchCountdown
           deadlineIso={p.deadlineIso}
@@ -230,6 +231,7 @@ export default function AiFirstLaunchPage() {
           closedLine={p.countdown.closedLine}
           closedCtaLabel={p.countdown.closedCtaLabel}
           closedHref={p.countdown.closedHref}
+          ended={ended}
         />
       </PageHero>
 
@@ -293,8 +295,8 @@ export default function AiFirstLaunchPage() {
           <SectionHead
             index={3}
             chip={p.price.chip}
-            headline={p.price.headline}
-            accent={p.price.accent}
+            headline={ended ? p.ended.priceHeadline : p.price.headline}
+            accent={ended ? p.ended.priceAccent : p.price.accent}
             center
           />
 
@@ -302,7 +304,7 @@ export default function AiFirstLaunchPage() {
             <RevealItem>
               <div className="relative border border-dashed border-hair bg-[linear-gradient(180deg,rgba(252,192,0,0.13),rgba(252,192,0,0.01)_70%)]">
                 <span className="absolute -top-[13px] left-1/2 -translate-x-1/2 whitespace-nowrap border border-dashed border-gold/60 bg-canvas px-3 py-1 font-mono text-label uppercase text-gold">
-                  {p.price.tag}
+                  {ended ? p.ended.priceTag : p.price.tag}
                 </span>
 
                 <div className="grid md:grid-cols-2">
@@ -325,7 +327,7 @@ export default function AiFirstLaunchPage() {
                       </div>
                       <div className="flex items-baseline justify-between gap-4 border-t border-dashed border-hair py-4">
                         <span className="text-body font-medium text-ink">
-                          {p.price.yourNote}
+                          {ended ? p.ended.yourNote : p.price.yourNote}
                         </span>
                         <span className="flex flex-col items-end">
                           <span className="font-mono text-[1.75rem] font-bold leading-none text-gold [font-variant-numeric:tabular-nums] md:text-stat-lg">
@@ -362,12 +364,23 @@ export default function AiFirstLaunchPage() {
                 </div>
 
                 <div className="border-t border-dashed border-hair p-5 md:px-9 md:py-7">
-                  <Button href={orderHref} variant="gradient" size="md" className="w-full">
-                    {cta.orderPremade}
-                  </Button>
-                  <p className="mt-4 text-center font-mono text-label uppercase text-dim">
-                    {p.price.autoNote}
-                  </p>
+                  {ended ? (
+                    <div className="flex flex-col items-center gap-4 text-center">
+                      <p className="text-body text-muted">{p.countdown.closedLine}</p>
+                      <Button href={p.countdown.closedHref} variant="ghost" size="md">
+                        {p.countdown.closedCtaLabel}
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <Button href={orderHref} variant="gradient" size="md" className="w-full">
+                        {cta.orderPremade}
+                      </Button>
+                      <p className="mt-4 text-center font-mono text-label uppercase text-dim">
+                        {p.price.autoNote}
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
             </RevealItem>
@@ -400,10 +413,14 @@ export default function AiFirstLaunchPage() {
       {/* 5. closing */}
       <CtaBand
         bpIdx={5}
-        headline={p.closing.headline}
-        accent={p.closing.accent}
-        sub={p.closing.sub}
-        cta={{ label: cta.orderPremade, href: orderHref }}
+        headline={ended ? p.ended.closingHeadline : p.closing.headline}
+        accent={ended ? p.ended.closingAccent : p.closing.accent}
+        sub={ended ? p.ended.closingSub : p.closing.sub}
+        cta={
+          ended
+            ? { label: p.countdown.closedCtaLabel, href: p.countdown.closedHref }
+            : { label: cta.orderPremade, href: orderHref }
+        }
       />
     </>
   );

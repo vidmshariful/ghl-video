@@ -22,6 +22,7 @@ export function LaunchCountdown({
   closedLine,
   closedCtaLabel,
   closedHref,
+  ended = false,
 }: {
   deadlineIso: string;
   deadlineLabel: string;
@@ -32,6 +33,7 @@ export function LaunchCountdown({
   closedLine: string;
   closedCtaLabel: string;
   closedHref: string;
+  ended?: boolean;
 }) {
   const [now, setNow] = useState<number | null>(null);
   useEffect(() => {
@@ -41,9 +43,12 @@ export function LaunchCountdown({
   }, []);
 
   const left = now == null ? null : Date.parse(deadlineIso) - now;
-  if (left != null && left <= 0) {
+  if (ended || (left != null && left <= 0)) {
     return (
       <div className="flex w-full flex-col items-center gap-5">
+        <p className="font-mono text-label uppercase tracking-[0.14em] text-gold">
+          Offer ended
+        </p>
         <p className="max-w-[var(--measure-body)] text-center text-body text-muted">
           {closedLine}
         </p>

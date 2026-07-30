@@ -179,6 +179,22 @@ export const pages = {
     percent: 30,
     deadlineIso: "2026-07-30T03:59:00Z",
     deadlineLabel: "July 29, 11:59 PM ET",
+    /* Offer state. The window has closed; the page reads as ended and the
+       buy actions point to the public pack instead of the discounted order.
+       To reopen (the planned 48-hour extension): set on:false, then refresh
+       deadlineIso + deadlineLabel to the new window. Nothing else changes. */
+    ended: {
+      on: true,
+      signal: "This launch offer has ended",
+      lede: "You already run our videos in your funnel. The 30% early window on the nine-video AI First pack has now closed. The pack is still available at its standard price, and we may reopen the window briefly, watch your inbox.",
+      priceHeadline: "The pack, and",
+      priceAccent: "its launch price.",
+      priceTag: "Client launch price",
+      yourNote: "Launch price",
+      closingHeadline: "The launch window",
+      closingAccent: "has closed.",
+      closingSub: "The 30% early-access offer has ended. The nine-video AI First pack is still available at its standard price on the premade page.",
+    },
     countdown: {
       endsPrefix: "Offer ends",
       videosLabel: "See the nine videos",
