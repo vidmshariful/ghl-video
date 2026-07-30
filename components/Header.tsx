@@ -400,8 +400,14 @@ export function Header({
           <ResourcesMenu items={resourceItems} pathname={pathname} />
         </nav>
 
-        {/* zone: CTA */}
-        <div className="hidden items-center pl-6 md:flex lg:pl-10">
+        {/* zone: login + CTA */}
+        <div className="hidden items-center gap-5 pl-6 md:flex lg:pl-10">
+          <Link
+            href="/portal"
+            className="text-gradient whitespace-nowrap text-body font-semibold transition-opacity hover:opacity-80"
+          >
+            Login
+          </Link>
           <MagneticCta />
         </div>
 
@@ -474,6 +480,12 @@ export function Header({
                   {item.label}
                 </Link>
               ))}
+              <Link
+                href="/portal"
+                className="text-gradient border-t border-hair py-4 font-display text-h3 font-semibold tracking-tight"
+              >
+                Login
+              </Link>
               <Link
                 href={cta.bookACall.href}
                 className="border-t border-hair py-4 font-display text-h3 font-semibold tracking-tight text-gold"
