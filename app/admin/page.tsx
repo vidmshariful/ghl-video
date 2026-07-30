@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { sitePages } from "@/lib/pages-list";
 import { site } from "@/lib/site";
 import { supabase } from "./client";
+import { Logo } from "@/components/Logo";
 import type { View } from "./nav";
 import { DashboardScreen } from "./DashboardScreen";
 import { OrdersScreen } from "./OrdersScreen";
@@ -657,7 +658,7 @@ export default function AdminPage() {
     );
 
   const groups: { title: string; items: { key: View; label: string }[] }[] = [
-    { title: "Overview", items: [{ key: "dashboard", label: "Dashboard" }] },
+    { title: "", items: [{ key: "dashboard", label: "Dashboard" }] },
     {
       title: "Sales",
       items: [
@@ -697,9 +698,10 @@ export default function AdminPage() {
     <div className="flex min-h-screen flex-col">
       {/* top bar */}
       <header className="flex items-center justify-between border-b border-hair bg-surface px-6 py-4">
-        <p className="font-display text-body font-bold">
-          GHL VIDEO <span className="font-mono text-label uppercase text-muted">/ Site Admin</span>
-        </p>
+        <div className="flex items-center gap-3">
+          <Logo className="h-6" />
+          <span className="font-mono text-label uppercase text-muted">/ Site Admin</span>
+        </div>
         <div className="flex items-center gap-4">
           <span className="hidden font-mono text-label text-dim sm:inline">
             {session.user.email}
@@ -723,25 +725,32 @@ export default function AdminPage() {
             onChange={(e) => setView(e.target.value as View)}
             className="w-full rounded-[6px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none md:hidden"
           >
-            {groups.map((group) => (
-              <optgroup key={group.title} label={group.title}>
-                {group.items.map((item) => (
-                  <option key={item.key} value={item.key}>
-                    {item.label}
-                    {item.key === "messages" && msgUnread > 0 ? ` (${msgUnread})` : ""}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
+            {groups.map((group) => {
+              const opts = group.items.map((item) => (
+                <option key={item.key} value={item.key}>
+                  {item.label}
+                  {item.key === "messages" && msgUnread > 0 ? ` (${msgUnread})` : ""}
+                </option>
+              ));
+              return group.title ? (
+                <optgroup key={group.title} label={group.title}>
+                  {opts}
+                </optgroup>
+              ) : (
+                opts
+              );
+            })}
           </select>
 
           {/* desktop: grouped sidebar */}
           <div className="hidden flex-col md:flex">
             {groups.map((group, gi) => (
-              <div key={group.title} className={gi > 0 ? "mt-5 border-t border-hair pt-5" : ""}>
-                <p className="mb-2 px-3 font-mono text-body-sm font-bold uppercase tracking-[0.14em] text-gold/70">
-                  {group.title}
-                </p>
+              <div key={group.title || "main"} className={gi > 0 ? "mt-5 border-t border-hair pt-5" : ""}>
+                {group.title ? (
+                  <p className="mb-2 px-3 font-mono text-body-sm font-bold uppercase tracking-[0.14em] text-gold/70">
+                    {group.title}
+                  </p>
+                ) : null}
                 <ul className="flex flex-col gap-0.5">
                   {group.items.map((item) => (
                     <li key={item.key}>

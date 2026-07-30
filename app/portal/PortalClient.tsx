@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { Session } from "@supabase/supabase-js";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
+import { Logo } from "@/components/Logo";
 import { MessagesView } from "./MessagesView";
 import { chatGet } from "@/components/chat/api";
 
@@ -981,9 +982,9 @@ function ProfileMenu({ email }: { email: string }) {
 function PortalTopBar({ session }: { session: Session | null }) {
   return (
     <header className="flex items-center justify-between border-b border-hair bg-surface px-6 py-3">
-      <Link href="/portal" className="font-display text-body font-bold text-ink">
-        GHL <span className="text-gradient">VIDEO</span>
-        <span className="ml-2 font-mono text-label uppercase text-muted">/ Portal</span>
+      <Link href="/portal" className="flex items-center gap-3">
+        <Logo className="h-6" />
+        <span className="font-mono text-label uppercase text-muted">/ Portal</span>
       </Link>
       {session ? <ProfileMenu email={session.user.email ?? ""} /> : null}
     </header>
