@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { authHeader, money, supabase, when } from "./client";
+import { AdminModal } from "./Modal";
 
 export type OrderRow = {
   id: string;
@@ -34,6 +35,8 @@ const STATUS_STYLE: Record<string, string> = {
 
 export function hlState(o: OrderRow): { label: string; cls: string } {
   if (o.status === "refunded") return { label: "", cls: "" };
+  // Manual orders came from outside (already in HighLevel); never flag them.
+  if (o.metadata?.manual) return { label: "Manual", cls: "text-muted" };
   if (o.highlevel_opportunity_id) return { label: "HL synced", cls: "text-green" };
   if (o.metadata?.hl_sync_failed) return { label: "HL sync failed", cls: "text-error" };
   if (o.status === "paid") return { label: "HL pending", cls: "text-dim" };
@@ -333,7 +336,7 @@ function OrderDetail({ order, onChanged }: { order: OrderRow; onChanged: () => v
   ];
 
   return (
-    <div className="border-t border-hair bg-canvas px-5 py-5">
+    <div>
       <div className="grid gap-x-8 gap-y-2 sm:grid-cols-2">
         {meta
           .filter(([, v]) => v)
@@ -367,11 +370,182 @@ function OrderDetail({ order, onChanged }: { order: OrderRow; onChanged: () => v
   );
 }
 
+type ProdOpt = {
+  sku: string;
+  name: string;
+  price_cents: number;
+  metadata: { code?: string; manual?: boolean; invoice?: boolean; custom?: boolean } | null;
+};
+
+/* Record a sale that happened outside the site (HighLevel invoice, etc.):
+   creates the customer + a paid order + portal access via /api/admin/orders/manual. */
+function ManualOrderForm({ onDone }: { onDone: () => void }) {
+  const [products, setProducts] = useState<ProdOpt[]>([]);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [company, setCompany] = useState("");
+  const [phone, setPhone] = useState("");
+  const [sku, setSku] = useState("__custom");
+  const [customTitle, setCustomTitle] = useState("");
+  const [amount, setAmount] = useState("");
+  const [invoiceRef, setInvoiceRef] = useState("");
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    supabase
+      .from("products")
+      .select("sku,name,price_cents,active,metadata")
+      .eq("active", true)
+      .order("price_cents", { ascending: true })
+      .then(({ data }) => {
+        setProducts(
+          ((data as ProdOpt[]) ?? []).filter(
+            (p) => !p.metadata?.manual && !p.metadata?.invoice && !p.metadata?.custom,
+          ),
+        );
+      });
+  }, []);
+
+  function pickProduct(value: string) {
+    setSku(value);
+    const p = products.find((x) => x.sku === value);
+    if (p) setAmount((p.price_cents / 100).toString());
+  }
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    setErr("");
+    const custom = sku === "__custom";
+    const res = await fetch("/api/admin/orders/manual", {
+      method: "POST",
+      headers: { ...(await authHeader()), "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name,
+        email,
+        company,
+        phone,
+        productSku: custom ? "" : sku,
+        customTitle: custom ? customTitle : "",
+        amountCents: Math.round(Number(amount) * 100),
+        invoiceRef,
+        note,
+      }),
+    });
+    const j = await res.json();
+    setBusy(false);
+    if (j.error) {
+      setErr(j.error);
+      return;
+    }
+    onDone();
+  }
+
+  return (
+    <form onSubmit={submit} className="grid gap-4">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label>
+          <span className={fLab}>Client name</span>
+          <input value={name} onChange={(e) => setName(e.target.value)} className={fField} />
+        </label>
+        <label>
+          <span className={fLab}>Client email</span>
+          <input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className={fField}
+          />
+        </label>
+        <label>
+          <span className={fLab}>Company</span>
+          <input value={company} onChange={(e) => setCompany(e.target.value)} className={fField} />
+        </label>
+        <label>
+          <span className={fLab}>Phone</span>
+          <input value={phone} onChange={(e) => setPhone(e.target.value)} className={fField} />
+        </label>
+      </div>
+
+      <label>
+        <span className={fLab}>Project</span>
+        <select value={sku} onChange={(e) => pickProduct(e.target.value)} className={fField}>
+          {products.map((p) => (
+            <option key={p.sku} value={p.sku}>
+              {p.metadata?.code ? `${p.metadata.code} ` : ""}
+              {p.name}
+            </option>
+          ))}
+          <option value="__custom">Custom project (enter a title)</option>
+        </select>
+      </label>
+
+      {sku === "__custom" && (
+        <label>
+          <span className={fLab}>Project title (shown to the client)</span>
+          <input
+            value={customTitle}
+            onChange={(e) => setCustomTitle(e.target.value)}
+            placeholder="e.g. AI First SaaS Pack"
+            className={fField}
+          />
+        </label>
+      )}
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label>
+          <span className={fLab}>Amount paid (USD)</span>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className={fField}
+          />
+        </label>
+        <label>
+          <span className={fLab}>Invoice / reference (optional)</span>
+          <input
+            value={invoiceRef}
+            onChange={(e) => setInvoiceRef(e.target.value)}
+            placeholder="e.g. INV-000831"
+            className={fField}
+          />
+        </label>
+      </div>
+
+      <label>
+        <span className={fLab}>Internal note (optional)</span>
+        <input value={note} onChange={(e) => setNote(e.target.value)} className={fField} />
+      </label>
+
+      {err && <p className="text-body-sm text-error">{err}</p>}
+      <p className="text-body-sm text-dim">
+        Creates a paid order and gives the client portal access. No Stripe charge, no HighLevel
+        sync (the sale already lives there).
+      </p>
+      <button
+        type="submit"
+        disabled={busy}
+        className="tap justify-self-start rounded-[3px] bg-brand-gradient px-6 py-2.5 text-body-sm font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-50"
+      >
+        {busy ? "Creating..." : "Create order"}
+      </button>
+    </form>
+  );
+}
+
 export function OrdersScreen() {
   const [rows, setRows] = useState<OrderRow[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [err, setErr] = useState("");
   const [open, setOpen] = useState<string | null>(null);
+  const [showManual, setShowManual] = useState(false);
 
   async function load() {
     const { data, error } = await supabase
@@ -396,7 +570,7 @@ export function OrdersScreen() {
     failed: rows.filter((r) => r.status === "failed").length,
   };
   const needsAttention = rows.filter(
-    (r) => r.status === "paid" && !r.highlevel_opportunity_id,
+    (r) => r.status === "paid" && !r.highlevel_opportunity_id && !r.metadata?.manual,
   ).length;
 
   const summary: [string, string, string][] = [
@@ -405,6 +579,8 @@ export function OrdersScreen() {
     ["Pending", String(counts.pending), "text-muted"],
     ["Failed", String(counts.failed), "text-muted"],
   ];
+
+  const openOrder = rows.find((r) => r.id === open) ?? null;
 
   return (
     <div className="max-w-5xl">
@@ -415,16 +591,25 @@ export function OrdersScreen() {
             Every checkout, newest first. {rows.length} total.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            setLoaded(false);
-            load();
-          }}
-          className="tap rounded-[3px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
-        >
-          Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowManual(true)}
+            className="tap rounded-[3px] bg-brand-gradient px-4 py-2 font-mono text-label font-semibold uppercase text-canvas transition-all hover:brightness-110"
+          >
+            Add manual order
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setLoaded(false);
+              load();
+            }}
+            className="tap rounded-[3px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
+          >
+            Refresh
+          </button>
+        </div>
       </div>
 
       <div className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-card border border-hair bg-hair sm:grid-cols-4">
@@ -454,12 +639,11 @@ export function OrdersScreen() {
         <ul className="mt-6 overflow-hidden rounded-card border border-hair">
           {rows.map((r) => {
             const hl = hlState(r);
-            const isOpen = open === r.id;
             return (
               <li key={r.id} className="border-t border-hair first:border-t-0">
                 <button
                   type="button"
-                  onClick={() => setOpen(isOpen ? null : r.id)}
+                  onClick={() => setOpen(r.id)}
                   className="flex w-full flex-wrap items-center justify-between gap-x-6 gap-y-2 bg-surface px-5 py-4 text-left transition-colors hover:bg-white/[0.02]"
                 >
                   <div className="min-w-0">
@@ -492,11 +676,62 @@ export function OrdersScreen() {
                     </span>
                   </div>
                 </button>
-                {isOpen && <OrderDetail order={r} onChanged={load} />}
               </li>
             );
           })}
         </ul>
+      )}
+
+      {openOrder && (
+        <AdminModal
+          open
+          onClose={() => setOpen(null)}
+          maxWidth="max-w-3xl"
+          title={openOrder.customer?.name || openOrder.customer_email}
+          subtitle={
+            <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span className="font-mono">
+                {openOrder.product?.metadata?.code ? (
+                  <span className="text-gold/80">{openOrder.product.metadata.code} </span>
+                ) : null}
+                {openOrder.product?.name ?? (openOrder.metadata?.sku as string)}
+              </span>
+              <span
+                className={`rounded-full border px-2 py-0.5 font-mono text-label uppercase ${STATUS_STYLE[openOrder.status]}`}
+              >
+                {openOrder.status}
+              </span>
+              {hlState(openOrder).label ? (
+                <span className={`font-mono text-label uppercase ${hlState(openOrder).cls}`}>
+                  {hlState(openOrder).label}
+                </span>
+              ) : null}
+              <span className="font-mono font-bold text-ink [font-variant-numeric:tabular-nums]">
+                {money(openOrder.amount_cents, openOrder.currency)}
+              </span>
+            </span>
+          }
+        >
+          <OrderDetail order={openOrder} onChanged={load} />
+        </AdminModal>
+      )}
+
+      {showManual && (
+        <AdminModal
+          open
+          onClose={() => setShowManual(false)}
+          maxWidth="max-w-2xl"
+          title="Add a manual order"
+          subtitle="Record a sale from a third party (a HighLevel invoice, a wire) and give the client portal access."
+        >
+          <ManualOrderForm
+            onDone={() => {
+              setShowManual(false);
+              setLoaded(false);
+              load();
+            }}
+          />
+        </AdminModal>
       )}
     </div>
   );
