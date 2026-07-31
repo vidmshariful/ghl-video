@@ -170,30 +170,32 @@ export const pages = {
      checkout no longer honors. */
   launch: {
     hero: {
-      chip: "Existing clients only",
-      headline: "Your early window on",
-      accent: "the AI First SaaS Pack.",
-      lede: "You already run our videos in your funnel, so you get the full nine-video AI pack before the public does. 30% off with code AIFIRST30, for the next 72 hours only.",
+      chip: "Reopened by request, today only",
+      headline: "You asked, so 30% off is",
+      accent: "back until tonight.",
+      lede: "The window closed last night, and a few of you wrote in that you missed it. So AIFIRST30 is open one more time, until 11:59 PM ET tonight, and this is the last time. The full nine-video AI pack, 30% off, branded to your SaaS.",
     },
     code: "AIFIRST30",
     percent: 30,
-    deadlineIso: "2026-07-30T03:59:00Z",
-    deadlineLabel: "July 29, 11:59 PM ET",
-    /* Offer state. The window has closed; the page reads as ended and the
-       buy actions point to the public pack instead of the discounted order.
-       To reopen (the planned 48-hour extension): set on:false, then refresh
-       deadlineIso + deadlineLabel to the new window. Nothing else changes. */
+    deadlineIso: "2026-08-01T03:59:00Z",
+    deadlineLabel: "July 31, 11:59 PM ET",
+    /* Offer state. on:false = live (countdown + order buttons); on:true =
+       ended (buy actions point to the public pack). Reopened one last time
+       for July 31. Whenever this deadline changes, extend the AIFIRST30
+       coupon's valid_until in the coupons table to match, or checkout will
+       refuse the code the page still shows. When it closes tonight, set
+       on:true. */
     ended: {
-      on: true,
+      on: false,
       signal: "This launch offer has ended",
-      lede: "You already run our videos in your funnel. The 30% early window on the nine-video AI First pack has now closed. The pack is still available at its standard price, and we may reopen the window briefly, watch your inbox.",
+      lede: "The 30% AIFIRST30 window has now closed for good. The nine-video AI First pack is still available at its standard price, and every video is branded to your SaaS as it ships.",
       priceHeadline: "The pack, and",
       priceAccent: "its launch price.",
       priceTag: "Client launch price",
       yourNote: "Launch price",
       closingHeadline: "The launch window",
       closingAccent: "has closed.",
-      closingSub: "The 30% early-access offer has ended. The nine-video AI First pack is still available at its standard price on the premade page.",
+      closingSub: "The 30% early-access offer has ended for good. The nine-video AI First pack is still available at its standard price on the premade page.",
     },
     countdown: {
       endsPrefix: "Offer ends",
@@ -233,8 +235,8 @@ export const pages = {
     price: {
       chip: "The launch price",
       headline: "The math for",
-      accent: "the next 72 hours.",
-      tag: "Existing clients, 72 hours",
+      accent: "your last window.",
+      tag: "Reopened, today only",
       priceNote: "one time",
       /* the value row is computed from the real per-video prices on the
          page, so the math always adds up against the cards above it */
@@ -265,9 +267,9 @@ export const pages = {
       note: "Existing-client early access until July 30",
     },
     closing: {
-      headline: "72 hours,",
-      accent: "then it goes public.",
-      sub: "Order in this window and the nine-video pack is yours at 30% off, branded to your SaaS as each video ships.",
+      headline: "Tonight,",
+      accent: "then it's gone for good.",
+      sub: "AIFIRST30 is open one last time, until 11:59 PM ET tonight. Order now and the nine-video pack is yours at 30% off, branded to your SaaS as each video ships.",
     },
   },
   custom: {
