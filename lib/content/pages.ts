@@ -170,23 +170,22 @@ export const pages = {
      checkout no longer honors. */
   launch: {
     hero: {
-      chip: "Reopened by request, today only",
-      headline: "You asked, so 30% off is",
-      accent: "back until tonight.",
-      lede: "The window closed last night, and a few of you wrote in that you missed it. So AIFIRST30 is open one more time, until 11:59 PM ET tonight, and this is the last time. The full nine-video AI pack, 30% off, branded to your SaaS.",
+      chip: "Existing clients only",
+      headline: "Your early window on",
+      accent: "the AI First SaaS Pack.",
+      lede: "You already run our videos in your funnel, so you get the full nine-video AI pack, 30% off with code AIFIRST30, before the public does.",
     },
     code: "AIFIRST30",
     percent: 30,
     deadlineIso: "2026-08-01T03:59:00Z",
     deadlineLabel: "July 31, 11:59 PM ET",
     /* Offer state. on:false = live (countdown + order buttons); on:true =
-       ended (buy actions point to the public pack). Reopened one last time
-       for July 31. Whenever this deadline changes, extend the AIFIRST30
-       coupon's valid_until in the coupons table to match, or checkout will
-       refuse the code the page still shows. When it closes tonight, set
-       on:true. */
+       ended (buy actions point to the public pack). CLOSED for good after
+       the July 31 last-chance window; the AIFIRST30 coupon is expired and
+       deactivated. If ever reopened: set on:false, refresh deadlineIso +
+       deadlineLabel, then re-activate + extend the coupon to match. */
     ended: {
-      on: false,
+      on: true,
       signal: "This launch offer has ended",
       lede: "The 30% AIFIRST30 window has now closed for good. The nine-video AI First pack is still available at its standard price, and every video is branded to your SaaS as it ships.",
       priceHeadline: "The pack, and",
