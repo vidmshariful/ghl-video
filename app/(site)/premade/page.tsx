@@ -18,6 +18,7 @@ import { VideoBundles } from "@/components/VideoBundles";
 import { PageHero } from "@/components/pages/PageHero";
 import { ProcessSection } from "@/components/pages/ProcessSection";
 import { ProofStrip } from "@/components/pages/ProofStrip";
+import { FeaturedQuote } from "@/components/pages/FeaturedQuote";
 import { WhiteLabelDemo } from "@/components/pages/WhiteLabelDemo";
 import { TrustStrip } from "@/components/home/TrustStrip";
 import { faqSchema, productCatalogSchema, serviceSchema } from "@/lib/schema";
@@ -241,7 +242,8 @@ export default function PremadePage() {
       <section data-bp-idx="7" className="relative section-pad">
         <DrawnBorder />
         <div className="shell">
-          <ProofStrip quote='"Great quality and quick turnaround! Will definitely work with again!" Ryan Maule, Google review' />
+          <ProofStrip />
+          <FeaturedQuote className="mx-auto mt-12 max-w-3xl" />
           <div className="mt-16">
             <SectionHead
               index={7}

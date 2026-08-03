@@ -9,6 +9,7 @@ import { FaqList } from "@/components/FaqList";
 import { MediaFrame } from "@/components/MediaFrame";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { ReviewCard } from "@/components/ReviewCard";
+import { FeaturedQuote } from "@/components/pages/FeaturedQuote";
 import { SectionGlow } from "@/components/SectionGlow";
 import { RuledSection } from "@/components/RuledSection";
 import { SectionHead } from "@/components/SectionHead";
@@ -259,7 +260,12 @@ export default function EditingPage() {
             intro={p.proof.intro}
             center
           />
-          <Reveal className="mt-12 grid items-start gap-5 md:grid-cols-2 lg:grid-cols-3">
+          <Reveal>
+            <RevealItem>
+              <FeaturedQuote className="mx-auto mt-12 max-w-3xl" />
+            </RevealItem>
+          </Reveal>
+          <Reveal className="mt-8 grid items-start gap-5 md:grid-cols-2 lg:grid-cols-3">
             {reviews.map((r) => (
               <RevealItem key={r.name} className="h-full">
                 <ReviewCard quote={r.quote} name={r.name} className="h-full" />

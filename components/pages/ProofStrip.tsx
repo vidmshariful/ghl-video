@@ -13,7 +13,7 @@ export function ProofStrip({ quote }: { quote?: string }) {
             {clients}+
           </span>
           <span className="font-mono text-label uppercase text-dim">
-            HighLevel SaaS teams
+            HighLevel SaaS clients
           </span>
         </span>
         <span aria-hidden="true" className="hidden h-4 w-px bg-hair sm:block" />

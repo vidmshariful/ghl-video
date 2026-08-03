@@ -3,7 +3,7 @@ import { Button } from "@/components/Button";
 import { Marquee } from "@/components/Marquee";
 import { RuledBox } from "@/components/RuledBox";
 import { SectionChip } from "@/components/SectionChip";
-import { home, trustLogos } from "@/lib/site";
+import { featuredTestimonial, home, trustLogos } from "@/lib/site";
 
 /*
  * The proof section under checkout, drawn in the site's blueprint grid: one
@@ -99,6 +99,7 @@ const CONFIDENCE: {
 export function CheckoutTrust() {
   const lead = home.reviews.items[0]; // Ben Gallagher, the flagship
   const second = home.reviews.items[3]; // Kiwanna Clark, concise
+  const ft = featuredTestimonial; // Chase Buckner, HighLevel, the authority lead
 
   return (
     <section className="relative overflow-x-clip section-pad">
@@ -116,9 +117,25 @@ export function CheckoutTrust() {
           {/* the bento mesh: left = two reviews (tall), right = logos over a 2x2,
               then one full-width closing CTA cell along the bottom */}
           <div className="grid gap-px bg-hair lg:grid-cols-2 lg:grid-rows-[auto_1fr_auto]">
-            {/* left tall cell: the rating and two real reviews */}
+            {/* left tall cell: an authority lead (Chase, HighLevel), the
+                rating, and two real reviews */}
             <div className="flex flex-col bg-canvas p-7 md:p-8 lg:row-span-2">
-              <div className="flex flex-wrap items-center gap-3">
+              {/* Chase Buckner, HighLevel: authority proof at the point of purchase */}
+              <figure className="border-b border-hair pb-7">
+                <span className="inline-flex w-fit items-center rounded-[4px] border border-gold/30 bg-gold/[0.06] px-2.5 py-1.5 font-mono text-label uppercase tracking-[0.12em] text-gold">
+                  {ft.marker}
+                </span>
+                <blockquote className="mt-4 text-lede leading-relaxed text-ink">
+                  &ldquo;{ft.short}&rdquo;
+                </blockquote>
+                <figcaption className="mt-4 border-l-2 border-gold pl-3">
+                  <span className="block text-body-sm font-semibold text-ink">
+                    {ft.name}
+                  </span>
+                  <span className="block text-body-sm text-muted">{ft.role}</span>
+                </figcaption>
+              </figure>
+              <div className="mt-7 flex flex-wrap items-center gap-3">
                 <Stars />
                 <span className="font-mono text-label uppercase tracking-[0.1em] text-muted">
                   5.0 on Google

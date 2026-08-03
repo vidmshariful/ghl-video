@@ -27,6 +27,27 @@ export const founderVideos = [
   "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a4f8271eada8c1f458e3266.mp4",
 ] as const;
 
+/* Chase Buckner's on-camera testimonial. He is HighLevel staff, not a
+ * customer, so this is authority proof and gets a dedicated featured
+ * treatment across the site (home video band, checkout, service pages),
+ * distinct from the customer founder cards. His words are his own
+ * professional opinion; the footer non-affiliation disclaimer stays. */
+export const featuredTestimonial = {
+  name: "Chase Buckner",
+  role: "Sr. Director of Product Marketing, HighLevel",
+  marker: "From inside HighLevel",
+  src: "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a70a464c13b1c94324c1cf6.mp4",
+  poster: null as string | null,
+  /* the large pull line, his exact words */
+  pull: "They know HighLevel inside and out.",
+  /* the fuller quote for the home feature, verbatim (spoken preamble trimmed) */
+  quote:
+    "They make fantastic videos. We've loved working with them over the years. Their animations are amazing. They know HighLevel inside and out, so it's easy for them to help us with scripts, and they just get it. Two thumbs up.",
+  /* a compact quote for checkout and the service pages */
+  short:
+    "They know HighLevel inside and out, so it's easy for them to help us with scripts, and they just get it.",
+} as const;
+
 /* The newest real videos, used as live examples across the site (home
  * showreel, Our Work) instead of the heavy placeholder clips. Sourced
  * from the AI-first pack plus the branded pitch cut. */
