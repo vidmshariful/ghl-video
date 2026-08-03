@@ -31,6 +31,7 @@ export function PageHero({
   top,
   children,
   note,
+  reviewer,
 }: {
   chip: string;
   headline: string;
@@ -46,6 +47,8 @@ export function PageHero({
   children?: ReactNode;
   /* availability line, rendered as plain text centered under the CTA row */
   note?: ReactNode;
+  /* an optional client-voice row (hero avatar review), centered below */
+  reviewer?: ReactNode;
 }) {
   return (
     <section data-bp-idx="1" className="relative overflow-x-clip hero-pad">
@@ -74,6 +77,9 @@ export function PageHero({
           </div>
         )}
         {note && <div className="mt-5 flex justify-center">{note}</div>}
+        {reviewer && (
+          <div className="mx-auto mt-12 w-fit max-w-full text-left">{reviewer}</div>
+        )}
       </div>
 
       {/* the boundary */}

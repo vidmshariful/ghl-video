@@ -16,6 +16,7 @@ import { SectionGlow } from "@/components/SectionGlow";
 import { SectionHead } from "@/components/SectionHead";
 import { VideoBundles } from "@/components/VideoBundles";
 import { PageHero } from "@/components/pages/PageHero";
+import { ChaseHeroReviewer } from "@/components/home/ChaseHeroReviewer";
 import { ProcessSection } from "@/components/pages/ProcessSection";
 import { ProofStrip } from "@/components/pages/ProofStrip";
 import { FeaturedQuote } from "@/components/pages/FeaturedQuote";
@@ -72,6 +73,7 @@ export default function PremadePage() {
         accent={p.hero.accent}
         lede={p.hero.lede}
         note={<CapacityChip service="premade" />}
+        reviewer={<ChaseHeroReviewer />}
       >
         <Button href="#videos">See the videos</Button>
         <Button href={cta.bookACall.href} variant="ghost">

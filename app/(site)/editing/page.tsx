@@ -17,6 +17,7 @@ import { CtaBand } from "@/components/CtaBand";
 import { JsonLd } from "@/components/JsonLd";
 import { PricingCards } from "@/components/PricingCards";
 import { PageHero } from "@/components/pages/PageHero";
+import { ChaseHeroReviewer } from "@/components/home/ChaseHeroReviewer";
 import { ProcessSection } from "@/components/pages/ProcessSection";
 import { TrustStrip } from "@/components/home/TrustStrip";
 import { faqSchema, serviceSchema } from "@/lib/schema";
@@ -71,6 +72,7 @@ export default function EditingPage() {
         accent={p.hero.accent}
         lede={p.hero.lede}
         note={<CapacityChip service="editing" />}
+        reviewer={<ChaseHeroReviewer />}
       >
         <Button href="#plans">See the plans</Button>
         <Button href={cta.bookACall.href} variant="ghost">

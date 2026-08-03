@@ -46,6 +46,10 @@ export const featuredTestimonial = {
   /* a compact quote for checkout and the service pages */
   short:
     "They know HighLevel inside and out, so it's easy for them to help us with scripts, and they just get it.",
+  /* compact form for the small hero avatar-review row (home + service heroes) */
+  heroQuote:
+    "They know HighLevel inside and out, so it's easy for them to help us with scripts.",
+  heroSource: "Sr. Director, HighLevel",
 } as const;
 
 /* The newest real videos, used as live examples across the site (home
@@ -100,19 +104,6 @@ export const home = {
       src: "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a67a34719a8766aea5ba483.mp4",
       poster: null as string | null,
       label: "Showreel",
-    },
-    /* REAL Google review, quoted verbatim */
-    testimonial: {
-      quote:
-        "Super easy process, Easy to deal with, and the video delivered was as advertised.",
-      name: "Dominic",
-      source: "Google review",
-      photo: null as string | null,
-      /* Dominic Bavaro's real on-camera cut, same clip as the first
-         Client Stories card (founderVideos[0], Dom / Emma.io). Loops
-         muted inside the avatar; plays with sound in the click popup. */
-      video: founderVideos[0] as string | null,
-      poster: null as string | null,
     },
   },
 

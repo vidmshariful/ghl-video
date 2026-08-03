@@ -2,7 +2,7 @@
 
 import { motion, useReducedMotion } from "framer-motion";
 import { Button } from "@/components/Button";
-import { HeroReviewer } from "@/components/home/HeroReviewer";
+import { ChaseHeroReviewer } from "@/components/home/ChaseHeroReviewer";
 import { GhlMark } from "@/components/GhlMark";
 import { HeroAtmosphere } from "@/components/HeroAtmosphere";
 import { MediaFrame } from "@/components/MediaFrame";
@@ -134,13 +134,7 @@ export function Hero() {
                   mobile it re-renders after the media so the moving
                   work appears right after the CTAs */}
               <motion.div {...fadeUp(0.69)} className="mt-auto hidden pt-10 lg:block">
-                <HeroReviewer
-                  name={home.hero.testimonial.name}
-                  quote={home.hero.testimonial.quote}
-                  source={home.hero.testimonial.source}
-                  video={home.hero.testimonial.video}
-                  poster={home.hero.testimonial.poster}
-                />
+                <ChaseHeroReviewer />
               </motion.div>
             </div>
 
@@ -165,13 +159,7 @@ export function Hero() {
 
             {/* mobile-only client voice, after the media */}
             <motion.div {...fadeUp(0.69)} className="px-8 pb-8 lg:hidden">
-              <HeroReviewer
-                name={home.hero.testimonial.name}
-                quote={home.hero.testimonial.quote}
-                source={home.hero.testimonial.source}
-                video={home.hero.testimonial.video}
-                poster={home.hero.testimonial.poster}
-              />
+              <ChaseHeroReviewer />
             </motion.div>
           </div>
         </Panel>

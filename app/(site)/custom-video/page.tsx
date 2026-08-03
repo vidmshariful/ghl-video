@@ -19,6 +19,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { PricingCards } from "@/components/PricingCards";
 import { GetStarted } from "@/components/pages/GetStarted";
 import { PageHero } from "@/components/pages/PageHero";
+import { ChaseHeroReviewer } from "@/components/home/ChaseHeroReviewer";
 import { ProcessSection } from "@/components/pages/ProcessSection";
 import { TrustStrip } from "@/components/home/TrustStrip";
 import { faqSchema, serviceSchema } from "@/lib/schema";
@@ -72,6 +73,7 @@ export default function CustomPage() {
         accent={p.hero.accent}
         lede={p.hero.lede}
         note={<CapacityChip service="custom" />}
+        reviewer={<ChaseHeroReviewer />}
       >
         <Button href={cta.requestQuote.href} variant="hero">
           {cta.requestQuote.label}
