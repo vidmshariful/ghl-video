@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { cta, pages, skuFor, videoStack, type PremadePack } from "@/lib/site";
+import { cta, pages, skuFor, videoStack, withPromo, type PremadePack } from "@/lib/site";
 import { EarlyAccessCta } from "./EarlyAccessCta";
 import {
   featureBrowse,
@@ -112,14 +112,14 @@ export function BundleView({
               </span>
               {lock ? (
                 <EarlyAccessCta
-                  href={`/checkout/${skuFor(sku ?? "")}`}
+                  href={withPromo(`/checkout/${skuFor(sku ?? "")}`)}
                   label={ctaLabel}
                   untilIso={lock.untilIso}
                   note={lock.note}
                 />
               ) : (
                 <Link
-                  href={`/checkout/${skuFor(sku ?? "")}`}
+                  href={withPromo(`/checkout/${skuFor(sku ?? "")}`)}
                   className="group inline-flex items-center gap-2 whitespace-nowrap rounded-[3px] bg-brand-gradient px-6 py-3 text-body font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.28)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98]"
                 >
                   {ctaLabel}

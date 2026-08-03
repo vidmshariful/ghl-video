@@ -259,6 +259,36 @@ export function checkoutHref(slug: string): string {
   return `/checkout/${skuFor(slug)}`;
 }
 
+/* ------------------------------------------------------------------ */
+/* Active site-wide promo (flippable)                                   */
+/* ------------------------------------------------------------------ */
+
+/* A time-boxed discount announced by newsletter. The coupon row itself
+ * lives in the DB (public.coupons, seeded by scripts/seed-coupon-new20.mjs);
+ * this is only the on-site surface. The library banner reads it, and
+ * withPromo() appends the code to library checkout links so it applies on
+ * load. Flip `active` to false when the window closes: the banner
+ * disappears and the links drop the code. The DB coupon's valid_until is
+ * the real enforcement, so an expired code is refused at checkout even if
+ * this is left on. Discount is one-time products only (the checkout
+ * refuses codes on subscriptions by design). */
+export const activePromo = {
+  active: true,
+  code: "NEW20",
+  percent: 20,
+  label: "20% off every video, pack, and bundle",
+  deadlineLabel: "Monday, Aug 10",
+  deadlineIso: "2026-08-11T03:59:00Z",
+} as const;
+
+/* Append the active promo code to a checkout href so it auto-applies on
+ * the checkout page. A no-op when the promo is inactive, and safe when the
+ * href already carries a query string. */
+export function withPromo(href: string): string {
+  if (!activePromo.active) return href;
+  return `${href}${href.includes("?") ? "&" : "?"}code=${activePromo.code}`;
+}
+
 /* Look up a video's individual price and checkout by title (packs use
  * this to offer the single-video buy alongside the pack). */
 export const premadeBySlugTitle: Record<string, PremadeVideo> =

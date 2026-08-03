@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { checkoutHref, collab, cta, type CollabVersion } from "@/lib/site";
+import { checkoutHref, collab, cta, withPromo, type CollabVersion } from "@/lib/site";
 
 /* ---------------------------------------------------------------- */
 /* HighLevel x Vidiosa: collaborations, played version by version      */
@@ -104,7 +104,7 @@ export function VersionLightbox({
             </a>
           ) : (
             <Link
-              href={checkoutHref(version.checkoutSlug ?? version.slug)}
+              href={withPromo(checkoutHref(version.checkoutSlug ?? version.slug))}
               className="group inline-flex items-center gap-2 whitespace-nowrap rounded-[3px] bg-brand-gradient px-6 py-3 text-body font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
             >
               {cta.orderPremade}

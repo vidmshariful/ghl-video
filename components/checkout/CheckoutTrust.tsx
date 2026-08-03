@@ -55,7 +55,7 @@ const CONFIDENCE: {
   icon: React.ReactNode;
 }[] = [
   {
-    title: "800+ SaaS clients",
+    title: "1000+ SaaS clients",
     body: "The HighLevel businesses that brand their platform with us.",
     icon: (
       <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">

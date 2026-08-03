@@ -3,7 +3,7 @@ import { trustLogos } from "@/lib/site";
 
 /*
  * The trust bar owns exactly one job: whose logos are on the wall, at a
- * glance, straight under the hero. The 800+ figure belongs to the client
+ * glance, straight under the hero. The 1000+ figure belongs to the client
  * wall and the 5.0 to the reviews section; repeating them here only
  * diluted all three. Logos ride as uniform light silhouettes so mixed
  * brand colours read on the dark ground, and light to full colour on

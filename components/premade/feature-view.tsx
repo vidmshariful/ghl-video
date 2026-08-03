@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { cta, featureAnimations, skuFor } from "@/lib/site";
+import { cta, featureAnimations, skuFor, withPromo } from "@/lib/site";
 import { type Version } from "./catalog";
 import { featurePacks } from "./catalog";
 import { VersionToggle } from "./cards";
@@ -175,7 +175,7 @@ export function FeaturePriceCard({ pack }: { pack: (typeof featurePacks)[number]
         {pack.subtitle}
       </p>
       <Link
-        href={`/checkout/${skuFor(pack.slug)}`}
+        href={withPromo(`/checkout/${skuFor(pack.slug)}`)}
         className="group/btn mt-4 inline-flex items-center justify-center gap-1.5 rounded-[3px] bg-brand-gradient px-4 py-2.5 text-body-sm font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
       >
         {cta.orderPremade}

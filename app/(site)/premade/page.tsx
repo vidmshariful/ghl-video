@@ -8,6 +8,7 @@ import { FaqList } from "@/components/FaqList";
 import { CtaBand } from "@/components/CtaBand";
 import { JsonLd } from "@/components/JsonLd";
 import { PremadeLibrary } from "@/components/PremadeLibrary";
+import { LibraryPromoBanner } from "@/components/premade/LibraryPromoBanner";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { RuleList } from "@/components/RuleList";
 import { RuledSection } from "@/components/RuledSection";
@@ -98,6 +99,7 @@ export default function PremadePage() {
             intro={p.grid.intro}
             center
           />
+          <LibraryPromoBanner />
           <div className="mt-12">
             <PremadeLibrary />
           </div>

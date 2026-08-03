@@ -24,7 +24,7 @@ export const pages = {
       headline: "Every video",
       accent: "and pack, in one place.",
       intro:
-        "800+ HighLevel teams order from this library. Filter it on the left, open a pack to browse it as a playlist, and preview anything before you order.",
+        "1000+ HighLevel clients order from this library. Filter it on the left, open a pack to browse it as a playlist, and preview anything before you order.",
     },
     included: {
       chip: "What is included",

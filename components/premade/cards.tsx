@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MediaFrame } from "@/components/MediaFrame";
-import { checkoutHref, codeFor, cta, skuFor } from "@/lib/site";
+import { checkoutHref, codeFor, cta, skuFor, withPromo } from "@/lib/site";
 import { type BrowseVideo, type Version } from "./catalog";
 
 /* ---------------------------------------------------------------- */
@@ -22,9 +22,11 @@ export function BuyVideoLink({
 }) {
   // a preview-only card buys its parent pack by that pack's sku; an
   // individually-sold video buys by its own slug via checkoutHref.
-  const href = video.checkoutSku
-    ? `/checkout/${skuFor(video.checkoutSku)}`
-    : checkoutHref(video.slug);
+  const href = withPromo(
+    video.checkoutSku
+      ? `/checkout/${skuFor(video.checkoutSku)}`
+      : checkoutHref(video.slug),
+  );
   return (
     <Link
       href={href}
