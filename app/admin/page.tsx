@@ -21,6 +21,7 @@ import { CustomersScreen } from "./CustomersScreen";
 import { StudioScreen } from "./StudioScreen";
 import { TeamScreen } from "./TeamScreen";
 import { SalesPagesScreen } from "./SalesPagesScreen";
+import { CatalogScreen } from "./CatalogScreen";
 import { canAccess, type Role } from "./roles";
 
 /*
@@ -717,9 +718,9 @@ export default function AdminPage() {
     {
       title: "Catalog",
       items: [
+        { key: "catalog", label: "Catalog" },
         { key: "products", label: "Products & Pricing" },
         { key: "bumps", label: "Order Bumps" },
-        { key: "videos", label: "Video List" },
       ],
     },
     {
@@ -859,6 +860,8 @@ export default function AdminPage() {
             <CodeScreen />
           ) : view === "pages" ? (
             <PagesScreen />
+          ) : view === "catalog" ? (
+            <CatalogScreen />
           ) : view === "salespages" ? (
             <SalesPagesScreen />
           ) : view === "team" ? (
