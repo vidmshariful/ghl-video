@@ -1,17 +1,31 @@
 import type { Metadata } from "next";
+import { Logo } from "@/components/Logo";
+import { cta } from "@/lib/site";
 import "./sales.css";
 
 /*
  * Sales landing pages: their own route group with NONE of the marketing
- * chrome (no header, footer, page-frame grid, or scroll ruler) and their
- * own scoped design system (sales.css, everything under .sp). Outreach
- * only, so noindex. The root layout still supplies <html>, the brand
- * fonts, and the CSS reset.
+ * chrome (no header nav, footer, page-frame grid, or scroll ruler) and their
+ * own scoped design system (sales.css, everything under .sp). A slim branded
+ * top bar carries only the logo + a book-a-call. Outreach only, so noindex.
+ * The root layout still supplies <html>, the brand fonts, and the CSS reset.
  */
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
 export default function SalesLayout({ children }: { children: React.ReactNode }) {
-  return <div className="sp">{children}</div>;
+  return (
+    <div className="sp">
+      <div className="sp-topbar">
+        <div className="sp-wrap sp-topbar-inner">
+          <Logo className="h-6" />
+          <a href={cta.bookACall.href} className="sp-btn sp-btn--ghost sp-btn--sm">
+            {cta.bookACall.label}
+          </a>
+        </div>
+      </div>
+      {children}
+    </div>
+  );
 }

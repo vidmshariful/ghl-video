@@ -80,6 +80,18 @@ export const salesPages: SalesPage[] = [
         label: "Unified Inbox + Conversational AI",
         sub: "Feature explainer, branded",
       },
+      {
+        src: aiPackClips.social,
+        poster: null,
+        label: "Social Media Planner + Content AI",
+        sub: "Feature explainer, branded",
+      },
+      {
+        src: "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a56fa0fbaf5f6da40287c33.mp4",
+        poster: "/posters/hl-full-pitch.jpg",
+        label: "HighLevel Full Platform Pitch",
+        sub: "Full platform pitch, branded",
+      },
     ],
     whiteLabel: {
       defaultSrc: null,

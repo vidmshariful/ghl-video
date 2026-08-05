@@ -404,6 +404,173 @@
   color: var(--sp-gold);
 }
 
+/* ---- top bar (logo) ---- */
+.sp-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  border-bottom: 1px solid var(--sp-line);
+  background: rgba(7, 8, 11, 0.72);
+  backdrop-filter: blur(10px);
+}
+.sp-topbar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-block: 0.85rem;
+}
+
+/* ---- coming-soon badge ---- */
+.sp-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--sp-line-strong);
+  padding: 0.3rem 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--sp-muted);
+}
+
+/* ---- bundle tiers ---- */
+.sp-tiers {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 820px) {
+  .sp-tiers {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.sp-tier {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--sp-line);
+  border-radius: var(--sp-radius);
+  background: var(--sp-panel);
+  padding: clamp(1.6rem, 3vw, 2.4rem);
+}
+.sp-tier--featured {
+  border-color: rgba(252, 192, 0, 0.35);
+  background:
+    radial-gradient(120% 90% at 100% 0%, rgba(252, 192, 0, 0.09), transparent 55%),
+    var(--sp-panel);
+}
+.sp-tier-badge {
+  position: absolute;
+  top: -0.8rem;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: var(--sp-grad);
+  color: #07080b;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0.35rem 0.9rem;
+  white-space: nowrap;
+}
+.sp-tier-list {
+  list-style: none;
+  padding: 0;
+  margin: 1.25rem 0;
+  display: grid;
+  gap: 0.7rem;
+  border-top: 1px solid var(--sp-line);
+  padding-top: 1.4rem;
+}
+.sp-tier-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: var(--sp-text);
+}
+.sp-tier-list li::before {
+  content: "\2713";
+  color: var(--sp-gold);
+  font-weight: 700;
+}
+.sp-tier-delivery {
+  margin-top: auto;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--sp-dim);
+  padding-block: 1rem 1.1rem;
+}
+
+/* ---- before / after split ---- */
+.sp-ba {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 820px) {
+  .sp-ba {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.sp-ba-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.sp-ba-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--sp-dim);
+}
+.sp-ba-dot--on {
+  background: var(--sp-gold);
+}
+
+/* ---- logo marquee ---- */
+.sp-marquee {
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+.sp-marquee-track {
+  display: flex;
+  align-items: center;
+  gap: 3rem;
+  width: max-content;
+  animation: sp-scroll 42s linear infinite;
+}
+.sp-logo {
+  height: 1.5rem;
+  width: auto;
+  max-width: 8rem;
+  object-fit: contain;
+  opacity: 0.5;
+  filter: brightness(0) invert(1);
+}
+@keyframes sp-scroll {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* ---- review card ---- */
+.sp-review {
+  border: 1px solid var(--sp-line);
+  border-radius: var(--sp-radius-sm);
+  background: var(--sp-panel);
+  padding: 1.4rem;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sp-btn,
   .sp-card,
@@ -411,5 +578,8 @@
   .sp-play > span,
   .sp-seg-btn {
     transition: none;
+  }
+  .sp-marquee-track {
+    animation: none;
   }
 }

@@ -1,17 +1,18 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { newReady, type BrowseVideo } from "@/components/premade/catalog";
 import {
+  bundleCategories,
   cta,
   disclaimer,
   entityLine,
   featuredTestimonial,
-  premadePacks,
+  home,
+  premadeVideos,
   skuFor,
+  trustLogos,
 } from "@/lib/site";
 import { salesPageBySlug, salesPages, salesShared } from "@/lib/sales/pages";
 import { SpVideo } from "@/components/sales/SpVideo";
-import { SpWhiteLabel } from "@/components/sales/SpWhiteLabel";
 
 export const dynamicParams = false;
 
@@ -33,6 +34,28 @@ export async function generateMetadata({
 
 const dollars = (n: number) => `$${n.toLocaleString("en-US")}`;
 
+type LibVideo = (typeof premadeVideos)[number];
+type Tier = (typeof bundleCategories)[number]["tiers"][number];
+
+/* The library, in the three formats a reseller actually deploys. */
+const LIBRARY_CATS = [
+  {
+    type: "Explainer",
+    name: "Full Explainer",
+    desc: "Perfect for a homepage hero. It works like a salesperson, delivering the core message of your full platform.",
+  },
+  {
+    type: "Demo",
+    name: "Demo Videos",
+    desc: "Show your audience the platform overview before the live demo call. Fewer repeat demos, and hours saved every week.",
+  },
+  {
+    type: "Feature Explainer",
+    name: "Feature Explainer",
+    desc: "Best for ad campaigns, social media, and the feature sections of your website.",
+  },
+];
+
 export default async function SalesLandingPage({
   params,
 }: {
@@ -42,21 +65,15 @@ export default async function SalesLandingPage({
   const page = salesPageBySlug(slug);
   if (!page) notFound();
 
-  const pack = premadePacks[0]; // AI First SaaS Pack (the bundle)
-  const packHref = `/checkout/${skuFor(pack.slug)}`;
   const ft = featuredTestimonial; // Chase Buckner
-  const packLines = [
-    "Every video branded to your SaaS",
-    "Full commercial rights, no attribution",
-    "Delivered in 5 to 7 days",
-  ];
+  const newBundle = bundleCategories.find((c) => c.slug === "new");
 
   return (
     <>
       {/* HERO */}
       <header
         className="sp-section"
-        style={{ position: "relative", overflow: "hidden", paddingBlockStart: "clamp(3rem, 7vw, 5.5rem)" }}
+        style={{ position: "relative", overflow: "hidden", paddingBlockStart: "clamp(2.5rem, 6vw, 4.5rem)" }}
       >
         <div className="sp-glow" />
         <div className="sp-wrap sp-narrow" style={{ position: "relative", textAlign: "center" }}>
@@ -67,16 +84,8 @@ export default async function SalesLandingPage({
           <p className="sp-lede" style={{ margin: "1.25rem auto 0", maxWidth: "44rem" }}>
             {page.hero.sub}
           </p>
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "0.9rem",
-              justifyContent: "center",
-              marginTop: "2rem",
-            }}
-          >
-            <a href="#order" className="sp-btn sp-btn--primary">
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.9rem", justifyContent: "center", marginTop: "2rem" }}>
+            <a href="#videos" className="sp-btn sp-btn--primary">
               See the videos and pricing
             </a>
             <a href={cta.bookACall.href} className="sp-btn sp-btn--ghost">
@@ -84,16 +93,8 @@ export default async function SalesLandingPage({
             </a>
           </div>
         </div>
-        <div
-          className="sp-wrap"
-          style={{ position: "relative", marginTop: "clamp(2.5rem, 5vw, 3.5rem)", maxWidth: "980px" }}
-        >
-          <SpVideo
-            src={page.hero.vslSrc}
-            poster={page.hero.vslPoster}
-            label="watch the overview"
-            placeholder="Your VSL goes here"
-          />
+        <div className="sp-wrap" style={{ position: "relative", marginTop: "clamp(2.5rem, 5vw, 3.5rem)", maxWidth: "980px" }}>
+          <SpVideo src={page.hero.vslSrc} poster={page.hero.vslPoster} label="watch the overview" placeholder="Your VSL goes here" />
         </div>
       </header>
 
@@ -115,12 +116,85 @@ export default async function SalesLandingPage({
         </div>
       </section>
 
-      {/* CLIENT WORK SHOWCASE */}
+      {/* LIBRARY, three formats */}
+      <section id="videos" className="sp-section" style={{ scrollMarginTop: "4rem" }}>
+        <div className="sp-wrap">
+          <SectionHead
+            eyebrow="The library"
+            title="Watch the work,"
+            accent="order what you need."
+            sub="Our newest HighLevel videos, in the three formats a reseller actually deploys. Preview any of them, then order the ones that fit."
+            center
+          />
+          {LIBRARY_CATS.map((cat) => {
+            const vids = premadeVideos.filter((v) => v.type === cat.type);
+            if (vids.length === 0) return null;
+            return (
+              <div key={cat.type} style={{ marginTop: "3rem" }}>
+                <div style={{ maxWidth: "46rem" }}>
+                  <h3 className="sp-display sp-h3">{cat.name}</h3>
+                  <p className="sp-muted" style={{ marginTop: "0.45rem" }}>
+                    {cat.desc}
+                  </p>
+                </div>
+                <div className="sp-grid-cards" style={{ marginTop: "1.5rem" }}>
+                  {vids.map((v) => (
+                    <LibraryCard key={v.slug} v={v} />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* NEW VIDEO BUNDLE */}
+      {newBundle ? (
+        <section id="bundle" className="sp-section" style={{ scrollMarginTop: "4rem" }}>
+          <div className="sp-wrap">
+            <SectionHead eyebrow="Bundle and save" title={newBundle.name} sub={newBundle.blurb} center />
+            <div className="sp-tiers" style={{ marginTop: "2.5rem", maxWidth: "880px", marginInline: "auto" }}>
+              {newBundle.tiers.map((t) => (
+                <TierCard key={t.slug} t={t} />
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {/* BEFORE / AFTER */}
+      <section className="sp-section">
+        <div className="sp-wrap">
+          <SectionHead
+            eyebrow="Before and after"
+            title="The same video,"
+            accent="branded to you."
+            sub="On the left, the original cut. On the right, the same video customized to a SaaS: logo, dashboard, colors, and voiceover."
+            center
+          />
+          <div className="sp-ba" style={{ marginTop: "2.5rem" }}>
+            <div>
+              <div className="sp-ba-label sp-muted">
+                <span className="sp-ba-dot" /> Original
+              </div>
+              <SpVideo src={page.whiteLabel.defaultSrc} poster={page.whiteLabel.poster} label="original cut" placeholder="Original coming" />
+            </div>
+            <div>
+              <div className="sp-ba-label" style={{ color: "var(--sp-gold)" }}>
+                <span className="sp-ba-dot sp-ba-dot--on" /> Customized to your SaaS
+              </div>
+              <SpVideo src={page.whiteLabel.brandedSrc} poster={page.whiteLabel.poster} label="branded cut" placeholder="Branded coming" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* RECENT DELIVERIES */}
       <section className="sp-section">
         <div className="sp-wrap">
           <SectionHead
             eyebrow="Recent work"
-            title="See the quality,"
+            title="Recently delivered,"
             accent="branded to real SaaS."
             sub="A slice of recent deliveries. Every frame is white-labeled: their logo, their dashboard, their voiceover."
           />
@@ -137,27 +211,6 @@ export default async function SalesLandingPage({
               </figure>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* WHITE LABEL */}
-      <section className="sp-section">
-        <div className="sp-wrap sp-featured">
-          <div>
-            <span className="sp-eyebrow">Your brand, not ours</span>
-            <h2 className="sp-display sp-h2" style={{ marginTop: "0.8rem" }}>
-              See it as <span className="sp-grad-text">your video.</span>
-            </h2>
-            <p className="sp-lede" style={{ marginTop: "1rem" }}>
-              Every video is customized to your SaaS: your logo, your dashboard theme, your colors, and a
-              voiceover in your choice of accent. Toggle to see the difference.
-            </p>
-          </div>
-          <SpWhiteLabel
-            defaultSrc={page.whiteLabel.defaultSrc}
-            brandedSrc={page.whiteLabel.brandedSrc}
-            poster={page.whiteLabel.poster}
-          />
         </div>
       </section>
 
@@ -185,73 +238,10 @@ export default async function SalesLandingPage({
         </div>
       </section>
 
-      {/* ORDER */}
-      <section id="order" className="sp-section" style={{ scrollMarginTop: "1.5rem" }}>
-        <div className="sp-wrap">
-          <SectionHead
-            eyebrow="Order"
-            title="Grab a single,"
-            accent="or take the pack."
-            sub="Order right here. Single videos ship on their own, or take the full pack and save. Every video branded to your SaaS."
-            center
-          />
-
-          {/* the pack, featured */}
-          <div className="sp-card" style={{ marginTop: "2.5rem" }}>
-            <div className="sp-featured" style={{ padding: "clamp(1.1rem, 2.5vw, 1.6rem)" }}>
-              <SpVideo src={pack.categories[0].videos[0].src} poster="/posters/ai-master.jpg" label={pack.name} />
-              <div>
-                <span className="sp-eyebrow">The pack, {pack.count} videos</span>
-                <h3 className="sp-display sp-h3" style={{ marginTop: "0.6rem" }}>
-                  {pack.name}
-                </h3>
-                <p className="sp-muted" style={{ marginTop: "0.5rem" }}>
-                  {pack.tagline}
-                </p>
-                <ul style={{ listStyle: "none", padding: 0, margin: "1.1rem 0 0", display: "grid", gap: "0.5rem" }}>
-                  {packLines.map((l) => (
-                    <li key={l} className="sp-muted" style={{ display: "flex", gap: "0.6rem", fontSize: "0.95rem" }}>
-                      <span style={{ color: "var(--sp-gold)" }} aria-hidden="true">
-                        &#10003;
-                      </span>
-                      {l}
-                    </li>
-                  ))}
-                </ul>
-                <div style={{ display: "flex", alignItems: "baseline", gap: "0.7rem", marginTop: "1.25rem" }}>
-                  {pack.anchorPrice ? <span className="sp-strike">{dollars(pack.anchorPrice)}</span> : null}
-                  <span className="sp-price" style={{ fontSize: "2.1rem" }}>
-                    {dollars(pack.price ?? 0)}
-                  </span>
-                </div>
-                <a href={packHref} className="sp-btn sp-btn--primary sp-btn--wide" style={{ marginTop: "1.1rem" }}>
-                  Order the pack
-                </a>
-              </div>
-            </div>
-          </div>
-
-          {/* singles */}
-          <h3 className="sp-display sp-h3" style={{ marginTop: "3rem", textAlign: "center" }}>
-            Or order any video on its own
-          </h3>
-          <div className="sp-grid-cards" style={{ marginTop: "1.75rem" }}>
-            {newReady.map((v) => (
-              <OrderCard key={v.slug} v={v} />
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* HOW IT WORKS */}
       <section className="sp-section">
         <div className="sp-wrap">
-          <SectionHead
-            eyebrow="How it works"
-            title={salesShared.howItWorks.heading}
-            accent={salesShared.howItWorks.accent}
-            center
-          />
+          <SectionHead eyebrow="How it works" title={salesShared.howItWorks.heading} accent={salesShared.howItWorks.accent} center />
           <div className="sp-steps" style={{ marginTop: "2.5rem" }}>
             {salesShared.howItWorks.steps.map((s) => (
               <div key={s.n} className="sp-step">
@@ -268,7 +258,7 @@ export default async function SalesLandingPage({
         </div>
       </section>
 
-      {/* CUSTOM FALLBACK */}
+      {/* CUSTOM VIDEO CTA */}
       <section className="sp-section--tight">
         <div className="sp-wrap">
           <div className="sp-panel-cta sp-featured">
@@ -278,19 +268,11 @@ export default async function SalesLandingPage({
                 We will build it custom for your SaaS.
               </h2>
               <p className="sp-muted" style={{ marginTop: "0.6rem" }}>
-                If none of these match your positioning, we script and produce a video from scratch for your
-                exact offer and ICP. Book a quick call and we will scope it with you.
+                If none of these match your positioning, we script and produce a video from scratch for your exact
+                offer and ICP. Book a quick call and we will scope it with you.
               </p>
             </div>
-            <div
-              style={{
-                display: "flex",
-                gap: "0.8rem",
-                flexWrap: "wrap",
-                alignItems: "center",
-                justifyContent: "flex-start",
-              }}
-            >
+            <div style={{ display: "flex", gap: "0.8rem", flexWrap: "wrap", alignItems: "center" }}>
               <a href={cta.bookACall.href} className="sp-btn sp-btn--primary">
                 Book a custom video call
               </a>
@@ -299,20 +281,6 @@ export default async function SalesLandingPage({
               </a>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* GUARANTEES */}
-      <section className="sp-section--tight">
-        <div className="sp-wrap sp-grid-cards">
-          {salesShared.guarantees.map((g) => (
-            <div key={g.title} className="sp-step">
-              <p style={{ fontWeight: 600 }}>{g.title}</p>
-              <p className="sp-muted" style={{ marginTop: "0.4rem", fontSize: "0.92rem" }}>
-                {g.line}
-              </p>
-            </div>
-          ))}
         </div>
       </section>
 
@@ -333,21 +301,77 @@ export default async function SalesLandingPage({
         </div>
       </section>
 
-      {/* FINAL CTA */}
+      {/* TESTIMONIALS: video + logos + reviews */}
+      <section className="sp-section">
+        <div className="sp-wrap">
+          <SectionHead eyebrow="Proof" title="Founders and platforms," accent="on the record." center />
+
+          {/* client video testimonials */}
+          <div className="sp-grid-cards" style={{ marginTop: "2.5rem" }}>
+            {home.videoTestimonials.items.map((t) => (
+              <figure key={t.company} className="sp-card" style={{ margin: 0 }}>
+                <SpVideo src={t.src} poster={t.poster} label={`${t.name}, ${t.company}`} />
+                <figcaption style={{ padding: "1.1rem 1.25rem" }}>
+                  <p className="sp-muted" style={{ fontSize: "0.95rem" }}>
+                    {t.summary}
+                  </p>
+                  <p style={{ marginTop: "0.7rem", fontWeight: 600 }}>{t.name}</p>
+                  <p className="sp-muted" style={{ fontSize: "0.85rem" }}>
+                    CEO of {t.company}
+                  </p>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+
+          {/* logo marquee */}
+          <div style={{ marginTop: "3.5rem" }}>
+            <p className="sp-eyebrow" style={{ display: "block", textAlign: "center", marginBottom: "1.5rem" }}>
+              Trusted by HighLevel SaaS
+            </p>
+            <div className="sp-marquee">
+              <div className="sp-marquee-track">
+                {[...trustLogos.slice(0, 22), ...trustLogos.slice(0, 22)].map((src, i) => (
+                  // eslint-disable-next-line @next/next/no-img-element -- local logo silhouette
+                  <img key={i} src={src} alt="" className="sp-logo" loading="lazy" />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* google reviews */}
+          <div className="sp-grid-cards" style={{ marginTop: "3.5rem" }}>
+            {home.reviews.items.slice(0, 6).map((r) => (
+              <div key={r.name} className="sp-review">
+                <span className="sp-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
+                <p style={{ marginTop: "0.6rem" }}>&ldquo;{r.quote}&rdquo;</p>
+                <p className="sp-muted" style={{ marginTop: "0.8rem", fontWeight: 600 }}>
+                  {r.name}
+                </p>
+              </div>
+            ))}
+          </div>
+          <p className="sp-muted" style={{ textAlign: "center", marginTop: "1.5rem", fontSize: "0.9rem" }}>
+            Every review on Google, five stars.
+          </p>
+        </div>
+      </section>
+
+      {/* FINAL CTA, bundle focused */}
       <section className="sp-section" style={{ position: "relative", overflow: "hidden", textAlign: "center" }}>
         <div className="sp-glow" />
         <div className="sp-wrap sp-narrow" style={{ position: "relative" }}>
-          <h2 className="sp-display sp-h2">
-            {page.closing.headline} <span className="sp-grad-text">{page.closing.accent}</span>
+          <span className="sp-eyebrow">Best value</span>
+          <h2 className="sp-display sp-h2" style={{ marginTop: "0.8rem" }}>
+            Take the bundle, <span className="sp-grad-text">publish this week.</span>
           </h2>
-          <p className="sp-lede" style={{ margin: "1rem auto 0", maxWidth: "40rem" }}>
-            {page.closing.sub}
+          <p className="sp-lede" style={{ margin: "1rem auto 0", maxWidth: "42rem" }}>
+            The Growth bundle gets you an explainer, four short explainers, a demo, and the full platform pitch, all
+            branded to your SaaS, and it saves you a third off single pricing. Or start with a single above.
           </p>
-          <div
-            style={{ display: "flex", gap: "0.9rem", justifyContent: "center", marginTop: "1.8rem", flexWrap: "wrap" }}
-          >
-            <a href="#order" className="sp-btn sp-btn--primary">
-              See the videos
+          <div style={{ display: "flex", gap: "0.9rem", justifyContent: "center", marginTop: "1.8rem", flexWrap: "wrap" }}>
+            <a href="#bundle" className="sp-btn sp-btn--primary">
+              See the bundles
             </a>
             <a href={cta.bookACall.href} className="sp-btn sp-btn--ghost">
               {cta.bookACall.label}
@@ -358,10 +382,7 @@ export default async function SalesLandingPage({
 
       {/* FOOTER */}
       <footer className="sp-footer">
-        <div
-          className="sp-wrap"
-          style={{ display: "flex", flexWrap: "wrap", gap: "1.25rem", alignItems: "center", justifyContent: "space-between" }}
-        >
+        <div className="sp-wrap" style={{ display: "flex", flexWrap: "wrap", gap: "1.25rem", alignItems: "center", justifyContent: "space-between" }}>
           <div>
             <p style={{ color: "var(--sp-text)", fontWeight: 600 }}>GHL Video</p>
             <p style={{ marginTop: "0.2rem" }}>{entityLine}</p>
@@ -385,21 +406,27 @@ function SectionHead({
 }: {
   eyebrow: string;
   title: string;
-  accent: string;
+  accent?: string;
   sub?: string;
   center?: boolean;
 }) {
   return (
     <div
       style={{
-        maxWidth: center ? "44rem" : "40rem",
+        maxWidth: center ? "46rem" : "42rem",
         marginInline: center ? "auto" : undefined,
         textAlign: center ? "center" : "left",
       }}
     >
       <span className="sp-eyebrow">{eyebrow}</span>
       <h2 className="sp-display sp-h2" style={{ marginTop: "0.7rem" }}>
-        {title} <span className="sp-grad-text">{accent}</span>
+        {title}
+        {accent ? (
+          <>
+            {" "}
+            <span className="sp-grad-text">{accent}</span>
+          </>
+        ) : null}
       </h2>
       {sub ? (
         <p className="sp-lede" style={{ marginTop: "0.9rem" }}>
@@ -410,15 +437,15 @@ function SectionHead({
   );
 }
 
-function OrderCard({ v }: { v: BrowseVideo }) {
-  const href = `/checkout/${skuFor(v.slug)}`;
+function LibraryCard({ v }: { v: LibVideo }) {
+  const ready = !v.comingSoon && Boolean(v.preview);
   return (
     <div className="sp-card sp-card--hover" style={{ display: "flex", flexDirection: "column" }}>
-      <SpVideo src={v.preview} poster={v.poster} label={v.title} />
+      <SpVideo src={v.preview} poster={v.poster} label={v.title} placeholder="Coming soon" />
       <div style={{ padding: "1rem 1.15rem", display: "flex", flexDirection: "column", flex: 1 }}>
         <p style={{ fontWeight: 600 }}>{v.title}</p>
         <p className="sp-muted" style={{ fontSize: "0.85rem", marginTop: "0.2rem" }}>
-          {v.typeTag}
+          {v.format}
         </p>
         <div
           style={{
@@ -430,14 +457,56 @@ function OrderCard({ v }: { v: BrowseVideo }) {
             paddingTop: "1rem",
           }}
         >
-          <span className="sp-price" style={{ fontSize: "1.35rem" }}>
-            {dollars(v.price)}
-          </span>
-          <a href={href} className="sp-btn sp-btn--primary sp-btn--sm">
-            Order
-          </a>
+          {ready ? (
+            <>
+              <span className="sp-price" style={{ fontSize: "1.35rem" }}>
+                {dollars(v.price)}
+              </span>
+              <a href={`/checkout/${skuFor(v.slug)}`} className="sp-btn sp-btn--primary sp-btn--sm">
+                Order
+              </a>
+            </>
+          ) : (
+            <span className="sp-badge">Coming soon</span>
+          )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function TierCard({ t }: { t: Tier }) {
+  const save = t.anchorPrice ? Math.round((1 - t.price / t.anchorPrice) * 100) : 0;
+  const href = `/checkout/${skuFor(t.slug)}`;
+  return (
+    <div className={`sp-tier${t.featured ? " sp-tier--featured" : ""}`}>
+      {t.featured ? <span className="sp-tier-badge">Most popular</span> : null}
+      <h3 className="sp-display sp-h3">{t.name}</h3>
+      <div style={{ marginTop: "0.8rem" }}>
+        <span className="sp-price" style={{ fontSize: "2.6rem" }}>
+          {dollars(t.price)}
+        </span>
+      </div>
+      {t.anchorPrice ? (
+        <p style={{ marginTop: "0.35rem" }}>
+          <span className="sp-strike">{dollars(t.anchorPrice)}</span>
+          <span
+            className="sp-muted"
+            style={{ marginLeft: "0.6rem", fontWeight: 600, fontSize: "0.82rem", textTransform: "uppercase", letterSpacing: "0.08em" }}
+          >
+            Save {save}%
+          </span>
+        </p>
+      ) : null}
+      <ul className="sp-tier-list">
+        {t.items.map((it) => (
+          <li key={it.label}>{it.label}</li>
+        ))}
+      </ul>
+      <p className="sp-tier-delivery">Delivery in {t.deliveryDays} days</p>
+      <a href={href} className="sp-btn sp-btn--primary sp-btn--wide">
+        Order Now
+      </a>
     </div>
   );
 }
