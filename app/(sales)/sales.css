@@ -1,0 +1,415 @@
+/* ==================================================================
+ * GHL Video, sales landing-page design system.
+ *
+ * Fully scoped under .sp, so it never touches the main marketing site
+ * and the main site's classes never leak in. A distinct, video-forward,
+ * conversion-first look: soft rounded surfaces, bold gradient CTAs, big
+ * type, generous rhythm, ambient glows. No blueprint grid, no hairline
+ * mesh. On brand (same gold-to-green), different job.
+ *
+ * All new landing pages reuse this system. Add page-specific tweaks as
+ * more .sp-* classes here, never in the global design tokens.
+ * ================================================================== */
+
+.sp {
+  /* palette (on brand, distinct usage) */
+  --sp-bg: #07080b;
+  --sp-panel: #0f1118;
+  --sp-panel-2: #161a24;
+  --sp-line: rgba(255, 255, 255, 0.08);
+  --sp-line-strong: rgba(255, 255, 255, 0.15);
+  --sp-text: #f4f6fb;
+  --sp-muted: #9aa2b6;
+  --sp-dim: #6b7286;
+  --sp-gold: #fcc000;
+  --sp-green: #00cc00;
+  --sp-grad: linear-gradient(100deg, #fcc000, #00cc00);
+  --sp-gold-soft: rgba(252, 192, 0, 0.1);
+
+  /* rhythm */
+  --sp-max: 1140px;
+  --sp-narrow: 800px;
+  --sp-radius: 20px;
+  --sp-radius-sm: 12px;
+  --sp-pad: clamp(3.5rem, 8vw, 7rem);
+
+  background: var(--sp-bg);
+  color: var(--sp-text);
+  font-family: var(--font-body), system-ui, sans-serif;
+  line-height: 1.5;
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.sp *,
+.sp *::before,
+.sp *::after {
+  box-sizing: border-box;
+}
+
+/* ---- containers ---- */
+.sp-wrap {
+  width: 100%;
+  max-width: var(--sp-max);
+  margin-inline: auto;
+  padding-inline: clamp(1.1rem, 4vw, 2rem);
+}
+.sp-narrow {
+  max-width: var(--sp-narrow);
+}
+
+/* ---- section rhythm ---- */
+.sp-section {
+  position: relative;
+  padding-block: var(--sp-pad);
+}
+.sp-section--tight {
+  padding-block: clamp(2.5rem, 5vw, 4rem);
+}
+.sp-hr {
+  height: 1px;
+  border: 0;
+  background: linear-gradient(90deg, transparent, var(--sp-line-strong), transparent);
+}
+
+/* ---- type ---- */
+.sp-display {
+  font-family: var(--font-heading), system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.03;
+}
+.sp-h1 {
+  font-size: clamp(2.4rem, 6vw, 4.3rem);
+}
+.sp-h2 {
+  font-size: clamp(1.9rem, 4vw, 3rem);
+}
+.sp-h3 {
+  font-size: clamp(1.25rem, 2.4vw, 1.75rem);
+}
+.sp-lede {
+  font-size: clamp(1.05rem, 1.5vw, 1.28rem);
+  color: var(--sp-muted);
+  line-height: 1.55;
+}
+.sp-eyebrow {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--sp-gold);
+}
+.sp-grad-text {
+  background: var(--sp-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.sp-muted {
+  color: var(--sp-muted);
+}
+
+/* ---- buttons ---- */
+.sp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  padding: 0.95rem 1.9rem;
+  font-family: var(--font-heading), system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 1.02rem;
+  line-height: 1;
+  cursor: pointer;
+  text-decoration: none;
+  border: 0;
+  transition: transform 0.15s ease, filter 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+.sp-btn--primary {
+  background: var(--sp-grad);
+  color: #07080b;
+  box-shadow: 0 12px 44px -14px rgba(252, 192, 0, 0.55);
+}
+.sp-btn--primary:hover {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+}
+.sp-btn--ghost {
+  background: transparent;
+  color: var(--sp-text);
+  border: 1px solid var(--sp-line-strong);
+}
+.sp-btn--ghost:hover {
+  border-color: var(--sp-gold);
+  color: var(--sp-gold);
+}
+.sp-btn--sm {
+  padding: 0.6rem 1.15rem;
+  font-size: 0.9rem;
+}
+.sp-btn--wide {
+  width: 100%;
+}
+
+/* ---- surfaces ---- */
+.sp-card {
+  background: var(--sp-panel);
+  border: 1px solid var(--sp-line);
+  border-radius: var(--sp-radius);
+  overflow: hidden;
+  transition: border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+}
+.sp-card--hover:hover {
+  border-color: rgba(252, 192, 0, 0.35);
+  transform: translateY(-3px);
+  box-shadow: 0 24px 60px -30px rgba(0, 0, 0, 0.8);
+}
+.sp-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid var(--sp-line-strong);
+  border-radius: 999px;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.82rem;
+  color: var(--sp-muted);
+}
+
+/* ---- ambient glow ---- */
+.sp-glow {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+.sp-glow::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -18rem;
+  width: 64rem;
+  height: 42rem;
+  transform: translateX(-50%);
+  background: radial-gradient(closest-side, rgba(252, 192, 0, 0.1), transparent 70%);
+}
+
+/* ---- video frame ---- */
+.sp-video {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  border-radius: var(--sp-radius);
+  overflow: hidden;
+  background: #000;
+  border: 1px solid var(--sp-line-strong);
+}
+.sp-video > video,
+.sp-video > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.sp-video--placeholder {
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(60% 60% at 50% 40%, rgba(252, 192, 0, 0.08), transparent 70%),
+    var(--sp-panel-2);
+}
+
+/* the round play affordance over a video */
+.sp-play {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+}
+.sp-play > span {
+  display: grid;
+  place-items: center;
+  width: clamp(3.5rem, 6vw, 5rem);
+  height: clamp(3.5rem, 6vw, 5rem);
+  border-radius: 999px;
+  background: var(--sp-grad);
+  box-shadow: 0 0 40px rgba(0, 204, 0, 0.35);
+  transition: transform 0.2s ease;
+}
+.sp-play:hover > span {
+  transform: scale(1.07);
+}
+
+/* ---- price ---- */
+.sp-price {
+  font-family: var(--font-heading), system-ui, sans-serif;
+  font-weight: 700;
+  color: var(--sp-gold);
+  font-variant-numeric: tabular-nums;
+}
+.sp-strike {
+  color: var(--sp-dim);
+  text-decoration: line-through;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- misc ---- */
+.sp-grid-cards {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+}
+.sp-stars {
+  color: var(--sp-gold);
+  letter-spacing: 0.1em;
+}
+
+/* ---- segmented toggle (white-label) ---- */
+.sp-seg {
+  display: inline-flex;
+  gap: 0.25rem;
+  padding: 0.3rem;
+  border: 1px solid var(--sp-line-strong);
+  border-radius: 999px;
+  background: var(--sp-panel);
+}
+.sp-seg-btn {
+  border: 0;
+  background: transparent;
+  color: var(--sp-muted);
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.55rem 1.25rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.sp-seg-btn.is-active {
+  background: var(--sp-gold-soft);
+  color: var(--sp-gold);
+}
+
+/* ---- trust bar ---- */
+.sp-trust {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem 2.25rem;
+  text-align: center;
+}
+.sp-trust-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  color: var(--sp-muted);
+}
+.sp-trust-num {
+  font-family: var(--font-heading), system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: var(--sp-text);
+}
+
+/* ---- featured testimonial spotlight ---- */
+.sp-featured {
+  display: grid;
+  gap: 1.5rem;
+  align-items: center;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 900px) {
+  .sp-featured {
+    grid-template-columns: 1.05fr 1fr;
+    gap: 2.5rem;
+  }
+}
+
+/* ---- how it works ---- */
+.sp-steps {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 780px) {
+  .sp-steps {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.sp-step {
+  padding: 1.6rem;
+  border: 1px solid var(--sp-line);
+  border-radius: var(--sp-radius-sm);
+  background: var(--sp-panel);
+}
+.sp-step-n {
+  font-family: var(--font-heading), system-ui, sans-serif;
+  font-weight: 700;
+  color: var(--sp-gold);
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+}
+
+/* ---- highlighted CTA panel (custom fallback) ---- */
+.sp-panel-cta {
+  border: 1px solid rgba(252, 192, 0, 0.28);
+  border-radius: var(--sp-radius);
+  background:
+    radial-gradient(80% 120% at 100% 0%, rgba(252, 192, 0, 0.08), transparent 60%),
+    var(--sp-panel);
+  padding: clamp(1.8rem, 4vw, 3rem);
+}
+
+/* ---- faq ---- */
+.sp-faq {
+  display: grid;
+  gap: 0.75rem;
+}
+.sp-faq-item {
+  border: 1px solid var(--sp-line);
+  border-radius: var(--sp-radius-sm);
+  background: var(--sp-panel);
+  padding: 1.25rem 1.4rem;
+}
+.sp-faq-q {
+  font-family: var(--font-heading), system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 1.08rem;
+  color: var(--sp-text);
+}
+
+/* ---- footer ---- */
+.sp-footer {
+  border-top: 1px solid var(--sp-line);
+  padding-block: 2.5rem;
+  color: var(--sp-dim);
+  font-size: 0.85rem;
+}
+.sp-footer a {
+  color: var(--sp-muted);
+  text-decoration: none;
+}
+.sp-footer a:hover {
+  color: var(--sp-gold);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sp-btn,
+  .sp-card,
+  .sp-card--hover,
+  .sp-play > span,
+  .sp-seg-btn {
+    transition: none;
+  }
+}

@@ -20,6 +20,7 @@ import { InvoicesScreen } from "./InvoicesScreen";
 import { CustomersScreen } from "./CustomersScreen";
 import { StudioScreen } from "./StudioScreen";
 import { TeamScreen } from "./TeamScreen";
+import { SalesPagesScreen } from "./SalesPagesScreen";
 import { canAccess, type Role } from "./roles";
 
 /*
@@ -703,6 +704,7 @@ export default function AdminPage() {
         { key: "subscriptions", label: "Subscriptions" },
         { key: "links", label: "Buy Links" },
         { key: "coupons", label: "Coupons" },
+        { key: "salespages", label: "Sales Pages" },
       ],
     },
     {
@@ -857,6 +859,8 @@ export default function AdminPage() {
             <CodeScreen />
           ) : view === "pages" ? (
             <PagesScreen />
+          ) : view === "salespages" ? (
+            <SalesPagesScreen />
           ) : view === "team" ? (
             <TeamScreen meEmail={me?.email ?? ""} />
           ) : (
