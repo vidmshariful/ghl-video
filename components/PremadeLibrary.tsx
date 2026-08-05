@@ -1,32 +1,46 @@
 "use client";
 
 import { useState } from "react";
-import { collab, featureAnimations, premadePacks, videoStack } from "@/lib/site";
-import { newGroups, newReady, oldBrowse, oldGroups } from "./premade/catalog";
+import { premadePacks, videoStack } from "@/lib/site";
+import type { BrowseVideo, FilterDef } from "./premade/catalog";
 import { VideoBrowser } from "./premade/browser";
-import { FeatureAnimationView } from "./premade/feature-view";
 import { PackBundleView, VideoStackView } from "./premade/bundle-views";
-import { CollabView } from "./premade/collab-view";
 
 /* ---------------------------------------------------------------- */
 /* The library shell                                                  */
 /* ---------------------------------------------------------------- */
 
-export function PremadeLibrary() {
-  const [view, setView] = useState<string>("new");
+/*
+ * Five views over the admin-managed catalog: two curated grids
+ * (Featured, Recent Launch), the two packs (AI First SaaS Pack, Complete
+ * Video Stack), and the Full Library, a filterable browser over every
+ * video new and classic. The grids read from the DB catalog (passed in
+ * from the server page); the packs stay composed in code.
+ */
+export function PremadeLibrary({
+  featured,
+  recent,
+  full,
+  fullGroups,
+}: {
+  featured: BrowseVideo[];
+  recent: BrowseVideo[];
+  full: BrowseVideo[];
+  fullGroups: FilterDef[];
+}) {
+  const [view, setView] = useState<string>("featured");
 
   const tabs = [
-    { slug: "new", label: "All New Videos", count: newReady.length as number | null },
+    { slug: "featured", label: "Featured Videos", count: featured.length as number | null },
+    { slug: "recent", label: "Recent Launch", count: recent.length as number | null },
     ...premadePacks.map((p) => ({ slug: p.slug, label: p.name, count: p.count })),
     { slug: videoStack.slug, label: videoStack.name, count: videoStack.totalCount as number | null },
-    { slug: collab.slug, label: collab.tabLabel, count: null },
-    { slug: "features", label: "Feature Animations", count: featureAnimations.length as number | null },
-    { slug: "old", label: "Classic Library", count: oldBrowse.length as number | null },
+    { slug: "full", label: "Full Library", count: full.length as number | null },
   ];
 
   return (
     <div>
-      {/* view rail: All videos first, then each pack */}
+      {/* view rail: curated grids, packs, then the full library */}
       <div
         role="tablist"
         aria-label="Catalog view"
@@ -92,8 +106,15 @@ export function PremadeLibrary() {
             click does not exist to them. Only the active view displays;
             hidden views cost nothing (display:none never intersects, so
             no media loads or plays). */}
-        <div hidden={view !== "new"}>
-          <VideoBrowser videos={newReady} groups={newGroups} />
+        <div hidden={view !== "featured"}>
+          <VideoBrowser videos={featured} groups={[]} />
+        </div>
+        <div hidden={view !== "recent"}>
+          <VideoBrowser
+            videos={recent}
+            groups={[]}
+            note="Our newest white-label releases, freshest first. Every one brands to your SaaS."
+          />
         </div>
         {premadePacks.map((pk) => (
           <div key={pk.slug} hidden={view !== pk.slug}>
@@ -103,17 +124,11 @@ export function PremadeLibrary() {
         <div hidden={view !== videoStack.slug}>
           <VideoStackView />
         </div>
-        <div hidden={view !== collab.slug}>
-          <CollabView />
-        </div>
-        <div hidden={view !== "features"}>
-          <FeatureAnimationView />
-        </div>
-        <div hidden={view !== "old"}>
+        <div hidden={view !== "full"}>
           <VideoBrowser
-            videos={oldBrowse}
-            groups={oldGroups}
-            note="Produced before HighLevel's current platform refresh. Most still brand cleanly, at the original prices and checkout links."
+            videos={full}
+            groups={fullGroups}
+            note="Every video we make, new and classic. Filter by type or era; each one white-labeled to your platform."
           />
         </div>
       </div>

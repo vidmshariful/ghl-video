@@ -16,16 +16,18 @@ export function BuyVideoLink({
   label = cta.orderPremade,
   className = "",
 }: {
-  video: { slug: string; checkoutSku?: string | null };
+  video: { slug: string; code?: string | null; checkoutSku?: string | null };
   label?: string;
   className?: string;
 }) {
-  // a preview-only card buys its parent pack by that pack's sku; an
-  // individually-sold video buys by its own slug via checkoutHref.
+  // a DB catalog row buys by its own code; a preview-only card buys its
+  // parent pack by that pack's sku; a legacy row buys by its slug.
   const href = withPromo(
-    video.checkoutSku
-      ? `/checkout/${skuFor(video.checkoutSku)}`
-      : checkoutHref(video.slug),
+    video.code
+      ? `/checkout/${video.code}`
+      : video.checkoutSku
+        ? `/checkout/${skuFor(video.checkoutSku)}`
+        : checkoutHref(video.slug),
   );
   return (
     <Link
@@ -183,8 +185,14 @@ export function LibraryCard({
   const descriptor =
     video.subtitle && video.subtitle !== video.subTag ? video.subtitle : null;
   /* the permanent product code, shown so a buyer and the team can name the
-     exact video. Preview-only cards (bundle contents) have none. */
-  const code = codeFor(video.slug);
+     exact video. DB rows carry it directly; legacy rows resolve it from the
+     slug. Bundle-content cards (previewOnly) show none: you buy the pack, not
+     the video, and a stale per-video code would clash with the renumber. */
+  const code = video.previewOnly
+    ? null
+    : video.code
+      ? video.code.toUpperCase()
+      : codeFor(video.slug);
 
   return (
     <div className="group/card flex h-full flex-col">

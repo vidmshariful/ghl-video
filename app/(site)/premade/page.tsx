@@ -8,6 +8,13 @@ import { FaqList } from "@/components/FaqList";
 import { CtaBand } from "@/components/CtaBand";
 import { JsonLd } from "@/components/JsonLd";
 import { PremadeLibrary } from "@/components/PremadeLibrary";
+import {
+  featuredBrowse,
+  libraryBrowse,
+  libraryGroups,
+  recentBrowse,
+} from "@/components/premade/catalog";
+import { getCatalog, recentCutoff } from "@/lib/catalog-db";
 import { LibraryPromoBanner } from "@/components/premade/LibraryPromoBanner";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { RuleList } from "@/components/RuleList";
@@ -34,8 +41,21 @@ export const metadata: Metadata = {
 
 const howIcons: IconName[] = ["mouse-click", "palette", "package-check"];
 
-export default function PremadePage() {
+/* the Recent Launch window: releases from the last N days roll through */
+const RECENT_DAYS = 120;
+
+export default async function PremadePage() {
   const p = pages.premade;
+
+  /* the admin-managed catalog, with a complete code fallback if the backend
+     is unreachable. Feeds the three grid tabs; the two packs stay in code. */
+  const rows = await getCatalog();
+  const cutoff = recentCutoff(RECENT_DAYS);
+  const featured = featuredBrowse(rows);
+  const recent = recentBrowse(rows, cutoff);
+  const full = libraryBrowse(rows);
+  const fullGroups = libraryGroups(full);
+
   /* every purchasable one-time SKU, machine-readable: singles, packs, the
      stack, and all bundle tiers, each pointing at its on-domain checkout.
      Derived from the one sellable-catalog source so it never drifts. */
@@ -104,7 +124,12 @@ export default function PremadePage() {
           />
           <LibraryPromoBanner />
           <div className="mt-12">
-            <PremadeLibrary />
+            <PremadeLibrary
+              featured={featured}
+              recent={recent}
+              full={full}
+              fullGroups={fullGroups}
+            />
           </div>
         </div>
       </section>

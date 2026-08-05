@@ -84,6 +84,7 @@ export function VideoBrowser({
     groups.every((g) => !sel[g.label] || v[g.on] === sel[g.label]),
   );
   const filtered = groups.some((g) => sel[g.label]);
+  const hasSidebar = groups.length > 0;
 
   return (
     <div>
@@ -92,24 +93,26 @@ export function VideoBrowser({
           {note}
         </p>
       )}
-      <div className="grid lg:grid-cols-[15.5rem_1fr]">
-        {/* sidebar */}
-        <aside className="border-b border-hair lg:border-b-0 lg:border-r">
-          {groups.map((g) => (
-            <FilterGroup
-              key={g.label}
-              label={g.label}
-              options={g.options}
-              active={sel[g.label] ?? null}
-              onPick={(val) => setSel((s) => ({ ...s, [g.label]: val }))}
-              countOf={(opt) =>
-                opt === null
-                  ? videos.length
-                  : videos.filter((v) => v[g.on] === opt).length
-              }
-            />
-          ))}
-        </aside>
+      <div className={hasSidebar ? "grid lg:grid-cols-[15.5rem_1fr]" : ""}>
+        {/* sidebar (only when there are filters to show) */}
+        {hasSidebar && (
+          <aside className="border-b border-hair lg:border-b-0 lg:border-r">
+            {groups.map((g) => (
+              <FilterGroup
+                key={g.label}
+                label={g.label}
+                options={g.options}
+                active={sel[g.label] ?? null}
+                onPick={(val) => setSel((s) => ({ ...s, [g.label]: val }))}
+                countOf={(opt) =>
+                  opt === null
+                    ? videos.length
+                    : videos.filter((v) => v[g.on] === opt).length
+                }
+              />
+            ))}
+          </aside>
+        )}
 
         {/* results */}
         <div className="flex min-w-0 flex-col">

@@ -6,11 +6,16 @@ import {
   premadeVideos,
   videoStack,
 } from "@/lib/site";
+import type { CatalogRow } from "@/lib/catalog-scheme";
 
 /* a common shape both the new catalog and the classic library browse
  * through: a card, a price, a preview, and a real order link */
 export type BrowseVideo = {
   slug: string;
+  /* the permanent catalog code (e.g. "fexp-031"); when set it IS both the
+     displayed code and the checkout sku. Absent for legacy code-catalog rows,
+     which resolve their code + sku from the slug. */
+  code?: string | null;
   title: string;
   typeTag: string;
   subTag: string;
@@ -158,11 +163,93 @@ export const stackGroups: FilterDef[] = [
   },
 ];
 
+/* ---------------------------------------------------------------- */
+/* DB catalog -> browse cards                                         */
+/* ---------------------------------------------------------------- */
+
+/* one admin-managed catalog row -> a library card. slug + code are the
+ * catalog code, so the card shows it and buys by it directly. */
+export function catalogToBrowse(r: CatalogRow): BrowseVideo {
+  return {
+    slug: r.code,
+    code: r.code,
+    title: r.title,
+    typeTag: r.category,
+    subTag: r.library === "new" ? "New" : "Classic",
+    price: r.price_cents / 100,
+    preview: r.video_url,
+    poster: r.poster_url,
+    wistiaId: r.wistia_id,
+    subtitle: r.subject,
+    packCount: r.pack_count,
+    realPreview: null,
+    realPoster: null,
+    previewOnly: false,
+    previewNote: null,
+    previewCtaLabel: null,
+    checkoutSku: null,
+  };
+}
+
+const CATEGORY_ORDER = [
+  "Full Explainer",
+  "Feature Explainer",
+  "Demo",
+  "Marketing",
+  "Feature Animation",
+];
+
+/* grid-worthy: something to show (clip, wistia poster, or a pack tile) and
+ * not still in production */
+const showable = (r: CatalogRow) =>
+  !r.coming_soon && Boolean(r.video_url || r.pack_count || r.wistia_id);
+
+/* Full Library: new first, then classics; each in catalog order */
+export function libraryBrowse(rows: CatalogRow[]): BrowseVideo[] {
+  return [...rows]
+    .filter(showable)
+    .sort(
+      (a, b) =>
+        (a.library === "new" ? 0 : 1) - (b.library === "new" ? 0 : 1) ||
+        a.sort - b.sort,
+    )
+    .map(catalogToBrowse);
+}
+
+/* Featured tab: the rows the admin flagged */
+export function featuredBrowse(rows: CatalogRow[]): BrowseVideo[] {
+  return rows.filter((r) => r.featured && showable(r)).map(catalogToBrowse);
+}
+
+/* Recent Launch tab: a rolling window by release date, newest first */
+export function recentBrowse(rows: CatalogRow[], cutoff: string): BrowseVideo[] {
+  return rows
+    .filter((r) => showable(r) && r.release_date != null && r.release_date >= cutoff)
+    .sort((a, b) => (b.release_date ?? "").localeCompare(a.release_date ?? ""))
+    .map(catalogToBrowse);
+}
+
+/* the Full Library sidebar: filter by video type, then by new vs classic */
+export function libraryGroups(videos: BrowseVideo[]): FilterDef[] {
+  return [
+    {
+      label: "Video type",
+      options: CATEGORY_ORDER.filter((t) => videos.some((v) => v.typeTag === t)),
+      on: "typeTag",
+    },
+    {
+      label: "Library",
+      options: ["New", "Classic"].filter((l) => videos.some((v) => v.subTag === l)),
+      on: "subTag",
+    },
+  ];
+}
+
 /*
  * The premade library: the home for every video and pack. The view
- * rail lists "All videos" (default) plus each pack. "All videos" is a
- * filterable grid browser; a pack is a playlist. Every video is
- * individually purchasable (price by type) and also bundled in its
- * pack, so single-buy and pack-buy live side by side. Square corners
- * throughout: this is the page's grid-lined instrument panel.
+ * rail lists the curated tabs (Featured, Recent Launch) plus the two
+ * packs and the full filterable library. Every video is individually
+ * purchasable and also bundled in a pack, so single-buy and pack-buy
+ * live side by side. Square corners throughout: this is the page's
+ * grid-lined instrument panel.
  */
