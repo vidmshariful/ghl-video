@@ -4,7 +4,7 @@ import { type Session } from "@supabase/supabase-js";
 import { useEffect, useState } from "react";
 import { sitePages } from "@/lib/pages-list";
 import { site } from "@/lib/site";
-import { supabase } from "./client";
+import { supabase, authHeader } from "./client";
 import { Logo } from "@/components/Logo";
 import type { View } from "./nav";
 import { DashboardScreen } from "./DashboardScreen";
@@ -19,6 +19,8 @@ import { LinksScreen } from "./LinksScreen";
 import { InvoicesScreen } from "./InvoicesScreen";
 import { CustomersScreen } from "./CustomersScreen";
 import { StudioScreen } from "./StudioScreen";
+import { TeamScreen } from "./TeamScreen";
+import { canAccess, type Role } from "./roles";
 
 /*
  * The managing area: /admin. Supabase Auth login, a sidebar, and one
@@ -601,6 +603,12 @@ export default function AdminPage() {
   const [view, setView] = useState<View>("dashboard");
   const [loginError, setLoginError] = useState("");
   const [msgUnread, setMsgUnread] = useState(0);
+  const [me, setMe] = useState<{
+    email: string;
+    name: string | null;
+    role: Role;
+    features: string[] | null;
+  } | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -619,6 +627,34 @@ export default function AdminPage() {
     }
     supabase.rpc("is_admin").then(({ data }) => setIsAdmin(data === true));
   }, [session]);
+
+  // The signed-in admin's role + feature grants, used to gate the menu.
+  useEffect(() => {
+    if (!isAdmin) {
+      setMe(null);
+      return;
+    }
+    let active = true;
+    (async () => {
+      try {
+        const r = await fetch("/api/admin/me", { headers: await authHeader() });
+        const j = await r.json();
+        if (active && r.ok) setMe(j);
+      } catch {
+        /* stays null; the nav shows Dashboard only until it loads */
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [isAdmin]);
+
+  // Never sit on a view this user is not allowed to open.
+  useEffect(() => {
+    if (me && view !== "dashboard" && !canAccess(view, me.role, me.features)) {
+      setView("dashboard");
+    }
+  }, [me, view]);
 
   // Unread chat count for the Messages nav badge (studio side).
   useEffect(() => {
@@ -692,7 +728,22 @@ export default function AdminPage() {
         { key: "code", label: "Header & Footer Code" },
       ],
     },
+    {
+      title: "Access",
+      items: [{ key: "team", label: "Team" }],
+    },
   ];
+
+  // Gate the menu to what this admin may see; while `me` loads, show only
+  // Dashboard.
+  const visibleGroups = groups
+    .map((g) => ({
+      ...g,
+      items: g.items.filter((it) =>
+        me ? canAccess(it.key, me.role, me.features) : it.key === "dashboard",
+      ),
+    }))
+    .filter((g) => g.items.length > 0);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -725,7 +776,7 @@ export default function AdminPage() {
             onChange={(e) => setView(e.target.value as View)}
             className="w-full rounded-[6px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none md:hidden"
           >
-            {groups.map((group) => {
+            {visibleGroups.map((group) => {
               const opts = group.items.map((item) => (
                 <option key={item.key} value={item.key}>
                   {item.label}
@@ -744,7 +795,7 @@ export default function AdminPage() {
 
           {/* desktop: grouped sidebar */}
           <div className="hidden flex-col md:flex">
-            {groups.map((group, gi) => (
+            {visibleGroups.map((group, gi) => (
               <div key={group.title || "main"} className={gi > 0 ? "mt-5 border-t border-hair pt-5" : ""}>
                 {group.title ? (
                   <p className="mb-2 px-3 font-mono text-body-sm font-bold uppercase tracking-[0.14em] text-gold/70">
@@ -806,6 +857,8 @@ export default function AdminPage() {
             <CodeScreen />
           ) : view === "pages" ? (
             <PagesScreen />
+          ) : view === "team" ? (
+            <TeamScreen meEmail={me?.email ?? ""} />
           ) : (
             <VideosScreen />
           )}

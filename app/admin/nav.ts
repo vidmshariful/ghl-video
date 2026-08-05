@@ -14,4 +14,5 @@ export type View =
   | "code"
   | "pages"
   | "videos"
-  | "studio";
+  | "studio"
+  | "team";

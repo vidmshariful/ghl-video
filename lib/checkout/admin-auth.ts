@@ -17,3 +17,17 @@ export async function verifyAdmin(req: Request): Promise<{ email: string } | nul
   const ok = (data ?? []).some((r) => (r.email ?? "").toLowerCase() === email.toLowerCase());
   return ok ? { email } : null;
 }
+
+/*
+ * The caller's role from the allowlist ('admin' | 'manager' | 'sales_rep'),
+ * or null if the email is not an admin. Used to gate the team-management
+ * routes to the 'admin' role server-side, so a limited user cannot escalate
+ * by hitting the API directly.
+ */
+export async function adminRole(email: string): Promise<string | null> {
+  const { data } = await supabaseAdmin().from("admins").select("email, role");
+  const row = (data ?? []).find(
+    (r) => (r.email ?? "").toLowerCase() === email.toLowerCase(),
+  );
+  return (row?.role as string | undefined) ?? null;
+}
