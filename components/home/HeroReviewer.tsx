@@ -55,7 +55,7 @@ export function HeroReviewer({
       <div ref={wrapRef} className="relative shrink-0">
         {/* the player popup, above the avatar, with a downward arrow */}
         {open && (
-          <div className="absolute bottom-full left-0 z-30 mb-3 w-64">
+          <div className="absolute bottom-full left-0 z-30 mb-3 w-[32rem] max-w-[calc(100vw-4rem)]">
             <div className="overflow-hidden rounded-card border border-hair bg-card shadow-[0_24px_60px_-24px_rgba(0,0,0,0.95)]">
               <div className="relative aspect-video bg-canvas">
                 {video ? (
@@ -123,9 +123,6 @@ export function HeroReviewer({
               {initial}
             </span>
           )}
-          <span className="absolute bottom-0 right-0 flex h-5 w-5 items-center justify-center rounded-full border border-canvas bg-gold text-canvas">
-            <Play className="h-2.5 w-2.5" />
-          </span>
         </button>
       </div>
 
