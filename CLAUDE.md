@@ -145,9 +145,11 @@ Colors come pixel-exact from the logo and do not change:
   stars instead.
 - Founder-to-founder voice: direct, outcome-led, no hype. The reader knows
   MRR, CAC, LTV, churn.
-- Footer brand line is "A brand of Vidiosa LLC" (brand-family narrative);
-  the operating legal entity in legal docs is Magic Motion Production LLC
-  (see lib/legal.ts). Do not "fix" one to match the other.
+- Footer brand line is "A brand of Vidiosa LLC". The operating legal entity
+  is Vidiosa LLC, named consistently in the legal docs (lib/legal.ts) and the
+  invoice From block. Changed 2026 from Magic Motion Production LLC (owner
+  decision); do not reintroduce that name. This entity must match the one
+  registered for Stripe payments and A2P/10DLC SMS.
 - The HighLevel non-affiliation disclaimer stays in every footer.
 
 ## 7. Routes

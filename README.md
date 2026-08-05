@@ -1,6 +1,6 @@
 # GHL Video
 
-Marketing site + native commerce for GHL Video (a brand of Vidiosa LLC), the video studio built only for the HighLevel ecosystem. The legal operating entity is Magic Motion Production LLC (GHL Video is its DBA).
+Marketing site + native commerce for GHL Video (a brand of Vidiosa LLC), the video studio built only for the HighLevel ecosystem. The legal operating entity is Vidiosa LLC (GHL Video is its brand / DBA).
 
 - **Stack:** Next.js 16 App Router (**server mode**, not static export), TypeScript, Tailwind CSS v4, Framer Motion.
 - **Backend:** Supabase (Postgres + RLS) and Stripe. The site **processes payments natively** on-domain via server route handlers (`app/api/**`): Stripe PaymentIntents, subscriptions, the Stripe webhook, and HighLevel fulfillment sync all run server-side. It is **not** a static export — a static build would drop every API route (checkout, webhook, portal).

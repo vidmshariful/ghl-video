@@ -100,8 +100,8 @@ export default async function InvoicePage({ params }: { params: Promise<{ token:
           <div className="grid gap-6 px-6 py-5 sm:grid-cols-2">
             <div>
               <p className="font-mono text-label uppercase text-dim">From</p>
-              <p className="mt-2 text-body font-semibold text-ink">Magic Motion Production LLC</p>
-              <p className="text-body-sm text-muted">GHL Video, a brand of Vidiosa LLC</p>
+              <p className="mt-2 text-body font-semibold text-ink">GHL Video</p>
+              <p className="text-body-sm text-muted">A brand of Vidiosa LLC</p>
               <p className="text-body-sm text-muted">hi@ghlvideo.com</p>
             </div>
             <div>

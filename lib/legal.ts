@@ -1,11 +1,9 @@
 /*
  * Legal documents, ported from the live WordPress site (privacy-policy,
  * terms-and-conditions, refund-policy) with typographic normalization only
- * (no em or en dashes). Operating legal entity is Magic Motion Production LLC
- * (GHL Video is its DBA / brand); this is the entity used for the A2P and
- * payment registration, so all three documents name it consistently. The
- * footer's "A brand of Vidiosa LLC" is brand-family narrative only, not the
- * contracting entity.
+ * (no em or en dashes). Operating legal entity is Vidiosa LLC (GHL Video is
+ * its brand / DBA), named consistently across all three documents. This must
+ * match the entity registered for payments (Stripe) and SMS (A2P / 10DLC).
  */
 
 export type LegalItem = { t: "p" | "li"; text: string };
@@ -26,7 +24,7 @@ export const legalDocs: Record<string, LegalDoc> = {
         "items": [
           {
             "t": "p",
-            "text": "Your privacy is important to us. This Privacy Policy explains how GHL Video (operated by Magic Motion Production LLC as a DBA) collects, uses, discloses, and protects your information when you interact with our website (ghlvideo.com) or engage with our services. By accessing our website and using our services, you consent to the collection and use of your information in accordance with this Privacy Policy."
+            "text": "Your privacy is important to us. This Privacy Policy explains how GHL Video (operated by Vidiosa LLC as a DBA) collects, uses, discloses, and protects your information when you interact with our website (ghlvideo.com) or engage with our services. By accessing our website and using our services, you consent to the collection and use of your information in accordance with this Privacy Policy."
           }
         ]
       },
@@ -157,7 +155,7 @@ export const legalDocs: Record<string, LegalDoc> = {
         "items": [
           {
             "t": "p",
-            "text": "By providing your phone number and checking the consent boxes on our forms, you agree to receive SMS messages from GHL Video (operated by Magic Motion Production LLC) for service-related communications such as appointment reminders, project updates, and customer support, as well as marketing or promotional messages if you have opted in separately."
+            "text": "By providing your phone number and checking the consent boxes on our forms, you agree to receive SMS messages from GHL Video (operated by Vidiosa LLC) for service-related communications such as appointment reminders, project updates, and customer support, as well as marketing or promotional messages if you have opted in separately."
           },
           {
             "t": "p",
@@ -178,7 +176,7 @@ export const legalDocs: Record<string, LegalDoc> = {
           },
           {
             "t": "p",
-            "text": "Magic Motion Production LLC. Email: hi@ghlvideo.com. Website: www.ghlvideo.com"
+            "text": "Vidiosa LLC. Email: hi@ghlvideo.com. Website: www.ghlvideo.com"
           }
         ]
       }
@@ -193,7 +191,7 @@ export const legalDocs: Record<string, LegalDoc> = {
         "items": [
           {
             "t": "p",
-            "text": "Welcome to ghlvideo.com, a service operated by Magic Motion Production LLC (\"Company,\" \"we,\" \"our,\" or \"us\"), a registered business in the United States. This document outlines the terms and conditions governing the use of our website and services. By accessing our website or using any of our services, you agree to be legally bound by these Terms and Conditions. If you do not agree with these terms, please refrain from using our website and services."
+            "text": "Welcome to ghlvideo.com, a service operated by Vidiosa LLC (\"Company,\" \"we,\" \"our,\" or \"us\"), a registered business in the United States. This document outlines the terms and conditions governing the use of our website and services. By accessing our website or using any of our services, you agree to be legally bound by these Terms and Conditions. If you do not agree with these terms, please refrain from using our website and services."
           }
         ]
       },
@@ -202,7 +200,7 @@ export const legalDocs: Record<string, LegalDoc> = {
         "items": [
           {
             "t": "p",
-            "text": "Magic Motion Production LLC provides professional video production services tailored to the needs of businesses. These services include, but are not limited to, conceptualizing video ideas, writing scripts, editing, adding motion graphics and animations, recording voice-overs, and delivering final video products in various formats. Our Video-as-a-Service (VaaS) offering allows businesses to integrate ongoing video content production into their broader marketing and product strategies. All services are customized based on client requirements and are governed by project-specific agreements."
+            "text": "Vidiosa LLC provides professional video production services tailored to the needs of businesses. These services include, but are not limited to, conceptualizing video ideas, writing scripts, editing, adding motion graphics and animations, recording voice-overs, and delivering final video products in various formats. Our Video-as-a-Service (VaaS) offering allows businesses to integrate ongoing video content production into their broader marketing and product strategies. All services are customized based on client requirements and are governed by project-specific agreements."
           }
         ]
       },
@@ -238,7 +236,7 @@ export const legalDocs: Record<string, LegalDoc> = {
         "items": [
           {
             "t": "p",
-            "text": "Unless otherwise agreed in writing, Magic Motion Production LLC retains full ownership of all raw project files, footage, templates, and source materials used in the production process. Upon full payment of the project, the client is granted a non-exclusive, non-transferable license to use the final deliverables for their intended purpose. This license does not grant rights to resell, sublicense, or commercially distribute the content to third parties without prior written consent. Unauthorized use or reproduction of our content is strictly prohibited and may result in legal action."
+            "text": "Unless otherwise agreed in writing, Vidiosa LLC retains full ownership of all raw project files, footage, templates, and source materials used in the production process. Upon full payment of the project, the client is granted a non-exclusive, non-transferable license to use the final deliverables for their intended purpose. This license does not grant rights to resell, sublicense, or commercially distribute the content to third parties without prior written consent. Unauthorized use or reproduction of our content is strictly prohibited and may result in legal action."
           }
         ]
       },
@@ -274,7 +272,7 @@ export const legalDocs: Record<string, LegalDoc> = {
         "items": [
           {
             "t": "p",
-            "text": "To the fullest extent permitted by law, Magic Motion Production LLC and its affiliates shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including but not limited to loss of revenue, profits, or data, arising from your use of our services. Our total liability for any claim arising out of or related to these terms or services shall not exceed the total fees paid by the client for the specific project giving rise to the claim."
+            "text": "To the fullest extent permitted by law, Vidiosa LLC and its affiliates shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including but not limited to loss of revenue, profits, or data, arising from your use of our services. Our total liability for any claim arising out of or related to these terms or services shall not exceed the total fees paid by the client for the specific project giving rise to the claim."
           }
         ]
       },
@@ -283,7 +281,7 @@ export const legalDocs: Record<string, LegalDoc> = {
         "items": [
           {
             "t": "p",
-            "text": "You agree to indemnify, defend, and hold harmless Magic Motion Production LLC, its directors, employees, agents, and partners from any claims, damages, losses, liabilities, costs, or expenses (including legal fees) arising out of or related to your use of our services, your breach of these terms, or any violation of applicable laws or third-party rights."
+            "text": "You agree to indemnify, defend, and hold harmless Vidiosa LLC, its directors, employees, agents, and partners from any claims, damages, losses, liabilities, costs, or expenses (including legal fees) arising out of or related to your use of our services, your breach of these terms, or any violation of applicable laws or third-party rights."
           }
         ]
       },
@@ -292,7 +290,7 @@ export const legalDocs: Record<string, LegalDoc> = {
         "items": [
           {
             "t": "p",
-            "text": "By providing your phone number during a form submission, booking, or communication with GHL Video (operated by Magic Motion Production LLC), and by checking the applicable consent boxes, you agree to receive SMS/text messages from us. These messages may include:"
+            "text": "By providing your phone number during a form submission, booking, or communication with GHL Video (operated by Vidiosa LLC), and by checking the applicable consent boxes, you agree to receive SMS/text messages from us. These messages may include:"
           },
           {
             "t": "p",
@@ -338,7 +336,7 @@ export const legalDocs: Record<string, LegalDoc> = {
           },
           {
             "t": "p",
-            "text": "Magic Motion Production LLC. Email: hi@ghlvideo.com. Website: www.ghlvideo.com"
+            "text": "Vidiosa LLC. Email: hi@ghlvideo.com. Website: www.ghlvideo.com"
           }
         ]
       }
@@ -353,7 +351,7 @@ export const legalDocs: Record<string, LegalDoc> = {
         "items": [
           {
             "t": "p",
-            "text": "At Magic Motion Production LLC, we are committed to delivering high-quality video content and a smooth client experience. This Refund Policy outlines the circumstances under which a client may request a refund for services purchased via ghlvideo.com."
+            "text": "At Vidiosa LLC, we are committed to delivering high-quality video content and a smooth client experience. This Refund Policy outlines the circumstances under which a client may request a refund for services purchased via ghlvideo.com."
           },
           {
             "t": "p",
@@ -489,7 +487,7 @@ export const legalDocs: Record<string, LegalDoc> = {
           },
           {
             "t": "p",
-            "text": "Magic Motion Production LLC. Email: hi@ghlvideo.com. Website: www.ghlvideo.com"
+            "text": "Vidiosa LLC. Email: hi@ghlvideo.com. Website: www.ghlvideo.com"
           }
         ]
       }
