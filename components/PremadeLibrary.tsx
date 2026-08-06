@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { premadePacks, videoStack } from "@/lib/site";
+import { featureAnimations, premadePacks, videoStack } from "@/lib/site";
 import type { BrowseVideo, FilterDef } from "./premade/catalog";
 import { VideoBrowser } from "./premade/browser";
 import { PackBundleView, VideoStackView } from "./premade/bundle-views";
+import { FeatureAnimationView } from "./premade/feature-view";
 
 /* ---------------------------------------------------------------- */
 /* The library shell                                                  */
@@ -35,6 +36,7 @@ export function PremadeLibrary({
     { slug: "recent", label: "Recent Launch", count: recent.length as number | null },
     ...premadePacks.map((p) => ({ slug: p.slug, label: p.name, count: p.count })),
     { slug: videoStack.slug, label: videoStack.name, count: videoStack.totalCount as number | null },
+    { slug: "features", label: "Feature Animations", count: featureAnimations.length as number | null },
     { slug: "full", label: "Full Library", count: full.length as number | null },
   ];
 
@@ -123,6 +125,9 @@ export function PremadeLibrary({
         ))}
         <div hidden={view !== videoStack.slug}>
           <VideoStackView />
+        </div>
+        <div hidden={view !== "features"}>
+          <FeatureAnimationView />
         </div>
         <div hidden={view !== "full"}>
           <VideoBrowser
