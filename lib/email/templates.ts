@@ -35,13 +35,30 @@ export const TEMPLATE_VARIABLES: Record<string, string[]> = {
   ],
 };
 
-/* Wrap message content in the shared GHL Video branded frame. */
+/*
+ * Wrap message content in the shared GHL Video branded frame, as a COMPLETE
+ * HTML document. The full doctype/head/body matters: the color-scheme meta tells
+ * Gmail/Apple Mail this email is dark-by-design (so they do not force-invert it
+ * into a broken light hybrid), and the dark <body> background stops clients from
+ * painting their own white behind it. bgcolor attributes back up the CSS for
+ * older/Outlook renderers.
+ */
 export function wrapEmail(content: string): string {
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#08090d;margin:0;padding:0;">
+  return `<!doctype html>
+<html lang="en" style="margin:0;padding:0;">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="supported-color-schemes" content="dark">
+<title>GHL Video</title>
+</head>
+<body style="margin:0;padding:0;background-color:#08090d;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#08090d" style="background-color:#08090d;margin:0;padding:0;">
   <tr><td align="center" style="padding:32px 16px;">
     <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="width:480px;max-width:480px;">
       <tr><td style="height:4px;background-color:#fcc000;background-image:linear-gradient(100deg,#fcc000,#00cc00);border-radius:6px 6px 0 0;font-size:0;line-height:0;">&nbsp;</td></tr>
-      <tr><td style="background-color:#12141b;border:1px solid #242736;border-top:0;border-radius:0 0 12px 12px;padding:34px 36px 30px;font-family:'Helvetica Neue',Arial,sans-serif;">
+      <tr><td bgcolor="#12141b" style="background-color:#12141b;border:1px solid #242736;border-top:0;border-radius:0 0 12px 12px;padding:34px 36px 30px;font-family:'Helvetica Neue',Arial,sans-serif;">
         <img src="${EMAIL_LOGO}" width="150" alt="GHL Video" style="display:block;width:150px;max-width:150px;height:auto;border:0;margin:0 0 22px;">
         ${content}
       </td></tr>
@@ -50,7 +67,9 @@ export function wrapEmail(content: string): string {
       </td></tr>
     </table>
   </td></tr>
-</table>`;
+</table>
+</body>
+</html>`;
 }
 
 const ORDER_UPDATE_BODY = `<h1 style="margin:0 0 14px;font-size:22px;line-height:1.25;color:#eef0f6;font-weight:bold;">Update on your order</h1>
