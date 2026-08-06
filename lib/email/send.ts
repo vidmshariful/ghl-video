@@ -21,11 +21,13 @@ export type SendEmailInput = {
   replyTo?: string;
 };
 
-export async function sendEmail(input: SendEmailInput): Promise<boolean> {
+export type SendResult = { ok: boolean; error?: string };
+
+export async function sendEmail(input: SendEmailInput): Promise<SendResult> {
   const key = process.env.BREVO_API_KEY;
   if (!key) {
     console.warn("[email] BREVO_API_KEY not set; skipping send to", input.to);
-    return false;
+    return { ok: false, error: "BREVO_API_KEY is not set on the server (check the Vercel env + redeploy)." };
   }
   const from = process.env.EMAIL_FROM ?? "hi@ghlvideo.com";
   const fromName = process.env.EMAIL_FROM_NAME ?? "GHL Video";
@@ -46,12 +48,14 @@ export async function sendEmail(input: SendEmailInput): Promise<boolean> {
       }),
     });
     if (!res.ok) {
-      console.error("[email] Brevo send failed", res.status, (await res.text()).slice(0, 300));
-      return false;
+      const detail = (await res.text()).slice(0, 400);
+      console.error("[email] Brevo send failed", res.status, detail);
+      return { ok: false, error: `Brevo returned ${res.status}. ${detail}` };
     }
-    return true;
+    return { ok: true };
   } catch (e) {
-    console.error("[email] send error", e instanceof Error ? e.message : e);
-    return false;
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("[email] send error", msg);
+    return { ok: false, error: msg };
   }
 }

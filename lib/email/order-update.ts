@@ -59,12 +59,14 @@ export async function sendOrderUpdateEmail(
       delivery_url: escapeHtml(o.delivery_url || ""),
     };
 
-    return await sendEmail({
+    const result = await sendEmail({
       to: o.customer_email,
       toName: o.customers?.name ?? null,
       subject: renderTemplate(tpl.subject, vars),
       html: renderTemplate(tpl.body, vars),
     });
+    if (!result.ok) console.error("[email] order update not sent:", result.error);
+    return result.ok;
   } catch (e) {
     console.error("[email] order update send failed", e instanceof Error ? e.message : e);
     return false;

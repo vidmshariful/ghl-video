@@ -26,16 +26,14 @@ export async function POST(req: Request) {
   const subject = typeof body.subject === "string" && body.subject ? body.subject : "Test email";
   const html = typeof body.body === "string" ? body.body : "";
 
-  const ok = await sendEmail({
+  const result = await sendEmail({
     to: admin.email,
     subject: `[Test] ${renderTemplate(subject, SAMPLE)}`,
     html: renderTemplate(html, SAMPLE),
   });
-  if (!ok) {
-    return NextResponse.json(
-      { error: "Send failed. Confirm BREVO_API_KEY is set in Vercel and the sender is verified in Brevo." },
-      { status: 500 },
-    );
+  if (!result.ok) {
+    // surface Brevo's actual reason so the real cause is visible, not a guess
+    return NextResponse.json({ error: result.error ?? "Send failed." }, { status: 500 });
   }
   return NextResponse.json({ ok: true, to: admin.email });
 }
