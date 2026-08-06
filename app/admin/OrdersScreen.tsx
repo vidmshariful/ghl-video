@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { authHeader, money, supabase, when } from "./client";
 import { AdminModal } from "./Modal";
 
@@ -25,6 +25,7 @@ export type OrderRow = {
   customer: { name: string | null; company: string | null; phone: string | null } | null;
 };
 type OrderEvent = { event_type: string; payload: Record<string, unknown>; created_at: string };
+type OrderUpdate = { id: string; body: string; created_at: string };
 
 const STATUS_STYLE: Record<string, string> = {
   paid: "border-green/40 text-green",
@@ -317,6 +318,17 @@ function BrandingBrief({ orderId }: { orderId: string }) {
 
 function OrderDetail({ order, onChanged }: { order: OrderRow; onChanged: () => void }) {
   const [events, setEvents] = useState<OrderEvent[] | null>(null);
+  const [updates, setUpdates] = useState<OrderUpdate[] | null>(null);
+
+  const loadUpdates = useCallback(() => {
+    supabase
+      .from("order_updates")
+      .select("id,body,created_at")
+      .eq("order_id", order.id)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => setUpdates((data as OrderUpdate[]) ?? []));
+  }, [order.id]);
+
   useEffect(() => {
     supabase
       .from("order_events")
@@ -324,48 +336,84 @@ function OrderDetail({ order, onChanged }: { order: OrderRow; onChanged: () => v
       .eq("order_id", order.id)
       .order("created_at", { ascending: true })
       .then(({ data }) => setEvents((data as OrderEvent[]) ?? []));
-  }, [order.id]);
+    loadUpdates();
+  }, [order.id, loadUpdates]);
 
   const meta: [string, string | null | undefined][] = [
     ["Order id", order.id],
     ["Stripe payment", order.stripe_payment_intent_id],
     ["HighLevel contact", order.highlevel_contact_id],
     ["HighLevel opportunity", order.highlevel_opportunity_id],
-    ["Company", order.customer?.company],
-    ["Phone", order.customer?.phone],
   ];
 
   return (
-    <div>
-      <div className="grid gap-x-8 gap-y-2 sm:grid-cols-2">
-        {meta
-          .filter(([, v]) => v)
-          .map(([k, v]) => (
-            <div key={k} className="flex gap-2 text-body-sm">
-              <span className="shrink-0 font-mono text-label uppercase text-dim">{k}:</span>
-              <span className="break-all font-mono text-muted">{v as string}</span>
-            </div>
-          ))}
-      </div>
-      <FulfillmentEditor order={order} onChanged={onChanged} />
-      <BrandingBrief orderId={order.id} />
-      <p className="mt-6 font-mono text-label uppercase text-dim">Timeline</p>
-      <ul className="mt-2 grid gap-1.5">
-        {events === null ? (
-          <li className="text-body-sm text-muted">Loading...</li>
-        ) : (
-          events.map((e, i) => (
-            <li key={i} className="flex items-baseline gap-3 text-body-sm">
-              <span className="w-32 shrink-0 font-mono text-dim">{when(e.created_at)}</span>
-              <span className="text-muted">
-                {e.event_type}
-                {e.payload?.error ? `: ${String(e.payload.error)}` : ""}
-              </span>
+    <div className="grid gap-8 lg:grid-cols-[1.1fr_1fr]">
+      {/* left: post updates + the update history the client sees */}
+      <div>
+        <FulfillmentEditor
+          order={order}
+          onChanged={() => {
+            onChanged();
+            loadUpdates();
+          }}
+        />
+        <p className="mt-8 font-mono text-label uppercase text-dim">
+          Updates the client sees
+        </p>
+        <ul className="mt-2 grid gap-2">
+          {updates === null ? (
+            <li className="text-body-sm text-muted">Loading...</li>
+          ) : updates.length === 0 ? (
+            <li className="rounded-[3px] border border-dashed border-hair px-4 py-3 text-body-sm text-muted">
+              No updates posted yet. Post one above: the client is emailed and sees it in
+              their portal, and it shows here too.
             </li>
-          ))
-        )}
-      </ul>
-      <OrderActions order={order} onChanged={onChanged} />
+          ) : (
+            updates.map((u) => (
+              <li
+                key={u.id}
+                className="rounded-[3px] border border-hair bg-surface px-4 py-3"
+              >
+                <p className="font-mono text-label uppercase text-dim">{when(u.created_at)}</p>
+                <p className="mt-1 whitespace-pre-wrap text-body-sm text-ink">{u.body}</p>
+              </li>
+            ))
+          )}
+        </ul>
+      </div>
+
+      {/* right: brief, order meta, system timeline, actions */}
+      <div>
+        <BrandingBrief orderId={order.id} />
+        <p className="mt-6 font-mono text-label uppercase text-dim">Order</p>
+        <div className="mt-2 grid gap-y-2">
+          {meta
+            .filter(([, v]) => v)
+            .map(([k, v]) => (
+              <div key={k} className="flex gap-2 text-body-sm">
+                <span className="shrink-0 font-mono text-label uppercase text-dim">{k}:</span>
+                <span className="break-all font-mono text-muted">{v as string}</span>
+              </div>
+            ))}
+        </div>
+        <p className="mt-6 font-mono text-label uppercase text-dim">System timeline</p>
+        <ul className="mt-2 grid gap-1.5">
+          {events === null ? (
+            <li className="text-body-sm text-muted">Loading...</li>
+          ) : (
+            events.map((e, i) => (
+              <li key={i} className="flex items-baseline gap-3 text-body-sm">
+                <span className="w-32 shrink-0 font-mono text-dim">{when(e.created_at)}</span>
+                <span className="text-muted">
+                  {e.event_type}
+                  {e.payload?.error ? `: ${String(e.payload.error)}` : ""}
+                </span>
+              </li>
+            ))
+          )}
+        </ul>
+        <OrderActions order={order} onChanged={onChanged} />
+      </div>
     </div>
   );
 }
@@ -582,6 +630,52 @@ export function OrdersScreen() {
 
   const openOrder = rows.find((r) => r.id === open) ?? null;
 
+  // Full-page order detail (replaces the list), instead of a cramped modal.
+  if (openOrder) {
+    const hl = hlState(openOrder);
+    return (
+      <div className="max-w-5xl">
+        <button
+          type="button"
+          onClick={() => setOpen(null)}
+          className="tap font-mono text-label uppercase text-muted transition-colors hover:text-gold"
+        >
+          &larr; Orders
+        </button>
+        <div className="mt-4 flex flex-wrap items-start justify-between gap-x-6 gap-y-3 border-b border-hair pb-5">
+          <div className="min-w-0">
+            <h1 className="font-display text-h3 text-ink">
+              {openOrder.customer?.name || openOrder.customer_email}
+            </h1>
+            <p className="mt-1 font-mono text-body-sm text-muted">
+              {openOrder.product?.metadata?.code ? (
+                <span className="text-gold/80">{openOrder.product.metadata.code} </span>
+              ) : null}
+              {openOrder.product?.name ?? (openOrder.metadata?.sku as string)}
+              <span className="text-dim"> / {openOrder.customer_email}</span>
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-wrap items-center gap-3">
+            {hl.label && (
+              <span className={`font-mono text-label uppercase ${hl.cls}`}>{hl.label}</span>
+            )}
+            <span
+              className={`rounded-full border px-2.5 py-0.5 font-mono text-label uppercase ${STATUS_STYLE[openOrder.status]}`}
+            >
+              {openOrder.status}
+            </span>
+            <span className="font-mono text-price font-bold text-ink [font-variant-numeric:tabular-nums]">
+              {money(openOrder.amount_cents, openOrder.currency)}
+            </span>
+          </div>
+        </div>
+        <div className="mt-6">
+          <OrderDetail order={openOrder} onChanged={load} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-5xl">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -680,40 +774,6 @@ export function OrdersScreen() {
             );
           })}
         </ul>
-      )}
-
-      {openOrder && (
-        <AdminModal
-          open
-          onClose={() => setOpen(null)}
-          maxWidth="max-w-3xl"
-          title={openOrder.customer?.name || openOrder.customer_email}
-          subtitle={
-            <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <span className="font-mono">
-                {openOrder.product?.metadata?.code ? (
-                  <span className="text-gold/80">{openOrder.product.metadata.code} </span>
-                ) : null}
-                {openOrder.product?.name ?? (openOrder.metadata?.sku as string)}
-              </span>
-              <span
-                className={`rounded-full border px-2 py-0.5 font-mono text-label uppercase ${STATUS_STYLE[openOrder.status]}`}
-              >
-                {openOrder.status}
-              </span>
-              {hlState(openOrder).label ? (
-                <span className={`font-mono text-label uppercase ${hlState(openOrder).cls}`}>
-                  {hlState(openOrder).label}
-                </span>
-              ) : null}
-              <span className="font-mono font-bold text-ink [font-variant-numeric:tabular-nums]">
-                {money(openOrder.amount_cents, openOrder.currency)}
-              </span>
-            </span>
-          }
-        >
-          <OrderDetail order={openOrder} onChanged={load} />
-        </AdminModal>
       )}
 
       {showManual && (
