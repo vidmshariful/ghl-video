@@ -21,6 +21,7 @@ import { CustomersScreen } from "./CustomersScreen";
 import { StudioScreen } from "./StudioScreen";
 import { TeamScreen } from "./TeamScreen";
 import { SalesPagesScreen } from "./SalesPagesScreen";
+import { EmailTemplatesScreen } from "./EmailTemplatesScreen";
 import { CatalogScreen } from "./CatalogScreen";
 import { canAccess, type Role } from "./roles";
 
@@ -430,6 +431,7 @@ export default function AdminPage() {
       items: [
         { key: "pages", label: "Pages" },
         { key: "studio", label: "Studio Insights" },
+        { key: "emails", label: "Email Templates" },
         { key: "code", label: "Header & Footer Code" },
       ],
     },
@@ -566,6 +568,8 @@ export default function AdminPage() {
             <CatalogScreen />
           ) : view === "salespages" ? (
             <SalesPagesScreen />
+          ) : view === "emails" ? (
+            <EmailTemplatesScreen />
           ) : view === "team" ? (
             <TeamScreen meEmail={me?.email ?? ""} />
           ) : (

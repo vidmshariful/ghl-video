@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { verifyAdmin } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
+import { sendOrderUpdateEmail } from "@/lib/email/order-update";
 
 export const runtime = "nodejs";
 
@@ -46,7 +47,10 @@ export async function POST(
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   }
   if (typeof body.update === "string" && body.update.trim()) {
-    await db.from("order_updates").insert({ order_id: id, body: body.update.trim() });
+    const msg = body.update.trim();
+    await db.from("order_updates").insert({ order_id: id, body: msg });
+    // notify the client by email (fail-soft; never blocks posting the update)
+    await sendOrderUpdateEmail(db, id, msg);
   }
   return NextResponse.json({ ok: true });
 }
