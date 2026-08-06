@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AdminModal } from "./Modal";
-import { supabase } from "./client";
+import { authHeader, supabase } from "./client";
 
 /*
  * The unified video Catalog (Phase 2 of the code->DB catalog move). One card
@@ -53,6 +53,29 @@ export function CatalogScreen() {
   const [editing, setEditing] = useState<CatalogRow | "new" | null>(null);
   const [filter, setFilter] = useState<string>("all");
   const [copied, setCopied] = useState<string | null>(null);
+  const [publishing, setPublishing] = useState(false);
+  const [published, setPublished] = useState("");
+
+  /* push the catalog to the products table so edits reach checkout: prices,
+     new videos, and hidden (unbuyable) videos all take effect. Runs after
+     every change, and on demand via the button. */
+  const publish = useCallback(async () => {
+    setPublishing(true);
+    setPublished("");
+    try {
+      const r = await fetch("/api/admin/sync-catalog", {
+        method: "POST",
+        headers: await authHeader(),
+      });
+      const j = await r.json();
+      if (!r.ok) setErr(j.error ?? "Publish to checkout failed.");
+      else setPublished(`Checkout updated: ${j.active} live, ${j.hidden} hidden.`);
+    } catch {
+      setErr("Publish to checkout failed.");
+    } finally {
+      setPublishing(false);
+    }
+  }, []);
 
   const load = useCallback(async () => {
     setErr("");
@@ -74,13 +97,21 @@ export function CatalogScreen() {
     if (!window.confirm(`Delete "${row.title}" (${row.code.toUpperCase()}) from the catalog?`)) return;
     const { error } = await supabase.from("catalog").delete().eq("id", row.id);
     if (error) setErr(error.message);
-    else load();
+    else {
+      await publish();
+      load();
+    }
   }
 
   async function toggle(row: CatalogRow, key: "featured" | "on_site") {
     const { error } = await supabase.from("catalog").update({ [key]: !row[key] }).eq("id", row.id);
     if (error) setErr(error.message);
-    else load();
+    else {
+      // on_site controls buyability, so it must reach checkout; featured is
+      // display-only and the site picks it up on its own.
+      if (key === "on_site") await publish();
+      load();
+    }
   }
 
   async function copyLink(row: CatalogRow) {
@@ -115,16 +146,28 @@ export function CatalogScreen() {
             {loaded ? `${rows.length} videos.` : ""}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setEditing("new")}
-          className="tap rounded-[3px] bg-brand-gradient px-5 py-2.5 text-body-sm font-semibold text-canvas transition-all hover:brightness-110"
-        >
-          Add video
-        </button>
+        <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={publish}
+            disabled={publishing}
+            className="tap rounded-[3px] border border-hair px-4 py-2.5 text-body-sm font-semibold text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-50"
+            title="Push catalog prices and visibility to checkout"
+          >
+            {publishing ? "Publishing..." : "Publish to checkout"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setEditing("new")}
+            className="tap rounded-[3px] bg-brand-gradient px-5 py-2.5 text-body-sm font-semibold text-canvas transition-all hover:brightness-110"
+          >
+            Add video
+          </button>
+        </div>
       </div>
 
       {err ? <p className="mt-4 text-body-sm text-error">{err}</p> : null}
+      {published ? <p className="mt-4 text-body-sm text-green">{published}</p> : null}
 
       {/* category filter */}
       <div className="mt-5 flex flex-wrap gap-2">
@@ -209,8 +252,9 @@ export function CatalogScreen() {
         <CatalogForm
           row={editing === "new" ? null : editing}
           onClose={() => setEditing(null)}
-          onSaved={() => {
+          onSaved={async () => {
             setEditing(null);
+            await publish();
             load();
           }}
         />

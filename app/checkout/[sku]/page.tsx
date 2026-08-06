@@ -1,6 +1,7 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { getActiveProductBySku } from "@/lib/checkout/products";
+import { newCodeForOldSku } from "@/lib/catalog-db";
 import { getApplicableBumps } from "@/lib/checkout/bumps";
 import { CheckoutTrust } from "@/components/checkout/CheckoutTrust";
 import { RuledBox } from "@/components/RuledBox";
@@ -29,7 +30,16 @@ export default async function CheckoutPage({
      at finalize, so the URL can never change what is charged */
   const initialCouponCode = typeof sp.code === "string" ? sp.code.slice(0, 32) : null;
   const product = await getActiveProductBySku(sku);
-  if (!product) notFound();
+  if (!product) {
+    // a retired sku (renumbered or replaced) forwards to its current code so
+    // old links, ads, and bookmarks keep working instead of 404ing
+    const current = await newCodeForOldSku(sku);
+    if (current) {
+      const q = initialCouponCode ? `?code=${encodeURIComponent(initialCouponCode)}` : "";
+      redirect(`/checkout/${current}/${q}`);
+    }
+    notFound();
+  }
 
   const isSub = product.type === "subscription";
   const meta = product.metadata ?? {};

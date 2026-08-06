@@ -12,7 +12,7 @@ import { cta, home, newSamples, pages } from "@/lib/site";
 export const metadata: Metadata = {
   title: "HighLevel Video Examples and Portfolio",
   description:
-    "Recent video work for HighLevel SaaS teams across premade, custom production, and editing. Every piece plays.",
+    "Recent video work for HighLevel SaaS founders across premade, custom production, and editing. Every piece plays.",
   alternates: { canonical: "/work/" },
 };
 

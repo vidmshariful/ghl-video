@@ -43,3 +43,26 @@ export async function getCatalog(): Promise<CatalogRow[]> {
 export function recentCutoff(days: number): string {
   return new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 10);
 }
+
+/*
+ * The current catalog code for a retired checkout sku, via the catalog's
+ * old_code map, or null. Lets /checkout/<oldsku> 308-forward to the canonical
+ * new code (e.g. short-001 -> fexp-031) instead of 404ing. Returns null when
+ * the old code was reused as a live code (never redirect a code onto itself).
+ */
+export async function newCodeForOldSku(oldSku: string): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `${SB_URL}/rest/v1/catalog?old_code=eq.${encodeURIComponent(oldSku)}&select=code&limit=1`,
+      { headers: { apikey: SB_ANON, Authorization: `Bearer ${SB_ANON}` }, cache: "no-store" },
+    );
+    if (res.ok) {
+      const rows = (await res.json()) as { code: string }[];
+      const code = rows?.[0]?.code;
+      if (code && code !== oldSku) return code;
+    }
+  } catch {
+    // ignore: fall back to notFound in the caller
+  }
+  return null;
+}

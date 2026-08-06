@@ -13,7 +13,6 @@ export type View =
   | "customers"
   | "code"
   | "pages"
-  | "videos"
   | "catalog"
   | "studio"
   | "salespages"
