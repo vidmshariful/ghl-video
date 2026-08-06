@@ -85,6 +85,11 @@ export async function POST(req: Request) {
   const company = str(body.customerCompany, 120);
   const notes = str(body.notes, 4000);
   const dueDate = /^\d{4}-\d{2}-\d{2}$/.test(str(body.dueDate, 10)) ? str(body.dueDate, 10) : null;
+  // optional: attach this invoice (extra work) to an existing order
+  const parentOrderId =
+    typeof body.parentOrderId === "string" && /^[0-9a-f-]{36}$/i.test(body.parentOrderId)
+      ? body.parentOrderId
+      : null;
 
   const rawItems = Array.isArray(body.lineItems) ? body.lineItems : [];
   const lineItems: LineItem[] = rawItems
@@ -141,6 +146,7 @@ export async function POST(req: Request) {
       total_cents: total,
       notes: notes || null,
       due_date: dueDate,
+      parent_order_id: parentOrderId,
       created_by: admin.email,
     })
     .select("*")

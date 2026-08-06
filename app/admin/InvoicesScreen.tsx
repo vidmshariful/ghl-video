@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { authHeader, money, when } from "./client";
+import { authHeader, money, supabase, when } from "./client";
 
 /*
  * Invoices: create an itemized invoice (client + line items + due date + notes)
@@ -77,6 +77,10 @@ export function InvoicesScreen() {
   const [dueDate, setDueDate] = useState("");
   const [notes, setNotes] = useState("");
   const [rows, setRows] = useState<Row[]>([{ description: "", amount: "" }]);
+  const [parentOrderId, setParentOrderId] = useState("");
+  const [orders, setOrders] = useState<
+    { id: string; customer_email: string; created_at: string; product: { name: string } | null }[]
+  >([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
@@ -84,6 +88,20 @@ export function InvoicesScreen() {
     const r = await fetch("/api/admin/invoices", { headers: await authHeader(), cache: "no-store" });
     const j = await r.json();
     setInvoices((j.invoices as Invoice[]) ?? []);
+    // paid orders, for the "attach to an existing order" picker (extra work)
+    const { data } = await supabase
+      .from("orders")
+      .select("id,customer_email,created_at, product:products(name)")
+      .eq("status", "paid")
+      .order("created_at", { ascending: false });
+    setOrders(
+      (data as unknown as {
+        id: string;
+        customer_email: string;
+        created_at: string;
+        product: { name: string } | null;
+      }[]) ?? [],
+    );
   }, []);
 
   useEffect(() => {
@@ -113,6 +131,7 @@ export function InvoicesScreen() {
         dueDate,
         notes,
         lineItems,
+        parentOrderId: parentOrderId || null,
       }),
     });
     const j = await res.json();
@@ -126,6 +145,7 @@ export function InvoicesScreen() {
     setCompany("");
     setDueDate("");
     setNotes("");
+    setParentOrderId("");
     setRows([{ description: "", amount: "" }]);
     load();
   }
@@ -240,6 +260,26 @@ export function InvoicesScreen() {
             <input value={notes} onChange={(e) => setNotes(e.target.value)} className={fField} />
           </label>
         </div>
+
+        <label className="mt-4 block">
+          <span className={fLab}>Attach to an existing order (optional)</span>
+          <select
+            value={parentOrderId}
+            onChange={(e) => setParentOrderId(e.target.value)}
+            className={fField}
+          >
+            <option value="">Standalone invoice</option>
+            {orders.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.customer_email} - {o.product?.name ?? "Order"} ({when(o.created_at)})
+              </option>
+            ))}
+          </select>
+          <span className="mt-1 block text-body-sm text-dim">
+            For extra work on a past order: the invoice nests under that order instead of
+            showing as a separate one.
+          </span>
+        </label>
 
         {err ? <p className="mt-3 text-body-sm text-error">{err}</p> : null}
         <button

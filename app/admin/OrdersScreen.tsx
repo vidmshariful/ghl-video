@@ -21,11 +21,41 @@ export type OrderRow = {
   delivery_url: string | null;
   intake_completed: boolean;
   invoice_number: string | null;
+  archived: boolean;
   product: { name: string; sku: string; metadata: { code?: string } | null } | null;
   customer: { name: string | null; company: string | null; phone: string | null } | null;
 };
 type OrderEvent = { event_type: string; payload: Record<string, unknown>; created_at: string };
 type OrderUpdate = { id: string; body: string; created_at: string };
+type InvoiceLink = {
+  id: string;
+  number: string;
+  parent_order_id: string | null;
+  product_sku: string;
+  total_cents: number;
+  status: string;
+  token: string;
+  line_items: { description: string; amount_cents: number }[];
+};
+
+/* the pipeline buckets Manage Orders groups paid orders into */
+const STAGE_BUCKET: Record<string, "new" | "production" | "delivered"> = {
+  paid: "new",
+  intake: "new",
+  production: "production",
+  review: "production",
+  delivered: "delivered",
+};
+
+/* an invoice / manual order shows its invoice number + title, not a catalog code */
+function invoiceTitle(o: OrderRow): { number: string | null; title: string } | null {
+  const m = o.metadata ?? {};
+  const isInvoice = Boolean(m.invoice || m.manual || m.custom);
+  if (!isInvoice) return null;
+  const number = (m.invoiceRef as string) || o.invoice_number || null;
+  const title = o.product?.name || (m.customTitle as string) || (m.sku as string) || "Invoice";
+  return { number, title };
+}
 
 const STATUS_STYLE: Record<string, string> = {
   paid: "border-green/40 text-green",
@@ -316,7 +346,15 @@ function BrandingBrief({ orderId }: { orderId: string }) {
   );
 }
 
-function OrderDetail({ order, onChanged }: { order: OrderRow; onChanged: () => void }) {
+function OrderDetail({
+  order,
+  attachedInvoices,
+  onChanged,
+}: {
+  order: OrderRow;
+  attachedInvoices: InvoiceLink[];
+  onChanged: () => void;
+}) {
   const [events, setEvents] = useState<OrderEvent[] | null>(null);
   const [updates, setUpdates] = useState<OrderUpdate[] | null>(null);
 
@@ -385,6 +423,34 @@ function OrderDetail({ order, onChanged }: { order: OrderRow; onChanged: () => v
       {/* right: brief, order meta, system timeline, actions */}
       <div>
         <BrandingBrief orderId={order.id} />
+        {attachedInvoices.length > 0 && (
+          <>
+            <p className="mt-6 font-mono text-label uppercase text-dim">Extra-work invoices</p>
+            <ul className="mt-2 grid gap-2">
+              {attachedInvoices.map((i) => (
+                <li key={i.id} className="rounded-[3px] border border-hair bg-surface px-4 py-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-mono text-body-sm text-gold/80">{i.number}</span>
+                    <span className="font-mono text-body-sm font-bold text-ink [font-variant-numeric:tabular-nums]">
+                      {money(i.total_cents)}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-body-sm text-muted">
+                    {i.line_items?.map((li) => li.description).filter(Boolean).join(", ") || "Invoice"}
+                  </p>
+                  <a
+                    href={`/invoice/${i.token}/`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-1 inline-block font-mono text-label uppercase text-muted transition-colors hover:text-gold"
+                  >
+                    {i.status === "void" ? "Voided" : "Open invoice"} &rarr;
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
         <p className="mt-6 font-mono text-label uppercase text-dim">Order</p>
         <div className="mt-2 grid gap-y-2">
           {meta
@@ -588,51 +654,86 @@ function ManualOrderForm({ onDone }: { onDone: () => void }) {
   );
 }
 
+/* Download the full order list as a CSV report (All Orders view). */
+function exportOrdersCsv(rows: OrderRow[]) {
+  const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const header = [
+    "Date", "Invoice", "Customer", "Email", "Company", "Product", "Code", "Status", "Stage", "Amount",
+  ].join(",");
+  const lines = rows.map((r) =>
+    [
+      r.created_at, r.invoice_number ?? "", r.customer?.name ?? "", r.customer_email,
+      r.customer?.company ?? "", r.product?.name ?? "", r.product?.metadata?.code ?? "",
+      r.status, r.fulfillment_stage, (r.amount_cents / 100).toFixed(2),
+    ].map(esc).join(","),
+  );
+  const blob = new Blob([[header, ...lines].join("\n")], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `orders-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export function OrdersScreen() {
   const [rows, setRows] = useState<OrderRow[]>([]);
+  const [invoices, setInvoices] = useState<InvoiceLink[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [err, setErr] = useState("");
   const [open, setOpen] = useState<string | null>(null);
   const [showManual, setShowManual] = useState(false);
+  const [view, setView] = useState<"manage" | "all">("manage");
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   async function load() {
-    const { data, error } = await supabase
-      .from("orders")
-      .select("*, product:products(name, sku, metadata), customer:customers(name,company,phone)")
-      .order("created_at", { ascending: false });
-    if (error) setErr(error.message);
-    else setRows(data as OrderRow[]);
+    const [o, inv] = await Promise.all([
+      supabase
+        .from("orders")
+        .select("*, product:products(name, sku, metadata), customer:customers(name,company,phone)")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("invoices")
+        .select("id,number,parent_order_id,product_sku,total_cents,status,token,line_items")
+        .not("parent_order_id", "is", null),
+    ]);
+    if (o.error) setErr(o.error.message);
+    else setRows(o.data as OrderRow[]);
+    if (!inv.error) setInvoices((inv.data as unknown as InvoiceLink[]) ?? []);
     setLoaded(true);
   }
   useEffect(() => {
     load();
   }, []);
 
+  async function archive(id: string, archived: boolean) {
+    setBusyId(id);
+    try {
+      await fetch(`/api/admin/orders/${id}/fulfillment`, {
+        method: "POST",
+        headers: { ...(await authHeader()), "content-type": "application/json" },
+        body: JSON.stringify({ archived }),
+      });
+      await load();
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   if (!loaded) return <p className="text-body text-muted">Loading orders...</p>;
 
-  const paid = rows.filter((r) => r.status === "paid");
-  const revenue = paid.reduce((s, r) => s + r.amount_cents, 0);
-  const counts = {
-    paid: paid.length,
-    pending: rows.filter((r) => r.status === "pending").length,
-    failed: rows.filter((r) => r.status === "failed").length,
-  };
-  const needsAttention = rows.filter(
-    (r) => r.status === "paid" && !r.highlevel_opportunity_id && !r.metadata?.manual,
-  ).length;
-
-  const summary: [string, string, string][] = [
-    ["Revenue", money(revenue), "text-gold"],
-    ["Paid", String(counts.paid), "text-green"],
-    ["Pending", String(counts.pending), "text-muted"],
-    ["Failed", String(counts.failed), "text-muted"],
-  ];
+  // An "extra work" invoice attached to a parent order backs a child order; nest
+  // it under the parent instead of listing it as its own order in Manage.
+  const childSkus = new Set(invoices.map((i) => i.product_sku));
+  const isChild = (r: OrderRow) => (r.product?.sku ? childSkus.has(r.product.sku) : false);
 
   const openOrder = rows.find((r) => r.id === open) ?? null;
 
-  // Full-page order detail (replaces the list), instead of a cramped modal.
+  // ---- full-page order detail ----
   if (openOrder) {
     const hl = hlState(openOrder);
+    const inv = invoiceTitle(openOrder);
+    const attached = invoices.filter((i) => i.parent_order_id === openOrder.id);
     return (
       <div className="max-w-5xl">
         <button
@@ -648,10 +749,19 @@ export function OrdersScreen() {
               {openOrder.customer?.name || openOrder.customer_email}
             </h1>
             <p className="mt-1 font-mono text-body-sm text-muted">
-              {openOrder.product?.metadata?.code ? (
-                <span className="text-gold/80">{openOrder.product.metadata.code} </span>
-              ) : null}
-              {openOrder.product?.name ?? (openOrder.metadata?.sku as string)}
+              {inv ? (
+                <>
+                  {inv.number ? <span className="text-gold/80">{inv.number} </span> : null}
+                  {inv.title}
+                </>
+              ) : (
+                <>
+                  {openOrder.product?.metadata?.code ? (
+                    <span className="text-gold/80">{openOrder.product.metadata.code} </span>
+                  ) : null}
+                  {openOrder.product?.name ?? (openOrder.metadata?.sku as string)}
+                </>
+              )}
               <span className="text-dim"> / {openOrder.customer_email}</span>
             </p>
           </div>
@@ -667,14 +777,114 @@ export function OrdersScreen() {
             <span className="font-mono text-price font-bold text-ink [font-variant-numeric:tabular-nums]">
               {money(openOrder.amount_cents, openOrder.currency)}
             </span>
+            <button
+              type="button"
+              onClick={() => archive(openOrder.id, !openOrder.archived)}
+              disabled={busyId === openOrder.id}
+              className="tap rounded-[3px] border border-hair px-3 py-1 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-50"
+            >
+              {openOrder.archived ? "Unarchive" : "Archive"}
+            </button>
           </div>
         </div>
         <div className="mt-6">
-          <OrderDetail order={openOrder} onChanged={load} />
+          <OrderDetail order={openOrder} attachedInvoices={attached} onChanged={load} />
         </div>
       </div>
     );
   }
+
+  // ---- list views ----
+  const paid = rows.filter((r) => r.status === "paid");
+  const summary: [string, string, string][] = [
+    ["Revenue", money(paid.reduce((s, r) => s + r.amount_cents, 0)), "text-gold"],
+    ["Paid", String(paid.length), "text-green"],
+    ["Pending", String(rows.filter((r) => r.status === "pending").length), "text-muted"],
+    ["Orders", String(rows.length), "text-muted"],
+  ];
+
+  // Manage: only real work (paid/refunded, not archived, not a nested child).
+  const manageable = rows.filter(
+    (r) => !r.archived && !isChild(r) && (r.status === "paid" || r.status === "refunded"),
+  );
+  const buckets: { key: string; label: string; tone: string; items: OrderRow[] }[] = [
+    {
+      key: "new",
+      label: "New orders",
+      tone: "text-gold",
+      items: manageable.filter((r) => r.status === "paid" && STAGE_BUCKET[r.fulfillment_stage] === "new"),
+    },
+    {
+      key: "production",
+      label: "In production",
+      tone: "text-blue",
+      items: manageable.filter((r) => r.status === "paid" && STAGE_BUCKET[r.fulfillment_stage] === "production"),
+    },
+    {
+      key: "delivered",
+      label: "Delivered",
+      tone: "text-green",
+      items: manageable.filter((r) => r.status === "paid" && STAGE_BUCKET[r.fulfillment_stage] === "delivered"),
+    },
+    { key: "cancelled", label: "Cancelled", tone: "text-dim", items: manageable.filter((r) => r.status === "refunded") },
+  ];
+
+  const row = (r: OrderRow) => {
+    const hl = hlState(r);
+    const inv = invoiceTitle(r);
+    return (
+      <li key={r.id} className="group/row relative border-t border-hair first:border-t-0">
+        <button
+          type="button"
+          onClick={() => setOpen(r.id)}
+          className="flex w-full flex-wrap items-center justify-between gap-x-6 gap-y-2 bg-surface px-5 py-4 pr-28 text-left transition-colors hover:bg-white/[0.02]"
+        >
+          <div className="min-w-0">
+            <p className="text-body font-semibold text-ink">
+              {r.customer?.name || r.customer_email}
+              <span className="ml-3 font-mono text-body-sm text-muted">
+                {inv ? (
+                  <>
+                    {inv.number ? <span className="text-gold/80">{inv.number} </span> : null}
+                    {inv.title}
+                  </>
+                ) : (
+                  <>
+                    {r.product?.metadata?.code ? (
+                      <span className="text-gold/80">{r.product.metadata.code} </span>
+                    ) : null}
+                    {r.product?.name ?? (r.metadata?.sku as string)}
+                  </>
+                )}
+              </span>
+            </p>
+            <p className="mt-0.5 font-mono text-label uppercase text-dim">
+              {when(r.created_at)} / {r.customer_email}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-3">
+            {hl.label && <span className={`font-mono text-label uppercase ${hl.cls}`}>{hl.label}</span>}
+            <span
+              className={`rounded-full border px-2.5 py-0.5 font-mono text-label uppercase ${STATUS_STYLE[r.status]}`}
+            >
+              {r.status}
+            </span>
+            <span className="font-mono text-price font-bold text-ink [font-variant-numeric:tabular-nums]">
+              {money(r.amount_cents, r.currency)}
+            </span>
+          </div>
+        </button>
+        <button
+          type="button"
+          onClick={() => archive(r.id, !r.archived)}
+          disabled={busyId === r.id}
+          className="absolute right-4 top-1/2 -translate-y-1/2 rounded-[3px] border border-hair bg-surface px-2 py-1 font-mono text-label uppercase text-dim opacity-0 transition-all hover:border-gold/60 hover:text-gold group-hover/row:opacity-100 focus-visible:opacity-100 disabled:opacity-50"
+        >
+          {r.archived ? "Unarch" : "Archive"}
+        </button>
+      </li>
+    );
+  };
 
   return (
     <div className="max-w-5xl">
@@ -682,7 +892,9 @@ export function OrdersScreen() {
         <div>
           <h1 className="font-display text-h3 text-ink">Orders</h1>
           <p className="mt-2 text-body text-muted">
-            Every checkout, newest first. {rows.length} total.
+            {view === "manage"
+              ? "Your active pipeline. New and in-production up top."
+              : "Every order, for reporting and export."}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -693,87 +905,77 @@ export function OrdersScreen() {
           >
             Add manual order
           </button>
-          <button
-            type="button"
-            onClick={() => {
-              setLoaded(false);
-              load();
-            }}
-            className="tap rounded-[3px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
-          >
-            Refresh
-          </button>
+          {view === "all" && (
+            <button
+              type="button"
+              onClick={() => exportOrdersCsv(rows)}
+              className="tap rounded-[3px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
+            >
+              Export CSV
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-card border border-hair bg-hair sm:grid-cols-4">
-        {summary.map(([label, val, cls]) => (
-          <div key={label} className="bg-surface px-5 py-4">
-            <p className="font-mono text-label uppercase text-dim">{label}</p>
-            <p className={`mt-1 font-display text-h4 [font-variant-numeric:tabular-nums] ${cls}`}>
-              {val}
-            </p>
-          </div>
+      <div role="tablist" aria-label="Orders view" className="mt-6 flex gap-1 border-b border-hair">
+        {([["manage", "Manage Orders"], ["all", "All Orders"]] as const).map(([k, label]) => (
+          <button
+            key={k}
+            type="button"
+            role="tab"
+            aria-selected={view === k}
+            onClick={() => setView(k)}
+            className={`min-h-11 px-4 font-mono text-body-sm transition-colors ${
+              view === k
+                ? "border-b-2 border-gold font-semibold text-gold"
+                : "text-muted hover:text-ink"
+            }`}
+          >
+            {label}
+          </button>
         ))}
       </div>
 
-      {needsAttention > 0 && (
-        <div className="mt-4 rounded-[8px] border border-error/40 bg-error/[0.06] px-4 py-3 text-body-sm text-muted">
-          {needsAttention} paid order{needsAttention > 1 ? "s" : ""}{" "}
-          {needsAttention > 1 ? "have" : "has"} not synced to HighLevel. Open the
-          order to re-sync.
-        </div>
-      )}
-
       {err && <p className="mt-4 text-body-sm text-error">{err}</p>}
 
-      {rows.length === 0 ? (
-        <p className="mt-8 text-body text-muted">No orders yet.</p>
+      {view === "manage" ? (
+        <div className="mt-6 grid gap-8">
+          {buckets.map((b) => (
+            <section key={b.key}>
+              <div className="flex items-baseline gap-3">
+                <p className={`font-mono text-label uppercase ${b.tone}`}>{b.label}</p>
+                <span className="font-mono text-label text-dim [font-variant-numeric:tabular-nums]">
+                  {b.items.length}
+                </span>
+              </div>
+              {b.items.length === 0 ? (
+                <p className="mt-2 text-body-sm text-dim">Nothing here.</p>
+              ) : (
+                <ul className="mt-2 overflow-hidden rounded-card border border-hair">
+                  {b.items.map(row)}
+                </ul>
+              )}
+            </section>
+          ))}
+        </div>
       ) : (
-        <ul className="mt-6 overflow-hidden rounded-card border border-hair">
-          {rows.map((r) => {
-            const hl = hlState(r);
-            return (
-              <li key={r.id} className="border-t border-hair first:border-t-0">
-                <button
-                  type="button"
-                  onClick={() => setOpen(r.id)}
-                  className="flex w-full flex-wrap items-center justify-between gap-x-6 gap-y-2 bg-surface px-5 py-4 text-left transition-colors hover:bg-white/[0.02]"
-                >
-                  <div className="min-w-0">
-                    <p className="text-body font-semibold text-ink">
-                      {r.customer?.name || r.customer_email}
-                      <span className="ml-3 font-mono text-body-sm text-muted">
-                        {r.product?.metadata?.code ? (
-                          <span className="text-gold/80">
-                            {r.product.metadata.code}{" "}
-                          </span>
-                        ) : null}
-                        {r.product?.name ?? (r.metadata?.sku as string)}
-                      </span>
-                    </p>
-                    <p className="mt-0.5 font-mono text-label uppercase text-dim">
-                      {when(r.created_at)} / {r.customer_email}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-3">
-                    {hl.label && (
-                      <span className={`font-mono text-label uppercase ${hl.cls}`}>{hl.label}</span>
-                    )}
-                    <span
-                      className={`rounded-full border px-2.5 py-0.5 font-mono text-label uppercase ${STATUS_STYLE[r.status]}`}
-                    >
-                      {r.status}
-                    </span>
-                    <span className="font-mono text-price font-bold text-ink [font-variant-numeric:tabular-nums]">
-                      {money(r.amount_cents, r.currency)}
-                    </span>
-                  </div>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
+        <>
+          <div className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-card border border-hair bg-hair sm:grid-cols-4">
+            {summary.map(([label, val, cls]) => (
+              <div key={label} className="bg-surface px-5 py-4">
+                <p className="font-mono text-label uppercase text-dim">{label}</p>
+                <p className={`mt-1 font-display text-h4 [font-variant-numeric:tabular-nums] ${cls}`}>
+                  {val}
+                </p>
+              </div>
+            ))}
+          </div>
+          {rows.length === 0 ? (
+            <p className="mt-8 text-body text-muted">No orders yet.</p>
+          ) : (
+            <ul className="mt-6 overflow-hidden rounded-card border border-hair">{rows.map(row)}</ul>
+          )}
+        </>
       )}
 
       {showManual && (

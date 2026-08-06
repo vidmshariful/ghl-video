@@ -41,6 +41,7 @@ export async function POST(
     }
   }
   if (typeof body.intakeCompleted === "boolean") patch.intake_completed = body.intakeCompleted;
+  if (typeof body.archived === "boolean") patch.archived = body.archived;
 
   if (Object.keys(patch).length) {
     const { error } = await db.from("orders").update(patch).eq("id", id);
