@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { verifyAdmin } from "@/lib/checkout/admin-auth";
 import { sendEmail } from "@/lib/email/send";
-import { SITE_URL, renderTemplate } from "@/lib/email/templates";
+import { SITE_URL, renderTemplate, wrapEmail } from "@/lib/email/templates";
 
 export const runtime = "nodejs";
 
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
   const result = await sendEmail({
     to: admin.email,
     subject: `[Test] ${renderTemplate(subject, SAMPLE)}`,
-    html: renderTemplate(html, SAMPLE),
+    html: wrapEmail(renderTemplate(html, SAMPLE)),
   });
   if (!result.ok) {
     // surface Brevo's actual reason so the real cause is visible, not a guess

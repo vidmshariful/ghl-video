@@ -7,6 +7,7 @@ import {
   SITE_URL,
   TEMPLATE_VARIABLES,
   renderTemplate,
+  wrapEmail,
 } from "@/lib/email/templates";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -109,7 +110,7 @@ export function EmailTemplatesScreen() {
     }
   }
 
-  const preview = renderTemplate(body, SAMPLE);
+  const preview = wrapEmail(renderTemplate(body, SAMPLE));
   const vars = TEMPLATE_VARIABLES[sel] ?? [];
 
   return (
@@ -118,9 +119,10 @@ export function EmailTemplatesScreen() {
         <div>
           <h1 className="font-display text-h3 text-ink">Email Templates</h1>
           <p className="mt-1 max-w-2xl text-body-sm text-muted">
-            Emails the site sends to clients. Edit the subject and body, and use the
-            variables below in double braces. The order update email is sent to the
-            client whenever the team posts an update on their order.
+            Emails the site sends to clients. Edit the subject and message, and use the
+            variables below in double braces. The GHL Video header, colors, and footer
+            are added automatically, so you only edit the message. The order update
+            email is sent to the client whenever the team posts an update on their order.
           </p>
         </div>
         {DEFAULT_TEMPLATES.length > 1 && (

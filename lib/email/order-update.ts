@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendEmail } from "./send";
-import { DEFAULT_TEMPLATES, SITE_URL, escapeHtml, renderTemplate } from "./templates";
+import { DEFAULT_TEMPLATES, SITE_URL, escapeHtml, renderTemplate, wrapEmail } from "./templates";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -63,7 +63,7 @@ export async function sendOrderUpdateEmail(
       to: o.customer_email,
       toName: o.customers?.name ?? null,
       subject: renderTemplate(tpl.subject, vars),
-      html: renderTemplate(tpl.body, vars),
+      html: wrapEmail(renderTemplate(tpl.body, vars)),
     });
     if (!result.ok) console.error("[email] order update not sent:", result.error);
     return result.ok;
