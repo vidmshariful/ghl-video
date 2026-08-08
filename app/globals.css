@@ -713,3 +713,28 @@ details[open]::details-content {
     opacity: 1;
   }
 }
+
+/* -------------------------------------------------------------------------
+   Premade library: hide the site chrome while scrolling DOWN so the sticky
+   library tab bar can rise to the top and get more room. Driven by
+   data-nav-hidden on <html> (set by components/PremadeLibrary.tsx); the tab
+   bar's own top offset flips to 0 in that component. Chrome returns on any
+   upward scroll.
+   ------------------------------------------------------------------------- */
+[data-site-header],
+[data-notice-bar] {
+  transition: transform 0.3s ease;
+  will-change: transform;
+}
+:root[data-nav-hidden="1"] [data-site-header] {
+  transform: translateY(-200%);
+}
+:root[data-nav-hidden="1"] [data-notice-bar] {
+  transform: translateY(-100%);
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-site-header],
+  [data-notice-bar] {
+    transition: none;
+  }
+}

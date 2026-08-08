@@ -29,8 +29,19 @@ import { ProofStrip } from "@/components/pages/ProofStrip";
 import { FeaturedQuote } from "@/components/pages/FeaturedQuote";
 import { WhiteLabelDemo } from "@/components/pages/WhiteLabelDemo";
 import { TrustStrip } from "@/components/home/TrustStrip";
+import { MediaFrame } from "@/components/MediaFrame";
 import { faqSchema, productCatalogSchema, serviceSchema } from "@/lib/schema";
-import { cta, pages, sellableProducts, site } from "@/lib/site";
+import { aiPackClips, cta, pages, sellableProducts, site } from "@/lib/site";
+
+/* recent branded deliveries, shown so a buyer sees the outcome on their brand */
+const recentDelivered: { src: string; poster: string | null; label: string; sub: string }[] = [
+  { src: aiPackClips.master, poster: "/posters/ai-master.jpg", label: "All-in-one + AI-First Positioning", sub: "Master explainer" },
+  { src: aiPackClips.receptionist, poster: "/posters/ai-receptionist.jpg", label: "AI Receptionist + Conversational AI", sub: "Feature explainer" },
+  { src: aiPackClips.reputation, poster: "/posters/ai-reputation.jpg", label: "Reputation Management + Reviews AI", sub: "Feature explainer" },
+  { src: aiPackClips.inbox, poster: "/posters/ai-inbox.jpg", label: "Unified Inbox + Conversational AI", sub: "Feature explainer" },
+  { src: aiPackClips.social, poster: null, label: "Social Media Planner + Content AI", sub: "Feature explainer" },
+  { src: aiPackClips.website, poster: null, label: "AI Website + Funnel Builder", sub: "Feature explainer" },
+];
 
 export const metadata: Metadata = {
   title: "GoHighLevel White-Label Videos and Video Packs",
@@ -183,9 +194,48 @@ export default async function PremadePage() {
         </div>
       </RuledSection>
 
+      {/* recent deliveries: branded client work so a buyer sees the outcome */}
+      <section
+        data-bp-idx="5"
+        aria-label="Recent deliveries"
+        className="relative overflow-x-clip section-pad"
+      >
+        <SectionGlow position="left" />
+        <div className="shell relative">
+          <SectionHead
+            index={5}
+            chip="Recent work"
+            headline="Recently delivered,"
+            accent="branded to real SaaS."
+            intro="A slice of what we shipped lately. Every frame is white-labeled to the client: their logo, their dashboard, their voiceover. Yours will look like this."
+            center
+          />
+          <div className="mt-12 grid gap-x-5 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
+            {recentDelivered.map((v) => (
+              <div key={v.label} className="group/card">
+                <MediaFrame
+                  src={v.src}
+                  poster={v.poster}
+                  label={v.label}
+                  tint
+                  rounded="rounded-none"
+                  caption={{ title: "Delivered", sub: v.sub }}
+                />
+                <div className="border-b border-hair px-1 pb-4 pt-3.5">
+                  <h3 className="font-display text-h4 font-semibold leading-snug tracking-[-0.01em] text-ink">
+                    {v.label}
+                  </h3>
+                  <p className="mt-1 font-mono text-label uppercase text-dim">{v.sub}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* how it works: a connected scroll timeline */}
       <ProcessSection
-        bpIdx={5}
+        bpIdx={6}
         glow="right"
         chip={p.how.chip}
         headline={p.how.headline}
@@ -202,8 +252,8 @@ export default async function PremadePage() {
 
       {/* keep going: ruled box, two route-out cells */}
       <RuledSection
-        bpIdx={6}
-        index={6}
+        bpIdx={7}
+        index={7}
         chip="Keep going"
         headline="Need something"
         accent="premade cannot do?"
@@ -266,14 +316,14 @@ export default async function PremadePage() {
       </RuledSection>
 
       {/* proof + FAQ */}
-      <section data-bp-idx="7" className="relative section-pad">
+      <section data-bp-idx="8" className="relative section-pad">
         <DrawnBorder />
         <div className="shell">
           <ProofStrip />
           <FeaturedQuote className="mx-auto mt-12 max-w-3xl" />
           <div className="mt-16">
             <SectionHead
-              index={7}
+              index={8}
               chip={p.faq.chip}
               headline={p.faq.headline}
               accent={p.faq.accent}
@@ -288,7 +338,7 @@ export default async function PremadePage() {
         </div>
       </section>
       <CtaBand
-        bpIdx={8}
+        bpIdx={9}
         headline={p.closing.headline}
         accent={p.closing.accent}
         sub={p.closing.sub}

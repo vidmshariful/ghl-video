@@ -353,6 +353,13 @@ export function Header({
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  /* publish the chrome height (notice + header) so a sticky sub-nav can dock
+     right below it; updates as the header shrinks on scroll */
+  useEffect(() => {
+    const h = (hasNotice ? 36 : 0) + (scrolled ? 56 : 80);
+    document.documentElement.style.setProperty("--chrome-h", `${h}px`);
+  }, [scrolled, hasNotice]);
+
   /* close the menu on navigation, lock scroll while open */
   useEffect(() => setOpen(false), [pathname]);
   useEffect(() => {
@@ -364,6 +371,7 @@ export function Header({
 
   return (
     <header
+      data-site-header
       className={`fixed inset-x-0 ${hasNotice ? "top-9" : "top-0"} z-50 border-b border-hair transition-all duration-300 ${
         scrolled
           ? "bg-canvas/85 backdrop-blur-md"

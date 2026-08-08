@@ -11,6 +11,7 @@ export function NoticeBar({ notice }: { notice: SiteNotice }) {
   return (
     <div
       role="status"
+      data-notice-bar
       className="fixed inset-x-0 top-0 z-[60] flex h-9 items-center justify-center gap-2 border-b border-gold/25 bg-surface px-4"
     >
       <span

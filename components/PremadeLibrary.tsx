@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { featureAnimations, premadePacks, videoStack } from "@/lib/site";
 import type { BrowseVideo, FilterDef } from "./premade/catalog";
 import { VideoBrowser } from "./premade/browser";
@@ -12,11 +12,12 @@ import { FeatureAnimationView } from "./premade/feature-view";
 /* ---------------------------------------------------------------- */
 
 /*
- * Five views over the admin-managed catalog: two curated grids
- * (Featured, Recent Launch), the two packs (AI First SaaS Pack, Complete
- * Video Stack), and the Full Library, a filterable browser over every
- * video new and classic. The grids read from the DB catalog (passed in
- * from the server page); the packs stay composed in code.
+ * Five views over the admin-managed catalog plus the two packs and the
+ * feature animations. The tab bar is a grid-lined cell row (edge-to-edge, one
+ * box per tab, active tab on the brand gradient) that sticks to the top on
+ * scroll. To give the library room, scrolling down hides the site chrome
+ * (via data-nav-hidden, see globals.css) and the tab bar rises to top:0;
+ * scrolling up brings the chrome back and drops the tab bar below it.
  */
 export function PremadeLibrary({
   featured,
@@ -30,6 +31,37 @@ export function PremadeLibrary({
   fullGroups: FilterDef[];
 }) {
   const [view, setView] = useState<string>("featured");
+  const [navHidden, setNavHidden] = useState(false);
+
+  useEffect(() => {
+    let lastY = window.scrollY;
+    let ticking = false;
+    const apply = () => {
+      const y = window.scrollY;
+      // hide chrome only while scrolling DOWN and past the hero; any upward
+      // scroll (or near the top) brings it back
+      if (y > lastY && y > 480) {
+        setNavHidden(true);
+        document.documentElement.dataset.navHidden = "1";
+      } else if (y < lastY || y < 240) {
+        setNavHidden(false);
+        document.documentElement.dataset.navHidden = "";
+      }
+      lastY = y;
+      ticking = false;
+    };
+    const onScroll = () => {
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(apply);
+      }
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      delete document.documentElement.dataset.navHidden;
+    };
+  }, []);
 
   const tabs = [
     { slug: "featured", label: "Featured Videos", count: featured.length as number | null },
@@ -41,12 +73,14 @@ export function PremadeLibrary({
   ];
 
   return (
-    <div>
-      {/* view rail: curated grids, packs, then the full library */}
+    <div className="border border-hair bg-canvas">
+      {/* grid-lined tab bar: one box per tab, active on the brand gradient,
+          sticky to the top on scroll (chrome hides to make room) */}
       <div
         role="tablist"
         aria-label="Catalog view"
-        className="flex flex-wrap items-center gap-x-1 gap-y-2 border-b border-hair pb-4"
+        className="sticky z-30 flex overflow-x-auto border-b border-hair bg-canvas/95 backdrop-blur-sm [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        style={{ top: navHidden ? 0 : "var(--chrome-h, 5rem)", transition: "top 0.25s ease" }}
       >
         {tabs.map((tab) => {
           const isActive = view === tab.slug;
@@ -57,85 +91,58 @@ export function PremadeLibrary({
               role="tab"
               aria-selected={isActive}
               onClick={() => setView(tab.slug)}
-              className="group/tab flex min-h-11 items-center gap-1.5 px-3 font-mono text-body-sm transition-colors"
+              className={`flex min-h-[3.25rem] min-w-[8.5rem] flex-1 items-center justify-center gap-2 whitespace-nowrap border-l border-hair px-3 font-mono text-body-sm transition-colors first:border-l-0 ${
+                isActive
+                  ? "bg-brand-gradient font-semibold text-canvas"
+                  : "text-muted hover:bg-surface hover:text-ink"
+              }`}
             >
-              <span
-                aria-hidden="true"
-                className={`transition-opacity ${
-                  isActive
-                    ? "text-gold opacity-100"
-                    : "text-dim opacity-0 group-hover/tab:opacity-100"
-                }`}
-              >
-                [
-              </span>
-              <span
-                className={
-                  isActive
-                    ? "font-semibold text-gold"
-                    : "text-muted group-hover/tab:text-ink"
-                }
-              >
-                {tab.label}
-              </span>
+              <span>{tab.label}</span>
               {tab.count !== null && (
                 <span
-                  className={`text-label ${isActive ? "text-gold/70" : "text-dim"}`}
+                  className={`text-label [font-variant-numeric:tabular-nums] ${
+                    isActive ? "text-canvas/70" : "text-dim"
+                  }`}
                 >
                   {tab.count}
                 </span>
               )}
-              <span
-                aria-hidden="true"
-                className={`transition-opacity ${
-                  isActive
-                    ? "text-gold opacity-100"
-                    : "text-dim opacity-0 group-hover/tab:opacity-100"
-                }`}
-              >
-                ]
-              </span>
             </button>
           );
         })}
       </div>
 
-      {/* the instrument panel: square, hairline-framed */}
-      <div className="mt-8 border border-hair bg-canvas">
-        {/* EVERY view renders into the static HTML so the whole catalog,
-            every SKU, and every price is crawlable: AI crawlers do not
-            execute JavaScript, and content that appears only after a
-            click does not exist to them. Only the active view displays;
-            hidden views cost nothing (display:none never intersects, so
-            no media loads or plays). */}
-        <div hidden={view !== "featured"}>
-          <VideoBrowser videos={featured} groups={[]} />
+      {/* the instrument panel: EVERY view renders into the static HTML so the
+          whole catalog, every SKU, and every price is crawlable (AI crawlers do
+          not execute JS). Only the active view displays; hidden views cost
+          nothing (display:none never intersects, so no media loads or plays). */}
+      <div hidden={view !== "featured"}>
+        <VideoBrowser videos={featured} groups={[]} />
+      </div>
+      <div hidden={view !== "recent"}>
+        <VideoBrowser
+          videos={recent}
+          groups={[]}
+          note="Our newest white-label releases, freshest first. Every one brands to your SaaS."
+        />
+      </div>
+      {premadePacks.map((pk) => (
+        <div key={pk.slug} hidden={view !== pk.slug}>
+          <PackBundleView pack={pk} />
         </div>
-        <div hidden={view !== "recent"}>
-          <VideoBrowser
-            videos={recent}
-            groups={[]}
-            note="Our newest white-label releases, freshest first. Every one brands to your SaaS."
-          />
-        </div>
-        {premadePacks.map((pk) => (
-          <div key={pk.slug} hidden={view !== pk.slug}>
-            <PackBundleView pack={pk} />
-          </div>
-        ))}
-        <div hidden={view !== videoStack.slug}>
-          <VideoStackView />
-        </div>
-        <div hidden={view !== "features"}>
-          <FeatureAnimationView />
-        </div>
-        <div hidden={view !== "full"}>
-          <VideoBrowser
-            videos={full}
-            groups={fullGroups}
-            note="Every video we make, new and classic. Filter by type or era; each one white-labeled to your platform."
-          />
-        </div>
+      ))}
+      <div hidden={view !== videoStack.slug}>
+        <VideoStackView />
+      </div>
+      <div hidden={view !== "features"}>
+        <FeatureAnimationView />
+      </div>
+      <div hidden={view !== "full"}>
+        <VideoBrowser
+          videos={full}
+          groups={fullGroups}
+          note="Every video we make, new and classic. Filter by type or era; each one white-labeled to your platform."
+        />
       </div>
     </div>
   );
