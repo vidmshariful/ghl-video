@@ -27,10 +27,11 @@ export function Avatar({
 }) {
   if (photo) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element -- static export, unoptimized images
+      // eslint-disable-next-line @next/next/no-img-element -- small class-sized avatar; next/image adds no value at this size
       <img
         src={photo}
         alt={name}
+        loading="lazy"
         className={`shrink-0 rounded-full border border-hair object-cover ${sizes[size]}`}
       />
     );

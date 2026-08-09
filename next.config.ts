@@ -25,7 +25,16 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  images: { unoptimized: true },
+  /* Vercel server mode: use Next's image optimizer (AVIF/WebP, responsive
+   * srcset, on-demand resizing). Remote posters are served from these hosts;
+   * add any new image host here before using next/image with it. */
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "assets.cdn.filesafe.space" },
+      { protocol: "https", hostname: "embed-ssl.wistia.com" },
+      { protocol: "https", hostname: "storage.googleapis.com" },
+    ],
+  },
   trailingSlash: true,
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];

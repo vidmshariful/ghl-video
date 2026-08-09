@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useReducedMotion } from "framer-motion";
 
 function Play({ className = "h-3 w-3" }: { className?: string }) {
   return (
@@ -31,6 +32,7 @@ export function HeroReviewer({
   poster: string | null;
 }) {
   const [open, setOpen] = useState(false);
+  const reduced = useReducedMotion();
   const wrapRef = useRef<HTMLDivElement>(null);
   const initial = name.trim()[0]?.toUpperCase() ?? "";
 
@@ -98,7 +100,7 @@ export function HeroReviewer({
           aria-expanded={open}
           className="group relative block h-14 w-14 overflow-hidden rounded-full border border-hair"
         >
-          {video ? (
+          {video && !reduced ? (
             <video
               src={video}
               poster={poster ?? undefined}
@@ -106,11 +108,12 @@ export function HeroReviewer({
               muted
               loop
               playsInline
+              preload="metadata"
               className="h-full w-full object-cover"
             />
           ) : poster ? (
-            // eslint-disable-next-line @next/next/no-img-element -- static export
-            <img src={poster} alt={name} className="h-full w-full object-cover" />
+            // eslint-disable-next-line @next/next/no-img-element -- 56px avatar; next/image adds no value at this size
+            <img src={poster} alt={name} loading="lazy" className="h-full w-full object-cover" />
           ) : (
             <span
               aria-hidden="true"

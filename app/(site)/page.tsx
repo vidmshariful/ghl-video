@@ -23,6 +23,9 @@ export const metadata: Metadata = {
 export default function Home() {
   return (
     <>
+      {/* preload the hero's LCP poster; scoped to the homepage so other
+          routes never fetch it. Keep in sync with the Hero's featured poster. */}
+      <link rel="preload" as="image" href="/posters/ai-master.jpg" fetchPriority="high" />
       <Hero />
       <TrustStrip />
       <ServicePanels />

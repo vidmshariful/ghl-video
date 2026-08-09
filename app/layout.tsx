@@ -37,11 +37,9 @@ export default function RootLayout({
       lang="en"
       className={`${archivo.variable} ${raveo.variable} h-full antialiased`}
     >
-      <head>
-        {/* the homepage hero's featured poster (home.work.pieces[0]) is the
-            first meaningful paint; keep this in sync with that source */}
-        <link rel="preload" as="image" href="/posters/ai-master.jpg" />
-      </head>
+      {/* the hero-poster preload lives on the homepage only (app/(site)/page.tsx),
+          not here: in the root layout it fired on every route (admin, checkout,
+          portal) and wasted a high-priority fetch those pages never use. */}
       <body className="flex min-h-full flex-col">{children}</body>
     </html>
   );

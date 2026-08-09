@@ -142,6 +142,10 @@ export function MediaFrame({
   const figureRef = useRef<HTMLElement>(null);
   const ref = useRef<HTMLVideoElement>(null);
   const [inView, setInView] = useState(false);
+  /* the <video> only mounts once the frame is near the viewport, and stays
+     mounted after. A page can hold a dozen frames; mounting them all up front
+     made every browser fetch metadata (and posters) at once. */
+  const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const reduced = useReducedMotion();
 
@@ -149,8 +153,11 @@ export function MediaFrame({
     const el = figureRef.current;
     if (!el) return;
     const io = new IntersectionObserver(
-      ([entry]) => setInView(entry.isIntersecting),
-      { threshold: 0.2 },
+      ([entry]) => {
+        setInView(entry.isIntersecting);
+        if (entry.isIntersecting) setMounted(true);
+      },
+      { rootMargin: "300px 0px" },
     );
     io.observe(el);
     return () => io.disconnect();
@@ -170,39 +177,52 @@ export function MediaFrame({
     }
     if (startAt > 0 && v.currentTime < startAt) v.currentTime = startAt;
     v.play().catch(() => {});
-  }, [inView, open, reduced, startAt]);
+  }, [inView, open, reduced, startAt, mounted]);
 
   return (
     <figure
       ref={figureRef}
       className={`group/mf relative aspect-video overflow-hidden border border-hair bg-[#030303] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] ${rounded} ${className}`}
     >
-      <video
-        ref={ref}
-        src={src}
-        poster={poster ?? undefined}
-        muted
-        loop={startAt === 0 && endAt === undefined}
-        playsInline
-        preload="metadata"
-        onTimeUpdate={
-          endAt !== undefined
-            ? (e) => {
-                if (e.currentTarget.currentTime >= endAt)
+      {mounted ? (
+        <video
+          ref={ref}
+          src={src}
+          poster={poster ?? undefined}
+          muted
+          loop={startAt === 0 && endAt === undefined}
+          playsInline
+          preload="none"
+          onTimeUpdate={
+            endAt !== undefined
+              ? (e) => {
+                  if (e.currentTarget.currentTime >= endAt)
+                    e.currentTarget.currentTime = startAt;
+                }
+              : undefined
+          }
+          onEnded={
+            startAt > 0
+              ? (e) => {
                   e.currentTarget.currentTime = startAt;
-              }
-            : undefined
-        }
-        onEnded={
-          startAt > 0
-            ? (e) => {
-                e.currentTarget.currentTime = startAt;
-                e.currentTarget.play().catch(() => {});
-              }
-            : undefined
-        }
-        className="absolute inset-0 h-full w-full object-cover brightness-[0.85] saturate-[0.8]"
-      />
+                  e.currentTarget.play().catch(() => {});
+                }
+              : undefined
+          }
+          className="absolute inset-0 h-full w-full object-cover brightness-[0.85] saturate-[0.8]"
+        />
+      ) : poster ? (
+        /* lightweight poster placeholder until the frame nears the viewport */
+        // eslint-disable-next-line @next/next/no-img-element -- fixed-size cover poster; next/image adds no value here and the video replaces it on scroll
+        <img
+          src={poster}
+          alt=""
+          loading="lazy"
+          className="absolute inset-0 h-full w-full object-cover brightness-[0.85] saturate-[0.8]"
+        />
+      ) : (
+        <div aria-hidden="true" className="absolute inset-0 bg-[#030303]" />
+      )}
 
       {/* unified grade, always on for ambient playback; eases as a
           hover affordance */}
