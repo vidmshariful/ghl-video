@@ -14,7 +14,8 @@ import { FeatureAnimationView } from "./premade/feature-view";
 /*
  * Five views over the admin-managed catalog plus the two packs and the
  * feature animations. The tab bar is a grid-lined cell row (edge-to-edge, one
- * box per tab, active tab on the brand gradient) that sticks to the top on
+ * surface-filled box per tab; the active box lifts to card with gold text and a
+ * thin gradient top bar) that sticks to the top on
  * scroll. To give the library room, scrolling down hides the site chrome
  * (via data-nav-hidden, see globals.css) and the tab bar rises to top:0;
  * scrolling up brings the chrome back and drops the tab bar below it.
@@ -91,17 +92,24 @@ export function PremadeLibrary({
               role="tab"
               aria-selected={isActive}
               onClick={() => setView(tab.slug)}
-              className={`flex min-h-[3.25rem] min-w-[8.5rem] flex-1 items-center justify-center gap-2 whitespace-nowrap border-l border-hair px-3 font-mono text-body-sm transition-colors first:border-l-0 ${
+              className={`relative flex min-h-[3.25rem] min-w-[8.5rem] flex-1 items-center justify-center gap-2 whitespace-nowrap border-l border-hair px-3 font-mono text-body-sm transition-colors first:border-l-0 ${
                 isActive
-                  ? "bg-brand-gradient font-semibold text-canvas"
-                  : "text-muted hover:bg-surface hover:text-ink"
+                  ? "bg-card font-semibold text-gold"
+                  : "bg-surface text-muted hover:bg-card hover:text-ink"
               }`}
             >
+              {/* selected: a thin gradient bar instead of a loud full fill */}
+              {isActive && (
+                <span
+                  aria-hidden="true"
+                  className="absolute inset-x-0 top-0 h-[2px] bg-brand-gradient"
+                />
+              )}
               <span>{tab.label}</span>
               {tab.count !== null && (
                 <span
                   className={`text-label [font-variant-numeric:tabular-nums] ${
-                    isActive ? "text-canvas/70" : "text-dim"
+                    isActive ? "text-gold/60" : "text-dim"
                   }`}
                 >
                   {tab.count}
