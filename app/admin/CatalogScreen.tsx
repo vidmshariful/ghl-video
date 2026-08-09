@@ -219,8 +219,8 @@ export function CatalogScreen() {
                     ) : null}
                   </p>
                   <p className="text-body-sm text-muted">
-                    {row.category} · {row.library === "new" ? "New" : "Classic"}
-                    {row.old_code ? ` · was ${row.old_code.toUpperCase()}` : ""}
+                    {row.category} / {row.library === "new" ? "New" : "Classic"}
+                    {row.old_code ? ` / was ${row.old_code.toUpperCase()}` : ""}
                   </p>
                 </div>
                 <span className="w-16 shrink-0 font-mono text-body-sm text-ink">{money(row.price_cents)}</span>

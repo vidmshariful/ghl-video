@@ -325,8 +325,8 @@ export function InvoicesScreen() {
               </div>
               <p className="mt-1 font-mono text-label uppercase text-dim">
                 {when(inv.createdAt)}
-                {inv.dueDate ? ` · due ${inv.dueDate}` : ""}
-                {inv.sentAt ? " · sent" : ""}
+                {inv.dueDate ? ` / due ${inv.dueDate}` : ""}
+                {inv.sentAt ? " / sent" : ""}
               </p>
 
               <div className="mt-3 flex flex-wrap items-center gap-2">

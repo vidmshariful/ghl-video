@@ -364,8 +364,12 @@ export function Header({
   useEffect(() => setOpen(false), [pathname]);
   useEffect(() => {
     document.documentElement.style.overflow = open ? "hidden" : "";
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    window.addEventListener("keydown", onKey);
     return () => {
       document.documentElement.style.overflow = "";
+      window.removeEventListener("keydown", onKey);
     };
   }, [open]);
 

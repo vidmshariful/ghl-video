@@ -114,7 +114,7 @@ export function MessagesScreen() {
                 <p className="text-body font-semibold text-ink">{selected.customerName}</p>
                 <p className="font-mono text-label uppercase text-dim">
                   {selected.customerEmail}
-                  {selected.company ? ` · ${selected.company}` : ""} · {selected.title}
+                  {selected.company ? ` / ${selected.company}` : ""} / {selected.title}
                 </p>
               </div>
               <div className="mt-3 min-h-0 flex-1">

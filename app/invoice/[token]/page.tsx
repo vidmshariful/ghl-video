@@ -87,7 +87,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ token:
               <h1 className="font-display text-h3 text-ink">{inv.number}</h1>
               <p className="mt-1 font-mono text-label uppercase text-dim">
                 Issued {dateLabel(inv.created_at)}
-                {inv.due_date ? ` · Due ${dateLabel(inv.due_date)}` : ""}
+                {inv.due_date ? ` / Due ${dateLabel(inv.due_date)}` : ""}
               </p>
             </div>
             <span
@@ -180,7 +180,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ token:
                   <span aria-hidden="true">&rarr;</span>
                 </a>
                 <p className="mt-3 font-mono text-label uppercase text-dim">
-                  Secure checkout · card payment
+                  Secure checkout, card payment
                 </p>
               </>
             )}

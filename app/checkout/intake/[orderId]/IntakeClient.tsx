@@ -148,7 +148,7 @@ export function IntakeClient({ orderId }: { orderId: string }) {
     <div>
       <header className="text-center">
         <p className="font-mono text-label uppercase tracking-[0.14em] text-gold/80">
-          {data?.productCode ? `${data.productCode} · ` : ""}Branding brief
+          {data?.productCode ? `${data.productCode} / ` : ""}Branding brief
         </p>
         <h1 className="mt-3 font-display text-h2 text-ink">
           {alreadyDone ? "Update your branding brief." : "Now let us brand it."}

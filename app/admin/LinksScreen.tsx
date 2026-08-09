@@ -63,7 +63,7 @@ function couponLabel(c: Coupon): string {
   const off = c.percent_off
     ? `${c.percent_off}% off`
     : `$${((c.amount_off_cents ?? 0) / 100).toFixed(0)} off`;
-  return `${c.code} — ${off}`;
+  return `${c.code} / ${off}`;
 }
 
 export function LinksScreen() {

@@ -717,7 +717,7 @@ function PortalDashboard({
   const active = list.filter((o) => o.status === "paid" && o.stage !== "delivered");
   const delivered = list.filter((o) => o.stage === "delivered");
   const latest = list[0] ?? null;
-  const num = (v: number) => (orders === null ? "—" : String(v));
+  const num = (v: number) => (orders === null ? "-" : String(v));
 
   const primary =
     "tap inline-flex items-center gap-2 rounded-[3px] bg-brand-gradient px-6 py-3 text-body font-semibold text-canvas transition-all hover:brightness-110";
