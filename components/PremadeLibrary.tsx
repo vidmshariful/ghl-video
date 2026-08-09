@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useReducedMotion } from "framer-motion";
 import { featureAnimations, premadePacks, videoStack } from "@/lib/site";
 import type { BrowseVideo, FilterDef } from "./premade/catalog";
 import { VideoBrowser } from "./premade/browser";
@@ -33,6 +34,8 @@ export function PremadeLibrary({
 }) {
   const [view, setView] = useState<string>("featured");
   const [navHidden, setNavHidden] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const reduced = useReducedMotion();
 
   useEffect(() => {
     let lastY = window.scrollY;
@@ -64,6 +67,16 @@ export function PremadeLibrary({
     };
   }, []);
 
+  /* switching tabs returns the reader to the top of the library, so the new
+     view starts from its first row instead of wherever the last one scrolled to */
+  const selectView = (slug: string) => {
+    setView(slug);
+    containerRef.current?.scrollIntoView({
+      behavior: reduced ? "auto" : "smooth",
+      block: "start",
+    });
+  };
+
   const tabs = [
     { slug: "featured", label: "Featured Videos", count: featured.length as number | null },
     { slug: "recent", label: "Recent Launch", count: recent.length as number | null },
@@ -74,7 +87,11 @@ export function PremadeLibrary({
   ];
 
   return (
-    <div className="border border-hair bg-canvas">
+    <div
+      ref={containerRef}
+      className="border border-hair bg-canvas"
+      style={{ scrollMarginTop: "var(--chrome-h, 5rem)" }}
+    >
       {/* grid-lined tab bar: one box per tab, active on the brand gradient,
           sticky to the top on scroll (chrome hides to make room) */}
       <div
@@ -91,7 +108,7 @@ export function PremadeLibrary({
               type="button"
               role="tab"
               aria-selected={isActive}
-              onClick={() => setView(tab.slug)}
+              onClick={() => selectView(tab.slug)}
               className={`relative flex min-h-[3.25rem] min-w-[8.5rem] flex-1 items-center justify-center gap-2 whitespace-nowrap border-l border-hair px-3 font-mono text-body-sm transition-colors first:border-l-0 ${
                 isActive
                   ? "bg-card font-semibold text-gold"
