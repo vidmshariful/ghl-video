@@ -10,7 +10,7 @@ import { home, cta } from "@/lib/site";
 gsap.registerPlugin(ScrollTrigger);
 
 /* token colours as literals: GSAP tweens concrete hex, not var() */
-const DIM = "#5A6076";
+const DIM = "#7d8499"; // mirrors --dim in globals.css; GSAP tweens need a literal
 const INK = "#EEF0F6";
 const GOLD = "#FCC000";
 

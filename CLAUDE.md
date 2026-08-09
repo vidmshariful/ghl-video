@@ -103,13 +103,15 @@ the in-process limiter as real protection.
 
 ## 5. Design system (locked)
 
-Colors come pixel-exact from the logo and do not change:
+Brand accents (gold, blue, green) are pixel-exact from the logo. The neutral
+hairline and dim grays were tuned for contrast (dim now passes WCAG AA on
+canvas); these are the live values in `app/globals.css`:
 
 ```css
 --gold:#FCC000; --blue:#0090FC; --green:#00CC00;
 --brand-gradient: linear-gradient(100deg,#FCC000,#00CC00); /* signature */
---canvas:#08090D; --surface:#111219; --card:#161821; --hair:#242736;
---text:#EEF0F6; --muted:#9096A8; --dim:#5A6076; --error:#FF6B6B;
+--canvas:#08090D; --surface:#111219; --card:#161821; --hair:#2b2f40;
+--text:#EEF0F6; --muted:#9096A8; --dim:#7d8499; --error:#FF6B6B;
 ```
 
 - **Type:** Archivo (display, 600, tight tracking) + Raveo Display (body and
@@ -119,7 +121,10 @@ Colors come pixel-exact from the logo and do not change:
   The gradient is the signature: hero accent word, primary buttons, ambient
   glows. Green never stands alone as a screen's only accent.
 - Buttons on bright fills use near-black text (#08090D). Hairline borders at
-  low opacity. Soft radial glows over drop shadows. The homepage uses a
+  low opacity. Soft radial glows over drop shadows. Radius is deliberately
+  tight: 4px containers (`rounded-card` / `rounded-media`), 3px controls
+  (buttons, inputs), `rounded-full` only for dots and avatars. No other radii.
+  The homepage uses a
   hybrid theme: dark heroes and footer (hard rule), `theme-light` bands for
   the proof/people sections.
 - **Anti-generic mandate still applies:** no pill-badge centered SaaS hero

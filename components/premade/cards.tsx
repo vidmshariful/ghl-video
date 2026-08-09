@@ -324,7 +324,7 @@ export function PreviewLightbox({
           type="button"
           onClick={onClose}
           aria-label="Close video"
-          className="absolute -top-12 right-0 flex h-10 w-10 items-center justify-center rounded-[3px] border border-hair bg-[#111219] text-ink transition-colors hover:border-gold"
+          className="absolute -top-12 right-0 flex h-10 w-10 items-center justify-center rounded-[3px] border border-hair bg-surface text-ink transition-colors hover:border-gold"
         >
           <svg viewBox="0 0 12 12" className="h-3.5 w-3.5" aria-hidden="true">
             <path
@@ -363,7 +363,7 @@ export function PreviewLightbox({
           />
         )}
         {/* the buy bar: the preview closes with the action in reach */}
-        <div className="flex flex-wrap items-center justify-between gap-4 border border-t-0 border-hair bg-[#111219] px-5 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-4 border border-t-0 border-hair bg-surface px-5 py-4">
           {video.previewOnly ? (
             <>
               <div>

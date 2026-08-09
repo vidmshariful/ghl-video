@@ -32,14 +32,15 @@ const appearance = {
     colorTextSecondary: "#9096A8",
     colorDanger: "#FF6B6B",
     fontFamily: "system-ui, sans-serif",
-    borderRadius: "3px",
+    borderRadius: "4px",
     spacingUnit: "3px",
   },
   rules: {
-    ".Input": { border: "1px solid #242736", backgroundColor: "#0E0F15" },
+    /* match the native name/email fields beside these: hair border, canvas fill, 4px */
+    ".Input": { border: "1px solid #2b2f40", backgroundColor: "#08090D" },
     ".Input:focus": { border: "1px solid #FCC000", boxShadow: "none" },
     ".Label": { color: "#9096A8" },
-    ".Tab": { border: "1px solid #242736", backgroundColor: "#0E0F15" },
+    ".Tab": { border: "1px solid #2b2f40", backgroundColor: "#08090D" },
     ".Tab:hover": { borderColor: "#FCC000" },
     ".Tab--selected": { borderColor: "#FCC000", backgroundColor: "#161821" },
   },
@@ -69,7 +70,7 @@ const inputCls =
 const labelCls =
   "mb-1.5 block font-mono text-label uppercase tracking-[0.08em] text-muted";
 const payBtnCls =
-  "group inline-flex w-full items-center justify-center gap-2.5 rounded-[4px] bg-brand-gradient px-8 py-[15px] text-body font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.28)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:brightness-100";
+  "group inline-flex w-full items-center justify-center gap-2.5 rounded-[3px] bg-brand-gradient px-8 py-[15px] text-body font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.25)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:brightness-100";
 
 type CommonProps = {
   sku: string;

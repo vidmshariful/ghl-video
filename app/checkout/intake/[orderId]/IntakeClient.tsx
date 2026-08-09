@@ -271,7 +271,7 @@ export function IntakeClient({ orderId }: { orderId: string }) {
         <button
           type="submit"
           disabled={submitting}
-          className="group inline-flex w-full items-center justify-center gap-2.5 rounded-[4px] bg-brand-gradient px-8 py-[15px] text-body font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.28)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70"
+          className="group inline-flex w-full items-center justify-center gap-2.5 rounded-[3px] bg-brand-gradient px-8 py-[15px] text-body font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.25)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70"
         >
           {submitting ? "Sending..." : alreadyDone ? "Update my brief" : "Submit my brief and start production"}
           {!submitting ? (

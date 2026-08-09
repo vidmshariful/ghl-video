@@ -42,7 +42,7 @@ export function AudienceSplit() {
                     <Link
                       key={l.href}
                       href={l.href}
-                      className="group inline-flex items-center gap-2 text-body font-semibold text-green"
+                      className="group inline-flex items-center gap-2 text-body font-semibold text-gold"
                     >
                       {l.label}
                       <span

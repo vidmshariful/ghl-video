@@ -23,7 +23,7 @@ export function LibraryPromoBanner() {
   }
 
   return (
-    <div className="mt-10 flex flex-col gap-5 rounded-[10px] border border-dashed border-gold/55 bg-gold/[0.05] p-5 shadow-[0_0_44px_-14px_rgba(252,192,0,0.4)] sm:flex-row sm:items-center sm:justify-between sm:gap-6 md:p-6">
+    <div className="mt-10 flex flex-col gap-5 rounded-card border border-dashed border-gold/55 bg-gold/[0.05] p-5 shadow-[0_0_44px_-14px_rgba(252,192,0,0.4)] sm:flex-row sm:items-center sm:justify-between sm:gap-6 md:p-6">
       <div className="min-w-0">
         <p className="font-mono text-label uppercase tracking-[0.14em] text-gold">
           Newsletter offer, ends {activePromo.deadlineLabel}

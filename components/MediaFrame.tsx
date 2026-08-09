@@ -272,7 +272,7 @@ export function MediaFrame({
       {/* quiet play affordance */}
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute bottom-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-[#242736] bg-canvas/70 opacity-80 backdrop-blur-sm transition-transform duration-300 group-hover/mf:scale-110"
+        className="pointer-events-none absolute bottom-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-hair bg-canvas/70 opacity-80 backdrop-blur-sm transition-transform duration-300 group-hover/mf:scale-110"
       >
         <svg viewBox="0 0 16 16" className="ml-0.5 h-3 w-3">
           <path d="M3 1.8v12.4L14 8 3 1.8Z" fill="var(--text)" />

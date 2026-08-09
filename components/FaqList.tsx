@@ -16,7 +16,7 @@ export function FaqList({
         <details
           key={item.q}
           name="faq"
-          className="group overflow-hidden rounded-[10px] border border-hair bg-surface transition-colors duration-300 open:border-green/40"
+          className="group overflow-hidden rounded-card border border-hair bg-surface transition-colors duration-300 open:border-green/40"
         >
           <summary className="flex cursor-pointer list-none items-center gap-4 p-5 md:gap-5 md:p-6 [&::-webkit-details-marker]:hidden">
             {/* number badge */}

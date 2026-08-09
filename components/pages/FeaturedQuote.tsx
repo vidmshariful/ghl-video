@@ -11,7 +11,7 @@ import { featuredTestimonial as t } from "@/lib/site";
 export function FeaturedQuote({ className = "" }: { className?: string }) {
   return (
     <figure
-      className={`relative overflow-hidden rounded-[10px] border border-gold/25 bg-gold/[0.04] p-6 shadow-[0_0_44px_-16px_rgba(252,192,0,0.35)] md:p-8 ${className}`}
+      className={`relative overflow-hidden rounded-card border border-gold/25 bg-gold/[0.04] p-6 shadow-[0_0_44px_-16px_rgba(252,192,0,0.35)] md:p-8 ${className}`}
     >
       <span className="inline-flex w-fit items-center gap-2.5 rounded-[4px] border border-gold/30 bg-canvas/60 py-1.5 pl-2 pr-3">
         <GhlMark className="h-3.5 w-auto" />
