@@ -30,6 +30,7 @@ export const metadata: Metadata = {
   title: "AI First SaaS Pack, Client Launch",
   description:
     "The 72-hour early window on the AI First SaaS Pack for existing GHL Video clients.",
+  alternates: { canonical: "/ai-first-launch/" },
   robots: { index: false, follow: false },
 };
 

@@ -13,6 +13,8 @@ import { Faq } from "@/components/home/Faq";
 import { FounderNote } from "@/components/home/FounderNote";
 import { CtaBand } from "@/components/CtaBand";
 
+import { JsonLd } from "@/components/JsonLd";
+import { faqSchema } from "@/lib/schema";
 import { cta, home } from "@/lib/site";
 import type { Metadata } from "next";
 
@@ -23,6 +25,8 @@ export const metadata: Metadata = {
 export default function Home() {
   return (
     <>
+      {/* homepage FAQ rich result; the org + website graph come from the (site) layout */}
+      <JsonLd schema={[faqSchema(home.faq.items)]} />
       {/* preload the hero's LCP poster; scoped to the homepage so other
           routes never fetch it. Keep in sync with the Hero's featured poster. */}
       <link rel="preload" as="image" href="/posters/ai-master.jpg" fetchPriority="high" />
