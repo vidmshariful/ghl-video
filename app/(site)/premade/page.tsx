@@ -8,6 +8,7 @@ import { FaqList } from "@/components/FaqList";
 import { CtaBand } from "@/components/CtaBand";
 import { JsonLd } from "@/components/JsonLd";
 import { PremadeLibrary } from "@/components/PremadeLibrary";
+import { PremadeExplainer } from "@/components/premade/PremadeExplainer";
 import {
   featuredBrowse,
   libraryBrowse,
@@ -113,6 +114,16 @@ export default async function PremadePage() {
 
       {/* trusted-by logo strip, directly under the hero */}
       <TrustStrip />
+
+      {/* what premade video is + what every order includes: an intro for buyers
+          and real indexable copy for SEO, before the library */}
+      <section
+        aria-label="What premade video is"
+        className="relative overflow-x-clip section-pad"
+      >
+        <SectionGlow position="left" />
+        <PremadeExplainer />
+      </section>
 
       <div>
       {/* the library: packs and the filterable catalog */}

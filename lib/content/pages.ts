@@ -26,6 +26,27 @@ export const pages = {
       intro:
         "1000+ HighLevel clients order from this library. Filter it on the left, open a pack to browse it as a playlist, and preview anything before you order.",
     },
+    /* intro explainer before the library: what the service is, what every order
+       includes, and a walkthrough video. Also earns the page real indexable
+       copy. The video src stays null until Shariful delivers the walkthrough. */
+    explainer: {
+      chip: "Premade video, explained",
+      headline: "Done-for-you GoHighLevel videos,",
+      accent: "white-labeled to your SaaS.",
+      body: [
+        "Premade videos are professionally produced HighLevel explainers, demos, and feature animations that we rebrand to your platform. Instead of scripting, filming, and editing from scratch, you pick a finished video from the library and we white-label it to your SaaS: your logo, your dashboard, your voiceover.",
+        "Every script is brand-agnostic, so nothing names a competitor and the video reads as yours. You get a launch-ready asset in days, for a fraction of custom production, ready to run as an ad, embed on your site, or drop into onboarding.",
+      ],
+      includedTitle: "In every order",
+      included: [
+        "White-labeled to your SaaS: logo, brand colors, and dashboard screens",
+        "Professional voiceover in your choice of accent",
+        "Brand-agnostic script, no competitor named",
+        "Full commercial rights, no attribution",
+        "Delivered in 5 to 7 days, with a review round before final",
+      ],
+      video: { src: null as string | null, poster: null as string | null },
+    },
     included: {
       chip: "What is included",
       headline: "Every video ships",
