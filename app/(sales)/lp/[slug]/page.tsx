@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import {
-  bundleCategories,
   codeFor,
   cta,
   disclaimer,
@@ -12,7 +11,13 @@ import {
   skuFor,
   trustLogos,
 } from "@/lib/site";
-import { salesPageBySlug, salesPages, salesShared } from "@/lib/sales/pages";
+import {
+  salesBundles,
+  salesPageBySlug,
+  salesPages,
+  salesShared,
+  type SalesBundle,
+} from "@/lib/sales/pages";
 import { SpVideo } from "@/components/sales/SpVideo";
 import { JsonLd } from "@/components/JsonLd";
 import { faqSchema, serviceSchema } from "@/lib/schema";
@@ -52,8 +57,6 @@ export async function generateMetadata({
 }
 
 const dollars = (n: number) => `$${n.toLocaleString("en-US")}`;
-
-type Tier = (typeof bundleCategories)[number]["tiers"][number];
 
 /* the sales-library card shape: the new library normalized, plus a couple of
  * classic (Wistia) videos surfaced on this page. */
@@ -103,7 +106,7 @@ const EXTRA_VIDEOS: SalesLibVideo[] = [
   },
   {
     slug: "ai-platform-demo",
-    title: "AI Platform Demo",
+    title: "Overall Platform Walkthrough",
     type: "Demo",
     format: "Platform demo",
     price: 995,
@@ -140,7 +143,6 @@ export default async function SalesLandingPage({
   if (!page) notFound();
 
   const ft = featuredTestimonial; // Chase Buckner
-  const newBundle = bundleCategories.find((c) => c.slug === "new");
 
   return (
     <>
@@ -254,19 +256,23 @@ export default async function SalesLandingPage({
         </div>
       </section>
 
-      {/* NEW VIDEO BUNDLE */}
-      {newBundle ? (
-        <section id="bundle" className="sp-section sp-section--offer" style={{ scrollMarginTop: "4rem" }}>
-          <div className="sp-wrap">
-            <SectionHead eyebrow="Bundle and save" title={newBundle.name} sub={newBundle.blurb} center />
-            <div className="sp-tiers" style={{ marginTop: "2.5rem", maxWidth: "880px", marginInline: "auto" }}>
-              {newBundle.tiers.map((t) => (
-                <TierCard key={t.slug} t={t} />
-              ))}
-            </div>
+      {/* SALES BUNDLES */}
+      <section id="bundle" className="sp-section sp-section--offer" style={{ scrollMarginTop: "4rem" }}>
+        <div className="sp-wrap">
+          <SectionHead
+            eyebrow="Bundle and save"
+            title="Bundle up,"
+            accent="save more."
+            sub="Three ways to take the set. Pick your videos at intake with Essential or Growth, or take every video on this page with Ultimate. All white-labeled to your SaaS."
+            center
+          />
+          <div className="sp-bundles" style={{ marginTop: "2.5rem" }}>
+            {salesBundles.map((b) => (
+              <SalesBundleCard key={b.sku} b={b} />
+            ))}
           </div>
-        </section>
-      ) : null}
+        </div>
+      </section>
 
       {/* BEFORE / AFTER */}
       <section className="sp-section">
@@ -569,7 +575,7 @@ function LibraryCard({ v }: { v: SalesLibVideo }) {
               Order Now
             </a>
           </div>
-          <NicheNote />
+          <NicheNote price={v.type === "Demo" ? 100 : 50} />
         </>
       ) : (
         <div className="sp-vcard-buy sp-vcard-buy--soon">
@@ -580,8 +586,9 @@ function LibraryCard({ v }: { v: SalesLibVideo }) {
   );
 }
 
-/* the ICP upsell tooltip, matched to the premade library card */
-function NicheNote() {
+/* the ICP upsell tooltip, matched to the premade library card. Demos retune
+   at $100 (they are the bigger, pricier format); everything else at $50. */
+function NicheNote({ price = 50 }: { price?: number }) {
   return (
     <div className="sp-niche">
       <button type="button" className="sp-niche-trigger" aria-label="ICP customization details">
@@ -590,7 +597,7 @@ function NicheNote() {
       <div className="sp-niche-tip" role="tooltip">
         <p className="sp-niche-tip-title">Made for your niche</p>
         <p className="sp-muted" style={{ marginTop: "0.3rem" }}>
-          For an extra $50, we retune this video to your exact ICP:
+          For an extra ${price}, we retune this video to your exact ICP:
         </p>
         <ul className="sp-niche-list">
           <li>Industry footage swapped in for yours</li>
@@ -604,35 +611,37 @@ function NicheNote() {
   );
 }
 
-function TierCard({ t }: { t: Tier }) {
-  const save = t.anchorPrice ? Math.round((1 - t.price / t.anchorPrice) * 100) : 0;
-  const href = `/checkout/${skuFor(t.slug)}`;
+function SalesBundleCard({ b }: { b: SalesBundle }) {
+  const save = b.anchorPrice ? Math.round((1 - b.price / b.anchorPrice) * 100) : 0;
+  const href = `/checkout/${b.sku}`;
   return (
-    <div className={`sp-tier${t.featured ? " sp-tier--featured" : ""}`}>
-      {t.featured ? <span className="sp-tier-badge">Most popular</span> : null}
-      <h3 className="sp-display sp-h3">{t.name}</h3>
+    <div className={`sp-bundle${b.featured ? " sp-bundle--featured" : ""}`}>
+      {b.featured ? <span className="sp-tier-badge">Most popular</span> : null}
+      <h3 className="sp-display sp-h3">{b.name}</h3>
+      <p className="sp-bundle-count">{b.videoCount} videos, white-labeled</p>
       <div style={{ marginTop: "0.8rem" }}>
         <span className="sp-price" style={{ fontSize: "2.6rem" }}>
-          {dollars(t.price)}
+          {dollars(b.price)}
         </span>
       </div>
-      {t.anchorPrice ? (
-        <p style={{ marginTop: "0.35rem" }}>
-          <span className="sp-strike">{dollars(t.anchorPrice)}</span>
-          <span
-            className="sp-muted"
-            style={{ marginLeft: "0.6rem", fontWeight: 600, fontSize: "0.82rem", textTransform: "uppercase", letterSpacing: "0.08em" }}
-          >
-            Save {save}%
-          </span>
-        </p>
-      ) : null}
+      <p style={{ marginTop: "0.35rem" }}>
+        <span className="sp-strike">{dollars(b.anchorPrice)}</span>
+        <span
+          className="sp-muted"
+          style={{ marginLeft: "0.6rem", fontWeight: 600, fontSize: "0.82rem", textTransform: "uppercase", letterSpacing: "0.08em" }}
+        >
+          Save {save}%
+        </span>
+      </p>
       <ul className="sp-tier-list">
-        {t.items.map((it) => (
-          <li key={it.label}>{it.label}</li>
+        {b.items.map((it) => (
+          <li key={it}>{it}</li>
         ))}
       </ul>
-      <p className="sp-tier-delivery">Delivery in {t.deliveryDays} days</p>
+      <p className="sp-bundle-pick">
+        {b.pickAtIntake ? "Pick your exact videos at intake" : "Every video on this page included"}
+      </p>
+      <p className="sp-tier-delivery">Delivery in {b.deliveryDays} days</p>
       <a href={href} className="sp-btn sp-btn--primary sp-btn--wide">
         Order Now
       </a>

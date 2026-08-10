@@ -45,6 +45,9 @@ export type PackVideo = {
   comingSoon?: boolean;
   startAt?: number;
   endAt?: number;
+  // pin the slug so a title change never churns the checkout sku / code key.
+  // when omitted the slug is derived from the title.
+  slug?: string;
 };
 
 export type PackCategory = {
@@ -162,7 +165,8 @@ export const premadePacks: PremadePack[] = [
         line: "A 5-minute lead-to-close walkthrough with AI at every stage of the funnel.",
         videos: [
           {
-            title: "Lead-to-Close With AI",
+            slug: "lead-to-close-with-ai",
+            title: "Customer Journey: Lead to Close",
             type: "Demo",
             format: "Platform Demo",
             capability: "Lead-to-close",
@@ -212,7 +216,7 @@ export type PremadeVideo = {
 const packVideos: PremadeVideo[] = premadePacks
   .flatMap((pack) => pack.categories.flatMap((c) => c.videos))
   .reduce<PremadeVideo[]>((acc, v) => {
-    const slug = slugify(v.title);
+    const slug = v.slug ?? slugify(v.title);
     if (acc.some((x) => x.slug === slug)) return acc; // dedupe across packs
     acc.push({
       slug,

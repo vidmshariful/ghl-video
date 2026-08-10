@@ -299,7 +299,7 @@ export const oldVideos: OldVideo[] = [
   },
   {
     slug: "ai-platform-demo",
-    title: "AI Platform Demo",
+    title: "Overall Platform Walkthrough",
     type: "Demo",
     price: 995,
     wistiaId: "kvxz5zjd6j",

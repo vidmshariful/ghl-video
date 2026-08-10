@@ -1,4 +1,4 @@
-import { aiPackClips } from "@/lib/content/premade";
+import { aiPackClips, premadeVideos } from "@/lib/content/premade";
 
 /*
  * The registry of sales landing pages. Each page is a code-defined
@@ -74,7 +74,7 @@ export const salesPages: SalesPage[] = [
       {
         src: aiPackClips.demo,
         poster: null,
-        label: "Lead-to-Close With AI",
+        label: "Customer Journey: Lead to Close",
         sub: "Platform demo, branded",
       },
       {
@@ -125,6 +125,166 @@ export const salesPageBySlug = (slug: string): SalesPage | undefined =>
   salesPages.find((p) => p.slug === slug);
 
 export const salesPageUrl = (slug: string): string => `/lp/${slug}`;
+
+/* The sales-page bundles: three fixed tiers priced against the a-la-carte value
+ * of the videos on this page (Master/Feature $495, Demo $995). Essential and
+ * Growth let the buyer pick videos at intake; Ultimate is every video. Products
+ * live in the DB (skus below); order bumps add per-pack niche customization. */
+export type SalesBundle = {
+  sku: string;
+  name: string;
+  price: number;
+  anchorPrice: number;
+  deliveryDays: number;
+  videoCount: number;
+  items: string[];
+  pickAtIntake: boolean;
+  featured?: boolean;
+  /* how many to choose per category at intake (pickAtIntake bundles only) */
+  pick?: { master: number; demo: number; feature: number };
+};
+
+export const salesBundles: SalesBundle[] = [
+  {
+    sku: "lp-essential",
+    name: "Essential",
+    price: 995,
+    anchorPrice: 1980,
+    deliveryDays: 7,
+    videoCount: 4,
+    items: ["1x Master Explainer", "3x Feature Explainer"],
+    pickAtIntake: true,
+    pick: { master: 1, demo: 0, feature: 3 },
+  },
+  {
+    sku: "lp-growth",
+    name: "Growth",
+    price: 1795,
+    anchorPrice: 4460,
+    deliveryDays: 10,
+    videoCount: 8,
+    featured: true,
+    items: ["2x Master Explainer", "1x Demo", "5x Feature Explainer"],
+    pickAtIntake: true,
+    pick: { master: 2, demo: 1, feature: 5 },
+  },
+  {
+    sku: "lp-ultimate",
+    name: "Ultimate",
+    price: 2295,
+    anchorPrice: 6940,
+    deliveryDays: 14,
+    videoCount: 12,
+    items: ["All 3x Master Explainer", "Both Demo Videos", "All 7x Feature Explainer"],
+    pickAtIntake: false,
+  },
+];
+
+export const salesBundleBySku = (sku: string): SalesBundle | undefined =>
+  salesBundles.find((b) => b.sku === sku);
+
+/* ---------------------------------------------------------------- */
+/* Bundle video picker (Essential/Growth intake selection)           */
+/* ---------------------------------------------------------------- */
+
+/* The three pick categories map to the LP library's video types. A pickable
+ * video is identified by its stable slug (the code catalog has legacy drift
+ * for some AI-pack videos, so slug is the safe identity); title/format are for
+ * display. */
+export type BundlePickKey = "master" | "demo" | "feature";
+export type BundlePickVideo = {
+  slug: string;
+  title: string;
+  format: string;
+  comingSoon: boolean;
+};
+
+const PICK_TYPE: Record<BundlePickKey, string> = {
+  master: "Explainer",
+  demo: "Demo",
+  feature: "Feature Explainer",
+};
+
+export const PICK_LABEL: Record<BundlePickKey, string> = {
+  master: "Master Explainer",
+  demo: "Demo",
+  feature: "Feature Explainer",
+};
+
+/* The classic (Wistia) videos the LP surfaces alongside the new library
+ * (kept in sync with EXTRA_VIDEOS in the LP page). Appended to the pools so
+ * the picker offers exactly what the page advertises. */
+const CLASSIC_PICKS: Record<BundlePickKey, BundlePickVideo[]> = {
+  master: [
+    { slug: "complete-platform-tour-explainer", title: "Complete Platform Tour Explainer", format: "Full platform tour", comingSoon: false },
+  ],
+  demo: [
+    { slug: "ai-platform-demo", title: "Overall Platform Walkthrough", format: "Platform demo", comingSoon: false },
+  ],
+  feature: [],
+};
+
+/* The pickable videos per category, derived from the same catalog the LP
+ * renders so the intake picker never drifts from the page. In-production
+ * videos are included (marked) so a bundle with N slots always offers a real
+ * choice; they deliver with the bundle when they release. */
+export function bundlePickPools(): Record<BundlePickKey, BundlePickVideo[]> {
+  const fromCatalog = (key: BundlePickKey): BundlePickVideo[] =>
+    premadeVideos
+      .filter((v) => v.type === PICK_TYPE[key])
+      .map((v) => ({
+        slug: v.slug,
+        title: v.title,
+        format: v.format,
+        comingSoon: v.comingSoon,
+      }));
+  return {
+    master: [...fromCatalog("master"), ...CLASSIC_PICKS.master],
+    demo: [...fromCatalog("demo"), ...CLASSIC_PICKS.demo],
+    feature: [...fromCatalog("feature"), ...CLASSIC_PICKS.feature],
+  };
+}
+
+/** slug -> title, across every pool, for read-back in admin. */
+export function bundlePickTitles(): Record<string, string> {
+  const m: Record<string, string> = {};
+  const pools = bundlePickPools();
+  for (const arr of Object.values(pools)) for (const v of arr) m[v.slug] = v.title;
+  return m;
+}
+
+export type BundleSelections = Record<BundlePickKey, string[]>;
+
+/* Server-truth validation of a client-submitted selection: exact counts per
+ * category, and every slug must belong to that category's pool. Bundles that
+ * do not pick at intake (Ultimate, or non-bundles) pass with no selection. */
+export function validateBundleSelections(
+  sku: string,
+  selections: Partial<Record<string, unknown>> | null | undefined,
+): { ok: boolean; error?: string; clean?: BundleSelections } {
+  const bundle = salesBundleBySku(sku);
+  if (!bundle || !bundle.pickAtIntake || !bundle.pick) return { ok: true };
+  if (!selections || typeof selections !== "object") {
+    return { ok: false, error: "Please choose your videos before submitting." };
+  }
+  const pools = bundlePickPools();
+  const clean: BundleSelections = { master: [], demo: [], feature: [] };
+  for (const key of ["master", "demo", "feature"] as BundlePickKey[]) {
+    const need = bundle.pick[key] ?? 0;
+    const raw = selections[key];
+    const picked = Array.isArray(raw) ? raw : [];
+    const valid = new Set(pools[key].map((v) => v.slug));
+    const uniq = [...new Set(picked.map((c) => String(c)))].filter((c) => valid.has(c));
+    if (uniq.length !== need) {
+      return {
+        ok: false,
+        error: `Please pick exactly ${need} ${PICK_LABEL[key]} video${need === 1 ? "" : "s"}.`,
+      };
+    }
+    clean[key] = uniq;
+  }
+  return { ok: true, clean };
+}
 
 /* Shared sales copy, reused across landing pages. */
 export const salesShared = {
@@ -186,7 +346,7 @@ export const salesShared = {
     },
     {
       q: "Can you match my niche or industry?",
-      a: "Yes. For an extra $50 per video we tailor it to your ICP: footage, on-screen graphics, and the wording in the script and voiceover, like saying clients instead of customers, or patients for a medical niche.",
+      a: "Yes. For an extra $50 per video, or $100 for a platform demo, we tailor it to your ICP: footage, on-screen graphics, and the wording in the script and voiceover, like saying clients instead of customers, or patients for a medical niche. Bundles have a single pack customization that covers every video inside.",
     },
     {
       q: "Can I resell or use these across my whole funnel?",

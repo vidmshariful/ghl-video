@@ -506,6 +506,60 @@
   padding-block: 1rem 1.1rem;
 }
 
+/* ---- sales bundles (3 fixed tiers, LP only) ---- */
+.sp-bundles {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 720px) {
+  .sp-bundles {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (min-width: 1000px) {
+  .sp-bundles {
+    grid-template-columns: repeat(3, 1fr);
+    align-items: stretch;
+  }
+}
+.sp-bundle {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--sp-line);
+  border-radius: var(--sp-radius);
+  background: var(--sp-panel);
+  padding: clamp(1.6rem, 3vw, 2.3rem);
+}
+.sp-bundle--featured {
+  border-color: rgba(252, 192, 0, 0.4);
+  box-shadow: 0 0 0 1px rgba(252, 192, 0, 0.15);
+  background:
+    radial-gradient(120% 90% at 100% 0%, rgba(252, 192, 0, 0.1), transparent 55%),
+    var(--sp-panel);
+}
+.sp-bundle-count {
+  margin-top: 0.4rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--sp-dim);
+}
+.sp-bundle-pick {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--sp-gold);
+}
+.sp-bundle-pick::before {
+  content: "\2713";
+  font-weight: 700;
+}
+
 /* ---- before / after split ---- */
 .sp-ba {
   display: grid;

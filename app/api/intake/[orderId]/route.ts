@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
+import { validateBundleSelections, type BundleSelections } from "@/lib/sales/pages";
 
 export const runtime = "nodejs";
 
@@ -26,6 +27,8 @@ type Intake = {
   notes: string;
   logoPath: string | null;
   screenshotPaths: string[];
+  // bundle video picks (Essential/Growth); null for single videos and Ultimate
+  videoSelections?: BundleSelections | null;
 };
 
 type DB = ReturnType<typeof supabaseAdmin>;
@@ -78,6 +81,9 @@ export async function GET(
   return NextResponse.json({
     productName: product?.name ?? null,
     productCode: product?.metadata?.code ?? product?.sku?.toUpperCase() ?? null,
+    // the product sku lets the client show the bundle video picker (it derives
+    // the required counts and options from the shared sales catalog)
+    bundleSku: product?.sku ?? null,
     intakeCompleted: !!order.intake_completed,
     intake: intake ? { ...intake, logoUrl, screenshotUrls } : null,
   });
@@ -170,6 +176,31 @@ export async function POST(
     return NextResponse.json({ error: (err as Error).message }, { status: 400 });
   }
 
+  // bundle video picks (Essential/Growth). The server is the authority on the
+  // counts and which videos belong to each category; a tampered client cannot
+  // save an invalid set. Non-pick products (single videos, Ultimate) store null.
+  const product = order.product as unknown as Product;
+  const sku = product?.sku ?? "";
+  let videoSelections = (prev?.videoSelections ?? null) as BundleSelections | null;
+  const rawSel = form.get("videoSelections");
+  if (rawSel != null && String(rawSel).trim().length) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(String(rawSel));
+    } catch {
+      return NextResponse.json({ error: "Invalid video selection." }, { status: 400 });
+    }
+    const res = validateBundleSelections(sku, parsed as Record<string, unknown>);
+    if (!res.ok) return NextResponse.json({ error: res.error }, { status: 400 });
+    videoSelections = res.clean ?? null;
+  } else {
+    // no new selection posted: what is already saved must still satisfy the
+    // bundle (this rejects a first submit that skipped the picker).
+    const res = validateBundleSelections(sku, videoSelections ?? undefined);
+    if (!res.ok) return NextResponse.json({ error: res.error }, { status: 400 });
+    videoSelections = res.clean ?? videoSelections;
+  }
+
   const intake: Intake = {
     submittedAt: new Date().toISOString(),
     brandName,
@@ -179,6 +210,7 @@ export async function POST(
     notes,
     logoPath,
     screenshotPaths,
+    videoSelections,
   };
 
   const { error } = await db

@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { authHeader, money, supabase, when } from "./client";
 import { AdminModal } from "./Modal";
+import { bundlePickTitles } from "@/lib/sales/pages";
 
 export type OrderRow = {
   id: string;
@@ -269,6 +270,11 @@ type Brief = {
   notes: string;
   logoUrl: string | null;
   screenshotUrls: string[];
+  videoSelections?: {
+    master?: string[];
+    demo?: string[];
+    feature?: string[];
+  } | null;
 };
 
 /* The client's submitted branding brief, read from the intake route (which
@@ -285,6 +291,13 @@ function BrandingBrief({ orderId }: { orderId: string }) {
   const lab = "shrink-0 font-mono text-label uppercase text-dim";
   const chip =
     "rounded-[3px] border border-hair px-3 py-1 font-mono text-label uppercase text-ink hover:border-gold/60";
+  // map a picked video slug to its title, for the fulfillment team
+  const slugTitle = useMemo(() => bundlePickTitles(), []);
+  const pickCats: { key: "master" | "demo" | "feature"; label: string }[] = [
+    { key: "master", label: "Master" },
+    { key: "demo", label: "Demo" },
+    { key: "feature", label: "Feature" },
+  ];
 
   return (
     <div className="mt-6">
@@ -314,6 +327,24 @@ function BrandingBrief({ orderId }: { orderId: string }) {
               <span className="font-mono text-muted">{brief.accentColor}</span>
             </span>
           </div>
+          {brief.videoSelections &&
+          pickCats.some((c) => (brief.videoSelections?.[c.key] ?? []).length) ? (
+            <div className="grid gap-1 rounded-[3px] border border-hair/60 bg-canvas/40 p-3">
+              <span className="font-mono text-label uppercase text-gold/80">Chosen videos</span>
+              {pickCats.map((c) => {
+                const slugs = brief.videoSelections?.[c.key] ?? [];
+                if (!slugs.length) return null;
+                return (
+                  <div key={c.key} className="flex gap-2">
+                    <span className={lab}>{c.label}:</span>
+                    <span className="text-muted">
+                      {slugs.map((slug) => slugTitle[slug] ?? slug).join(", ")}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
           {brief.brandPronunciation ? (
             <div className="flex gap-2">
               <span className={lab}>Say it:</span>

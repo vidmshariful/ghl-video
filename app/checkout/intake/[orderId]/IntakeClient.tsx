@@ -1,7 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import {
+  bundlePickPools,
+  salesBundleBySku,
+  type BundlePickKey,
+  type BundleSelections,
+} from "@/lib/sales/pages";
 
 /*
  * The branding brief a buyer fills out right after paying (no login: the order
@@ -17,13 +23,22 @@ type Existing = {
   notes: string;
   logoUrl: string | null;
   screenshotUrls: string[];
+  videoSelections?: BundleSelections | null;
 };
 type Loaded = {
   productName: string | null;
   productCode: string | null;
+  bundleSku: string | null;
   intakeCompleted: boolean;
   intake: Existing | null;
 };
+
+const PICK_LABEL: Record<BundlePickKey, string> = {
+  master: "Master Explainer",
+  demo: "Demo",
+  feature: "Feature Explainer",
+};
+const emptySel = (): BundleSelections => ({ master: [], demo: [], feature: [] });
 
 const inputCls =
   "w-full rounded-[4px] border border-hair bg-canvas px-4 py-3 text-body text-ink placeholder:text-dim/70 focus:border-gold focus:outline-none";
@@ -43,8 +58,26 @@ export function IntakeClient({ orderId }: { orderId: string }) {
   const [accentColor, setAccentColor] = useState("#00CC00");
   const [brandPronunciation, setBrandPronunciation] = useState("");
   const [notes, setNotes] = useState("");
+  const [selections, setSelections] = useState<BundleSelections>(emptySel);
   const logoRef = useRef<HTMLInputElement>(null);
   const shotsRef = useRef<HTMLInputElement>(null);
+
+  const pools = useMemo(() => bundlePickPools(), []);
+  const bundle = data?.bundleSku ? salesBundleBySku(data.bundleSku) : undefined;
+  const needsPick = !!(bundle?.pickAtIntake && bundle.pick);
+  const pick = bundle?.pick;
+
+  function toggle(key: BundlePickKey, code: string) {
+    setSelections((prev) => {
+      const has = prev[key].includes(code);
+      const max = pick?.[key] ?? 0;
+      let next = prev[key];
+      if (has) next = prev[key].filter((c) => c !== code);
+      else if (prev[key].length < max) next = [...prev[key], code];
+      else return prev; // at the limit: ignore extra picks
+      return { ...prev, [key]: next };
+    });
+  }
 
   useEffect(() => {
     let active = true;
@@ -61,6 +94,14 @@ export function IntakeClient({ orderId }: { orderId: string }) {
           if (j.intake.accentColor) setAccentColor(j.intake.accentColor);
           setBrandPronunciation(j.intake.brandPronunciation || "");
           setNotes(j.intake.notes || "");
+          if (j.intake.videoSelections) {
+            const s = j.intake.videoSelections;
+            setSelections({
+              master: s.master ?? [],
+              demo: s.demo ?? [],
+              feature: s.feature ?? [],
+            });
+          }
         }
         setPhase("ready");
       } catch {
@@ -75,6 +116,16 @@ export function IntakeClient({ orderId }: { orderId: string }) {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!brandName.trim()) return setError("Please add your brand or platform name.");
+    if (needsPick && pick) {
+      for (const key of ["master", "demo", "feature"] as BundlePickKey[]) {
+        const need = pick[key] ?? 0;
+        if (selections[key].length !== need) {
+          return setError(
+            `Please pick ${need} ${PICK_LABEL[key]} video${need === 1 ? "" : "s"} to continue.`,
+          );
+        }
+      }
+    }
     setSubmitting(true);
     setError(null);
     try {
@@ -84,6 +135,7 @@ export function IntakeClient({ orderId }: { orderId: string }) {
       fd.set("accentColor", accentColor);
       fd.set("brandPronunciation", brandPronunciation.trim());
       fd.set("notes", notes.trim());
+      if (needsPick) fd.set("videoSelections", JSON.stringify(selections));
       const logo = logoRef.current?.files?.[0];
       if (logo) fd.set("logo", logo);
       for (const f of Array.from(shotsRef.current?.files ?? [])) fd.append("screenshots", f);
@@ -161,6 +213,88 @@ export function IntakeClient({ orderId }: { orderId: string }) {
       </header>
 
       <form onSubmit={submit} className="mt-10 grid gap-6 rounded-card border border-hair card-glass p-6 md:p-8">
+        {needsPick && pick ? (
+          <div className="grid gap-5">
+            <div>
+              <p className="font-display text-h4 text-ink">
+                Choose your {bundle?.videoCount} videos
+              </p>
+              <p className="mt-1 text-body-sm leading-relaxed text-muted">
+                This is your {bundle?.name} bundle. Pick the exact videos you want in
+                each category, and we white-label every one to your brand.
+              </p>
+            </div>
+            {(["master", "demo", "feature"] as BundlePickKey[]).map((key) => {
+              const need = pick[key] ?? 0;
+              if (need === 0) return null;
+              const chosen = selections[key].length;
+              const full = chosen >= need;
+              return (
+                <div
+                  key={key}
+                  role="group"
+                  aria-label={`Choose ${need} ${PICK_LABEL[key]} video${need === 1 ? "" : "s"}`}
+                  className="grid gap-2.5 rounded-[4px] border border-hair bg-canvas/40 p-4"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">
+                      Choose {need} {PICK_LABEL[key]}
+                      {need === 1 ? "" : "s"}
+                    </span>
+                    <span
+                      className="font-mono text-label uppercase tabular-nums"
+                      style={{ color: full ? "var(--green)" : "var(--gold)" }}
+                    >
+                      {chosen} / {need}
+                    </span>
+                  </div>
+                  <div className="grid gap-2">
+                    {pools[key].map((v) => {
+                      const checked = selections[key].includes(v.slug);
+                      const disabled = !checked && full;
+                      return (
+                        <label
+                          key={v.slug}
+                          className={`flex cursor-pointer items-start gap-3 rounded-[4px] border p-3 transition-colors ${
+                            checked
+                              ? "border-gold/60 bg-gold/[0.06]"
+                              : disabled
+                                ? "cursor-not-allowed border-hair/50 opacity-45"
+                                : "border-hair hover:border-gold/40"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            disabled={disabled}
+                            onChange={() => toggle(key, v.slug)}
+                            className="mt-0.5 h-4 w-4 shrink-0"
+                            style={{ accentColor: "var(--gold)" }}
+                          />
+                          <span className="min-w-0">
+                            <span className="block text-body text-ink">
+                              {v.title}
+                              {v.comingSoon ? (
+                                <span className="ml-2 font-mono text-label uppercase text-dim">
+                                  In production
+                                </span>
+                              ) : null}
+                            </span>
+                            <span className="mt-0.5 block font-mono text-label uppercase text-dim">
+                              {v.format}
+                            </span>
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+            <div className="h-px bg-hair" />
+          </div>
+        ) : null}
+
         <label>
           <span className={labelCls}>Brand or platform name</span>
           <input

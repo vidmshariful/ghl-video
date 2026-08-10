@@ -163,7 +163,7 @@ export function VersionToggle({
 
 /* A quiet per-video upsell: hover or focus reveals the ICP customization
  * offer. Informational for now; the copy points buyers to the checkout add-on. */
-function NicheNote() {
+function NicheNote({ price = 50 }: { price?: number }) {
   const bullets = [
     "Industry footage swapped in for yours",
     "Graphics and on-screen text rebranded",
@@ -196,7 +196,7 @@ function NicheNote() {
       >
         <p className="font-display text-body font-semibold text-ink">Made for your niche</p>
         <p className="mt-1 text-body-sm leading-relaxed text-muted">
-          For an extra $50, we retune this video to your exact ICP:
+          For an extra ${price}, we retune this video to your exact ICP:
         </p>
         <ul className="mt-2.5 space-y-1.5">
           {bullets.map((line) => (
@@ -334,7 +334,7 @@ export function LibraryCard({
               <BuyVideoLink video={video} />
             </div>
           </div>
-          <NicheNote />
+          <NicheNote price={code?.startsWith("DEMO") ? 100 : 50} />
         </>
       )}
     </div>
