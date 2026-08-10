@@ -260,7 +260,7 @@ export function LibraryCard({
       : codeFor(video.slug);
 
   return (
-    <div className="group/card flex h-full flex-col border border-hair bg-canvas">
+    <div className="group/card flex h-full flex-col border border-hair bg-card shadow-[0_4px_18px_-8px_rgba(0,0,0,0.6)] transition-all duration-300 hover:-translate-y-0.5 hover:border-gold/30 hover:shadow-[0_18px_40px_-14px_rgba(0,0,0,0.85)]">
       {video.wistiaId && video.poster ? (
         <PosterPlay
           video={video}
