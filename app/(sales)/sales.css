@@ -725,31 +725,37 @@
   white-space: nowrap;
 }
 
-/* ---- Chase reviewer in the hero ---- */
-.sp-hero-reviewer {
+/* ---- FAQ accordion (toggle, closed by default) ---- */
+.sp-faq-item > summary.sp-faq-q {
   display: flex;
-  gap: 1.1rem;
   align-items: center;
-  max-width: 38rem;
-  margin-inline: auto;
-  text-align: left;
+  justify-content: space-between;
+  gap: 1rem;
+  cursor: pointer;
+  list-style: none;
 }
-.sp-hero-reviewer-media {
-  width: 14rem;
+.sp-faq-item > summary.sp-faq-q::-webkit-details-marker {
+  display: none;
+}
+.sp-faq-item > summary.sp-faq-q:focus-visible {
+  outline: 2px solid var(--sp-gold);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+.sp-faq-chevron {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-right: 2px solid var(--sp-dim);
+  border-bottom: 2px solid var(--sp-dim);
+  transform: rotate(45deg);
+  transition: transform 0.2s ease;
   flex-shrink: 0;
+  margin-top: -0.25rem;
 }
-.sp-hero-reviewer-copy {
-  flex: 1;
-  min-width: 0;
+.sp-faq-item[open] .sp-faq-chevron {
+  transform: rotate(225deg);
+  border-color: var(--sp-gold);
 }
-@media (max-width: 640px) {
-  .sp-hero-reviewer {
-    flex-direction: column;
-    text-align: center;
-  }
-  .sp-hero-reviewer-media {
-    width: 100%;
-    max-width: 22rem;
-    margin-inline: auto;
-  }
+.sp-faq-a {
+  margin-top: 0.75rem;
 }

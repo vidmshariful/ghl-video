@@ -21,11 +21,14 @@ export function SpVideo({
   poster,
   label = "video",
   placeholder = "Video coming",
+  wistiaId = null,
 }: {
   src: string | null;
   poster: string | null;
   label?: string;
   placeholder?: string;
+  /* a Wistia-hosted classic video: show the poster, play in the lightbox */
+  wistiaId?: string | null;
 }) {
   const [open, setOpen] = useState(false);
   const [inView, setInView] = useState(false);
@@ -50,7 +53,7 @@ export function SpVideo({
     else v.pause();
   }, [inView, open]);
 
-  if (!src) {
+  if (!src && !wistiaId) {
     return (
       <div ref={figRef} className="sp-video sp-video--placeholder">
         {poster ? (
@@ -67,25 +70,34 @@ export function SpVideo({
   return (
     <>
       <div ref={figRef} className="sp-video">
-        <video ref={vidRef} src={src} poster={poster ?? undefined} muted loop playsInline preload="metadata" />
+        {src ? (
+          <video ref={vidRef} src={src} poster={poster ?? undefined} muted loop playsInline preload="metadata" />
+        ) : poster ? (
+          // eslint-disable-next-line @next/next/no-img-element -- remote wistia poster
+          <img src={poster} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        ) : null}
         <button type="button" className="sp-play" aria-label={`Play ${label}`} onClick={() => setOpen(true)}>
           <span>
             <PlayIcon />
           </span>
         </button>
       </div>
-      {open ? <Lightbox src={src} poster={poster} label={label} onClose={() => setOpen(false)} /> : null}
+      {open ? (
+        <Lightbox src={src} wistiaId={wistiaId} poster={poster} label={label} onClose={() => setOpen(false)} />
+      ) : null}
     </>
   );
 }
 
 function Lightbox({
   src,
+  wistiaId,
   poster,
   label,
   onClose,
 }: {
-  src: string;
+  src: string | null;
+  wistiaId?: string | null;
   poster: string | null;
   label: string;
   onClose: () => void;
@@ -138,14 +150,24 @@ function Lightbox({
         >
           Close
         </button>
-        <video
-          ref={vidRef}
-          src={src}
-          poster={poster ?? undefined}
-          controls
-          playsInline
-          style={{ width: "100%", aspectRatio: "16 / 9", borderRadius: "16px", border: "1px solid rgba(255,255,255,0.15)", background: "#000" }}
-        />
+        {src ? (
+          <video
+            ref={vidRef}
+            src={src}
+            poster={poster ?? undefined}
+            controls
+            playsInline
+            style={{ width: "100%", aspectRatio: "16 / 9", borderRadius: "16px", border: "1px solid rgba(255,255,255,0.15)", background: "#000" }}
+          />
+        ) : wistiaId ? (
+          <iframe
+            src={`https://fast.wistia.net/embed/iframe/${wistiaId}?autoPlay=true`}
+            title={label}
+            allow="autoplay; fullscreen"
+            allowFullScreen
+            style={{ width: "100%", aspectRatio: "16 / 9", borderRadius: "16px", border: "1px solid rgba(255,255,255,0.15)", background: "#000" }}
+          />
+        ) : null}
       </div>
     </div>,
     document.body,

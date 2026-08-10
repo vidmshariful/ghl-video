@@ -53,8 +53,21 @@ export async function generateMetadata({
 
 const dollars = (n: number) => `$${n.toLocaleString("en-US")}`;
 
-type LibVideo = (typeof premadeVideos)[number];
 type Tier = (typeof bundleCategories)[number]["tiers"][number];
+
+/* the sales-library card shape: the new library normalized, plus a couple of
+ * classic (Wistia) videos surfaced on this page. */
+type SalesLibVideo = {
+  slug: string;
+  title: string;
+  type: string;
+  format: string;
+  price: number;
+  preview: string | null;
+  wistiaId: string | null;
+  poster: string | null;
+  comingSoon?: boolean;
+};
 
 /* The library, in the three formats a reseller actually deploys. */
 const LIBRARY_CATS = [
@@ -73,6 +86,48 @@ const LIBRARY_CATS = [
     name: "Feature Explainer",
     desc: "Best for ad campaigns, social media, and the feature sections of your website.",
   },
+];
+
+/* Classic (Wistia) videos to surface on this LP alongside the new library. */
+const EXTRA_VIDEOS: SalesLibVideo[] = [
+  {
+    slug: "complete-platform-tour-explainer",
+    title: "Complete Platform Tour Explainer",
+    type: "Explainer",
+    format: "Full platform tour",
+    price: 395,
+    preview: null,
+    wistiaId: "nyv9u91be2",
+    poster:
+      "https://embed-ssl.wistia.com/deliveries/63b213ac1651cc07ce3b26cc0b8fc17e.jpg?image_crop_resized=960x540",
+  },
+  {
+    slug: "ai-platform-demo",
+    title: "AI Platform Demo",
+    type: "Demo",
+    format: "Platform demo",
+    price: 995,
+    preview: null,
+    wistiaId: "kvxz5zjd6j",
+    poster:
+      "https://embed-ssl.wistia.com/deliveries/2ef47e87e0771057f43fcccc95946f07.jpg?image_crop_resized=960x540",
+  },
+];
+
+/* the new library normalized to the card shape, plus the classics above */
+const ALL_LIB: SalesLibVideo[] = [
+  ...premadeVideos.map((v) => ({
+    slug: v.slug,
+    title: v.title,
+    type: v.type as string,
+    format: v.format,
+    price: v.price,
+    preview: v.preview,
+    wistiaId: null,
+    poster: v.poster,
+    comingSoon: v.comingSoon,
+  })),
+  ...EXTRA_VIDEOS,
 ];
 
 export default async function SalesLandingPage({
@@ -110,8 +165,14 @@ export default async function SalesLandingPage({
         <div className="sp-glow" />
         <div className="sp-wrap sp-narrow" style={{ position: "relative", textAlign: "center" }}>
           <span className="sp-eyebrow">{page.hero.eyebrow}</span>
-          <h1 className="sp-display sp-h1" style={{ marginTop: "1rem" }}>
-            {page.hero.headline} <span className="sp-grad-text">{page.hero.accent}</span>
+          <h1
+            className="sp-display sp-h1"
+            style={{ marginTop: "1rem", fontSize: "clamp(2.1rem, 5vw, 3rem)" }}
+          >
+            {page.hero.headline}{" "}
+            <span className="sp-grad-text" style={{ display: "block" }}>
+              {page.hero.accent}
+            </span>
           </h1>
           <p className="sp-lede" style={{ margin: "1.25rem auto 0", maxWidth: "44rem" }}>
             {page.hero.sub}
@@ -124,20 +185,12 @@ export default async function SalesLandingPage({
               {cta.bookACall.label}
             </a>
           </div>
-          {/* Chase Buckner (HighLevel) authority proof, right in the hero */}
-          <div className="sp-hero-reviewer" style={{ marginTop: "2.25rem" }}>
-            <div className="sp-hero-reviewer-media">
-              <SpVideo src={ft.src} poster={ft.poster} label={`Testimonial from ${ft.name}`} />
-            </div>
-            <div className="sp-hero-reviewer-copy">
-              <p style={{ fontStyle: "italic", lineHeight: 1.4 }}>&ldquo;{ft.pull}&rdquo;</p>
-              <p style={{ marginTop: "0.55rem", fontWeight: 600 }}>{ft.name}</p>
-              <p className="sp-muted" style={{ fontSize: "0.85rem" }}>{ft.role}</p>
-            </div>
-          </div>
         </div>
         <div className="sp-wrap" style={{ position: "relative", marginTop: "clamp(2.5rem, 5vw, 3.5rem)", maxWidth: "980px" }}>
-          <SpVideo src={page.hero.vslSrc} poster={page.hero.vslPoster} label="watch the overview" placeholder="Your VSL goes here" />
+          {/* TEMP: Chase Buckner's testimonial fills the hero video box until the
+              real sales VSL for this page is shot; then swap back to
+              page.hero.vslSrc / page.hero.vslPoster. */}
+          <SpVideo src={ft.src} poster={ft.poster} label="watch the overview" placeholder="Your VSL goes here" />
         </div>
       </header>
 
@@ -170,7 +223,7 @@ export default async function SalesLandingPage({
             center
           />
           {LIBRARY_CATS.map((cat, i) => {
-            const vids = premadeVideos.filter((v) => v.type === cat.type);
+            const vids = ALL_LIB.filter((v) => v.type === cat.type);
             if (vids.length === 0) return null;
             return (
               <div
@@ -346,12 +399,13 @@ export default async function SalesLandingPage({
           <SectionHead eyebrow="FAQ" title="Asked before" accent="every order." center />
           <div className="sp-faq" style={{ marginTop: "2rem" }}>
             {salesShared.faq.map((f) => (
-              <div key={f.q} className="sp-faq-item">
-                <p className="sp-faq-q">{f.q}</p>
-                <p className="sp-muted" style={{ marginTop: "0.5rem" }}>
-                  {f.a}
-                </p>
-              </div>
+              <details key={f.q} className="sp-faq-item">
+                <summary className="sp-faq-q">
+                  <span>{f.q}</span>
+                  <span className="sp-faq-chevron" aria-hidden="true" />
+                </summary>
+                <p className="sp-muted sp-faq-a">{f.a}</p>
+              </details>
             ))}
           </div>
         </div>
@@ -493,12 +547,18 @@ function SectionHead({
   );
 }
 
-function LibraryCard({ v }: { v: LibVideo }) {
-  const ready = !v.comingSoon && Boolean(v.preview);
+function LibraryCard({ v }: { v: SalesLibVideo }) {
+  const ready = !v.comingSoon && Boolean(v.preview || v.wistiaId);
   const code = codeFor(v.slug);
   return (
     <div className="sp-card sp-card--hover sp-vcard">
-      <SpVideo src={v.preview} poster={v.poster} label={v.title} placeholder="Coming soon" />
+      <SpVideo
+        src={v.preview}
+        poster={v.poster}
+        wistiaId={v.wistiaId}
+        label={v.title}
+        placeholder="Coming soon"
+      />
       <div className="sp-vcard-body">
         {code ? <p className="sp-vcard-code">{code.toUpperCase()}</p> : null}
         <p className="sp-vcard-title">{v.title}</p>
