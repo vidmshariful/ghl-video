@@ -187,10 +187,7 @@ export default async function SalesLandingPage({
           </div>
         </div>
         <div className="sp-wrap" style={{ position: "relative", marginTop: "clamp(2.5rem, 5vw, 3.5rem)", maxWidth: "980px" }}>
-          {/* TEMP: Chase Buckner's testimonial fills the hero video box until the
-              real sales VSL for this page is shot; then swap back to
-              page.hero.vslSrc / page.hero.vslPoster. */}
-          <SpVideo src={ft.src} poster={ft.poster} label="watch the overview" placeholder="Your VSL goes here" />
+          <SpVideo src={page.hero.vslSrc} poster={page.hero.vslPoster} label="watch the overview" placeholder="Your VSL goes here" />
         </div>
       </header>
 
@@ -259,7 +256,7 @@ export default async function SalesLandingPage({
 
       {/* NEW VIDEO BUNDLE */}
       {newBundle ? (
-        <section id="bundle" className="sp-section" style={{ scrollMarginTop: "4rem" }}>
+        <section id="bundle" className="sp-section sp-section--offer" style={{ scrollMarginTop: "4rem" }}>
           <div className="sp-wrap">
             <SectionHead eyebrow="Bundle and save" title={newBundle.name} sub={newBundle.blurb} center />
             <div className="sp-tiers" style={{ marginTop: "2.5rem", maxWidth: "880px", marginInline: "auto" }}>
@@ -299,7 +296,7 @@ export default async function SalesLandingPage({
       </section>
 
       {/* RECENT DELIVERIES */}
-      <section className="sp-section">
+      <section className="sp-section sp-section--band">
         <div className="sp-wrap">
           <SectionHead
             eyebrow="Recent work"
@@ -348,7 +345,7 @@ export default async function SalesLandingPage({
       </section>
 
       {/* HOW IT WORKS */}
-      <section className="sp-section">
+      <section className="sp-section sp-section--band">
         <div className="sp-wrap">
           <SectionHead eyebrow="How it works" title={salesShared.howItWorks.heading} accent={salesShared.howItWorks.accent} center />
           <div className="sp-steps" style={{ marginTop: "2.5rem" }}>
@@ -412,7 +409,7 @@ export default async function SalesLandingPage({
       </section>
 
       {/* TESTIMONIALS: video + logos + reviews */}
-      <section className="sp-section">
+      <section className="sp-section sp-section--band">
         <div className="sp-wrap">
           <SectionHead eyebrow="Proof" title="Founders and platforms," accent="on the record." center />
 

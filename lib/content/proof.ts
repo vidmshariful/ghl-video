@@ -101,7 +101,7 @@ export const home = {
        muted and loops in the hero panel; clicking opens it with sound
        in the MediaFrame lightbox. Swap `src` to change the video. */
     showreel: {
-      src: "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a67a34719a8766aea5ba483.mp4",
+      src: "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a7a47bc03343f290f1f19b9.mp4",
       poster: null as string | null,
       label: "Showreel",
     },

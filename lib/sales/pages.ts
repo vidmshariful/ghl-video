@@ -60,10 +60,9 @@ export const salesPages: SalesPage[] = [
       headline: "White-label HighLevel videos,",
       accent: "branded to your SaaS.",
       sub: "Launch-ready HighLevel explainers, platform demos, and feature videos, each one white-labeled to your platform: your logo, your dashboard, your voiceover. Watch the work, order a single video or the whole pack, and publish this week.",
-      /* STAND-IN until the real VSL is delivered: shows the master explainer
-         so the hero is not empty. Swap vslSrc/vslPoster for the VSL. */
-      vslSrc: aiPackClips.master,
-      vslPoster: "/posters/ai-master.jpg",
+      /* the hero video for this page; swap vslSrc/vslPoster to change it */
+      vslSrc: "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a7a47bc03343f290f1f19b9.mp4",
+      vslPoster: null,
     },
     clientWork: [
       {

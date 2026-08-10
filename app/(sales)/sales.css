@@ -725,6 +725,21 @@
   white-space: nowrap;
 }
 
+/* ---- tinted section bands: break up the all-black rhythm ---- */
+.sp-section--band {
+  background:
+    radial-gradient(130% 90% at 50% 0%, rgba(0, 144, 252, 0.06), rgba(0, 0, 0, 0) 62%),
+    var(--sp-panel);
+  border-block: 1px solid var(--sp-line);
+}
+/* the offer band leans warm (gold) to signal value */
+.sp-section--offer {
+  background:
+    radial-gradient(130% 90% at 50% 0%, rgba(252, 192, 0, 0.07), rgba(0, 0, 0, 0) 62%),
+    var(--sp-panel);
+  border-block: 1px solid var(--sp-line);
+}
+
 /* ---- FAQ accordion (toggle, closed by default) ---- */
 .sp-faq-item > summary.sp-faq-q {
   display: flex;
