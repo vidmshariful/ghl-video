@@ -16,8 +16,8 @@ export const premadeTypes = [
 ] as const;
 export type PremadeType = (typeof premadeTypes)[number];
 
-/* Real AI First SaaS Pack videos on the LeadConnector CDN. Six are
- * delivered; three are in production (comingSoon). */
+/* Real AI First SaaS Pack videos on the LeadConnector CDN. Seven are
+ * delivered; two are in production (comingSoon). */
 export const aiPackClips = {
   master:
     "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a54fdf79c9b37b5fd24a140.mp4",
@@ -31,6 +31,8 @@ export const aiPackClips = {
     "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a6b613ca4c8a1a2c3bae6c2.mp4",
   website:
     "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a734d2da177d5c2b9ffbf3a.mp4",
+  demo:
+    "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a79fde81635e466c144a517.mp4",
 } as const;
 
 export type PackVideo = {
@@ -164,9 +166,8 @@ export const premadePacks: PremadePack[] = [
             type: "Demo",
             format: "Platform Demo",
             capability: "Lead-to-close",
-            src: null,
+            src: aiPackClips.demo,
             poster: null,
-            comingSoon: true,
           },
         ],
       },

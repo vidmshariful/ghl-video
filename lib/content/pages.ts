@@ -216,11 +216,6 @@ export const pages = {
          publishes, move it to the catalog (aiPackClips + src) like Social
          Media Planner, and drop its entry here. */
       states: {
-        "Lead-to-Close With AI": {
-          kind: "draft",
-          src: "https://t9009190526.p.clickup-attachments.com/t9009190526/6f30edf9-2066-4282-b161-ece60d06a5f4/Ai-First%20Platform%20Demo.mp4?open=true",
-          date: "2026-08-05",
-        },
         "AI Website + Funnel Builder": { kind: "scheduled", date: "2026-07-31" },
         "Ask AI, Your In-Platform Assistant": { kind: "scheduled", date: "2026-08-07" },
         "Mobile App, Run Your Business From Your Phone": { kind: "scheduled", date: "2026-08-09" },

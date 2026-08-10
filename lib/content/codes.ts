@@ -56,6 +56,7 @@ export const productCodes: Record<string, string> = {
   "spokesperson-platform-demo": "DEMO-001",
   "motion-graphics-platform-demo": "DEMO-002",
   "ai-platform-demo": "DEMO-003",
+  "lead-to-close-with-ai": "DEMO-004",
   "marketing-1": "MKT-001",
   "marketing-2": "MKT-002",
   "marketing-3": "MKT-003",
