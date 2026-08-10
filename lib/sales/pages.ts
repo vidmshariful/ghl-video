@@ -37,19 +37,29 @@ export type SalesPage = {
   /* the same video, HighLevel's default cut vs branded to the client */
   whiteLabel: { defaultSrc: string | null; brandedSrc: string | null; poster: string | null };
   closing: { headline: string; accent: string; sub: string };
+  /* when true, the page is a real, indexable funnel page (not a private
+     outreach-only LP) and uses the seo block for its metadata. */
+  indexable?: boolean;
+  seo?: { title: string; description: string };
 };
 
 export const salesPages: SalesPage[] = [
   {
     slug: "new-videos",
-    title: "New Videos, Cold Outreach",
-    campaign: "Cold email + social outreach (watch, judge, order)",
+    title: "White-Label HighLevel Videos",
+    campaign: "Universal funnel page (SEO, paid, and outreach)",
     status: "live",
+    indexable: true,
+    seo: {
+      title: "HighLevel White-Label Videos and Demos, Branded to Your SaaS",
+      description:
+        "Launch-ready HighLevel white-label videos: explainers, platform demos, and feature videos, each branded to your SaaS with your logo, dashboard, and voiceover. Order a single video or a pack and publish this week.",
+    },
     hero: {
-      eyebrow: "White-label HighLevel videos",
-      headline: "See the videos.",
-      accent: "Judge for yourself.",
-      sub: "You asked to see the work, so here it is. Our newest HighLevel videos, each one white-labeled to your SaaS. Watch, order the single you want or the whole pack, and publish this week.",
+      eyebrow: "HighLevel white-label videos and demos",
+      headline: "White-label HighLevel videos,",
+      accent: "branded to your SaaS.",
+      sub: "Launch-ready HighLevel explainers, platform demos, and feature videos, each one white-labeled to your platform: your logo, your dashboard, your voiceover. Watch the work, order a single video or the whole pack, and publish this week.",
       /* STAND-IN until the real VSL is delivered: shows the master explainer
          so the hero is not empty. Swap vslSrc/vslPoster for the VSL. */
       vslSrc: aiPackClips.master,
@@ -162,6 +172,26 @@ export const salesShared = {
     {
       q: "What if the premade videos do not fit what I need?",
       a: "Then we build it custom, scripted and produced for your exact positioning. Book a quick call and we will scope it with you.",
+    },
+    {
+      q: "What is a HighLevel white-label video?",
+      a: "It is a professionally produced GoHighLevel explainer, demo, or feature video that we rebrand to your platform. You get the finished video with your logo, your dashboard screens, your colors, and a voiceover that names your brand, so it reads as yours end to end.",
+    },
+    {
+      q: "Do you make white-label HighLevel demo videos?",
+      a: "Yes. Our platform demos walk a prospect through HighLevel branded as your SaaS, so they see your product win before the sales call. They cut repeat demos and save your team hours every week.",
+    },
+    {
+      q: "How much does a HighLevel white-label video cost?",
+      a: "Single videos start at $97 and most explainers are $495, with packs and bundles bringing the per-video price down. Full pricing sits on every card, so there is no quote to wait on.",
+    },
+    {
+      q: "Can you match my niche or industry?",
+      a: "Yes. For an extra $50 per video we tailor it to your ICP: footage, on-screen graphics, and the wording in the script and voiceover, like saying clients instead of customers, or patients for a medical niche.",
+    },
+    {
+      q: "Can I resell or use these across my whole funnel?",
+      a: "Every video ships with full commercial rights and no attribution. Run it as an ad, embed it on your site, put it in onboarding, or deploy it for your own clients. It is yours to use anywhere.",
     },
   ],
 };

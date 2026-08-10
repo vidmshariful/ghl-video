@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import {
   bundleCategories,
+  codeFor,
   cta,
   disclaimer,
   entityLine,
@@ -13,6 +14,8 @@ import {
 } from "@/lib/site";
 import { salesPageBySlug, salesPages, salesShared } from "@/lib/sales/pages";
 import { SpVideo } from "@/components/sales/SpVideo";
+import { JsonLd } from "@/components/JsonLd";
+import { faqSchema, serviceSchema } from "@/lib/schema";
 
 export const dynamicParams = false;
 
@@ -27,8 +30,24 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const page = salesPageBySlug(slug);
+  if (!page) return { title: "GHL Video" };
+  const title = page.seo?.title ?? `${page.hero.headline} ${page.hero.accent}`;
+  const description = page.seo?.description ?? page.hero.sub;
   return {
-    title: page ? `${page.hero.headline} ${page.hero.accent} | GHL Video` : "GHL Video",
+    title: `${title} | GHL Video`,
+    description,
+    alternates: { canonical: `/lp/${slug}/` },
+    // most sales LPs are private outreach (noindex from the layout); a page
+    // flagged indexable is a real funnel page and overrides that here.
+    robots: page.indexable
+      ? { index: true, follow: true }
+      : { index: false, follow: false },
+    openGraph: {
+      title: `${title} | GHL Video`,
+      description,
+      type: "website",
+      url: `/lp/${slug}/`,
+    },
   };
 }
 
@@ -70,6 +89,19 @@ export default async function SalesLandingPage({
 
   return (
     <>
+      {page.indexable ? (
+        <JsonLd
+          schema={[
+            serviceSchema({
+              name: "HighLevel White-Label Videos",
+              description: page.seo?.description ?? page.hero.sub,
+              path: `/lp/${slug}/`,
+              offers: { lowPrice: 97, highPrice: 3495, count: premadeVideos.length },
+            }),
+            faqSchema(salesShared.faq),
+          ]}
+        />
+      ) : null}
       {/* HERO */}
       <header
         className="sp-section"
@@ -91,6 +123,17 @@ export default async function SalesLandingPage({
             <a href={cta.bookACall.href} className="sp-btn sp-btn--ghost">
               {cta.bookACall.label}
             </a>
+          </div>
+          {/* Chase Buckner (HighLevel) authority proof, right in the hero */}
+          <div className="sp-hero-reviewer" style={{ marginTop: "2.25rem" }}>
+            <div className="sp-hero-reviewer-media">
+              <SpVideo src={ft.src} poster={ft.poster} label={`Testimonial from ${ft.name}`} />
+            </div>
+            <div className="sp-hero-reviewer-copy">
+              <p style={{ fontStyle: "italic", lineHeight: 1.4 }}>&ldquo;{ft.pull}&rdquo;</p>
+              <p style={{ marginTop: "0.55rem", fontWeight: 600 }}>{ft.name}</p>
+              <p className="sp-muted" style={{ fontSize: "0.85rem" }}>{ft.role}</p>
+            </div>
           </div>
         </div>
         <div className="sp-wrap" style={{ position: "relative", marginTop: "clamp(2.5rem, 5vw, 3.5rem)", maxWidth: "980px" }}>
@@ -126,18 +169,31 @@ export default async function SalesLandingPage({
             sub="Our newest HighLevel videos, in the three formats a reseller actually deploys. Preview any of them, then order the ones that fit."
             center
           />
-          {LIBRARY_CATS.map((cat) => {
+          {LIBRARY_CATS.map((cat, i) => {
             const vids = premadeVideos.filter((v) => v.type === cat.type);
             if (vids.length === 0) return null;
             return (
-              <div key={cat.type} style={{ marginTop: "3rem" }}>
-                <div style={{ maxWidth: "46rem" }}>
-                  <h3 className="sp-display sp-h3">{cat.name}</h3>
-                  <p className="sp-muted" style={{ marginTop: "0.45rem" }}>
-                    {cat.desc}
-                  </p>
+              <div
+                key={cat.type}
+                style={
+                  i > 0
+                    ? { marginTop: "3.5rem", paddingTop: "3rem", borderTop: "1px solid var(--sp-line)" }
+                    : { marginTop: "3rem" }
+                }
+              >
+                <div className="sp-vtype-head">
+                  <div style={{ maxWidth: "46rem" }}>
+                    <span className="sp-eyebrow">Format {String(i + 1).padStart(2, "0")}</span>
+                    <h3 className="sp-display sp-h3" style={{ marginTop: "0.55rem" }}>
+                      {cat.name}
+                    </h3>
+                    <p className="sp-muted" style={{ marginTop: "0.45rem" }}>
+                      {cat.desc}
+                    </p>
+                  </div>
+                  <span className="sp-vtype-count">{vids.length} videos</span>
                 </div>
-                <div className="sp-grid-cards" style={{ marginTop: "1.5rem" }}>
+                <div className="sp-grid-cards" style={{ marginTop: "1.75rem" }}>
                   {vids.map((v) => (
                     <LibraryCard key={v.slug} v={v} />
                   ))}
@@ -199,7 +255,7 @@ export default async function SalesLandingPage({
             sub="A slice of recent deliveries. Every frame is white-labeled: their logo, their dashboard, their voiceover."
           />
           <div className="sp-grid-cards" style={{ marginTop: "2.5rem" }}>
-            {page.clientWork.map((c, i) => (
+            {page.clientWork.slice(0, 6).map((c, i) => (
               <figure key={i} className="sp-card sp-card--hover" style={{ margin: 0 }}>
                 <SpVideo src={c.src} poster={c.poster} label={c.label} />
                 <figcaption style={{ padding: "1rem 1.15rem" }}>
@@ -439,37 +495,53 @@ function SectionHead({
 
 function LibraryCard({ v }: { v: LibVideo }) {
   const ready = !v.comingSoon && Boolean(v.preview);
+  const code = codeFor(v.slug);
   return (
-    <div className="sp-card sp-card--hover" style={{ display: "flex", flexDirection: "column" }}>
+    <div className="sp-card sp-card--hover sp-vcard">
       <SpVideo src={v.preview} poster={v.poster} label={v.title} placeholder="Coming soon" />
-      <div style={{ padding: "1rem 1.15rem", display: "flex", flexDirection: "column", flex: 1 }}>
-        <p style={{ fontWeight: 600 }}>{v.title}</p>
-        <p className="sp-muted" style={{ fontSize: "0.85rem", marginTop: "0.2rem" }}>
-          {v.format}
-        </p>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "0.75rem",
-            marginTop: "auto",
-            paddingTop: "1rem",
-          }}
-        >
-          {ready ? (
-            <>
-              <span className="sp-price" style={{ fontSize: "1.35rem" }}>
-                {dollars(v.price)}
-              </span>
-              <a href={`/checkout/${skuFor(v.slug)}`} className="sp-btn sp-btn--primary sp-btn--sm">
-                Order
-              </a>
-            </>
-          ) : (
-            <span className="sp-badge">Coming soon</span>
-          )}
+      <div className="sp-vcard-body">
+        {code ? <p className="sp-vcard-code">{code.toUpperCase()}</p> : null}
+        <p className="sp-vcard-title">{v.title}</p>
+        <p className="sp-muted sp-vcard-feat">{v.format}</p>
+      </div>
+      {ready ? (
+        <>
+          <div className="sp-vcard-buy">
+            <span className="sp-price">{dollars(v.price)}</span>
+            <a href={`/checkout/${skuFor(v.slug)}`} className="sp-btn sp-btn--primary sp-btn--sm">
+              Order Now
+            </a>
+          </div>
+          <NicheNote />
+        </>
+      ) : (
+        <div className="sp-vcard-buy sp-vcard-buy--soon">
+          <span className="sp-badge">Coming soon</span>
         </div>
+      )}
+    </div>
+  );
+}
+
+/* the ICP upsell tooltip, matched to the premade library card */
+function NicheNote() {
+  return (
+    <div className="sp-niche">
+      <button type="button" className="sp-niche-trigger" aria-label="ICP customization details">
+        <span aria-hidden="true" className="sp-niche-i">i</span> Serving a specific niche?
+      </button>
+      <div className="sp-niche-tip" role="tooltip">
+        <p className="sp-niche-tip-title">Made for your niche</p>
+        <p className="sp-muted" style={{ marginTop: "0.3rem" }}>
+          For an extra $50, we retune this video to your exact ICP:
+        </p>
+        <ul className="sp-niche-list">
+          <li>Industry footage swapped in for yours</li>
+          <li>Graphics and on-screen text rebranded</li>
+          <li>Conversational messaging matched to your funnel</li>
+          <li>ICP wording in the script and voiceover, like clients to patients</li>
+        </ul>
+        <p className="sp-niche-cta">Select it at checkout</p>
       </div>
     </div>
   );
