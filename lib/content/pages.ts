@@ -57,7 +57,10 @@ export const pages = {
           desc: "From order to a launch-ready video, with a review round before the final cut.",
         },
       ],
-      video: { src: null as string | null, poster: null as string | null },
+      video: {
+        src: "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a7a3a1903343f290f0ae5be.mp4" as string | null,
+        poster: null as string | null,
+      },
     },
     included: {
       chip: "What is included",

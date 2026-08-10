@@ -41,7 +41,9 @@ export function PremadeExplainer() {
 
         {/* the question, then the description */}
         <div>
-          <h2 className="font-display text-h2 leading-tight text-ink">{x.question}</h2>
+          <h2 className="font-display text-[26px] font-semibold leading-snug tracking-[-0.01em] text-ink md:text-[30px]">
+            {x.question}
+          </h2>
           <div className="mt-5 space-y-4">
             {x.body.map((para) => (
               <p key={para} className="text-lede leading-relaxed text-muted">
@@ -57,13 +59,22 @@ export function PremadeExplainer() {
         {x.features.map((f) => (
           <div
             key={f.title}
-            className="flex flex-col rounded-card border border-hair card-glass p-6"
+            className="relative flex flex-col overflow-hidden rounded-card border border-hair p-6"
+            style={{
+              background:
+                "linear-gradient(135deg, rgba(0,144,252,0.13) 0%, rgba(0,144,252,0.035) 34%, rgba(0,0,0,0) 60%), #000",
+            }}
           >
+            <span
+              aria-hidden="true"
+              className="grunge pointer-events-none absolute inset-0"
+              style={{ opacity: 0.15 }}
+            />
             <DrawnIcon name={f.icon as IconName} />
-            <h3 className="mt-4 font-display text-h4 font-semibold leading-snug text-ink">
+            <h3 className="relative mt-4 font-display text-h4 font-semibold leading-snug text-ink">
               {f.title}
             </h3>
-            <p className="mt-2 text-body-sm leading-relaxed text-muted">{f.desc}</p>
+            <p className="relative mt-2 text-body-sm leading-relaxed text-muted">{f.desc}</p>
           </div>
         ))}
       </div>
