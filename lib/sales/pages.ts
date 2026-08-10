@@ -63,6 +63,12 @@ export const salesPages: SalesPage[] = [
         sub: "Master explainer, branded",
       },
       {
+        src: aiPackClips.demo,
+        poster: null,
+        label: "Lead-to-Close With AI",
+        sub: "Platform demo, branded",
+      },
+      {
         src: aiPackClips.receptionist,
         poster: "/posters/ai-receptionist.jpg",
         label: "AI Receptionist + Conversational AI",
