@@ -58,9 +58,11 @@ export function Price({ value }: { value: number }) {
 export function PosterPlay({
   video,
   onOpen,
+  bordered = true,
 }: {
   video: BrowseVideo;
   onOpen: () => void;
+  bordered?: boolean;
 }) {
   return (
     <button
@@ -68,7 +70,7 @@ export function PosterPlay({
       onClick={onOpen}
       aria-label={`Play: ${video.title}`}
       aria-haspopup="dialog"
-      className="group/pp relative block aspect-video w-full overflow-hidden border border-hair bg-black focus-visible:outline-offset-[-4px]"
+      className={`group/pp relative block aspect-video w-full overflow-hidden bg-black focus-visible:outline-offset-[-4px] ${bordered ? "border border-hair" : ""}`}
     >
       {/* eslint-disable-next-line @next/next/no-img-element -- static export, remote poster */}
       <img
@@ -97,9 +99,9 @@ export function PosterPlay({
 
 /* Feature animation ships as a bundle, not a single clip: a typographic
  * pack tile stands in for a preview. */
-export function PackTile({ count }: { count: number }) {
+export function PackTile({ count, bordered = true }: { count: number; bordered?: boolean }) {
   return (
-    <div className="relative flex aspect-video w-full flex-col items-center justify-center overflow-hidden border border-hair bg-surface">
+    <div className={`relative flex aspect-video w-full flex-col items-center justify-center overflow-hidden bg-surface ${bordered ? "border border-hair" : ""}`}>
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 hatch opacity-20"
@@ -159,6 +161,69 @@ export function VersionToggle({
   );
 }
 
+/* A quiet per-video upsell: hover or focus reveals the ICP customization
+ * offer. Informational for now; the copy points buyers to the checkout add-on. */
+function NicheNote() {
+  const bullets = [
+    "Industry footage swapped in for yours",
+    "Graphics and on-screen text rebranded",
+    "Conversational messaging matched to your funnel",
+    'ICP wording in the script and the voiceover (say "clients" not "customers")',
+  ];
+  return (
+    <div className="group/niche relative px-4 py-2.5">
+      <button
+        type="button"
+        aria-label="ICP customization details"
+        className="inline-flex items-center gap-1.5 font-mono text-label uppercase tracking-[0.08em] text-dim transition-colors hover:text-gold focus-visible:text-gold focus:outline-none"
+      >
+        <svg
+          viewBox="0 0 16 16"
+          className="h-3.5 w-3.5 shrink-0"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.4"
+          aria-hidden="true"
+        >
+          <circle cx="8" cy="8" r="6.5" />
+          <path d="M8 7.2v3.4M8 5.1h.01" strokeLinecap="round" />
+        </svg>
+        Serving a specific niche?
+      </button>
+      <div
+        role="tooltip"
+        className="pointer-events-none absolute bottom-full left-4 right-4 z-50 mb-2 border border-hair bg-surface p-4 opacity-0 shadow-[0_18px_50px_-18px_rgba(0,0,0,0.85)] transition-opacity duration-200 group-hover/niche:opacity-100 group-focus-within/niche:opacity-100"
+      >
+        <p className="font-display text-body font-semibold text-ink">Made for your niche</p>
+        <p className="mt-1 text-body-sm leading-relaxed text-muted">
+          For an extra $50, we retune this video to your exact ICP:
+        </p>
+        <ul className="mt-2.5 space-y-1.5">
+          {bullets.map((line) => (
+            <li
+              key={line}
+              className="flex items-start gap-2 text-body-sm leading-relaxed text-muted"
+            >
+              <svg viewBox="0 0 12 12" className="mt-[5px] h-3 w-3 shrink-0" aria-hidden="true">
+                <path
+                  d="M2 6.2 4.8 9 10 3.4"
+                  fill="none"
+                  stroke="var(--gold)"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              {line}
+            </li>
+          ))}
+        </ul>
+        <p className="mt-3 font-mono text-label uppercase text-gold/80">Select it at checkout</p>
+      </div>
+    </div>
+  );
+}
+
 /* One card for every library row. Wistia classics get a poster+play;
  * mp4 classics get the hover frame; feature animations get a two-cut
  * toggle and no single price; feature packs get the typographic tile. */
@@ -195,9 +260,13 @@ export function LibraryCard({
       : codeFor(video.slug);
 
   return (
-    <div className="group/card flex h-full flex-col">
+    <div className="group/card flex h-full flex-col border border-hair bg-canvas">
       {video.wistiaId && video.poster ? (
-        <PosterPlay video={video} onOpen={() => onPreview(video, "simplified")} />
+        <PosterPlay
+          video={video}
+          onOpen={() => onPreview(video, "simplified")}
+          bordered={false}
+        />
       ) : video.preview ? (
         <div className="relative">
           <MediaFrame
@@ -208,6 +277,7 @@ export function LibraryCard({
             tint
             interactive={false}
             rounded="rounded-none"
+            bordered={false}
             caption={{ title: video.typeTag, sub: video.subTag }}
           />
           {twoCut && (
@@ -224,45 +294,49 @@ export function LibraryCard({
           />
         </div>
       ) : video.packCount ? (
-        <PackTile count={video.packCount} />
+        <PackTile count={video.packCount} bordered={false} />
       ) : (
-        <div className="flex aspect-video items-center justify-center border border-hair bg-[#030303]">
+        <div className="flex aspect-video items-center justify-center bg-[#030303]">
           <span className="font-mono text-label uppercase text-dim">
             [ Preview coming ]
           </span>
         </div>
       )}
 
-      {/* details: title wraps on the left; price + action stay pinned right */}
-      <div className="flex flex-1 border-b border-hair px-1 pb-4 pt-3.5">
-        <div className="flex w-full items-start justify-between gap-4">
-          <div className="min-w-0">
-            {code && (
-              <p className="font-mono text-label uppercase tracking-[0.12em] text-gold/80 [font-variant-numeric:tabular-nums]">
-                {code}
-              </p>
-            )}
-            <h3 className="mt-1 font-display text-h4 font-semibold leading-snug tracking-[-0.01em] text-ink">
-              {video.title}
-            </h3>
-            {descriptor && (
-              <p className="mt-1 font-mono text-label uppercase text-dim">
-                {descriptor}
-              </p>
-            )}
-          </div>
-          {video.previewOnly ? (
-            <span className="shrink-0 font-mono text-label uppercase text-dim">
-              Included
-            </span>
-          ) : (
-            <div className="flex shrink-0 items-center gap-3">
+      {/* description, all left-aligned: SKU, title, feature category */}
+      <div className="flex flex-1 flex-col px-4 pb-4 pt-3.5">
+        {code && (
+          <p className="font-mono text-label uppercase tracking-[0.12em] text-gold/80 [font-variant-numeric:tabular-nums]">
+            {code}
+          </p>
+        )}
+        <h3 className="mt-1 font-display text-h4 font-semibold leading-snug tracking-[-0.01em] text-ink">
+          {video.title}
+        </h3>
+        {descriptor && (
+          <p className="mt-1 font-mono text-label uppercase text-dim">{descriptor}</p>
+        )}
+      </div>
+
+      {video.previewOnly ? (
+        <div className="border-t border-hair px-4 py-3 text-center font-mono text-label uppercase text-dim">
+          Included in the pack
+        </div>
+      ) : (
+        <>
+          {/* price + buy on one line: price left, button right, a divider
+              between them, top and bottom rules edge to edge with the card */}
+          <div className="flex items-stretch border-y border-hair">
+            <div className="flex flex-1 items-center px-4 py-3">
               <Price value={video.price} />
+            </div>
+            <div className="flex items-center border-l border-hair px-3">
               <BuyVideoLink video={video} />
             </div>
-          )}
-        </div>
-      </div>
+          </div>
+          <NicheNote />
+        </>
+      )}
     </div>
   );
 }

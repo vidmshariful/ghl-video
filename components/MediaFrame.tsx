@@ -120,6 +120,7 @@ export function MediaFrame({
   tint,
   groupEase = false,
   rounded = "rounded-media",
+  bordered = true,
   className = "",
 }: {
   src: string;
@@ -137,6 +138,8 @@ export function MediaFrame({
   /* also ease the grade when an ancestor group/svc container hovers */
   groupEase?: boolean;
   rounded?: string;
+  /* the card frame draws its own outer border; pass false to avoid doubling it */
+  bordered?: boolean;
   className?: string;
 }) {
   const figureRef = useRef<HTMLElement>(null);
@@ -182,7 +185,7 @@ export function MediaFrame({
   return (
     <figure
       ref={figureRef}
-      className={`group/mf relative aspect-video overflow-hidden border border-hair bg-[#030303] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] ${rounded} ${className}`}
+      className={`group/mf relative aspect-video overflow-hidden bg-[#030303] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] ${bordered ? "border border-hair" : ""} ${rounded} ${className}`}
     >
       {mounted ? (
         <video
