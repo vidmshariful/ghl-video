@@ -30,20 +30,32 @@ export const pages = {
        includes, and a walkthrough video. Also earns the page real indexable
        copy. The video src stays null until Shariful delivers the walkthrough. */
     explainer: {
-      chip: "Premade video, explained",
-      headline: "Done-for-you GoHighLevel videos,",
-      accent: "white-labeled to your SaaS.",
+      question: "What is a HighLevel premade video?",
       body: [
         "Premade videos are professionally produced HighLevel explainers, demos, and feature animations that we rebrand to your platform. Instead of scripting, filming, and editing from scratch, you pick a finished video from the library and we white-label it to your SaaS: your logo, your dashboard, your voiceover.",
         "Every script is brand-agnostic, so nothing names a competitor and the video reads as yours. You get a launch-ready asset in days, for a fraction of custom production, ready to run as an ad, embed on your site, or drop into onboarding.",
       ],
-      includedTitle: "In every order",
-      included: [
-        "White-labeled to your SaaS: logo, brand colors, and dashboard screens",
-        "Professional voiceover in your choice of accent",
-        "Brand-agnostic script, no competitor named",
-        "Full commercial rights, no attribution",
-        "Delivered in 5 to 7 days, with a review round before final",
+      features: [
+        {
+          icon: "palette",
+          title: "Your exact branding",
+          desc: "The exact video you preview, rebranded to your SaaS: logo, colors, and dashboard screens on every frame.",
+        },
+        {
+          icon: "mic",
+          title: "Your brand in the voiceover",
+          desc: "The voiceover is re-recorded to announce your brand name, in the accent you choose.",
+        },
+        {
+          icon: "crosshair",
+          title: "Personalized to your niche",
+          desc: "Optional ICP tailoring so the script fits your audience, like swapping clients for patients.",
+        },
+        {
+          icon: "package-check",
+          title: "Delivered in 5 to 7 days",
+          desc: "From order to a launch-ready video, with a review round before the final cut.",
+        },
       ],
       video: { src: null as string | null, poster: null as string | null },
     },

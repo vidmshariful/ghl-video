@@ -1,33 +1,26 @@
+import { DrawnIcon, type IconName } from "@/components/DrawnIcon";
 import { MediaFrame } from "@/components/MediaFrame";
-import { RuleList } from "@/components/RuleList";
 import { pages } from "@/lib/site";
 
 /*
- * Intro explainer above the library: what premade video is, what every order
- * includes, and a walkthrough video. Also earns the page real indexable copy
- * (a proper h2, two descriptive paragraphs, and a semantic list) for SEO.
- * The video slot shows a placeholder until the walkthrough URL is set in
+ * Intro explainer above the library: a walkthrough video on the left, the
+ * question and description on the right, then four feature cards. Real
+ * indexable copy for SEO (an h2 question, two descriptive paragraphs, and the
+ * card headings). The video shows a placeholder until a URL is set in
  * pages.premade.explainer.video.
  */
 export function PremadeExplainer() {
   const x = pages.premade.explainer;
   return (
     <div className="shell relative">
-      <div className="mx-auto max-w-3xl text-center">
-        <p className="font-mono text-label uppercase tracking-[0.14em] text-gold">{x.chip}</p>
-        <h2 className="mt-5 font-display text-h2 leading-tight text-ink">
-          {x.headline} <span className="text-gradient">{x.accent}</span>
-        </h2>
-      </div>
-
-      <div className="mt-12 grid gap-10 lg:grid-cols-2 lg:items-start">
+      <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
         {/* the walkthrough video (placeholder until a URL is set) */}
         <div>
           {x.video.src ? (
             <MediaFrame
               src={x.video.src}
               poster={x.video.poster}
-              label="What premade video is"
+              label={x.question}
               tint
               caption={{ title: "Watch", sub: "How it works" }}
             />
@@ -46,20 +39,33 @@ export function PremadeExplainer() {
           )}
         </div>
 
-        {/* what it is, then what every order includes */}
+        {/* the question, then the description */}
         <div>
-          <div className="space-y-4">
+          <h2 className="font-display text-h2 leading-tight text-ink">{x.question}</h2>
+          <div className="mt-5 space-y-4">
             {x.body.map((para) => (
               <p key={para} className="text-lede leading-relaxed text-muted">
                 {para}
               </p>
             ))}
           </div>
-          <h3 className="mt-8 font-display text-h4 font-semibold text-ink">{x.includedTitle}</h3>
-          <div className="mt-4">
-            <RuleList items={x.included.map((line) => ({ line }))} framed={false} />
-          </div>
         </div>
+      </div>
+
+      {/* four feature cards, below the video + description */}
+      <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {x.features.map((f) => (
+          <div
+            key={f.title}
+            className="flex flex-col rounded-card border border-hair card-glass p-6"
+          >
+            <DrawnIcon name={f.icon as IconName} />
+            <h3 className="mt-4 font-display text-h4 font-semibold leading-snug text-ink">
+              {f.title}
+            </h3>
+            <p className="mt-2 text-body-sm leading-relaxed text-muted">{f.desc}</p>
+          </div>
+        ))}
       </div>
     </div>
   );
