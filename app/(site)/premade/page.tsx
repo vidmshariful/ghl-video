@@ -15,7 +15,6 @@ import {
   recentBrowse,
 } from "@/components/premade/catalog";
 import { getCatalog, recentCutoff } from "@/lib/catalog-db";
-import { LibraryPromoBanner } from "@/components/premade/LibraryPromoBanner";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { RuleList } from "@/components/RuleList";
 import { RuledSection } from "@/components/RuledSection";
@@ -133,7 +132,6 @@ export default async function PremadePage() {
             intro={p.grid.intro}
             center
           />
-          <LibraryPromoBanner />
           <div className="mt-12">
             <PremadeLibrary
               featured={featured}
