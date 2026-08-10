@@ -140,7 +140,9 @@ export function VideoBrowser({
             ) : (
               <motion.div
                 layout={!reduced}
-                className="grid gap-x-5 gap-y-8 md:grid-cols-2"
+                className={`grid gap-x-5 gap-y-8 ${
+                  hasSidebar ? "md:grid-cols-2" : "sm:grid-cols-2 lg:grid-cols-3"
+                }`}
               >
                 <AnimatePresence mode="popLayout" initial={false}>
                   {shown.map((video) => (
