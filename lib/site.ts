@@ -11,6 +11,7 @@
  * one-off scripts run outside Next.
  */
 export * from "./content/core";
+export * from "./content/niche";
 export * from "./content/media";
 export * from "./content/premade";
 export * from "./content/proof";

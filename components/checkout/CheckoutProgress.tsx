@@ -4,10 +4,12 @@
  * read as done, the current one is highlighted, the rest are upcoming.
  * `compact` is the tight, single-line variant that lives in the header bar.
  */
+import { deliveryWindow } from "@/lib/site";
+
 const STEPS = [
   { key: "order", label: "Order", note: "Pay securely" },
   { key: "intake", label: "Intake", note: "Brand your videos" },
-  { key: "delivery", label: "Delivery", note: "In 5 to 7 days" },
+  { key: "delivery", label: "Delivery", note: `In ${deliveryWindow}` },
 ] as const;
 
 function Check({ className = "h-4 w-4" }: { className?: string }) {

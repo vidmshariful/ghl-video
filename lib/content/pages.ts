@@ -2,7 +2,7 @@
 /* Inner-page content                                                   */
 /* ------------------------------------------------------------------ */
 
-import { cta } from "./core";
+import { cta, clients, deliveryWindow } from "./core";
 import { clips, posters } from "./media";
 
 export const pages = {
@@ -10,7 +10,7 @@ export const pages = {
     closing: {
       headline: "Your videos are",
       accent: "one order away.",
-      sub: "Pick a video or a pack, send your brand kit, and publish this week. Most orders land in 5 to 7 days.",
+      sub: `Pick a video or a pack, send your brand kit, and publish this week. Most orders land in ${deliveryWindow}.`,
       cta: { label: "See the videos", href: "#videos" },
     },
     hero: {
@@ -24,7 +24,7 @@ export const pages = {
       headline: "Every video",
       accent: "and pack, in one place.",
       intro:
-        "1000+ HighLevel clients order from this library. Filter it on the left, open a pack to browse it as a playlist, and preview anything before you order.",
+        `${clients}+ HighLevel clients order from this library. Filter it on the left, open a pack to browse it as a playlist, and preview anything before you order.`,
     },
     /* intro explainer before the library: what the service is, what every order
        includes, and a walkthrough video. Also earns the page real indexable
@@ -53,7 +53,7 @@ export const pages = {
         },
         {
           icon: "package-check",
-          title: "Delivered in 5 to 7 days",
+          title: `Delivered in ${deliveryWindow}`,
           desc: "From order to a launch-ready video, with a review round before the final cut.",
         },
       ],
@@ -85,7 +85,7 @@ export const pages = {
       headline: "Order today,",
       accent: "publish this week.",
       intro:
-        "Pick a video, send your brand kit, and publish. The whole process runs from your order page, and most videos land in 5 to 7 days.",
+        `Pick a video, send your brand kit, and publish. The whole process runs from your order page, and most videos land in ${deliveryWindow}.`,
       cta: { label: "See the videos", href: "#videos" },
       /* PLACEHOLDER clip until the process walkthrough is cut; swap
          src and poster only, the section stays the same. */
@@ -898,14 +898,14 @@ export const pages = {
     closing: {
       headline: "Put a HighLevel-fluent team",
       accent: "behind your brand.",
-      sub: "1000+ SaaS founders already publish with us. See what that looks like for your platform.",
+      sub: `${clients}+ SaaS founders already publish with us. See what that looks like for your platform.`,
       cta: { label: cta.bookACall.label, href: cta.bookACall.href },
     },
     hero: {
       chip: "About",
       headline: "The original",
       accent: "HighLevel-only video studio.",
-      lede: "One niche, one stack, 1000+ HighLevel clients served. This page is the why.",
+      lede: `One niche, one stack, ${clients}+ HighLevel clients served. This page is the why.`,
     },
     story: {
       chip: "The category",
@@ -953,7 +953,7 @@ export const pages = {
         },
         {
           q: "Why work only in the HighLevel ecosystem?",
-          a: "One platform, learned once, compounding across 1000+ clients. You never brief us on what a snapshot or a subaccount is, so every project starts at your positioning instead of the basics.",
+          a: `One platform, learned once, compounding across ${clients}+ clients. You never brief us on what a snapshot or a subaccount is, so every project starts at your positioning instead of the basics.`,
         },
       ],
     },

@@ -3,7 +3,7 @@ import { Button } from "@/components/Button";
 import { Marquee } from "@/components/Marquee";
 import { RuledBox } from "@/components/RuledBox";
 import { SectionChip } from "@/components/SectionChip";
-import { featuredTestimonial, home, trustLogos } from "@/lib/site";
+import { clients, featuredTestimonial, home, rating, trustLogos } from "@/lib/site";
 
 /*
  * The proof section under checkout, drawn in the site's blueprint grid: one
@@ -55,7 +55,7 @@ const CONFIDENCE: {
   icon: React.ReactNode;
 }[] = [
   {
-    title: "1000+ SaaS clients",
+    title: `${clients}+ SaaS clients`,
     body: "The HighLevel businesses that brand their platform with us.",
     icon: (
       <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
@@ -138,7 +138,7 @@ export function CheckoutTrust() {
               <div className="mt-7 flex flex-wrap items-center gap-3">
                 <Stars />
                 <span className="font-mono text-label uppercase tracking-[0.1em] text-muted">
-                  5.0 on Google
+                  {rating} on Google
                 </span>
               </div>
 

@@ -22,12 +22,12 @@ import {
   otherBrands,
   pages,
   rating,
+  studioSince,
 } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "About the HighLevel-Only Video Studio",
-  description:
-    "The original HighLevel-only video studio. One niche, an in-house team, and 1000+ HighLevel SaaS clients served since 2020. A brand of Vidiosa LLC.",
+  description: `The original HighLevel-only video studio. One niche, an in-house team, and ${clients}+ HighLevel SaaS clients served since ${studioSince}. A brand of Vidiosa LLC.`,
   alternates: { canonical: "/about/" },
 };
 

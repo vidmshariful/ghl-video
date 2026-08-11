@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/Button";
+import { deliveryWindow } from "@/lib/site";
 
 /*
  * Confirmation. Reads the order id (an unguessable UUID) from the URL and
@@ -112,7 +113,7 @@ function Paid({ detail, orderId }: { detail: Detail | null; orderId: string | nu
   const videos = detail?.videoCount ?? 1;
   const delivery = detail?.deliveryDays
     ? `${detail.deliveryDays} days after brief`
-    : "5 to 7 days after brief";
+    : `${deliveryWindow} after brief`;
   return (
     <div className="mx-auto max-w-[42rem]">
       <div className="text-center">

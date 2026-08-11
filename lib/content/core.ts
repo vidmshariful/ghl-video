@@ -1,14 +1,19 @@
+/* The load-bearing facts, in ONE place. Anything on any of the 4 parts that
+ * shows the client count, the Google rating, the premade delivery window, or
+ * the founding year reads these constants, so changing a number here updates
+ * every page. (`npm run check:drift` guards the DB prices the same way.) */
+export const clients = 1000; // always rendered as "1000+"
+export const rating = "5.0";
+export const deliveryWindow = "5 to 7 days"; // premade turnaround after brief
+export const studioSince = "2020"; // founding year, phrased "since 2020"
+
 export const site = {
   name: "GHL Video",
   url: "https://ghlvideo.com",
   email: "hi@ghlvideo.com",
   tagline: "Video built for HighLevel SaaS. Fast, custom, done.",
-  description:
-    "The video studio built only for the HighLevel ecosystem. White-label premade videos, custom production, and video editing service. 1000+ clients served, rated 5.0 on Google.",
+  description: `The video studio built only for the HighLevel ecosystem. White-label premade videos, custom production, and video editing service. ${clients}+ clients served, rated ${rating} on Google.`,
 };
-
-export const clients = 1000; // always rendered as "1000+"
-export const rating = "5.0";
 
 export const namedClients = [
   { name: "Dominic Bavaro", role: "CEO", company: "Emma.io" },
@@ -24,7 +29,7 @@ export const namedClients = [
 export const navServices = [
   {
     name: "Premade Videos",
-    line: "Branded HighLevel videos in 5 to 7 days",
+    line: `Branded HighLevel videos in ${deliveryWindow}`,
     href: "/premade/",
     posterKey: "sampleC",
   },

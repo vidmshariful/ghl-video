@@ -1,4 +1,5 @@
 import { aiPackClips } from "./premade";
+import { rating, deliveryWindow, studioSince } from "./core";
 
 /* ------------------------------------------------------------------ */
 /* Homepage content                                                     */
@@ -117,7 +118,7 @@ export const home = {
       {
         name: "Premade Videos",
         title: "Branded HighLevel videos, ready in days.",
-        body: "Pick from the launch set. Each video is customized with your logo, your dashboard theme, and your voiceover, then delivered in 5 to 7 days.",
+        body: `Pick from the launch set. Each video is customized with your logo, your dashboard theme, and your voiceover, then delivered in ${deliveryWindow}.`,
         checklist: [
           "Your branding on every frame",
           "Dashboard theme matched to your SaaS",
@@ -238,7 +239,7 @@ export const home = {
       },
       {
         q: "How fast is delivery?",
-        a: "Premade videos arrive in 5 to 7 days after you submit your branding. Custom timelines are scoped up front, in days and weeks, not months.",
+        a: `Premade videos arrive in ${deliveryWindow} after you submit your branding. Custom timelines are scoped up front, in days and weeks, not months.`,
       },
       {
         q: "How does the editing subscription work?",
@@ -291,12 +292,12 @@ export const home = {
       {
         label: "Focus",
         others: "Video for anyone",
-        us: "Only HighLevel, since 2020",
+        us: `Only HighLevel, since ${studioSince}`,
       },
       {
         label: "Speed",
         others: "4 to 8 weeks",
-        us: "5 to 7 days on premade",
+        us: `${deliveryWindow} on premade`,
       },
       {
         label: "Pricing",
@@ -344,7 +345,7 @@ export const home = {
    * size drives the bento span. */
   reviews: {
     chip: "Proof",
-    headline: "Rated 5.0 by",
+    headline: `Rated ${rating} by`,
     accent: "HighLevel founders.",
     ratingLine: "Every review on Google, five stars.",
     items: [
@@ -411,4 +412,4 @@ export const home = {
   },
 } as const;
 
-export const footerBlurb = "The video studio built only for HighLevel. Creating HighLevel white-label videos since 2020.";
+export const footerBlurb = `The video studio built only for HighLevel. Creating HighLevel white-label videos since ${studioSince}.`;

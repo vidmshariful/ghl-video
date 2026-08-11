@@ -2,14 +2,20 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  clients,
   codeFor,
   cta,
   disclaimer,
   entityLine,
   featuredTestimonial,
   home,
+  nicheAddon,
+  nicheAddonPrice,
+  nicheIntro,
   premadeVideos,
+  rating,
   skuFor,
+  studioSince,
   trustLogos,
 } from "@/lib/site";
 import {
@@ -201,13 +207,13 @@ export default async function SalesLandingPage({
       <section className="sp-section--tight">
         <div className="sp-wrap sp-trust">
           <span className="sp-trust-item">
-            <span className="sp-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span> 5.0 on Google
+            <span className="sp-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span> {rating} on Google
           </span>
           <span className="sp-trust-item">
-            <span className="sp-trust-num">1000+</span> HighLevel clients
+            <span className="sp-trust-num">{clients}+</span> HighLevel clients
           </span>
           <span className="sp-trust-item">
-            <span className="sp-trust-num">Since 2020</span> HighLevel-only studio
+            <span className="sp-trust-num">Since {studioSince}</span> HighLevel-only studio
           </span>
           <span className="sp-trust-item">
             <span className="sp-trust-num">Full</span> commercial rights
@@ -592,7 +598,7 @@ function LibraryCard({ v }: { v: SalesLibVideo }) {
               Order Now
             </a>
           </div>
-          <NicheNote price={v.type === "Demo" ? 100 : 50} />
+          <NicheNote price={nicheAddonPrice(v.type === "Demo")} />
         </>
       ) : (
         <div className="sp-vcard-buy sp-vcard-buy--soon">
@@ -609,20 +615,19 @@ function NicheNote({ price = 50 }: { price?: number }) {
   return (
     <div className="sp-niche">
       <button type="button" className="sp-niche-trigger" aria-label="ICP customization details">
-        <span aria-hidden="true" className="sp-niche-i">i</span> Serving a specific niche?
+        <span aria-hidden="true" className="sp-niche-i">i</span> {nicheAddon.trigger}
       </button>
       <div className="sp-niche-tip" role="tooltip">
-        <p className="sp-niche-tip-title">Made for your niche</p>
+        <p className="sp-niche-tip-title">{nicheAddon.title}</p>
         <p className="sp-muted" style={{ marginTop: "0.3rem" }}>
-          For an extra ${price}, we retune this video to your exact ICP:
+          {nicheIntro(price)}
         </p>
         <ul className="sp-niche-list">
-          <li>Industry footage swapped in for yours</li>
-          <li>Graphics and on-screen text rebranded</li>
-          <li>Conversational messaging matched to your funnel</li>
-          <li>ICP wording in the script and voiceover, like clients to patients</li>
+          {nicheAddon.bullets.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
         </ul>
-        <p className="sp-niche-cta">Select it at checkout</p>
+        <p className="sp-niche-cta">{nicheAddon.cta}</p>
       </div>
     </div>
   );

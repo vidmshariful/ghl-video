@@ -1,4 +1,6 @@
 import { aiPackClips, premadeVideos } from "@/lib/content/premade";
+import { deliveryWindow, studioSince } from "@/lib/content/core";
+import { nicheAddon } from "@/lib/content/niche";
 
 /*
  * The registry of sales landing pages. Each page is a code-defined
@@ -56,7 +58,7 @@ export const salesPages: SalesPage[] = [
         "Launch-ready HighLevel white-label videos: explainers, platform demos, and feature videos, each branded to your SaaS with your logo, dashboard, and voiceover. Order a single video or a pack and publish this week.",
     },
     hero: {
-      eyebrow: "The HighLevel-only video studio, since 2020",
+      eyebrow: `The HighLevel-only video studio, since ${studioSince}`,
       headline: "White-label HighLevel videos,",
       accent: "branded to your SaaS.",
       sub: "Launch-ready HighLevel explainers, platform demos, and feature videos, each one white-labeled to your platform: your logo, your dashboard, your voiceover. Watch the work, order a single video or the whole pack, and publish this week.",
@@ -114,7 +116,7 @@ export const salesPages: SalesPage[] = [
     closing: {
       headline: "Your videos are",
       accent: "one order away.",
-      sub: "Pick a single or the full pack, send your brand kit, and publish this week. Most orders land in 5 to 7 days.",
+      sub: `Pick a single or the full pack, send your brand kit, and publish this week. Most orders land in ${deliveryWindow}.`,
     },
   },
 ];
@@ -305,14 +307,14 @@ export const salesShared = {
       {
         n: "03",
         title: "Receive and publish",
-        line: "We white-label every video to your SaaS and deliver after a full review round, in 5 to 7 days.",
+        line: `We white-label every video to your SaaS and deliver after a full review round, in ${deliveryWindow}.`,
       },
     ],
   },
   guarantees: [
     { title: "Full commercial rights", line: "Every video is yours to run across your whole funnel, forever." },
     { title: "White-label from frame one", line: "Your logo, dashboard, colors, and voiceover. Nothing points back to us." },
-    { title: "A HighLevel-fluent team", line: "You never explain the platform. We only make HighLevel videos, since 2020." },
+    { title: "A HighLevel-fluent team", line: `You never explain the platform. We only make HighLevel videos, since ${studioSince}.` },
     { title: "Clear refund policy", line: "Not the right fit? Our refund policy is published and plain." },
   ],
   faq: [
@@ -326,7 +328,7 @@ export const salesShared = {
     },
     {
       q: "How fast is delivery?",
-      a: "Most orders land in 5 to 7 days after you send your branding. You get one full review round before final delivery.",
+      a: `Most orders land in ${deliveryWindow} after you send your branding. You get one full review round before final delivery.`,
     },
     {
       q: "What if the premade videos do not fit what I need?",
@@ -346,7 +348,7 @@ export const salesShared = {
     },
     {
       q: "Can you match my niche or industry?",
-      a: "Yes. For an extra $50 per video, or $100 for a platform demo, we tailor it to your ICP: footage, on-screen graphics, and the wording in the script and voiceover, like saying clients instead of customers, or patients for a medical niche. Bundles have a single pack customization that covers every video inside.",
+      a: `Yes. For an extra $${nicheAddon.priceStandard} per video, or $${nicheAddon.priceDemo} for a platform demo, we tailor it to your ICP: footage, on-screen graphics, and the wording in the script and voiceover, like saying clients instead of customers, or patients for a medical niche. Bundles have a single pack customization that covers every video inside.`,
     },
     {
       q: "Can I resell or use these across my whole funnel?",

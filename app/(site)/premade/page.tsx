@@ -31,7 +31,7 @@ import { WhiteLabelDemo } from "@/components/pages/WhiteLabelDemo";
 import { TrustStrip } from "@/components/home/TrustStrip";
 import { MediaFrame } from "@/components/MediaFrame";
 import { faqSchema, productCatalogSchema, serviceSchema } from "@/lib/schema";
-import { aiPackClips, cta, pages, sellableProducts, site } from "@/lib/site";
+import { aiPackClips, cta, deliveryWindow, pages, sellableProducts, site } from "@/lib/site";
 
 /* recent branded deliveries, shown so a buyer sees the outcome on their brand */
 const recentDelivered: { src: string; poster: string | null; label: string; sub: string }[] = [
@@ -45,8 +45,7 @@ const recentDelivered: { src: string; poster: string | null; label: string; sub:
 
 export const metadata: Metadata = {
   title: "GoHighLevel White-Label Videos and Video Packs",
-  description:
-    "The premade GoHighLevel video library: explainers, demos, ads, and animated GIFs, plus complete packs. White-labeled to your SaaS and delivered in 5 to 7 days.",
+  description: `The premade GoHighLevel video library: explainers, demos, ads, and animated GIFs, plus complete packs. White-labeled to your SaaS and delivered in ${deliveryWindow}.`,
   alternates: { canonical: "/premade/" },
 };
 

@@ -4,7 +4,16 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MediaFrame } from "@/components/MediaFrame";
-import { checkoutHref, codeFor, cta, skuFor, withPromo } from "@/lib/site";
+import {
+  checkoutHref,
+  codeFor,
+  cta,
+  nicheAddon,
+  nicheAddonPrice,
+  nicheIntro,
+  skuFor,
+  withPromo,
+} from "@/lib/site";
 import { type BrowseVideo, type Version } from "./catalog";
 
 /* ---------------------------------------------------------------- */
@@ -164,12 +173,6 @@ export function VersionToggle({
 /* A quiet per-video upsell: hover or focus reveals the ICP customization
  * offer. Informational for now; the copy points buyers to the checkout add-on. */
 function NicheNote({ price = 50 }: { price?: number }) {
-  const bullets = [
-    "Industry footage swapped in for yours",
-    "Graphics and on-screen text rebranded",
-    "Conversational messaging matched to your funnel",
-    'ICP wording in the script and the voiceover (say "clients" not "customers")',
-  ];
   return (
     <div className="group/niche relative px-4 py-2.5">
       <button
@@ -188,18 +191,16 @@ function NicheNote({ price = 50 }: { price?: number }) {
           <circle cx="8" cy="8" r="6.5" />
           <path d="M8 7.2v3.4M8 5.1h.01" strokeLinecap="round" />
         </svg>
-        Serving a specific niche?
+        {nicheAddon.trigger}
       </button>
       <div
         role="tooltip"
         className="pointer-events-none absolute bottom-full left-4 right-4 z-50 mb-2 border border-hair bg-surface p-4 opacity-0 shadow-[0_18px_50px_-18px_rgba(0,0,0,0.85)] transition-opacity duration-200 group-hover/niche:opacity-100 group-focus-within/niche:opacity-100"
       >
-        <p className="font-display text-body font-semibold text-ink">Made for your niche</p>
-        <p className="mt-1 text-body-sm leading-relaxed text-muted">
-          For an extra ${price}, we retune this video to your exact ICP:
-        </p>
+        <p className="font-display text-body font-semibold text-ink">{nicheAddon.title}</p>
+        <p className="mt-1 text-body-sm leading-relaxed text-muted">{nicheIntro(price)}</p>
         <ul className="mt-2.5 space-y-1.5">
-          {bullets.map((line) => (
+          {nicheAddon.bullets.map((line) => (
             <li
               key={line}
               className="flex items-start gap-2 text-body-sm leading-relaxed text-muted"
@@ -218,7 +219,7 @@ function NicheNote({ price = 50 }: { price?: number }) {
             </li>
           ))}
         </ul>
-        <p className="mt-3 font-mono text-label uppercase text-gold/80">Select it at checkout</p>
+        <p className="mt-3 font-mono text-label uppercase text-gold/80">{nicheAddon.cta}</p>
       </div>
     </div>
   );
@@ -334,7 +335,7 @@ export function LibraryCard({
               <BuyVideoLink video={video} />
             </div>
           </div>
-          <NicheNote price={code?.startsWith("DEMO") ? 100 : 50} />
+          <NicheNote price={nicheAddonPrice(!!code?.startsWith("DEMO"))} />
         </>
       )}
     </div>

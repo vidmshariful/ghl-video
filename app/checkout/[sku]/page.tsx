@@ -5,7 +5,7 @@ import { newCodeForOldSku } from "@/lib/catalog-db";
 import { getApplicableBumps } from "@/lib/checkout/bumps";
 import { CheckoutTrust } from "@/components/checkout/CheckoutTrust";
 import { RuledBox } from "@/components/RuledBox";
-import { clients, rating } from "@/lib/site";
+import { clients, rating, deliveryWindow } from "@/lib/site";
 import { CheckoutClient } from "./CheckoutClient";
 
 /* Always server-rendered: reads the product (and its authoritative price)
@@ -78,7 +78,7 @@ export default async function CheckoutPage({
           "Professional voiceover included",
           meta.delivery_days
             ? `Delivered in about ${meta.delivery_days} business days`
-            : "Delivered in 5 to 7 days",
+            : `Delivered in ${deliveryWindow}`,
           "Full commercial rights",
         ];
 

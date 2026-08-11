@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { cta, featureAnimations, skuFor, withPromo } from "@/lib/site";
+import { cta, deliveryWindow, featureAnimations, skuFor, withPromo } from "@/lib/site";
 import { type Version } from "./catalog";
 import { featurePacks } from "./catalog";
 import { VersionToggle } from "./cards";
@@ -152,7 +152,7 @@ export const featureIncludes: { text: string; ok: boolean; highlight?: boolean }
   { text: "Both realistic and simplified version", ok: true },
   { text: "Keep or remove the default caption", ok: true },
   { text: "Add background music, on demand", ok: true },
-  { text: "Delivery in 5 to 7 days", ok: true },
+  { text: `Delivery in ${deliveryWindow}`, ok: true },
   {
     text: "Both old and new UI, released at LevelUp Summit",
     ok: true,
