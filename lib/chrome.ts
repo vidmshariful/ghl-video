@@ -48,7 +48,7 @@ export type SiteChrome = {
 /* Injected at body start: Google Tag Manager, Google Ads gtag, and
  * Hotjar. Kept verbatim from the previous backend config so analytics
  * and conversion tracking are unchanged. */
-const HEAD_SCRIPTS = `<!-- GTM loader -->
+export const HEAD_SCRIPTS = `<!-- GTM loader -->
 <script data-cfasync="false" data-pagespeed-no-defer type="text/javascript">
 (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
 new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -100,7 +100,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 
 /* Injected at body end: the LeadConnector chat widget and the GTM
  * noscript fallback. */
-const BODY_END_SCRIPTS = `<!-- LeadConnector widget -->
+export const BODY_END_SCRIPTS = `<!-- LeadConnector widget -->
 <script src="https://widgets.leadconnectorhq.com/loader.js" data-resources-url="https://widgets.leadconnectorhq.com/chat-widget/loader.js" data-widget-id="66b215e292c831bcfeb2c0f4">
  </script>
 

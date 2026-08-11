@@ -15,11 +15,11 @@
  * EDIT editing plan. */
 export const productCodes: Record<string, string> = {
   "all-in-one-ai-first-positioning": "EXP-003",
-  "ai-receptionist-conversational-ai": "SHORT-001",
-  "unified-inbox-conversational-ai": "SHORT-002",
-  "reputation-management-reviews-ai": "SHORT-003",
-  "social-media-planner-content-ai": "SHORT-030",
-  "ai-website-funnel-builder": "SHORT-031",
+  "ai-receptionist-conversational-ai": "FEXP-031",
+  "unified-inbox-conversational-ai": "FEXP-032",
+  "reputation-management-reviews-ai": "FEXP-033",
+  "social-media-planner-content-ai": "FEXP-034",
+  "ai-website-funnel-builder": "FEXP-035",
   "highlevel-official-full-platform-pitch": "EXP-004",
   "ai-employee": "SHORT-004",
   "conversational-ai": "SHORT-005",

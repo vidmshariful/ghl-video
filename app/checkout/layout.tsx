@@ -17,6 +17,11 @@ export default async function CheckoutLayout({
   const chrome = await getChrome();
   return (
     <div className="flex min-h-screen w-full flex-col bg-canvas text-ink">
+      {/* hard-coded tracking (GTM, Google Ads, Hotjar) so the checkout step of
+          the funnel fires the same events as the rest of the site */}
+      {chrome.headScripts ? (
+        <div suppressHydrationWarning dangerouslySetInnerHTML={{ __html: chrome.headScripts }} />
+      ) : null}
       {/* the blueprint frame: the same vertical rails the marketing pages use,
           so checkout sections snap into the same grid */}
       <PageFrame />

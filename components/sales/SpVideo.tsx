@@ -71,7 +71,7 @@ export function SpVideo({
     <>
       <div ref={figRef} className="sp-video">
         {src ? (
-          <video ref={vidRef} src={src} poster={poster ?? undefined} muted loop playsInline preload="metadata" />
+          <video ref={vidRef} src={src} poster={poster ?? undefined} muted loop playsInline preload="none" />
         ) : poster ? (
           // eslint-disable-next-line @next/next/no-img-element -- remote wistia poster
           <img src={poster} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />

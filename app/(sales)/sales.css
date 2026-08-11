@@ -560,6 +560,40 @@
   font-weight: 700;
 }
 
+/* ---- risk-reversal strip under the offer ---- */
+.sp-guarantees {
+  display: grid;
+  gap: 1rem 1.5rem;
+  grid-template-columns: 1fr;
+  margin-top: 2.5rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--sp-line);
+}
+@media (min-width: 720px) {
+  .sp-guarantees {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.sp-guarantee {
+  display: flex;
+  gap: 0.7rem;
+  align-items: flex-start;
+}
+.sp-guarantee-check {
+  flex-shrink: 0;
+  color: var(--sp-gold);
+  font-weight: 700;
+  line-height: 1.5;
+}
+.sp-guarantee-title {
+  font-weight: 600;
+  color: var(--sp-text);
+}
+.sp-guarantee-line {
+  margin-top: 0.15rem;
+  font-size: 0.9rem;
+}
+
 /* ---- before / after split ---- */
 .sp-ba {
   display: grid;

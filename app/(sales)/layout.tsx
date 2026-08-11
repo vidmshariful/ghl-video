@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Logo } from "@/components/Logo";
 import { cta } from "@/lib/site";
+import { getChrome } from "@/lib/chrome";
 import "./sales.css";
 
 /*
@@ -14,18 +15,30 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function SalesLayout({ children }: { children: React.ReactNode }) {
+export default async function SalesLayout({ children }: { children: React.ReactNode }) {
+  const chrome = await getChrome();
   return (
-    <div className="sp">
-      <div className="sp-topbar">
-        <div className="sp-wrap sp-topbar-inner">
-          <Logo className="h-6" />
-          <a href={cta.bookACall.href} className="sp-btn sp-btn--ghost sp-btn--sm">
-            {cta.bookACall.label}
-          </a>
+    <>
+      {/* Hard-coded tracking (GTM, Google Ads, Hotjar), injected at body start
+          just like the marketing site so the sales funnel is measured too. */}
+      {chrome.headScripts ? (
+        <div suppressHydrationWarning dangerouslySetInnerHTML={{ __html: chrome.headScripts }} />
+      ) : null}
+      <div className="sp">
+        <div className="sp-topbar">
+          <div className="sp-wrap sp-topbar-inner">
+            <Logo className="h-6" />
+            <a href={cta.bookACall.href} className="sp-btn sp-btn--ghost sp-btn--sm">
+              {cta.bookACall.label}
+            </a>
+          </div>
         </div>
+        {children}
       </div>
-      {children}
-    </div>
+      {/* Body-end: GTM noscript + LeadConnector chat widget. */}
+      {chrome.bodyEndScripts ? (
+        <div suppressHydrationWarning dangerouslySetInnerHTML={{ __html: chrome.bodyEndScripts }} />
+      ) : null}
+    </>
   );
 }

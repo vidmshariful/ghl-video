@@ -4,6 +4,7 @@ import { type Session } from "@supabase/supabase-js";
 import { useEffect, useState } from "react";
 import { sitePages } from "@/lib/pages-list";
 import { site } from "@/lib/site";
+import { HEAD_SCRIPTS, BODY_END_SCRIPTS } from "@/lib/chrome";
 import { supabase, authHeader } from "./client";
 import { Logo } from "@/components/Logo";
 import type { View } from "./nav";
@@ -140,95 +141,44 @@ function Login({ onError, error }: { onError: (m: string) => void; error: string
 /* Screen 1: Header & Footer code                                    */
 /* ---------------------------------------------------------------- */
 function CodeScreen() {
-  const [head, setHead] = useState("");
-  const [body, setBody] = useState("");
-  const [loaded, setLoaded] = useState(false);
-  const [status, setStatus] = useState<{ kind: "ok" | "err"; msg: string } | null>(null);
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    supabase
-      .from("site_settings")
-      .select("head_scripts, body_end_scripts")
-      .eq("id", 1)
-      .single()
-      .then(({ data, error }) => {
-        if (error) setStatus({ kind: "err", msg: "Could not load settings: " + error.message });
-        else {
-          setHead(data.head_scripts ?? "");
-          setBody(data.body_end_scripts ?? "");
-        }
-        setLoaded(true);
-      });
-  }, []);
-
-  async function save() {
-    setSaving(true);
-    setStatus(null);
-    const { error } = await supabase
-      .from("site_settings")
-      .update({ head_scripts: head, body_end_scripts: body, updated_at: new Date().toISOString() })
-      .eq("id", 1);
-    setStatus(
-      error
-        ? { kind: "err", msg: "Save failed: " + error.message }
-        : { kind: "ok", msg: "Saved. The site is republishing itself now, live in about 2 minutes." },
-    );
-    setSaving(false);
-  }
-
-  if (!loaded) return <p className="text-body text-muted">Loading settings...</p>;
+  // The tracking snippets are hard-coded in lib/chrome.ts (see the note there)
+  // and injected on every public page. This screen only mirrors them so the
+  // team can confirm exactly what is live without touching the source.
+  const blocks: { label: string; where: string; code: string }[] = [
+    {
+      label: "Header code (GTM, Google Ads, Hotjar)",
+      where: "Injected at body start on every public page.",
+      code: HEAD_SCRIPTS,
+    },
+    {
+      label: "Footer code (GTM noscript, chat widget)",
+      where: "Injected right before the closing body tag.",
+      code: BODY_END_SCRIPTS,
+    },
+  ];
 
   return (
     <div className="max-w-3xl">
       <h1 className="font-display text-h3 text-ink">Header &amp; Footer Code</h1>
       <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
-        Tracking and verification snippets. The first box is injected at the
-        top of every page, the second right before the closing body tag.
-        Saving republishes the website automatically.
+        These tracking and verification snippets are hard-coded in the site
+        source and injected on every public page: the marketing site, the
+        sales pages, and checkout. They are never added to the customer portal
+        or this admin. This screen is read-only, so what you see below is
+        exactly what is live. To change it, edit{" "}
+        <span className="font-mono text-body-sm text-ink">lib/chrome.ts</span>{" "}
+        and deploy.
       </p>
 
-      <label className="mt-8 block">
-        <span className="font-mono text-label uppercase text-muted">
-          Header code (GTM, pixels, analytics)
-        </span>
-        <textarea
-          value={head}
-          onChange={(e) => setHead(e.target.value)}
-          rows={12}
-          spellCheck={false}
-          className="mt-2 w-full rounded-[6px] border border-hair bg-[#05060a] p-4 font-mono text-body-sm leading-relaxed text-ink focus:border-gold focus:outline-none"
-        />
-      </label>
-
-      <label className="mt-6 block">
-        <span className="font-mono text-label uppercase text-muted">
-          Footer code (noscript tags, chat widget)
-        </span>
-        <textarea
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          rows={8}
-          spellCheck={false}
-          className="mt-2 w-full rounded-[6px] border border-hair bg-[#05060a] p-4 font-mono text-body-sm leading-relaxed text-ink focus:border-gold focus:outline-none"
-        />
-      </label>
-
-      <div className="mt-6 flex items-center gap-5">
-        <button
-          type="button"
-          onClick={save}
-          disabled={saving}
-          className="tap rounded-[3px] bg-brand-gradient px-8 py-3 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60"
-        >
-          {saving ? "Saving" : "Save and publish"}
-        </button>
-        {status && (
-          <p className={`text-body-sm ${status.kind === "ok" ? "text-green" : "text-error"}`}>
-            {status.msg}
-          </p>
-        )}
-      </div>
+      {blocks.map((b) => (
+        <div key={b.label} className="mt-8">
+          <span className="font-mono text-label uppercase text-muted">{b.label}</span>
+          <p className="mt-1 text-body-sm text-dim">{b.where}</p>
+          <pre className="mt-2 max-h-80 w-full overflow-auto rounded-[6px] border border-hair bg-[#05060a] p-4 font-mono text-body-sm leading-relaxed text-ink">
+            {b.code}
+          </pre>
+        </div>
+      ))}
     </div>
   );
 }

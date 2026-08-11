@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   codeFor,
@@ -274,6 +275,18 @@ export default async function SalesLandingPage({
               <SalesBundleCard key={b.sku} b={b} />
             ))}
           </div>
+          {/* risk reversal, right under the offer where the buying decision is */}
+          <div className="sp-guarantees">
+            {salesShared.guarantees.map((g) => (
+              <div key={g.title} className="sp-guarantee">
+                <span className="sp-guarantee-check" aria-hidden="true">&#10003;</span>
+                <div>
+                  <p className="sp-guarantee-title">{g.title}</p>
+                  <p className="sp-muted sp-guarantee-line">{g.line}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -473,24 +486,25 @@ export default async function SalesLandingPage({
         </div>
       </section>
 
-      {/* FINAL CTA, bundle focused */}
+      {/* FINAL CTA, Ultimate focused */}
       <section className="sp-section" style={{ position: "relative", overflow: "hidden", textAlign: "center" }}>
         <div className="sp-glow" />
         <div className="sp-wrap sp-narrow" style={{ position: "relative" }}>
-          <span className="sp-eyebrow">Best value</span>
+          <span className="sp-eyebrow">The full set</span>
           <h2 className="sp-display sp-h2" style={{ marginTop: "0.8rem" }}>
-            Take the bundle, <span className="sp-grad-text">publish this week.</span>
+            Take every video, <span className="sp-grad-text">publish this week.</span>
           </h2>
           <p className="sp-lede" style={{ margin: "1rem auto 0", maxWidth: "42rem" }}>
-            The Growth bundle gets you an explainer, four short explainers, a demo, and the full platform pitch, all
-            branded to your SaaS, and it saves you a third off single pricing. Or start with a single above.
+            Ultimate is every video on this page, all 12 white-labeled to your SaaS
+            for $2,295. That is 67% off buying them one by one. Prefer to start
+            smaller? Grab a single or a lighter bundle above.
           </p>
           <div style={{ display: "flex", gap: "0.9rem", justifyContent: "center", marginTop: "1.8rem", flexWrap: "wrap" }}>
-            <a href="#bundle" className="sp-btn sp-btn--primary">
-              See the bundles
-            </a>
-            <a href={cta.bookACall.href} className="sp-btn sp-btn--ghost">
-              {cta.bookACall.label}
+            <Link href="/checkout/lp-ultimate" className="sp-btn sp-btn--primary">
+              Order Now
+            </Link>
+            <a href="#bundle" className="sp-btn sp-btn--ghost">
+              Compare the bundles
             </a>
           </div>
         </div>
