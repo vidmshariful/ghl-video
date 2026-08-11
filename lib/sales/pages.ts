@@ -56,7 +56,7 @@ export const salesPages: SalesPage[] = [
         "Launch-ready HighLevel white-label videos: explainers, platform demos, and feature videos, each branded to your SaaS with your logo, dashboard, and voiceover. Order a single video or a pack and publish this week.",
     },
     hero: {
-      eyebrow: "HighLevel white-label videos and demos",
+      eyebrow: "The HighLevel-only video studio, since 2020",
       headline: "White-label HighLevel videos,",
       accent: "branded to your SaaS.",
       sub: "Launch-ready HighLevel explainers, platform demos, and feature videos, each one white-labeled to your platform: your logo, your dashboard, your voiceover. Watch the work, order a single video or the whole pack, and publish this week.",
@@ -138,6 +138,7 @@ export type SalesBundle = {
   items: string[];
   pickAtIntake: boolean;
   featured?: boolean;
+  badge?: string; // label for the featured badge (defaults to "Most popular")
   /* how many to choose per category at intake (pickAtIntake bundles only) */
   pick?: { master: number; demo: number; feature: number };
 };
@@ -147,24 +148,23 @@ export const salesBundles: SalesBundle[] = [
     sku: "lp-essential",
     name: "Essential",
     price: 995,
-    anchorPrice: 1980,
+    anchorPrice: 1485,
     deliveryDays: 7,
-    videoCount: 4,
-    items: ["1x Master Explainer", "3x Feature Explainer"],
+    videoCount: 3,
+    items: ["1x Full Explainer", "2x Feature Explainer"],
     pickAtIntake: true,
-    pick: { master: 1, demo: 0, feature: 3 },
+    pick: { master: 1, demo: 0, feature: 2 },
   },
   {
     sku: "lp-growth",
     name: "Growth",
     price: 1795,
-    anchorPrice: 4460,
+    anchorPrice: 3965,
     deliveryDays: 10,
-    videoCount: 8,
-    featured: true,
-    items: ["2x Master Explainer", "1x Demo", "5x Feature Explainer"],
+    videoCount: 7,
+    items: ["2x Full Explainer", "1x Demo", "4x Feature Explainer"],
     pickAtIntake: true,
-    pick: { master: 2, demo: 1, feature: 5 },
+    pick: { master: 2, demo: 1, feature: 4 },
   },
   {
     sku: "lp-ultimate",
@@ -173,7 +173,9 @@ export const salesBundles: SalesBundle[] = [
     anchorPrice: 6940,
     deliveryDays: 14,
     videoCount: 12,
-    items: ["All 3x Master Explainer", "Both Demo Videos", "All 7x Feature Explainer"],
+    featured: true,
+    badge: "Best value",
+    items: ["All 3x Full Explainer", "Both Demo Videos", "All 7x Feature Explainer"],
     pickAtIntake: false,
   },
 ];
@@ -204,7 +206,7 @@ const PICK_TYPE: Record<BundlePickKey, string> = {
 };
 
 export const PICK_LABEL: Record<BundlePickKey, string> = {
-  master: "Master Explainer",
+  master: "Full Explainer",
   demo: "Demo",
   feature: "Feature Explainer",
 };

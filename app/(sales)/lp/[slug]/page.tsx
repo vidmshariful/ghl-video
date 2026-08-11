@@ -169,14 +169,17 @@ export default async function SalesLandingPage({
           <span className="sp-eyebrow">{page.hero.eyebrow}</span>
           <h1
             className="sp-display sp-h1"
-            style={{ marginTop: "1rem", fontSize: "clamp(2.1rem, 5vw, 3rem)" }}
+            style={{ marginTop: "1.1rem", fontSize: "clamp(2.2rem, 5.8vw, 3.6rem)" }}
           >
             {page.hero.headline}{" "}
             <span className="sp-grad-text" style={{ display: "block" }}>
               {page.hero.accent}
             </span>
           </h1>
-          <p className="sp-lede" style={{ margin: "1.25rem auto 0", maxWidth: "44rem" }}>
+          <p
+            className="sp-lede"
+            style={{ margin: "1.35rem auto 0", maxWidth: "42rem", textWrap: "normal" }}
+          >
             {page.hero.sub}
           </p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.9rem", justifyContent: "center", marginTop: "2rem" }}>
@@ -616,7 +619,7 @@ function SalesBundleCard({ b }: { b: SalesBundle }) {
   const href = `/checkout/${b.sku}`;
   return (
     <div className={`sp-bundle${b.featured ? " sp-bundle--featured" : ""}`}>
-      {b.featured ? <span className="sp-tier-badge">Most popular</span> : null}
+      {b.featured ? <span className="sp-tier-badge">{b.badge ?? "Most popular"}</span> : null}
       <h3 className="sp-display sp-h3">{b.name}</h3>
       <p className="sp-bundle-count">{b.videoCount} videos, white-labeled</p>
       <div style={{ marginTop: "0.8rem" }}>

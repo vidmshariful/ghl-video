@@ -34,7 +34,7 @@ type Loaded = {
 };
 
 const PICK_LABEL: Record<BundlePickKey, string> = {
-  master: "Master Explainer",
+  master: "Full Explainer",
   demo: "Demo",
   feature: "Feature Explainer",
 };
