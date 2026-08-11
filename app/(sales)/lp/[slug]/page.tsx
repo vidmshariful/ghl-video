@@ -165,7 +165,7 @@ export default async function SalesLandingPage({
         style={{ position: "relative", overflow: "hidden", paddingBlockStart: "clamp(2.5rem, 6vw, 4.5rem)" }}
       >
         <div className="sp-glow" />
-        <div className="sp-wrap sp-narrow" style={{ position: "relative", textAlign: "center" }}>
+        <div className="sp-wrap" style={{ position: "relative", textAlign: "center" }}>
           <span className="sp-eyebrow">{page.hero.eyebrow}</span>
           <h1
             className="sp-display sp-h1"
@@ -178,7 +178,7 @@ export default async function SalesLandingPage({
           </h1>
           <p
             className="sp-lede"
-            style={{ margin: "1.35rem auto 0", maxWidth: "42rem", textWrap: "normal" }}
+            style={{ margin: "1.35rem auto 0", maxWidth: "50rem", textWrap: "normal" }}
           >
             {page.hero.sub}
           </p>
