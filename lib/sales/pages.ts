@@ -45,7 +45,7 @@ export type SalesPage = {
 
 export const salesPages: SalesPage[] = [
   {
-    slug: "new-videos",
+    slug: "white-label-videos",
     title: "White-Label HighLevel Videos",
     campaign: "Universal funnel page (SEO, paid, and outreach)",
     status: "live",
