@@ -354,3 +354,43 @@ export const salesShared = {
     },
   ],
 };
+
+/* ---------------------------------------------------------------- */
+/* Build-time integrity gate for the sales bundles                   */
+/* ---------------------------------------------------------------- */
+/* Runs at module eval (the LP page imports salesBundles), so a bad edit
+ * fails `next build` with a clear message instead of shipping a broken
+ * offer. Catches the exact mistakes that are easy to make by hand: an
+ * anchor that is not above the price, pick counts that do not add up to
+ * the advertised video count, and a pick that asks for more videos than
+ * the catalog can supply. It cannot check the DB price (that is the
+ * scripts/check-drift.ts job); this is pure code-consistency. */
+{
+  const pools = bundlePickPools();
+  for (const b of salesBundles) {
+    if (b.anchorPrice <= b.price) {
+      throw new Error(
+        `[salesBundles] "${b.sku}": anchorPrice (${b.anchorPrice}) must be greater than price (${b.price}).`,
+      );
+    }
+    if (b.pickAtIntake) {
+      if (!b.pick) {
+        throw new Error(`[salesBundles] "${b.sku}": pickAtIntake is true but pick counts are missing.`);
+      }
+      const sum = b.pick.master + b.pick.demo + b.pick.feature;
+      if (sum !== b.videoCount) {
+        throw new Error(
+          `[salesBundles] "${b.sku}": pick counts add to ${sum} but videoCount is ${b.videoCount}. Keep them in sync.`,
+        );
+      }
+      for (const key of ["master", "demo", "feature"] as BundlePickKey[]) {
+        const need = b.pick[key] ?? 0;
+        if (need > pools[key].length) {
+          throw new Error(
+            `[salesBundles] "${b.sku}": asks for ${need} ${key} videos but the catalog only offers ${pools[key].length}.`,
+          );
+        }
+      }
+    }
+  }
+}

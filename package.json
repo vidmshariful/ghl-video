@@ -12,6 +12,7 @@
     "lint": "eslint",
     "seed:subscriptions": "node scripts/seed-editing-subscriptions.mjs",
     "migrate": "node scripts/apply-migrations.mjs",
+    "check:drift": "tsx scripts/check-drift.ts",
     "test:e2e": "playwright test"
   },
   "dependencies": {
