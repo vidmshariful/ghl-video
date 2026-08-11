@@ -64,54 +64,52 @@ export const salesPages: SalesPage[] = [
       vslSrc: "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a7a47bc03343f290f1f19b9.mp4",
       vslPoster: null,
     },
+    /* Real recent client deliveries (white-labeled). The ColeLab AI Receptionist
+       cut is featured in the before/after below, so it is not repeated here. */
     clientWork: [
       {
-        src: aiPackClips.master,
-        poster: "/posters/ai-master.jpg",
+        src: "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a7a3025a7433164043136cf.mp4",
+        poster: null,
         label: "All-in-one + AI-First Positioning",
-        sub: "Master explainer, branded",
+        sub: "ColeLab, white-labeled",
       },
       {
-        src: aiPackClips.demo,
+        src: "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a7a4c091635e466c1e310a5.mp4",
         poster: null,
-        label: "Customer Journey: Lead to Close",
-        sub: "Platform demo, branded",
-      },
-      {
-        src: aiPackClips.receptionist,
-        poster: "/posters/ai-receptionist.jpg",
         label: "AI Receptionist + Conversational AI",
-        sub: "Feature explainer, branded",
+        sub: "SPEEDMOBI, white-labeled",
       },
       {
-        src: aiPackClips.reputation,
-        poster: "/posters/ai-reputation.jpg",
-        label: "Reputation Management + Reviews AI",
-        sub: "Feature explainer, branded",
-      },
-      {
-        src: aiPackClips.inbox,
-        poster: "/posters/ai-inbox.jpg",
-        label: "Unified Inbox + Conversational AI",
-        sub: "Feature explainer, branded",
-      },
-      {
-        src: aiPackClips.social,
+        src: "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a7a4c098880872019f23ce4.mp4",
         poster: null,
-        label: "Social Media Planner + Content AI",
-        sub: "Feature explainer, branded",
+        label: "AI Receptionist + Conversational AI",
+        sub: "My Lead Hub, white-labeled",
       },
       {
-        src: "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a56fa0fbaf5f6da40287c33.mp4",
-        poster: "/posters/hl-full-pitch.jpg",
-        label: "HighLevel Full Platform Pitch",
-        sub: "Full platform pitch, branded",
+        src: "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a7a4dff03343f290f26b7e8.mp4",
+        poster: null,
+        label: "Unified Inbox + Conversational AI",
+        sub: "My Lead Hub, white-labeled",
+      },
+      {
+        src: "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a7a4dff9994d35aa0a808ed.mp4",
+        poster: null,
+        label: "Reputation Management + Reviews AI",
+        sub: "ColeLab, white-labeled",
+      },
+      {
+        src: "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a7a63f0157190b359282bab.mp4",
+        poster: null,
+        label: "All-in-one + AI-First Positioning",
+        sub: "SPEEDMOBI, white-labeled",
       },
     ],
     whiteLabel: {
-      defaultSrc: null,
-      brandedSrc: aiPackClips.master,
-      poster: "/posters/ai-master.jpg",
+      // Before/after of the AI Receptionist video: the generic (brand-agnostic)
+      // cut on the left, ColeLab's white-labeled delivery on the right.
+      defaultSrc: aiPackClips.receptionist,
+      brandedSrc: "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a7a4dff03343f290f26b7de.mp4",
+      poster: "/posters/ai-receptionist.jpg",
     },
     closing: {
       headline: "Your videos are",
