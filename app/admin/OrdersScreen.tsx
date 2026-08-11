@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { authHeader, money, supabase, when } from "./client";
 import { AdminModal } from "./Modal";
-import { bundlePickTitles } from "@/lib/sales/pages";
+import { bundlePickTitles } from "@/lib/bundles";
 
 export type OrderRow = {
   id: string;

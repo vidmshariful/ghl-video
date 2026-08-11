@@ -1,4 +1,4 @@
-import { SB_URL, SB_ANON } from "@/lib/chrome";
+import { SB_URL, SB_ANON } from "@/lib/supabase-config";
 import { buildCatalogRows, type CatalogRow } from "@/lib/catalog-scheme";
 
 export type { CatalogRow } from "@/lib/catalog-scheme";

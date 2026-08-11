@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { SB_ANON, SB_URL } from "@/lib/chrome";
+import { SB_ANON, SB_URL } from "@/lib/supabase-config";
 
 /*
  * The live capacity chip: "N slots left this week" beside a page's

@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { SB_ANON, SB_URL } from "@/lib/chrome";
+import { SB_ANON, SB_URL } from "@/lib/supabase-config";
 
 /*
  * One browser Supabase client, shared by /admin and /portal, so a tab has

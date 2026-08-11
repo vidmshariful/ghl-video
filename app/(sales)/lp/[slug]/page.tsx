@@ -18,13 +18,8 @@ import {
   studioSince,
   trustLogos,
 } from "@/lib/site";
-import {
-  salesBundles,
-  salesPageBySlug,
-  salesPages,
-  salesShared,
-  type SalesBundle,
-} from "@/lib/sales/pages";
+import { salesBundles, type SalesBundle } from "@/lib/bundles";
+import { salesPageBySlug, salesPages, salesShared } from "@/lib/sales/pages";
 import { SpVideo } from "@/components/sales/SpVideo";
 import { JsonLd } from "@/components/JsonLd";
 import { faqSchema, serviceSchema } from "@/lib/schema";

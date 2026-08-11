@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
-import { validateBundleSelections, type BundleSelections } from "@/lib/sales/pages";
+import { validateBundleSelections, type BundleSelections } from "@/lib/bundles";
 
 export const runtime = "nodejs";
 

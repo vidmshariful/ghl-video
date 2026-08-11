@@ -1,6 +1,6 @@
 import "server-only";
 import { createClient } from "@supabase/supabase-js";
-import { SB_ANON, SB_URL } from "@/lib/chrome";
+import { SB_ANON, SB_URL } from "@/lib/supabase-config";
 
 /*
  * Verify a Supabase Auth session token from a request and return the

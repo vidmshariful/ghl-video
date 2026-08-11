@@ -7,7 +7,7 @@ import {
   salesBundleBySku,
   type BundlePickKey,
   type BundleSelections,
-} from "@/lib/sales/pages";
+} from "@/lib/bundles";
 
 /*
  * The branding brief a buyer fills out right after paying (no login: the order

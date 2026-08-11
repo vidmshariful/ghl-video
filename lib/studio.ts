@@ -1,4 +1,4 @@
-import { SB_ANON, SB_URL } from "@/lib/chrome";
+import { SB_ANON, SB_URL } from "@/lib/supabase-config";
 
 /*
  * Studio Insights data: capacity slots and the production board, read

@@ -16,7 +16,7 @@
 import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 import { oneTimeSellableProducts } from "@/lib/site";
-import { salesBundles } from "@/lib/sales/pages";
+import { salesBundles } from "@/lib/bundles";
 
 // --- env (parse .env.local the same way the other scripts do) ---
 const env: Record<string, string> = {};
