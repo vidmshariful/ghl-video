@@ -225,6 +225,19 @@ p {
   text-wrap: pretty;
 }
 
+/* Dismissed soft-launch notice: hide the bar and collapse the header + page
+   offset it reserved. The (site) layout's inline script sets data-notice="off"
+   from localStorage before paint, so there is no flash on a return visit. */
+html[data-notice="off"] [data-notice-bar] {
+  display: none;
+}
+html[data-notice="off"] [data-site-header] {
+  top: 0;
+}
+html[data-notice="off"] #main {
+  padding-top: 0;
+}
+
 ::selection {
   background: rgba(252, 192, 0, 0.3);
   color: #08090d;

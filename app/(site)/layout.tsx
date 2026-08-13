@@ -51,7 +51,19 @@ export default async function SiteLayout({
       >
         Skip to content
       </a>
-      {siteNotice ? <NoticeBar notice={siteNotice} /> : null}
+      {siteNotice ? (
+        <>
+          {/* pre-paint: if the notice was dismissed before, collapse its offset
+              before render so there is no flash of the bar or the empty gap */}
+          <script
+            dangerouslySetInnerHTML={{
+              __html:
+                "try{if(localStorage.getItem('ghlv_notice_off_v1'))document.documentElement.setAttribute('data-notice','off')}catch(e){}",
+            }}
+          />
+          <NoticeBar notice={siteNotice} />
+        </>
+      ) : null}
       <PageFrame />
       <ScrollRuler />
       <Header nav={chrome.nav} services={chrome.services} hasNotice={!!siteNotice} />

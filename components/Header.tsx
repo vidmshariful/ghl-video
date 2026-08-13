@@ -354,10 +354,18 @@ export function Header({
   }, []);
 
   /* publish the chrome height (notice + header) so a sticky sub-nav can dock
-     right below it; updates as the header shrinks on scroll */
+     right below it; updates as the header shrinks on scroll, and when the
+     soft-launch notice is dismissed (its 36px drops out) */
   useEffect(() => {
-    const h = (hasNotice ? 36 : 0) + (scrolled ? 56 : 80);
-    document.documentElement.style.setProperty("--chrome-h", `${h}px`);
+    const compute = () => {
+      const noticeOn =
+        hasNotice && document.documentElement.getAttribute("data-notice") !== "off";
+      const h = (noticeOn ? 36 : 0) + (scrolled ? 56 : 80);
+      document.documentElement.style.setProperty("--chrome-h", `${h}px`);
+    };
+    compute();
+    window.addEventListener("ghlv:notice-dismissed", compute);
+    return () => window.removeEventListener("ghlv:notice-dismissed", compute);
   }, [scrolled, hasNotice]);
 
   /* close the menu on navigation, lock scroll while open */
