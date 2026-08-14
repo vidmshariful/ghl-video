@@ -12,6 +12,7 @@
  */
 export * from "./content/core";
 export * from "./content/niche";
+export * from "./content/deliveries";
 export * from "./content/media";
 export * from "./content/premade";
 export * from "./content/proof";

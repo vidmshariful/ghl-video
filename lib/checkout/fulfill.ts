@@ -29,7 +29,10 @@ export async function syncPaidOrderToHighLevel(
   const meta = order.metadata ?? {};
   try {
     const product = await getActiveProductBySku((meta.sku as string) ?? "");
-    const tags = (product?.metadata?.hl_tags as string[]) ?? ["ghlv-purchase"];
+    const tags = [...((product?.metadata?.hl_tags as string[]) ?? ["ghlv-purchase"])];
+    // credit the referring affiliate (attribution), when the order carried one
+    const ref = typeof meta.ref === "string" ? meta.ref : null;
+    if (ref) tags.push(`affiliate:${ref}`);
     const { data: customer } = await db
       .from("customers")
       .select("name, phone, company")
@@ -97,7 +100,10 @@ export async function syncSubscriptionToHighLevel(
   const meta = sub.metadata ?? {};
   try {
     const product = await getActiveProductBySku((meta.sku as string) ?? "");
-    const tags = (product?.metadata?.hl_tags as string[]) ?? ["ghlv-editing-subscriber"];
+    const tags = [...((product?.metadata?.hl_tags as string[]) ?? ["ghlv-editing-subscriber"])];
+    // credit the referring affiliate (attribution), when the sub carried one
+    const ref = typeof meta.ref === "string" ? meta.ref : null;
+    if (ref) tags.push(`affiliate:${ref}`);
     const { data: customer } = await db
       .from("customers")
       .select("name, phone, company")

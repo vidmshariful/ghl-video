@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getActiveProductBySku } from "@/lib/checkout/products";
 import { resolveSelectedBumps } from "@/lib/checkout/bumps";
 import { checkCoupon } from "@/lib/checkout/coupons";
+import { refFromCookieHeader } from "@/lib/affiliates";
 import { ensureAuthAccount } from "@/lib/checkout/account";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { stripe } from "@/lib/checkout/stripe";
@@ -43,6 +44,10 @@ export async function POST(req: Request) {
   const bumpIds = Array.isArray(payload.bumpIds)
     ? (payload.bumpIds as unknown[]).filter((x): x is string => typeof x === "string").slice(0, 10)
     : [];
+
+  // First-touch affiliate ref (set as a cookie by the middleware from a ?ref=
+  // link). Recorded on the order for attribution; it never affects the price.
+  const ref = refFromCookieHeader(req.headers.get("cookie"));
 
   if (!paymentIntentId.startsWith("pi_")) {
     return NextResponse.json({ error: "Missing payment." }, { status: 400 });
@@ -110,6 +115,7 @@ export async function POST(req: Request) {
             base_cents: product.price_cents,
             bumps: bumps.map((b) => ({ id: b.id, name: b.name, price_cents: b.priceCents })),
             ...(couponMeta ? { coupon: couponMeta } : {}),
+            ...(ref ? { ref } : {}),
           },
         })
         .eq("id", existing.id)
@@ -125,6 +131,7 @@ export async function POST(req: Request) {
             // empty string deletes the key on a retry that dropped the code
             coupon_code: couponMeta?.code ?? "",
             discount_cents: couponMeta ? String(discountCents) : "",
+            ...(ref ? { ref } : {}),
           },
         });
       } catch {
@@ -189,6 +196,7 @@ export async function POST(req: Request) {
       bump_cents: String(bumpsCents),
       coupon_code: couponMeta?.code ?? "",
       discount_cents: couponMeta ? String(discountCents) : "",
+      ...(ref ? { ref } : {}),
     },
   });
 
@@ -207,6 +215,7 @@ export async function POST(req: Request) {
         base_cents: product.price_cents,
         bumps: bumps.map((b) => ({ id: b.id, name: b.name, price_cents: b.priceCents })),
         ...(couponMeta ? { coupon: couponMeta } : {}),
+        ...(ref ? { ref } : {}),
       },
     })
     .select()

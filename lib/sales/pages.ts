@@ -1,6 +1,7 @@
 import { aiPackClips } from "@/lib/content/premade";
 import { deliveryWindow, studioSince } from "@/lib/content/core";
 import { nicheAddon } from "@/lib/content/niche";
+import { recentDeliveries } from "@/lib/content/deliveries";
 
 /*
  * The registry of sales landing pages. Each page is a code-defined
@@ -25,11 +26,22 @@ export type SalesClip = {
   sub: string;
 };
 
-export type SalesPage = {
+/* Fields every sales page shares, whichever kind it is. */
+type SalesPageBase = {
   slug: string;
   title: string; // internal name shown in the admin list
   campaign: string; // what it is used for
   status: SalesPageStatus;
+  /* when true, the page is a real, indexable funnel page (not a private
+     outreach-only LP) and uses the seo block for its metadata. */
+  indexable?: boolean;
+  seo?: { title: string; description: string };
+};
+
+/* The default kind: a premade-video landing page (library + bundles +
+ * white-label showcase). Rendered inline by app/(sales)/lp/[slug]/page.tsx. */
+export type PremadeSalesPage = SalesPageBase & {
+  kind?: "premade";
   hero: {
     eyebrow: string;
     headline: string;
@@ -43,11 +55,30 @@ export type SalesPage = {
   /* the same video, HighLevel's default cut vs branded to the client */
   whiteLabel: { defaultSrc: string | null; brandedSrc: string | null; poster: string | null };
   closing: { headline: string; accent: string; sub: string };
-  /* when true, the page is a real, indexable funnel page (not a private
-     outreach-only LP) and uses the seo block for its metadata. */
-  indexable?: boolean;
-  seo?: { title: string; description: string };
 };
+
+/* An affiliate-partner landing page: a partner-branded pitch for the editing
+ * service. The discount + credit come from the partner's affiliateRef (see
+ * lib/affiliates.ts); the render lives in components/sales/PartnerLanding.tsx.
+ * Add one of these and a matching lib/affiliates.ts entry to launch a partner. */
+export type PartnerSalesPage = SalesPageBase & {
+  kind: "partner";
+  /* the partner's ref, keyed into lib/affiliates.ts (drives discount + credit) */
+  affiliateRef: string;
+  partner: {
+    name: string;
+    role: string; // e.g. "GHL Video affiliate partner"
+    photo: string | null; // /partners/<slug>.jpg, or null for a designed placeholder
+    tagline: string; // "A friend of Jonah is a friend of GHL Video."
+    offer: string; // the discount line shown in the hero
+    endorsement?: string; // one line in the partner's own voice (needs their sign-off)
+    heroVideoSrc?: string | null; // optional showreel; null renders a placeholder
+    heroVideoPoster?: string | null;
+  };
+  closing: { headline: string; accent: string; sub: string };
+};
+
+export type SalesPage = PremadeSalesPage | PartnerSalesPage;
 
 export const salesPages: SalesPage[] = [
   {
@@ -70,46 +101,8 @@ export const salesPages: SalesPage[] = [
       vslSrc: "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a7a47bc03343f290f1f19b9.mp4",
       vslPoster: null,
     },
-    /* Real recent client deliveries (white-labeled). The ColeLab AI Receptionist
-       cut is featured in the before/after below, so it is not repeated here. */
-    clientWork: [
-      {
-        src: "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a7a3025a7433164043136cf.mp4",
-        poster: null,
-        label: "All-in-one + AI-First Positioning",
-        sub: "ColeLab, white-labeled",
-      },
-      {
-        src: "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a7a4c091635e466c1e310a5.mp4",
-        poster: null,
-        label: "AI Receptionist + Conversational AI",
-        sub: "SPEEDMOBI, white-labeled",
-      },
-      {
-        src: "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a7a4c098880872019f23ce4.mp4",
-        poster: null,
-        label: "AI Receptionist + Conversational AI",
-        sub: "My Lead Hub, white-labeled",
-      },
-      {
-        src: "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a7a4dff03343f290f26b7e8.mp4",
-        poster: null,
-        label: "Unified Inbox + Conversational AI",
-        sub: "My Lead Hub, white-labeled",
-      },
-      {
-        src: "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a7a4dff9994d35aa0a808ed.mp4",
-        poster: null,
-        label: "Reputation Management + Reviews AI",
-        sub: "ColeLab, white-labeled",
-      },
-      {
-        src: "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a7a63f0157190b359282bab.mp4",
-        poster: null,
-        label: "All-in-one + AI-First Positioning",
-        sub: "SPEEDMOBI, white-labeled",
-      },
-    ],
+    /* Real recent client deliveries: the one shared list in lib/content/deliveries. */
+    clientWork: recentDeliveries,
     whiteLabel: {
       // Before/after of the AI Receptionist video: the generic (brand-agnostic)
       // cut on the left, ColeLab's white-labeled delivery on the right.
@@ -121,6 +114,39 @@ export const salesPages: SalesPage[] = [
       headline: "Your videos are",
       accent: "one order away.",
       sub: `Pick a single or the full pack, send your brand kit, and publish this week. Most orders land in ${deliveryWindow}.`,
+    },
+  },
+  {
+    kind: "partner",
+    slug: "jonah-cockshaw",
+    title: "Jonah Cockshaw (affiliate)",
+    campaign: "Affiliate partner page for Jonah Cockshaw's audience",
+    status: "live",
+    // Private partner page, not a public SEO funnel: indexable omitted -> noindex.
+    affiliateRef: "jonah",
+    seo: {
+      title: "GHL Video for Friends of Jonah Cockshaw",
+      description:
+        "Jonah Cockshaw's audience gets 10% off GHL Video's HighLevel video editing service for the first 3 months, applied automatically. Long-form and short-form edits from a HighLevel-fluent team.",
+    },
+    partner: {
+      name: "Jonah Cockshaw",
+      role: "GHL Video affiliate partner",
+      // The headshot renders once public/partners/jonah-cockshaw.jpg exists;
+      // until then PartnerLanding shows a designed "JC" placeholder (it checks
+      // the file on disk), so this path is safe to set before the file lands.
+      photo: "/partners/jonah-cockshaw.jpg",
+      tagline: "A friend of Jonah is a friend of GHL Video.",
+      offer:
+        "Get 10% off our HighLevel video editing service for your first 3 months, applied automatically at checkout.",
+      // endorsement intentionally omitted until Jonah provides a line in his own voice.
+      heroVideoSrc: null,
+      heroVideoPoster: null,
+    },
+    closing: {
+      headline: "Your videos,",
+      accent: "edited and ready.",
+      sub: "Start your plan today, send your footage, and get back polished long-form and short-form edits. Your 10% off applies automatically for the first 3 months.",
     },
   },
 ];

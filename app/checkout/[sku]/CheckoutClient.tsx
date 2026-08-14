@@ -86,6 +86,11 @@ type CommonProps = {
   clients: number;
   /* a ?code= in the checkout URL (campaign links); auto-applied on load */
   initialCouponCode?: string | null;
+  /* affiliate ref resolved server-side (partner links); sent back with the
+     subscription so the server applies the matching coupon */
+  partnerRef?: string | null;
+  /* subscription discount to display, derived server-side from the same ref */
+  subDiscount?: { percentOff: number; months: number; label: string } | null;
 };
 
 type AppliedCoupon = { code: string; label: string; discountCents: number };
@@ -460,6 +465,8 @@ function SubscriptionCheckout({
   included,
   sku,
   rating,
+  partnerRef,
+  subDiscount,
 }: CommonProps) {
   const [details, setDetails] = useState<Details>(EMPTY);
   const [step, setStep] = useState<"details" | "payment">("details");
@@ -468,7 +475,17 @@ function SubscriptionCheckout({
   const [successPath, setSuccessPath] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
 
-  const totalLabel = `${money(priceCents, currency)}/mo`;
+  // Affiliate discount (e.g. 10% off the first 3 months): what the buyer sees.
+  // The charge is enforced by the Stripe coupon create-subscription applies
+  // from the same ref, so this display can never diverge from what is billed.
+  const monthlyDiscountCents = subDiscount
+    ? Math.round((priceCents * subDiscount.percentOff) / 100)
+    : 0;
+  const fullLabel = `${money(priceCents, currency)}/mo`;
+  const payLabel = subDiscount
+    ? `${money(priceCents - monthlyDiscountCents, currency)}/mo`
+    : fullLabel;
+
   const set =
     (k: keyof Details) => (e: React.ChangeEvent<HTMLInputElement>) =>
       setDetails((d) => ({ ...d, [k]: e.target.value }));
@@ -482,7 +499,7 @@ function SubscriptionCheckout({
       const r = await fetch("/api/checkout/create-subscription", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sku, ...details }),
+        body: JSON.stringify({ sku, ...details, ref: partnerRef ?? undefined }),
       });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error ?? "Could not start checkout.");
@@ -512,7 +529,7 @@ function SubscriptionCheckout({
         <PaymentBlock open={step === "payment"}>
           {step === "payment" && clientSecret && successPath ? (
             <Elements stripe={stripePromise} options={{ clientSecret, appearance }}>
-              <SubPayStep successUrl={successPath} totalLabel={totalLabel} />
+              <SubPayStep successUrl={successPath} totalLabel={payLabel} />
             </Elements>
           ) : null}
         </PaymentBlock>
@@ -527,11 +544,24 @@ function SubscriptionCheckout({
         bumps={[]}
         selected={[]}
         onToggle={() => {}}
-        baseLabel={totalLabel}
+        baseLabel={fullLabel}
         chosen={[]}
         currency={currency}
-        totalLabel={totalLabel}
+        totalLabel={payLabel}
         rating={rating}
+        discount={
+          subDiscount
+            ? {
+                label: `${subDiscount.label}, ${subDiscount.percentOff}% off ${subDiscount.months} mo`,
+                amountLabel: `-${money(monthlyDiscountCents, currency)}/mo`,
+              }
+            : null
+        }
+        subNote={
+          subDiscount
+            ? `${subDiscount.percentOff}% off for your first ${subDiscount.months} months, then ${fullLabel}. Cancel anytime.`
+            : undefined
+        }
       />
     </div>
   );
@@ -742,6 +772,7 @@ function OrderSummary({
   rating,
   couponBox = null,
   discount = null,
+  subNote,
 }: {
   code: string | null;
   name: string;
@@ -758,6 +789,9 @@ function OrderSummary({
   rating: string;
   couponBox?: React.ReactNode;
   discount?: { label: string; amountLabel: string } | null;
+  /* overrides the default "Billed monthly / One-time" line (e.g. to spell out
+     an intro discount term) */
+  subNote?: string;
 }) {
   return (
     <aside className="flex h-full flex-col bg-canvas">
@@ -867,7 +901,7 @@ function OrderSummary({
             <span className="font-display text-price text-gold [font-variant-numeric:tabular-nums]">{totalLabel}</span>
           </div>
           <p className="mt-2 text-body-sm text-dim">
-            {isSub ? "Billed monthly. Cancel anytime." : "One-time payment. No subscription."}
+            {subNote ?? (isSub ? "Billed monthly. Cancel anytime." : "One-time payment. No subscription.")}
           </p>
 
           <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-hair pt-5 font-mono text-label uppercase tracking-[0.06em] text-muted">

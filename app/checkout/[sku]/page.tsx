@@ -1,6 +1,8 @@
 import { notFound, redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import type { Metadata } from "next";
 import { getActiveProductBySku } from "@/lib/checkout/products";
+import { affiliateByRef } from "@/lib/affiliates";
 import { newCodeForOldSku } from "@/lib/catalog-db";
 import { getApplicableBumps } from "@/lib/checkout/bumps";
 import { CheckoutTrust } from "@/components/checkout/CheckoutTrust";
@@ -22,20 +24,29 @@ export default async function CheckoutPage({
   searchParams,
 }: {
   params: Promise<{ sku: string }>;
-  searchParams: Promise<{ code?: string | string[] }>;
+  searchParams: Promise<{ code?: string | string[]; ref?: string | string[] }>;
 }) {
   const { sku } = await params;
   const sp = await searchParams;
   /* campaign links carry ?code=; validated server-side on apply and again
      at finalize, so the URL can never change what is charged */
   const initialCouponCode = typeof sp.code === "string" ? sp.code.slice(0, 32) : null;
+  /* partner links carry ?ref=; the affiliate discount is re-derived here (and
+     again server-side at create-subscription), so the URL can never set a
+     price. Falls back to the first-touch ghlv_ref cookie for a returning buyer. */
+  const refParam = typeof sp.ref === "string" ? sp.ref : null;
+  const affiliate =
+    affiliateByRef(refParam) ?? affiliateByRef((await cookies()).get("ghlv_ref")?.value);
   const product = await getActiveProductBySku(sku);
   if (!product) {
     // a retired sku (renumbered or replaced) forwards to its current code so
     // old links, ads, and bookmarks keep working instead of 404ing
     const current = await newCodeForOldSku(sku);
     if (current) {
-      const q = initialCouponCode ? `?code=${encodeURIComponent(initialCouponCode)}` : "";
+      const qs = new URLSearchParams();
+      if (initialCouponCode) qs.set("code", initialCouponCode);
+      if (affiliate) qs.set("ref", affiliate.ref);
+      const q = qs.toString() ? `?${qs.toString()}` : "";
       redirect(`/checkout/${current}/${q}`);
     }
     notFound();
@@ -82,6 +93,18 @@ export default async function CheckoutPage({
           "Full commercial rights",
         ];
 
+  /* subscription discount to SHOW the buyer, when a partner ref resolved.
+     create-subscription applies the real coupon from the same ref server-side. */
+  const partnerRef = isSub ? (affiliate?.ref ?? null) : null;
+  const subDiscount =
+    isSub && affiliate
+      ? {
+          percentOff: affiliate.discountPercent,
+          months: affiliate.discountMonths,
+          label: affiliate.summaryLabel,
+        }
+      : null;
+
   return (
     <>
       {/* the checkout box is one ruled cell-grid, drawn into the page like every
@@ -112,6 +135,8 @@ export default async function CheckoutPage({
               rating={rating}
               clients={clients}
               initialCouponCode={product.type === "one_time" ? initialCouponCode : null}
+              partnerRef={partnerRef}
+              subDiscount={subDiscount}
             />
           </RuledBox>
         </div>

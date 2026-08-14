@@ -21,6 +21,7 @@ import {
 import { salesBundles, type SalesBundle } from "@/lib/bundles";
 import { salesPageBySlug, salesPages, salesShared } from "@/lib/sales/pages";
 import { SpVideo } from "@/components/sales/SpVideo";
+import { PartnerLanding } from "@/components/sales/PartnerLanding";
 import { JsonLd } from "@/components/JsonLd";
 import { faqSchema, serviceSchema } from "@/lib/schema";
 
@@ -38,8 +39,13 @@ export async function generateMetadata({
   const { slug } = await params;
   const page = salesPageBySlug(slug);
   if (!page) return { title: "GHL Video" };
-  const title = page.seo?.title ?? `${page.hero.headline} ${page.hero.accent}`;
-  const description = page.seo?.description ?? page.hero.sub;
+  const title =
+    page.seo?.title ??
+    (page.kind === "partner"
+      ? `${page.partner.name} and GHL Video`
+      : `${page.hero.headline} ${page.hero.accent}`);
+  const description =
+    page.seo?.description ?? (page.kind === "partner" ? page.partner.offer : page.hero.sub);
   return {
     title: `${title} | GHL Video`,
     description,
@@ -143,6 +149,10 @@ export default async function SalesLandingPage({
   const { slug } = await params;
   const page = salesPageBySlug(slug);
   if (!page) notFound();
+
+  // Affiliate-partner pages are a different animal (partner pitch for the
+  // editing service): render their own component and skip the premade body.
+  if (page.kind === "partner") return <PartnerLanding page={page} />;
 
   const ft = featuredTestimonial; // Chase Buckner
 

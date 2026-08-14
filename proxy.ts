@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { REF_COOKIE, normalizeRef } from "@/lib/affiliates";
 
 /*
  * Region gate + VPN/proxy gate + team bypass. Next's request interceptor (the
@@ -29,6 +30,7 @@ const BYPASS_COOKIE = "ghlv_pass";
 const CHECK_COOKIE = "ghlv_chk";
 const ONE_YEAR = 60 * 60 * 24 * 365;
 const CHECK_TTL = 60 * 60 * 6; // re-check a given IP at most every 6 hours
+const REF_TTL = 60 * 60 * 24 * 90; // affiliate first-touch: remember for 90 days
 
 const HTML_HEADERS = {
   "content-type": "text/html; charset=utf-8",
@@ -150,9 +152,28 @@ async function isProxy(ip: string, apiKey: string): Promise<boolean | null> {
 }
 
 export async function proxy(req: NextRequest) {
+  // First-touch affiliate capture. If a ?ref= is present and no ref cookie is
+  // set yet, remember it for 90 days. This runs before and independent of the
+  // gate (so partner links credit their partner even while the gate is
+  // dormant), and only ever ADDS a Set-Cookie: it never changes a gate verdict.
+  const ref = normalizeRef(req.nextUrl.searchParams.get("ref"));
+  const hasRef = Boolean(req.cookies.get(REF_COOKIE));
+  const withRef = (res: NextResponse) => {
+    if (ref && !hasRef) {
+      res.cookies.set(REF_COOKIE, ref, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+        path: "/",
+        maxAge: REF_TTL,
+      });
+    }
+    return res;
+  };
+
   try {
     const key = process.env.ACCESS_BYPASS_KEY;
-    if (!key) return NextResponse.next(); // dormant until the key is set
+    if (!key) return withRef(NextResponse.next()); // dormant until the key is set
 
     const { pathname, searchParams } = req.nextUrl;
     // trailingSlash:true normalizes /unlock -> /unlock/, so match either form
@@ -169,16 +190,16 @@ export async function proxy(req: NextRequest) {
         path: "/",
         maxAge: ONE_YEAR,
       });
-      return res;
+      return withRef(res);
     }
 
     // The team bypass exempts the country block AND the VPN check.
-    if (req.cookies.get(BYPASS_COOKIE)?.value === key) return NextResponse.next();
+    if (req.cookies.get(BYPASS_COOKIE)?.value === key) return withRef(NextResponse.next());
 
     // 1) Country block (never needs the API, so it always holds).
     const country = (req.headers.get("x-vercel-ip-country") ?? "").toUpperCase();
     if (country && blockedCountries().has(country)) {
-      return new NextResponse(REGION_PAGE, { status: 403, headers: HTML_HEADERS });
+      return withRef(new NextResponse(REGION_PAGE, { status: 403, headers: HTML_HEADERS }));
     }
 
     // 2) VPN / proxy block (only when configured), cached per IP.
@@ -210,21 +231,21 @@ export async function proxy(req: NextRequest) {
             httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: CHECK_TTL,
           });
         }
-        return res;
+        return withRef(res);
       }
       if (verdict === "ok" && fresh) {
         const res = NextResponse.next();
         res.cookies.set(CHECK_COOKIE, await issueCheck(key, "ok", ip), {
           httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: CHECK_TTL,
         });
-        return res;
+        return withRef(res);
       }
     }
 
-    return NextResponse.next();
+    return withRef(NextResponse.next());
   } catch {
     // Fail open: never take the whole site down over a gate error.
-    return NextResponse.next();
+    return withRef(NextResponse.next());
   }
 }
 

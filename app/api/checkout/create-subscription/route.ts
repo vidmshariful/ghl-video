@@ -3,6 +3,7 @@ import { getActiveProductBySku } from "@/lib/checkout/products";
 import { ensureAuthAccount } from "@/lib/checkout/account";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { stripe } from "@/lib/checkout/stripe";
+import { affiliateByRef, refFromCookieHeader } from "@/lib/affiliates";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -39,6 +40,14 @@ export async function POST(req: Request) {
   const company = asStr(payload.company) || null;
   const phone = asStr(payload.phone) || null;
 
+  // The referring affiliate, from the posted ref or the first-touch ghlv_ref
+  // cookie. The client only sends a ref; the coupon + discount are derived here
+  // server-side, so a checkout URL can never invent a price.
+  const affiliate =
+    affiliateByRef(asStr(payload.ref)) ??
+    affiliateByRef(refFromCookieHeader(req.headers.get("cookie")));
+  const ref = affiliate?.ref ?? null;
+
   if (!sku) return NextResponse.json({ error: "Missing plan." }, { status: 400 });
   if (!name) return NextResponse.json({ error: "Name is required." }, { status: 400 });
   if (!email || !EMAIL_RE.test(email)) {
@@ -73,14 +82,18 @@ export async function POST(req: Request) {
   // (Stripe would only expire the extras ~23h later).
   const { data: pending } = await db
     .from("subscriptions")
-    .select("stripe_subscription_id")
+    .select("stripe_subscription_id, metadata")
     .eq("customer_email", email)
     .eq("product_id", product.id)
     .eq("status", "incomplete")
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (pending?.stripe_subscription_id) {
+  // Only reuse a still-pending sub if it carries the same affiliate ref, so a
+  // buyer arriving via a partner link is never handed an earlier no-discount
+  // sub (or vice versa); a mismatch falls through and creates a fresh one.
+  const pendingRef = (pending?.metadata as { ref?: string } | null)?.ref ?? null;
+  if (pending?.stripe_subscription_id && pendingRef === ref) {
     try {
       const existing = await stripe().subscriptions.retrieve(pending.stripe_subscription_id, {
         expand: ["latest_invoice.confirmation_secret"],
@@ -101,14 +114,18 @@ export async function POST(req: Request) {
     {
       customer: stripeCustomerId,
       items: [{ price: priceId }],
+      // Affiliate discount (e.g. 10% off the first 3 months): a real Stripe
+      // coupon, resolved server-side from the ref so the client never sets it.
+      ...(affiliate ? { discounts: [{ coupon: affiliate.stripeCouponId }] } : {}),
       payment_behavior: "default_incomplete",
       payment_settings: { save_default_payment_method: "on_subscription" },
       expand: ["latest_invoice.confirmation_secret"],
-      metadata: { sku, customer_email: email },
+      metadata: { sku, customer_email: email, ...(ref ? { ref } : {}) },
     },
     // Same-minute duplicates (double-click racing past the reuse check above)
-    // collapse onto one Stripe subscription.
-    { idempotencyKey: `create-sub_${customer.id}_${sku}_${Math.floor(Date.now() / 60_000)}` },
+    // collapse onto one Stripe subscription. The ref is in the key so a no-ref
+    // attempt can't mask a later ref attempt within the same minute.
+    { idempotencyKey: `create-sub_${customer.id}_${sku}_${ref ?? ""}_${Math.floor(Date.now() / 60_000)}` },
   );
 
   // Current Stripe API (2026-...) carries the first invoice's client secret
@@ -132,7 +149,7 @@ export async function POST(req: Request) {
     amount_cents: product.price_cents,
     currency: product.currency,
     interval: "month",
-    metadata: { sku },
+    metadata: { sku, ...(ref ? { ref } : {}) },
   });
   if (rowErr && rowErr.code !== "23505") {
     // Not fatal to the buyer (the webhook reconstructs missing rows from the

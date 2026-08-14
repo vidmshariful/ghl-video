@@ -31,17 +31,7 @@ import { WhiteLabelDemo } from "@/components/pages/WhiteLabelDemo";
 import { TrustStrip } from "@/components/home/TrustStrip";
 import { MediaFrame } from "@/components/MediaFrame";
 import { faqSchema, productCatalogSchema, serviceSchema } from "@/lib/schema";
-import { aiPackClips, cta, deliveryWindow, pages, sellableProducts, site } from "@/lib/site";
-
-/* recent branded deliveries, shown so a buyer sees the outcome on their brand */
-const recentDelivered: { src: string; poster: string | null; label: string; sub: string }[] = [
-  { src: aiPackClips.master, poster: "/posters/ai-master.jpg", label: "All-in-one + AI-First Positioning", sub: "Master explainer" },
-  { src: aiPackClips.receptionist, poster: "/posters/ai-receptionist.jpg", label: "AI Receptionist + Conversational AI", sub: "Feature explainer" },
-  { src: aiPackClips.reputation, poster: "/posters/ai-reputation.jpg", label: "Reputation Management + Reviews AI", sub: "Feature explainer" },
-  { src: aiPackClips.inbox, poster: "/posters/ai-inbox.jpg", label: "Unified Inbox + Conversational AI", sub: "Feature explainer" },
-  { src: aiPackClips.social, poster: null, label: "Social Media Planner + Content AI", sub: "Feature explainer" },
-  { src: aiPackClips.website, poster: null, label: "AI Website + Funnel Builder", sub: "Feature explainer" },
-];
+import { cta, deliveryWindow, pages, recentDeliveries, sellableProducts, site } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "GoHighLevel White-Label Videos and Video Packs",
@@ -219,8 +209,8 @@ export default async function PremadePage() {
             center
           />
           <div className="mt-12 grid gap-x-5 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
-            {recentDelivered.map((v) => (
-              <div key={v.label} className="group/card">
+            {recentDeliveries.map((v) => (
+              <div key={v.src} className="group/card">
                 <MediaFrame
                   src={v.src}
                   poster={v.poster}

@@ -862,3 +862,249 @@
 .sp-faq-a {
   margin-top: 0.75rem;
 }
+
+/* ==================================================================
+ * Affiliate partner landing page (components/sales/PartnerLanding.tsx)
+ * ================================================================== */
+
+/* ---- partner hero: portrait + pitch ---- */
+.sp-partner {
+  display: grid;
+  gap: 1.75rem;
+  align-items: center;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 860px) {
+  .sp-partner {
+    grid-template-columns: 0.82fr 1.18fr;
+    gap: 3rem;
+  }
+}
+.sp-partner-photo {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  width: 100%;
+  max-width: 22rem;
+  margin-inline: auto;
+  border-radius: var(--sp-radius);
+  overflow: hidden;
+  border: 1px solid var(--sp-line-strong);
+  background:
+    radial-gradient(70% 70% at 50% 25%, rgba(252, 192, 0, 0.14), transparent 70%),
+    var(--sp-panel-2);
+}
+@media (min-width: 860px) {
+  .sp-partner-photo {
+    max-width: none;
+    margin-inline: 0;
+  }
+}
+.sp-partner-photo > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.sp-partner-initials {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-heading), system-ui, sans-serif;
+  font-weight: 700;
+  font-size: clamp(3.5rem, 9vw, 6rem);
+  background: var(--sp-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ---- the "10% off" offer chip ---- */
+.sp-offer {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  border: 1px solid rgba(252, 192, 0, 0.35);
+  border-radius: 999px;
+  padding: 0.5rem 0.6rem 0.5rem 1.05rem;
+  background: var(--sp-gold-soft);
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--sp-text);
+}
+.sp-offer-tag {
+  border-radius: 999px;
+  background: var(--sp-grad);
+  color: #07080b;
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+  padding: 0.28rem 0.7rem;
+  white-space: nowrap;
+}
+
+/* ---- editing plans grid (up to 3 across) ---- */
+.sp-plans {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 680px) {
+  .sp-plans {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (min-width: 980px) {
+  .sp-plans {
+    grid-template-columns: repeat(3, 1fr);
+    align-items: stretch;
+  }
+}
+.sp-tier-blurb {
+  margin-top: 0.4rem;
+  color: var(--sp-muted);
+  font-size: 0.95rem;
+}
+.sp-tier-price {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-top: 0.6rem;
+}
+/* the discounted first-months line under a plan's price */
+.sp-tier-intro {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--sp-gold);
+}
+
+/* ---- who it's for (editorial split: statement + divided checklist) ---- */
+.sp-who {
+  display: grid;
+  gap: 2.25rem;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 900px) {
+  .sp-who {
+    grid-template-columns: 0.92fr 1.08fr;
+    gap: 3.5rem;
+    align-items: start;
+  }
+}
+.sp-who-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.sp-who-item {
+  display: flex;
+  gap: 1rem;
+  padding: 1.35rem 0;
+  border-top: 1px solid var(--sp-line);
+}
+.sp-who-item:last-child {
+  border-bottom: 1px solid var(--sp-line);
+}
+.sp-who-check {
+  flex-shrink: 0;
+  width: 1.7rem;
+  height: 1.7rem;
+  margin-top: 0.1rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--sp-gold-soft);
+  color: var(--sp-gold);
+}
+.sp-who-title {
+  font-family: var(--font-heading), system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 1.12rem;
+  color: var(--sp-text);
+}
+.sp-who-line {
+  margin-top: 0.28rem;
+  font-size: 0.96rem;
+}
+
+/* ---- how we work (two weighted pillars + a slim loop) ---- */
+.sp-pillars {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 800px) {
+  .sp-pillars {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.sp-pillar {
+  position: relative;
+  border: 1px solid rgba(252, 192, 0, 0.22);
+  border-radius: var(--sp-radius);
+  background:
+    radial-gradient(90% 85% at 100% 0%, rgba(252, 192, 0, 0.08), transparent 55%),
+    var(--sp-panel);
+  padding: clamp(1.7rem, 3vw, 2.5rem);
+  overflow: hidden;
+}
+.sp-pillar-n {
+  display: inline-block;
+  font-family: var(--font-heading), system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 2.4rem;
+  line-height: 1;
+  background: var(--sp-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.sp-loop {
+  margin-top: 1.25rem;
+  border: 1px solid var(--sp-line);
+  border-radius: var(--sp-radius-sm);
+  background: var(--sp-panel);
+  padding: 1.1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem 1.5rem;
+  flex-wrap: wrap;
+}
+.sp-loop-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--sp-dim);
+  font-weight: 600;
+}
+.sp-loop-steps {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.sp-loop-step {
+  font-family: var(--font-heading), system-ui, sans-serif;
+  font-weight: 600;
+  color: var(--sp-text);
+}
+.sp-loop-arrow {
+  color: var(--sp-gold);
+  font-weight: 700;
+}
+
+/* ---- "every plan includes" panel (anchors the guarantees) ---- */
+.sp-includes {
+  border: 1px solid var(--sp-line);
+  border-radius: var(--sp-radius);
+  background:
+    radial-gradient(120% 100% at 50% 0%, rgba(0, 144, 252, 0.05), transparent 60%),
+    var(--sp-panel);
+  padding: clamp(1.8rem, 4vw, 2.75rem);
+}
