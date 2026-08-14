@@ -72,7 +72,7 @@ export const cta = {
 
 export const entityLine = "A brand of Vidiosa LLC";
 export const disclaimer =
-  "GHL Video is not affiliated with or endorsed by GoHighLevel Inc.";
+  "GHL Video is not affiliated with or endorsed by HighLevel Inc.";
 export const otherBrands = [
   { name: "growX", url: "https://growx.studio", domain: "growx.studio" },
   { name: "socialX", url: "https://socialx.studio", domain: "socialx.studio" },

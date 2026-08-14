@@ -458,7 +458,7 @@ export const legalDocs: Record<string, LegalDoc> = {
           },
           {
             "t": "li",
-            "text": "Contact us at hi@gethighlevelvideo.com within three (3) days of receiving the final deliverable."
+            "text": "Contact us at hi@ghlvideo.com within three (3) days of receiving the final deliverable."
           },
           {
             "t": "li",

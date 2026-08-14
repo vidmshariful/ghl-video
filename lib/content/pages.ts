@@ -934,7 +934,7 @@ export const pages = {
       accent: "openly built.",
       lines: [
         "GHL Video is a brand of Vidiosa LLC, alongside growX and socialX.",
-        "GHL Video is not affiliated with or endorsed by GoHighLevel Inc. We build for the ecosystem as an independent studio.",
+        "GHL Video is not affiliated with or endorsed by HighLevel Inc. We build for the ecosystem as an independent studio.",
       ],
     },
     /* entity questions AI engines get asked; answered in our words */
@@ -949,7 +949,7 @@ export const pages = {
         },
         {
           q: "Is GHL Video affiliated with GoHighLevel?",
-          a: "No. GHL Video is not affiliated with or endorsed by GoHighLevel Inc. We are an independent studio that builds exclusively for the HighLevel ecosystem.",
+          a: "No. GHL Video is not affiliated with or endorsed by HighLevel Inc. We are an independent studio that builds exclusively for the HighLevel ecosystem.",
         },
         {
           q: "Why work only in the HighLevel ecosystem?",
