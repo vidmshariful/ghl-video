@@ -63,6 +63,9 @@ export type PremadeSalesPage = SalesPageBase & {
  * Add one of these and a matching lib/affiliates.ts entry to launch a partner. */
 export type PartnerSalesPage = SalesPageBase & {
   kind: "partner";
+  /* when true, render the multi-service template (premade + editing + custom)
+     via MultiPartnerLanding; otherwise the editing-only PartnerLanding. */
+  full?: boolean;
   /* the partner's ref, keyed into lib/affiliates.ts (drives discount + credit) */
   affiliateRef: string;
   partner: {
@@ -147,6 +150,37 @@ export const salesPages: SalesPage[] = [
       headline: "Your videos,",
       accent: "edited and ready.",
       sub: "Start your plan today, send your footage, and get back polished long-form and short-form edits. Your 10% off applies automatically for the first 3 months.",
+    },
+  },
+  {
+    // Multi-service partner template (example uses Jonah's name/photo). New
+    // partners are cloned from this entry; Jonah's own page above is untouched.
+    kind: "partner",
+    full: true,
+    slug: "partner-template",
+    title: "Partner template (all services)",
+    campaign: "Multi-service partner page template (premade + editing + custom)",
+    status: "live",
+    affiliateRef: "jonah",
+    seo: {
+      title: "GHL Video for Partners",
+      description:
+        "White-label HighLevel videos, monthly editing, and custom production, with a partner discount applied across everything.",
+    },
+    partner: {
+      name: "Jonah Cockshaw",
+      role: "GHL Video affiliate partner",
+      photo: "/partners/jonah-cockshaw.jpg",
+      tagline: "A friend of Jonah is a friend of GHL Video.",
+      offer:
+        "Get 10% off everything GHL Video makes: premade white-label videos, monthly editing, and custom production, applied automatically at checkout and honored on custom quotes.",
+      heroVideoSrc: null,
+      heroVideoPoster: null,
+    },
+    closing: {
+      headline: "Your videos are",
+      accent: "one order away.",
+      sub: "Pick premade videos, start an editing plan, or book a custom call. Your 10% is applied automatically, and honored on custom quotes.",
     },
   },
 ];

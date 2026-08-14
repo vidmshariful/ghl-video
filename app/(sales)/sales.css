@@ -982,6 +982,331 @@
   color: var(--sp-gold);
 }
 
+/* ---- service cards (the "who we are" section chooser) ---- */
+.sp-svc-grid {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 820px) {
+  .sp-svc-grid {
+    grid-template-columns: repeat(3, 1fr);
+    align-items: stretch;
+  }
+}
+.sp-svc-card {
+  display: flex;
+  flex-direction: column;
+  padding: 1.75rem;
+}
+.sp-svc-cta {
+  margin-top: 1.2rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-heading), system-ui, sans-serif;
+  font-weight: 600;
+  color: var(--sp-gold);
+  text-decoration: none;
+  transition: gap 0.2s ease;
+}
+.sp-svc-cta:hover {
+  gap: 0.75rem;
+}
+.sp-svc-card .sp-svc-cta {
+  color: var(--svc, var(--sp-gold));
+}
+@media (prefers-reduced-motion: reduce) {
+  .sp-svc-cta {
+    transition: none;
+  }
+}
+
+/* each service card in its own accent colour, so the three read as distinct */
+.sp-svc-card {
+  position: relative;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.sp-svc-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 24px 60px -30px rgba(0, 0, 0, 0.8);
+}
+.sp-svc-card--gold {
+  --svc: #fcc000;
+  border-color: rgba(252, 192, 0, 0.3);
+  background:
+    radial-gradient(130% 110% at 0% 0%, rgba(252, 192, 0, 0.12), transparent 55%),
+    var(--sp-panel);
+}
+.sp-svc-card--blue {
+  --svc: #0090fc;
+  border-color: rgba(0, 144, 252, 0.32);
+  background:
+    radial-gradient(130% 110% at 0% 0%, rgba(0, 144, 252, 0.14), transparent 55%),
+    var(--sp-panel);
+}
+.sp-svc-card--green {
+  --svc: #00cc00;
+  border-color: rgba(0, 204, 0, 0.3);
+  background:
+    radial-gradient(130% 110% at 0% 0%, rgba(0, 204, 0, 0.12), transparent 55%),
+    var(--sp-panel);
+}
+
+/* section-eyebrow chip, echoing the main site: GHL mark, divider, mono label.
+   Label is gold + semibold so it stays visible and readable on the dark bg. */
+.sp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.45rem 0.85rem 0.45rem 0.6rem;
+}
+.sp-chip-mark {
+  height: 1.05rem;
+  width: auto;
+}
+.sp-chip-div {
+  width: 1px;
+  height: 0.9rem;
+  background: rgba(255, 255, 255, 0.2);
+}
+.sp-chip-label {
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: 0.76rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--sp-gold);
+}
+/* partner-name accent inside an eyebrow: green -> gold, so the name STARTS on
+   green and breaks cleanly from the gold label (rather than blending into it
+   like the gold-start signature gradient would). */
+.sp-chip-name {
+  background: linear-gradient(100deg, #00cc00, #fcc000);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* "best for" line at the foot of a slim service card: a light hairline
+   separator, not the old boxed highlight */
+.sp-svc-for-line {
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--sp-line);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--sp-dim);
+}
+.sp-svc-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 8px;
+  border: 1px solid var(--svc, var(--sp-line));
+  color: var(--svc, var(--sp-gold));
+  margin-bottom: 1.1rem;
+}
+.sp-svc-icon svg {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+/* ---- sticky service sub-nav (sits below the top bar on scroll) ---- */
+.sp-svcnav {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  border-block: 1px solid var(--sp-line);
+  background: rgba(7, 8, 11, 0.92);
+  backdrop-filter: blur(10px);
+}
+.sp-svcnav-inner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  padding-block: 0.6rem;
+  flex-wrap: wrap;
+}
+.sp-svcnav-links {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+.sp-svcnav-link {
+  border-radius: 999px;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--sp-muted);
+  text-decoration: none;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.sp-svcnav-link:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--sp-text);
+}
+.sp-svcnav-offer {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--sp-gold);
+}
+.sp-svcnav-offer::before {
+  content: "\2713";
+  font-weight: 700;
+}
+@media (max-width: 760px) {
+  .sp-svcnav-offer {
+    display: none;
+  }
+}
+
+/* ---- "your discount is applied" cue near a buy area ---- */
+.sp-disc-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  border: 1px dashed rgba(252, 192, 0, 0.45);
+  border-radius: 999px;
+  padding: 0.45rem 1.05rem;
+  background: var(--sp-gold-soft);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--sp-text);
+}
+.sp-disc-note::before {
+  content: "\2713";
+  color: var(--sp-gold);
+  font-weight: 700;
+}
+
+/* ---- custom production format cards ---- */
+.sp-cformats {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 620px) {
+  .sp-cformats {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (min-width: 940px) {
+  .sp-cformats {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+.sp-cformat {
+  border: 1px solid var(--sp-line);
+  border-radius: var(--sp-radius-sm);
+  background: var(--sp-panel);
+  padding: 1.3rem;
+}
+.sp-cformat-name {
+  font-family: var(--font-heading), system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+.sp-cformat-from {
+  margin-top: 0.5rem;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--sp-dim);
+}
+.sp-cformat-from strong {
+  color: var(--sp-gold);
+  font-size: 1.1rem;
+}
+
+/* ---- format jump-links (premade library) ---- */
+.sp-jumprow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 1.75rem;
+}
+.sp-jumplink {
+  border: 1px solid var(--sp-line-strong);
+  border-radius: 999px;
+  padding: 0.45rem 1rem;
+  font-size: 0.85rem;
+  color: var(--sp-muted);
+  text-decoration: none;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+.sp-jumplink:hover {
+  border-color: var(--sp-gold);
+  color: var(--sp-gold);
+}
+
+/* full multi-service partner template: hide the shared layout top bar and let
+   the page render its own logo-only, centered, NON-sticky bar (whose logo links
+   home carrying the partner ref). Scoped with :has() so the other sales pages
+   keep their sticky logo + book-a-call bar untouched. */
+.sp:has(.sp-mpl) .sp-topbar {
+  display: none;
+}
+.sp-mpl-topbar {
+  border-bottom: 1px solid var(--sp-line);
+  background: rgba(7, 8, 11, 0.72);
+}
+.sp-mpl-topbar .sp-topbar-inner {
+  justify-content: center;
+}
+.sp-mpl-logo {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* hero fallback-code box: fills the space the 3 service buttons left, and
+   reassures that the discount is automatic (the code is only a backup). */
+.sp-codebox {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.1rem;
+  margin-top: 1.9rem;
+  border: 1px solid var(--sp-line-strong);
+  border-radius: var(--sp-radius-sm);
+  background: rgba(255, 255, 255, 0.02);
+  padding: 0.95rem 1.15rem;
+}
+.sp-codebox-label {
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-weight: 700;
+  color: var(--sp-dim);
+}
+.sp-codebox-code {
+  display: inline-block;
+  border: 1px dashed rgba(252, 192, 0, 0.5);
+  border-radius: 4px;
+  padding: 0.2rem 0.7rem;
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: 0.1em;
+  color: var(--sp-gold);
+  background: rgba(252, 192, 0, 0.08);
+}
+.sp-codebox-note {
+  flex: 1;
+  min-width: 13rem;
+  font-size: 0.82rem;
+  color: var(--sp-muted);
+}
+
 /* ---- who it's for (editorial split: statement + divided checklist) ---- */
 .sp-who {
   display: grid;

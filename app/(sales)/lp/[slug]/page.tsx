@@ -22,6 +22,7 @@ import { salesBundles, type SalesBundle } from "@/lib/bundles";
 import { salesPageBySlug, salesPages, salesShared } from "@/lib/sales/pages";
 import { SpVideo } from "@/components/sales/SpVideo";
 import { PartnerLanding } from "@/components/sales/PartnerLanding";
+import { MultiPartnerLanding } from "@/components/sales/MultiPartnerLanding";
 import { JsonLd } from "@/components/JsonLd";
 import { faqSchema, serviceSchema } from "@/lib/schema";
 
@@ -150,9 +151,11 @@ export default async function SalesLandingPage({
   const page = salesPageBySlug(slug);
   if (!page) notFound();
 
-  // Affiliate-partner pages are a different animal (partner pitch for the
-  // editing service): render their own component and skip the premade body.
-  if (page.kind === "partner") return <PartnerLanding page={page} />;
+  // Affiliate-partner pages render their own component: the multi-service
+  // template (premade + editing + custom) when `full`, else the editing-only one.
+  if (page.kind === "partner") {
+    return page.full ? <MultiPartnerLanding page={page} /> : <PartnerLanding page={page} />;
+  }
 
   const ft = featuredTestimonial; // Chase Buckner
 

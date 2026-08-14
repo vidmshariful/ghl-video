@@ -30,6 +30,11 @@ export type Affiliate = {
   discountMonths: number;
   /** short label shown on the checkout order summary, e.g. "Friend of Jonah" */
   summaryLabel: string;
+  /** customer-facing fallback code, typable at checkout if the automatic
+   *  discount ever fails to apply. For it to work it must exist in the DB
+   *  coupons table as a percent-off, sub_eligible (for editing), all-sku code.
+   *  Create it in admin -> Coupons before the partner page goes live. */
+  code: string;
 };
 
 export const affiliates: Affiliate[] = [
@@ -41,6 +46,7 @@ export const affiliates: Affiliate[] = [
     discountPercent: 10,
     discountMonths: 3,
     summaryLabel: "Friend of Jonah",
+    code: "JONAH10",
   },
 ];
 
