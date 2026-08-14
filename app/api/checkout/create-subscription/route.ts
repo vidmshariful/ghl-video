@@ -61,8 +61,19 @@ export async function POST(req: Request) {
   if (!product || product.type !== "subscription") {
     return NextResponse.json({ error: "That plan is not available." }, { status: 404 });
   }
-  const priceId = product.metadata?.stripe_price_id as string | undefined;
-  if (!priceId) return NextResponse.json({ error: "Plan is not configured." }, { status: 500 });
+  // Stripe recurring prices are mode-specific (a test price id can't be used on
+  // the live account). Prefer the price id for the running key's mode, and fall
+  // back to the legacy single field so nothing breaks before a re-seed.
+  const liveMode = (process.env.STRIPE_SECRET_KEY ?? "").startsWith("sk_live");
+  const priceId =
+    (liveMode ? product.metadata?.stripe_price_id_live : product.metadata?.stripe_price_id_test) ??
+    product.metadata?.stripe_price_id;
+  if (!priceId) {
+    return NextResponse.json(
+      { error: "This plan is not available right now. Please contact support." },
+      { status: 503 },
+    );
+  }
 
   const db = supabaseAdmin();
   await db.from("customers").upsert({ email, name, company, phone }, { onConflict: "email", ignoreDuplicates: true });
@@ -110,23 +121,35 @@ export async function POST(req: Request) {
     }
   }
 
-  const sub = await stripe().subscriptions.create(
-    {
-      customer: stripeCustomerId,
-      items: [{ price: priceId }],
-      // Affiliate discount (e.g. 10% off the first 3 months): a real Stripe
-      // coupon, resolved server-side from the ref so the client never sets it.
-      ...(affiliate ? { discounts: [{ coupon: affiliate.stripeCouponId }] } : {}),
-      payment_behavior: "default_incomplete",
-      payment_settings: { save_default_payment_method: "on_subscription" },
-      expand: ["latest_invoice.confirmation_secret"],
-      metadata: { sku, customer_email: email, ...(ref ? { ref } : {}) },
-    },
-    // Same-minute duplicates (double-click racing past the reuse check above)
-    // collapse onto one Stripe subscription. The ref is in the key so a no-ref
-    // attempt can't mask a later ref attempt within the same minute.
-    { idempotencyKey: `create-sub_${customer.id}_${sku}_${ref ?? ""}_${Math.floor(Date.now() / 60_000)}` },
-  );
+  let sub;
+  try {
+    sub = await stripe().subscriptions.create(
+      {
+        customer: stripeCustomerId,
+        items: [{ price: priceId }],
+        // Affiliate discount (e.g. 10% off the first 3 months): a real Stripe
+        // coupon, resolved server-side from the ref so the client never sets it.
+        ...(affiliate ? { discounts: [{ coupon: affiliate.stripeCouponId }] } : {}),
+        payment_behavior: "default_incomplete",
+        payment_settings: { save_default_payment_method: "on_subscription" },
+        expand: ["latest_invoice.confirmation_secret"],
+        metadata: { sku, customer_email: email, ...(ref ? { ref } : {}) },
+      },
+      // Same-minute duplicates (double-click racing past the reuse check above)
+      // collapse onto one Stripe subscription. The ref is in the key so a no-ref
+      // attempt can't mask a later ref attempt within the same minute.
+      { idempotencyKey: `create-sub_${customer.id}_${sku}_${ref ?? ""}_${Math.floor(Date.now() / 60_000)}` },
+    );
+  } catch (err) {
+    // Turn a Stripe failure (e.g. a price id from the wrong mode, or an invalid
+    // coupon) into a clean JSON error instead of an empty 500 that the browser
+    // would surface as "Unexpected end of JSON input".
+    console.error(`[create-subscription] Stripe create failed for ${sku}: ${(err as Error).message}`);
+    return NextResponse.json(
+      { error: "We could not start this plan right now. Please try again, or contact support." },
+      { status: 502 },
+    );
+  }
 
   // Current Stripe API (2026-...) carries the first invoice's client secret
   // on confirmation_secret, which the Payment Element confirms on-domain.

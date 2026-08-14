@@ -10,6 +10,7 @@ import {
 } from "@stripe/react-stripe-js";
 import { useRouter } from "next/navigation";
 import { SecurePaymentsBand } from "@/components/checkout/SecurePaymentsBand";
+import { dialCodes, toE164 } from "@/lib/dial-codes";
 
 /*
  * On-domain checkout, a two-step accordion inside one card. The buyer fills
@@ -53,8 +54,8 @@ export type CheckoutBump = {
   priceCents: number;
 };
 
-type Details = { name: string; email: string; company: string; phone: string };
-const EMPTY: Details = { name: "", email: "", company: "", phone: "" };
+type Details = { name: string; email: string; company: string; phone: string; country: string };
+const EMPTY: Details = { name: "", email: "", company: "", phone: "", country: "US" };
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const money = (cents: number, currency: string) =>
@@ -69,6 +70,8 @@ const inputCls =
   "w-full rounded-[4px] border border-hair bg-canvas px-4 py-3 text-body text-ink placeholder:text-dim/70 focus:border-gold focus:outline-none";
 const labelCls =
   "mb-1.5 block font-mono text-label uppercase tracking-[0.08em] text-muted";
+const selectCls =
+  "shrink-0 max-w-[8.5rem] rounded-[4px] border border-hair bg-canvas px-2.5 py-3 text-body-sm text-ink focus:border-gold focus:outline-none";
 const payBtnCls =
   "group inline-flex w-full items-center justify-center gap-2.5 rounded-[3px] bg-brand-gradient px-8 py-[15px] text-body font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.25)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:brightness-100";
 
@@ -194,7 +197,7 @@ function OneTimeCheckout({
   const totalLabel = money(totalCents, currency);
 
   const set =
-    (k: keyof Details) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    (k: keyof Details) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setDetails((d) => ({ ...d, [k]: e.target.value }));
   const toggleBump = (id: string) =>
     setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
@@ -202,6 +205,8 @@ function OneTimeCheckout({
   function next() {
     if (!details.name.trim()) return setDetailErr("Your name is required.");
     if (!EMAIL_RE.test(details.email)) return setDetailErr("A valid email is required.");
+    if (!details.company.trim()) return setDetailErr("Your SaaS or company name is required.");
+    if (details.phone.replace(/\D/g, "").length < 6) return setDetailErr("A valid phone number is required.");
     setDetailErr(null);
     setStep("payment");
   }
@@ -395,13 +400,23 @@ function PayBox({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           paymentIntentId,
-          ...details,
+          name: details.name,
+          email: details.email,
+          company: details.company,
+          phone: toE164(details.country, details.phone),
           bumpIds: selected,
           couponCode: couponCode ?? undefined,
         }),
       });
-      const j = await r.json();
-      if (!r.ok) throw new Error(j.error ?? "Could not complete checkout.");
+      let j: { orderId?: string; error?: string } = {};
+      try {
+        j = await r.json();
+      } catch {
+        /* empty or non-JSON response */
+      }
+      if (!r.ok || !j.orderId) {
+        throw new Error(j.error ?? "Could not complete checkout. Please try again, or contact support.");
+      }
       const successUrl = `/checkout/thank-you?order=${j.orderId}`;
       const { error: err } = await stripe.confirmPayment({
         elements,
@@ -411,7 +426,7 @@ function PayBox({
             billing_details: {
               name: details.name,
               email: details.email,
-              phone: details.phone || undefined,
+              phone: toE164(details.country, details.phone) || undefined,
             },
           },
         },
@@ -487,22 +502,40 @@ function SubscriptionCheckout({
     : fullLabel;
 
   const set =
-    (k: keyof Details) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    (k: keyof Details) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setDetails((d) => ({ ...d, [k]: e.target.value }));
 
   async function next() {
     if (!details.name.trim()) return setDetailErr("Your name is required.");
     if (!EMAIL_RE.test(details.email)) return setDetailErr("A valid email is required.");
+    if (!details.company.trim()) return setDetailErr("Your SaaS or company name is required.");
+    if (details.phone.replace(/\D/g, "").length < 6) return setDetailErr("A valid phone number is required.");
     setDetailErr(null);
     setStarting(true);
     try {
       const r = await fetch("/api/checkout/create-subscription", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sku, ...details, ref: partnerRef ?? undefined }),
+        body: JSON.stringify({
+          sku,
+          name: details.name,
+          email: details.email,
+          company: details.company,
+          phone: toE164(details.country, details.phone),
+          ref: partnerRef ?? undefined,
+        }),
       });
-      const j = await r.json();
-      if (!r.ok) throw new Error(j.error ?? "Could not start checkout.");
+      // A crashed function can return an empty body; tolerate that instead of
+      // surfacing a raw "Unexpected end of JSON input" to the buyer.
+      let j: { clientSecret?: string; planName?: string; error?: string } = {};
+      try {
+        j = await r.json();
+      } catch {
+        /* empty or non-JSON response */
+      }
+      if (!r.ok || !j.clientSecret) {
+        throw new Error(j.error ?? "Could not start checkout. Please try again, or contact support.");
+      }
       setClientSecret(j.clientSecret);
       setSuccessPath(`/checkout/thank-you?plan=${encodeURIComponent(j.planName ?? "")}`);
       setStep("payment");
@@ -658,7 +691,7 @@ function DetailsBlock({
 }: {
   step: "details" | "payment";
   details: Details;
-  onChange: (k: keyof Details) => (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onChange: (k: keyof Details) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
   error: string | null;
   onNext: () => void;
   onEdit: () => void;
@@ -683,11 +716,25 @@ function DetailsBlock({
             </label>
             <label>
               <span className={labelCls}>SaaS or company name</span>
-              <input autoComplete="organization" value={details.company} onChange={onChange("company")} className={inputCls} placeholder="YourSaaS CRM" />
+              <input required autoComplete="organization" value={details.company} onChange={onChange("company")} className={inputCls} placeholder="YourSaaS CRM" />
             </label>
             <label>
-              <span className={labelCls}>Phone (optional)</span>
-              <input type="tel" autoComplete="tel" value={details.phone} onChange={onChange("phone")} className={inputCls} placeholder="+1 555 000 0000" />
+              <span className={labelCls}>Phone</span>
+              <div className="flex gap-2">
+                <select
+                  aria-label="Country dial code"
+                  value={details.country}
+                  onChange={onChange("country")}
+                  className={selectCls}
+                >
+                  {dialCodes.map((c) => (
+                    <option key={c.iso} value={c.iso}>
+                      {c.name} ({c.dial})
+                    </option>
+                  ))}
+                </select>
+                <input type="tel" required autoComplete="tel" value={details.phone} onChange={onChange("phone")} className={`${inputCls} min-w-0 flex-1`} placeholder="555 000 0000" />
+              </div>
             </label>
           </div>
           {error ? <div className="mt-4"><ErrorLine msg={error} /></div> : null}

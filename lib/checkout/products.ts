@@ -18,8 +18,11 @@ export type ProductMetadata = {
   bump_eligible?: boolean;
   upsell_sku?: string;
   hl_tags?: string[];
-  // subscription (editing plans)
+  // subscription (editing plans). Prices are mode-specific, so the id is stored
+  // per Stripe mode; stripe_price_id is the legacy single-field fallback.
   stripe_price_id?: string;
+  stripe_price_id_live?: string;
+  stripe_price_id_test?: string;
   long_form?: number;
   short_form?: number;
   featured?: boolean;
