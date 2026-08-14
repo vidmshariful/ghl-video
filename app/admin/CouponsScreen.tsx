@@ -21,6 +21,9 @@ type CouponRow = {
   max_redemptions: number | null;
   redemption_count: number;
   active: boolean;
+  sub_eligible: boolean;
+  sub_duration: "once" | "forever" | "repeating" | null;
+  sub_duration_months: number | null;
 };
 
 const field =
@@ -63,6 +66,9 @@ function CouponForm({
     until: toLocalInput(initial.valid_until ?? null),
     max: initial.max_redemptions != null ? String(initial.max_redemptions) : "",
     active: initial.active ?? true,
+    subEligible: initial.sub_eligible ?? false,
+    subDuration: initial.sub_duration ?? "forever",
+    subMonths: initial.sub_duration_months != null ? String(initial.sub_duration_months) : "3",
   });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -96,6 +102,12 @@ function CouponForm({
       valid_until: fromLocalInput(f.until),
       max_redemptions: f.max ? Math.max(1, Math.round(Number(f.max))) : null,
       active: f.active,
+      sub_eligible: f.subEligible,
+      sub_duration: f.subEligible ? f.subDuration : null,
+      sub_duration_months:
+        f.subEligible && f.subDuration === "repeating"
+          ? Math.max(1, Math.round(Number(f.subMonths) || 1))
+          : null,
     };
     const q = supabase.from("coupons");
     const { error } = isNew
@@ -192,6 +204,46 @@ function CouponForm({
             className={field}
           />
         </label>
+        <div className="rounded-[3px] border border-hair p-4 sm:col-span-2">
+          <label className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              checked={f.subEligible}
+              onChange={(e) => set("subEligible", e.target.checked)}
+              className="h-4 w-4"
+            />
+            <span className="text-body text-ink">Also works on editing plans (subscriptions)</span>
+          </label>
+          {f.subEligible && (
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <label>
+                <span className={lab}>On a subscription, the discount lasts</span>
+                <select
+                  value={f.subDuration}
+                  onChange={(e) => set("subDuration", e.target.value)}
+                  className={field}
+                >
+                  <option value="forever">Every month (as long as subscribed)</option>
+                  <option value="once">First payment only</option>
+                  <option value="repeating">First N months</option>
+                </select>
+              </label>
+              {f.subDuration === "repeating" && (
+                <label>
+                  <span className={lab}>Number of months</span>
+                  <input
+                    type="number"
+                    min={1}
+                    value={f.subMonths}
+                    onChange={(e) => set("subMonths", e.target.value)}
+                    className={field}
+                    placeholder="3"
+                  />
+                </label>
+              )}
+            </div>
+          )}
+        </div>
         <label className="flex items-center gap-3 sm:col-span-2">
           <input
             type="checkbox"

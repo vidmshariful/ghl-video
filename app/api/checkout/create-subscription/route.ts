@@ -4,6 +4,7 @@ import { ensureAuthAccount } from "@/lib/checkout/account";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { stripe } from "@/lib/checkout/stripe";
 import { affiliateByRef, refFromCookieHeader } from "@/lib/affiliates";
+import { checkCouponForSubscription, ensureStripeCouponId } from "@/lib/checkout/coupons";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -64,7 +65,8 @@ export async function POST(req: Request) {
   // Stripe recurring prices are mode-specific (a test price id can't be used on
   // the live account). Prefer the price id for the running key's mode, and fall
   // back to the legacy single field so nothing breaks before a re-seed.
-  const liveMode = (process.env.STRIPE_SECRET_KEY ?? "").startsWith("sk_live");
+  // matches both standard (sk_live_) and restricted (rk_live_) live keys
+  const liveMode = (process.env.STRIPE_SECRET_KEY ?? "").includes("_live_");
   const priceId =
     (liveMode ? product.metadata?.stripe_price_id_live : product.metadata?.stripe_price_id_test) ??
     product.metadata?.stripe_price_id;
@@ -121,19 +123,93 @@ export async function POST(req: Request) {
     }
   }
 
+  // Resolve the discount to charge, as a Stripe coupon derived server-side (the
+  // client never sets a price). A buyer-entered code wins over the affiliate
+  // discount; the affiliate ref still credits the partner via metadata below.
+  // Done AFTER the pending-reuse check so a retry does not re-reserve a slot.
+  const couponCodeRaw = asStr(payload.couponCode);
+  let discountCouponId: string | null = null;
+  let couponCode: string | null = null; // the applied buyer coupon, if any
+  let couponReserved = false; // whether we hold its redemption slot
+
+  if (couponCodeRaw) {
+    const v = await checkCouponForSubscription(couponCodeRaw, sku);
+    if (!v.ok) return NextResponse.json({ error: v.reason }, { status: 400 });
+    couponCode = v.coupon.code;
+    // reserve the redemption cap atomically before charging (released on failure)
+    const { data: reserved, error: reserveErr } = await db.rpc("reserve_coupon_redemption", {
+      p_code: couponCode,
+    });
+    if (reserveErr) {
+      console.error(`[create-subscription] coupon reserve failed for ${couponCode}: ${reserveErr.message}`);
+    } else if (reserved === false) {
+      return NextResponse.json({ error: "That code has been fully redeemed." }, { status: 400 });
+    } else {
+      couponReserved = true;
+    }
+    try {
+      discountCouponId = await ensureStripeCouponId(v.coupon);
+    } catch (err) {
+      console.error(`[create-subscription] could not build Stripe coupon for ${couponCode}: ${(err as Error).message}`);
+      if (couponReserved) {
+        try {
+          await db.rpc("release_coupon_redemption", { p_code: couponCode });
+        } catch {}
+      }
+      return NextResponse.json({ error: "Could not apply that code. Please try again." }, { status: 502 });
+    }
+  } else if (affiliate) {
+    // The discount SHOWN comes from lib/affiliates.ts; the discount CHARGED comes
+    // from the Stripe coupon. Verify they agree (and the coupon exists) before
+    // charging, so we never bill a different discount than we displayed.
+    try {
+      const coupon = await stripe().coupons.retrieve(affiliate.stripeCouponId);
+      const termsMatch =
+        coupon.valid &&
+        coupon.percent_off === affiliate.discountPercent &&
+        coupon.duration === "repeating" &&
+        coupon.duration_in_months === affiliate.discountMonths;
+      if (!termsMatch) {
+        console.error(
+          `[create-subscription] affiliate coupon ${affiliate.stripeCouponId} != config: ` +
+            `stripe ${coupon.percent_off ?? "-"}%/${coupon.duration}/${coupon.duration_in_months ?? "-"}mo valid=${coupon.valid}; ` +
+            `config ${affiliate.discountPercent}%/repeating/${affiliate.discountMonths}mo`,
+        );
+        return NextResponse.json(
+          { error: "This offer is not available right now. Please contact support." },
+          { status: 502 },
+        );
+      }
+      discountCouponId = affiliate.stripeCouponId;
+    } catch (err) {
+      console.error(
+        `[create-subscription] affiliate coupon ${affiliate.stripeCouponId} lookup failed: ${(err as Error).message}`,
+      );
+      return NextResponse.json(
+        { error: "This offer is not available right now. Please contact support." },
+        { status: 502 },
+      );
+    }
+  }
+
   let sub;
   try {
     sub = await stripe().subscriptions.create(
       {
         customer: stripeCustomerId,
         items: [{ price: priceId }],
-        // Affiliate discount (e.g. 10% off the first 3 months): a real Stripe
-        // coupon, resolved server-side from the ref so the client never sets it.
-        ...(affiliate ? { discounts: [{ coupon: affiliate.stripeCouponId }] } : {}),
+        // The buyer coupon or affiliate discount, resolved to a Stripe coupon
+        // server-side above so the client can never set a price.
+        ...(discountCouponId ? { discounts: [{ coupon: discountCouponId }] } : {}),
         payment_behavior: "default_incomplete",
         payment_settings: { save_default_payment_method: "on_subscription" },
         expand: ["latest_invoice.confirmation_secret"],
-        metadata: { sku, customer_email: email, ...(ref ? { ref } : {}) },
+        metadata: {
+          sku,
+          customer_email: email,
+          ...(ref ? { ref } : {}),
+          ...(couponCode ? { coupon_code: couponCode } : {}),
+        },
       },
       // Same-minute duplicates (double-click racing past the reuse check above)
       // collapse onto one Stripe subscription. The ref is in the key so a no-ref
@@ -141,6 +217,12 @@ export async function POST(req: Request) {
       { idempotencyKey: `create-sub_${customer.id}_${sku}_${ref ?? ""}_${Math.floor(Date.now() / 60_000)}` },
     );
   } catch (err) {
+    // Release the coupon slot reserved for this (now failed) attempt.
+    if (couponReserved && couponCode) {
+      try {
+        await db.rpc("release_coupon_redemption", { p_code: couponCode });
+      } catch {}
+    }
     // Turn a Stripe failure (e.g. a price id from the wrong mode, or an invalid
     // coupon) into a clean JSON error instead of an empty 500 that the browser
     // would surface as "Unexpected end of JSON input".
@@ -172,7 +254,7 @@ export async function POST(req: Request) {
     amount_cents: product.price_cents,
     currency: product.currency,
     interval: "month",
-    metadata: { sku, ...(ref ? { ref } : {}) },
+    metadata: { sku, ...(ref ? { ref } : {}), ...(couponCode ? { coupon_code: couponCode } : {}) },
   });
   if (rowErr && rowErr.code !== "23505") {
     // Not fatal to the buyer (the webhook reconstructs missing rows from the

@@ -72,8 +72,23 @@ export function dialFor(iso: string): string {
   return DIAL_BY_ISO[iso] ?? "+1";
 }
 
-/** build an E.164-ish number from a country and a locally typed number */
+/** build an E.164 number from a country and a locally typed number, handling
+ * the common ways buyers enter it: a leading "+" (they typed their own country
+ * code), a national trunk zero (UK "020 ..."), or the country code typed
+ * without a "+" (avoid doubling it). */
 export function toE164(iso: string, local: string): string {
-  const digits = local.replace(/\D/g, "");
-  return digits ? `${dialFor(iso)}${digits}` : "";
+  const trimmed = local.trim();
+  if (!trimmed) return "";
+  const digits = trimmed.replace(/\D/g, "");
+  if (!digits) return "";
+  // Explicit leading "+": trust the country code the buyer typed.
+  if (trimmed.startsWith("+")) return `+${digits}`;
+  const dial = dialFor(iso);
+  const dialDigits = dial.replace(/\D/g, "");
+  let d = digits.replace(/^0+/, ""); // drop a national trunk zero
+  // Country code typed without a "+": don't prepend it twice.
+  if (d.startsWith(dialDigits) && d.length - dialDigits.length >= 7) {
+    d = d.slice(dialDigits.length);
+  }
+  return d ? `${dial}${d}` : "";
 }

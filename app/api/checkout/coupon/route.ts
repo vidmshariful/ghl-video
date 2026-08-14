@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getActiveProductBySku } from "@/lib/checkout/products";
-import { checkCoupon } from "@/lib/checkout/coupons";
+import { checkCoupon, checkCouponForSubscription, couponLabel } from "@/lib/checkout/coupons";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -35,8 +35,25 @@ export async function POST(req: Request) {
   }
 
   const product = await getActiveProductBySku(sku);
-  if (!product || product.type !== "one_time") {
+  if (!product) {
     return NextResponse.json({ error: "That product is not available." }, { status: 404 });
+  }
+
+  // Editing subscription: return the terms so the client can display the
+  // discount (and how long it lasts); create-subscription re-checks and applies.
+  if (product.type === "subscription") {
+    const v = await checkCouponForSubscription(code, product.sku);
+    if (!v.ok) return NextResponse.json({ valid: false, reason: v.reason });
+    const c = v.coupon;
+    return NextResponse.json({
+      valid: true,
+      code: c.code,
+      label: couponLabel(c),
+      percentOff: c.percent_off,
+      amountOffCents: c.amount_off_cents,
+      subDuration: c.sub_duration,
+      subDurationMonths: c.sub_duration_months,
+    });
   }
 
   const chk = await checkCoupon(code, product.sku);

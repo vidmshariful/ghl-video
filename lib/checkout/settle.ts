@@ -89,18 +89,8 @@ export async function settlePaidIntent(
         event_type: "payment_succeeded",
         payload: { stripe_payment_intent_id: pi.id, amount_cents: chargedCents },
       });
-      // coupon bookkeeping, exactly once per order (the flip wins once);
-      // best-effort: a failed count must never fail the settle
-      const usedCoupon = (
-        (flipped.metadata as Record<string, unknown> | null)?.coupon as
-          | { code?: string }
-          | undefined
-      )?.code;
-      if (usedCoupon) {
-        try {
-          await db.rpc("increment_coupon_redemption", { p_code: usedCoupon });
-        } catch {}
-      }
+      // (coupon redemption is now reserved atomically at finalize, before the
+      // charge, via reserve_coupon_redemption; nothing to count here.)
       if (mismatch) {
         console.error(
           `[settle] amount mismatch on order ${order.id}: expected ${order.amount_cents} ${order.currency}, charged ${chargedCents} ${pi.currency}`,

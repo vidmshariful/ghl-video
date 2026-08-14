@@ -97,6 +97,16 @@ type CommonProps = {
 };
 
 type AppliedCoupon = { code: string; label: string; discountCents: number };
+/* a coupon applied on the subscription checkout: carries the terms needed to
+   show how the discount lands on a recurring plan */
+type SubAppliedCoupon = {
+  code: string;
+  label: string;
+  percentOff: number | null;
+  amountOffCents: number | null;
+  subDuration: "once" | "forever" | "repeating" | null;
+  subDurationMonths: number | null;
+};
 
 export function CheckoutClient(props: CommonProps) {
   return props.type === "subscription" ? (
@@ -176,9 +186,16 @@ function OneTimeCheckout({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ sku }),
         });
-        const j = await r.json();
+        let j: { clientSecret?: string; paymentIntentId?: string; error?: string } = {};
+        try {
+          j = await r.json();
+        } catch {
+          /* empty or non-JSON response */
+        }
         if (!active) return;
-        if (!r.ok) return setInitError(j.error ?? "Could not load checkout.");
+        if (!r.ok || !j.clientSecret || !j.paymentIntentId) {
+          return setInitError(j.error ?? "Could not load checkout.");
+        }
         setClientSecret(j.clientSecret);
         setPaymentIntentId(j.paymentIntentId);
       } catch {
@@ -489,17 +506,100 @@ function SubscriptionCheckout({
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [successPath, setSuccessPath] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
+  const [coupon, setCoupon] = useState<SubAppliedCoupon | null>(null);
+  const [couponErr, setCouponErr] = useState<string | null>(null);
+  const [couponBusy, setCouponBusy] = useState(false);
 
-  // Affiliate discount (e.g. 10% off the first 3 months): what the buyer sees.
-  // The charge is enforced by the Stripe coupon create-subscription applies
-  // from the same ref, so this display can never diverge from what is billed.
-  const monthlyDiscountCents = subDiscount
-    ? Math.round((priceCents * subDiscount.percentOff) / 100)
+  /* display-time check only; create-subscription re-validates and applies. */
+  const applyCoupon = useCallback(
+    async (raw: string) => {
+      const attempt = raw.trim();
+      if (!attempt) return;
+      setCouponBusy(true);
+      setCouponErr(null);
+      try {
+        const r = await fetch("/api/checkout/coupon", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: attempt, sku }),
+        });
+        let j: Record<string, unknown> = {};
+        try {
+          j = await r.json();
+        } catch {
+          /* empty or non-JSON */
+        }
+        if (!r.ok) throw new Error((j.error as string) ?? "Could not check that code.");
+        if (!j.valid) {
+          setCoupon(null);
+          setCouponErr((j.reason as string) ?? "That code is not valid.");
+        } else {
+          setCoupon({
+            code: j.code as string,
+            label: j.label as string,
+            percentOff: (j.percentOff as number | null) ?? null,
+            amountOffCents: (j.amountOffCents as number | null) ?? null,
+            subDuration: (j.subDuration as SubAppliedCoupon["subDuration"]) ?? null,
+            subDurationMonths: (j.subDurationMonths as number | null) ?? null,
+          });
+        }
+      } catch (err) {
+        setCoupon(null);
+        setCouponErr((err as Error).message);
+      } finally {
+        setCouponBusy(false);
+      }
+    },
+    [sku],
+  );
+
+  // The active discount. A buyer-entered coupon overrides the affiliate
+  // discount; the affiliate ref still credits the partner at create time.
+  const active: {
+    label: string;
+    percentOff: number | null;
+    amountOffCents: number | null;
+    duration: "once" | "forever" | "repeating";
+    months: number | null;
+  } | null = coupon
+    ? {
+        label: `Code ${coupon.code}`,
+        percentOff: coupon.percentOff,
+        amountOffCents: coupon.amountOffCents,
+        duration: coupon.subDuration ?? "once",
+        months: coupon.subDurationMonths,
+      }
+    : subDiscount
+      ? {
+          label: subDiscount.label,
+          percentOff: subDiscount.percentOff,
+          amountOffCents: null,
+          duration: "repeating",
+          months: subDiscount.months,
+        }
+      : null;
+
+  const monthlyDiscountCents = active
+    ? active.percentOff != null
+      ? Math.round((priceCents * active.percentOff) / 100)
+      : Math.min(active.amountOffCents ?? 0, priceCents)
     : 0;
   const fullLabel = `${money(priceCents, currency)}/mo`;
-  const payLabel = subDiscount
-    ? `${money(priceCents - monthlyDiscountCents, currency)}/mo`
-    : fullLabel;
+  const payLabel = active ? `${money(priceCents - monthlyDiscountCents, currency)}/mo` : fullLabel;
+
+  const discountAmountLabel = active
+    ? active.percentOff != null
+      ? `${active.percentOff}% off`
+      : `${money(active.amountOffCents ?? 0, currency)} off`
+    : "";
+  const months = active?.months ?? 1;
+  const subNote = !active
+    ? undefined
+    : active.duration === "forever"
+      ? "Discount applies every month. Cancel anytime."
+      : active.duration === "repeating"
+        ? `Discount applies for your first ${months} month${months === 1 ? "" : "s"}, then ${fullLabel}. Cancel anytime.`
+        : `Discount applies to your first payment, then ${fullLabel}. Cancel anytime.`;
 
   const set =
     (k: keyof Details) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -523,6 +623,7 @@ function SubscriptionCheckout({
           company: details.company,
           phone: toE164(details.country, details.phone),
           ref: partnerRef ?? undefined,
+          couponCode: coupon?.code ?? undefined,
         }),
       });
       // A crashed function can return an empty body; tolerate that instead of
@@ -582,19 +683,28 @@ function SubscriptionCheckout({
         currency={currency}
         totalLabel={payLabel}
         rating={rating}
+        couponBox={
+          <CouponBox
+            coupon={coupon ? { code: coupon.code, label: coupon.label, discountCents: monthlyDiscountCents } : null}
+            error={couponErr}
+            busy={couponBusy}
+            initialInput=""
+            onApply={applyCoupon}
+            onRemove={() => {
+              setCoupon(null);
+              setCouponErr(null);
+            }}
+          />
+        }
         discount={
-          subDiscount
+          active
             ? {
-                label: `${subDiscount.label}, ${subDiscount.percentOff}% off ${subDiscount.months} mo`,
+                label: `${active.label}, ${discountAmountLabel}`,
                 amountLabel: `-${money(monthlyDiscountCents, currency)}/mo`,
               }
             : null
         }
-        subNote={
-          subDiscount
-            ? `${subDiscount.percentOff}% off for your first ${subDiscount.months} months, then ${fullLabel}. Cancel anytime.`
-            : undefined
-        }
+        subNote={subNote}
       />
     </div>
   );

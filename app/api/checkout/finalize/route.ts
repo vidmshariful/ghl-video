@@ -149,6 +149,23 @@ export async function POST(req: Request) {
     return NextResponse.json({ orderId: existing.id });
   }
 
+  // New order for this intent. Reserve a coupon redemption slot atomically
+  // BEFORE charging, so a capped code cannot be over-redeemed by a burst (the
+  // old settle-time increment lagged the pay step). Released below if the order
+  // is not written (e.g. a concurrent double-submit loses the insert race). On
+  // a reserve-infra error we do NOT block the sale; the cap simply is not
+  // enforced until the migration is in place.
+  if (couponMeta) {
+    const { data: reserved, error: reserveErr } = await db.rpc("reserve_coupon_redemption", {
+      p_code: couponMeta.code,
+    });
+    if (reserveErr) {
+      console.error(`[finalize] coupon reserve failed for ${couponMeta.code}: ${reserveErr.message}`);
+    } else if (reserved === false) {
+      return NextResponse.json({ error: "That code has been fully redeemed." }, { status: 400 });
+    }
+  }
+
   // Upsert the customer, but never overwrite an existing row's details with an
   // unverified request.
   await db
@@ -221,6 +238,13 @@ export async function POST(req: Request) {
     .select()
     .single();
   if (orderErr || !order) {
+    // We reserved a coupon slot above but no order row was written; release it
+    // so the count stays balanced (the winner of a race reserved its own).
+    if (couponMeta) {
+      try {
+        await db.rpc("release_coupon_redemption", { p_code: couponMeta.code });
+      } catch {}
+    }
     // A concurrent double-submit can race past the existing-order check and
     // lose on the unique intent-id constraint; reuse the winner's order.
     if (orderErr?.code === "23505") {

@@ -391,7 +391,16 @@ async function recoverOrphanSubscription(
       amount_cents: product.price_cents,
       currency: product.currency,
       interval: "month",
-      metadata: { sku, recovered: true },
+      // carry the affiliate ref off the Stripe sub so a recovered row still
+      // credits the partner (the create-subscription insert may lose the race
+      // to this recovery, since the sub is created default_incomplete).
+      metadata: {
+        sku,
+        recovered: true,
+        ...(typeof sub.metadata?.ref === "string" && sub.metadata.ref
+          ? { ref: sub.metadata.ref }
+          : {}),
+      },
     })
     .select("*")
     .single();
