@@ -43,7 +43,9 @@ const stripe = new Stripe(STRIPE_KEY);
 
 // MIRROR of lib/affiliates.ts. The app reads that file; this seeds Stripe.
 const COUPONS = [
-  { id: "aff_jonah_10pct_3mo", name: "Friend of Jonah (10% off first 3 months)", percentOff: 10, months: 3 },
+  // Jonah's live coupon was created in the Stripe dashboard (id below); this
+  // entry keeps the seed in sync so a re-run validates it instead of duplicating.
+  { id: "bzD89jmL", name: "Friend of Jonah (10% off first 3 months)", percentOff: 10, months: 3 },
 ];
 
 for (const c of COUPONS) {

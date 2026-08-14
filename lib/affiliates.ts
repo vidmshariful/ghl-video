@@ -36,7 +36,8 @@ export const affiliates: Affiliate[] = [
   {
     ref: "jonah",
     name: "Jonah Cockshaw",
-    stripeCouponId: "aff_jonah_10pct_3mo",
+    // Live Stripe coupon (10% off, repeating 3 months), created in the dashboard.
+    stripeCouponId: "bzD89jmL",
     discountPercent: 10,
     discountMonths: 3,
     summaryLabel: "Friend of Jonah",
