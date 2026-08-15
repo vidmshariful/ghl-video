@@ -21,7 +21,7 @@ export type MemberRow = {
   member_email: string;
   member_name: string | null;
   features: string[] | null;
-  status: "invited" | "active";
+  status: "invited" | "active" | "paused";
   created_at: string;
 };
 
@@ -131,6 +131,49 @@ export async function removeMember(
     .eq("owner_email", ownerEmail.toLowerCase());
 }
 
+/** One member row by id, scoped to the owner (for resend and status flips). */
+export async function getMember(
+  db: SupabaseClient,
+  accountType: AccountType,
+  ownerEmail: string,
+  id: string,
+): Promise<MemberRow | null> {
+  const { data } = await db
+    .from("account_members")
+    .select(MEMBER_FIELDS)
+    .eq("id", id)
+    .eq("account_type", accountType)
+    .eq("owner_email", ownerEmail.toLowerCase())
+    .maybeSingle();
+  return (data as MemberRow | null) ?? null;
+}
+
+/** Pause locks a member out while keeping their row; resume lets them back
+ *  in. Only active members pause; only paused ones resume. */
+export async function setMemberStatus(
+  db: SupabaseClient,
+  accountType: AccountType,
+  ownerEmail: string,
+  id: string,
+  action: "pause" | "resume",
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const member = await getMember(db, accountType, ownerEmail, id);
+  if (!member) return { ok: false, error: "That teammate is no longer on your team." };
+  if (action === "pause" && member.status !== "active")
+    return { ok: false, error: "Only an active teammate can be paused." };
+  if (action === "resume" && member.status !== "paused")
+    return { ok: false, error: "That teammate is not paused." };
+  const { error } = await db
+    .from("account_members")
+    .update({ status: action === "pause" ? "paused" : "active" })
+    .eq("id", id);
+  if (error) {
+    console.error("[team] status change failed:", error.message);
+    return { ok: false, error: "Could not save. Try again." };
+  }
+  return { ok: true };
+}
+
 /* ---------------- membership lookups ---------------- */
 
 export async function membershipsForMember(
@@ -227,7 +270,7 @@ export async function resolvePortalContext(
   }
 
   const membership = await membershipFor(db, accountType, actFor, user.email);
-  if (!membership) return { failStatus: 403 };
+  if (!membership || membership.status === "paused") return { failStatus: 403 };
   await activateMembership(db, membership);
   return {
     ownerEmail: membership.owner_email,

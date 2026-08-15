@@ -56,10 +56,12 @@ export async function GET(req: Request) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const db = supabaseAdmin();
 
-  const [profile, memberships] = await Promise.all([
+  const [profile, allMemberships] = await Promise.all([
     profileByEmail(db, user.email),
     membershipsForMember(db, "partner", user.email),
   ]);
+  // a paused membership is not an account you can enter
+  const memberships = allMemberships.filter((m) => m.status !== "paused");
   const membershipList = await Promise.all(
     memberships.map(async (m) => {
       const owner = await partnerByEmail(m.owner_email);

@@ -713,7 +713,9 @@ function SubscriptionsView({ canBilling = true }: { canBilling?: boolean }) {
   );
 }
 
-/* ---- settings ---- */
+/* ---- settings: Profile / Account / Team tabs ---- */
+type SettingsTab = "profile" | "account" | "team";
+
 function SettingsView({
   profile,
   onSaved,
@@ -721,19 +723,28 @@ function SettingsView({
   profile: MyProfile;
   onSaved: () => void;
 }) {
+  const isOwner = profile.isOwner;
+  const [tab, setTab] = useState<SettingsTab>("profile");
   const [name, setName] = useState(profile.name ?? "");
   const [company, setCompany] = useState(profile.company ?? "");
   const [phone, setPhone] = useState(profile.phone ?? "");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
-  const isOwner = profile.isOwner;
+
+  const tabs: { key: SettingsTab; label: string }[] = [
+    { key: "profile", label: "Profile" },
+    { key: "account", label: "Account" },
+    ...(isOwner ? [{ key: "team" as SettingsTab, label: "Team" }] : []),
+  ];
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     setMsg("");
     setErr("");
+    // the parent holds all fields, so a save from either tab sends the
+    // full set and never wipes the other tab's values
     const j = await authedFetch("/api/portal/me", {
       method: "PATCH",
       body: JSON.stringify(isOwner ? { name, company, phone } : { name }),
@@ -745,11 +756,31 @@ function SettingsView({
     } else setErr(j.error ?? "Could not save. Try again.");
   }
 
+  const saveBtn = (
+    <div>
+      <button
+        type="submit"
+        disabled={busy}
+        className="tap rounded-[8px] bg-brand-gradient px-6 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60"
+      >
+        {busy ? "Saving" : "Save changes"}
+      </button>
+    </div>
+  );
+  const feedback = (
+    <>
+      {msg && <p className="text-body-sm text-green">{msg}</p>}
+      {err && <p className="text-body-sm text-error">{err}</p>}
+    </>
+  );
+
   return (
     <div className="max-w-3xl">
       <h1 className="font-display text-h2 text-ink">Settings</h1>
       <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
-        {isOwner ? "Your details, photo, password, and team." : "Your details, photo, and password."}
+        {isOwner
+          ? "Your profile, your account, and your team."
+          : "Your profile and your account."}
       </p>
 
       {!isOwner && profile.actingFor ? (
@@ -759,84 +790,105 @@ function SettingsView({
             <span className="font-semibold text-ink">
               {profile.actingFor.name || profile.actingFor.email}
             </span>
-            &apos;s portal. Account details and the team belong to them; what you
-            see here is your own profile.
+            &apos;s portal. What you edit here is your own profile and login.
           </p>
         </div>
       ) : null}
 
-      <div className="mt-8 rounded-[12px] border border-hair bg-surface p-6">
-        <AvatarUploader
-          name={profile.name}
-          email={profile.email}
-          avatarUrl={profile.avatarUrl}
-          endpoint="/api/portal/me/avatar"
-          onChanged={() => onSaved()}
-        />
-        <form onSubmit={save} className="mt-6 grid gap-4 border-t border-hair pt-6">
-          <label className="grid gap-2">
-            <span className="font-mono text-label uppercase text-muted">Your name</span>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              maxLength={120}
-              className={authFieldCls}
-            />
-          </label>
-          {isOwner ? (
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="grid gap-2">
-                <span className="font-mono text-label uppercase text-muted">Company / SaaS</span>
-                <input
-                  value={company}
-                  onChange={(e) => setCompany(e.target.value)}
-                  maxLength={160}
-                  className={authFieldCls}
-                />
-              </label>
-              <label className="grid gap-2">
-                <span className="font-mono text-label uppercase text-muted">Phone</span>
-                <input
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  maxLength={40}
-                  className={authFieldCls}
-                />
-              </label>
-            </div>
-          ) : null}
-          <div className="grid gap-2">
-            <span className="font-mono text-label uppercase text-muted">Sign-in email</span>
-            <p className="text-body text-ink">{profile.email}</p>
-            <p className="text-body-sm text-dim">
-              {isOwner
-                ? "Your orders and login hang on this email. To change it, write to hi@ghlvideo.com."
-                : "Your login. To change it, ask the account owner to re-add you with the new one."}
-            </p>
-          </div>
-          {msg && <p className="text-body-sm text-green">{msg}</p>}
-          {err && <p className="text-body-sm text-error">{err}</p>}
-          <div>
-            <button
-              type="submit"
-              disabled={busy}
-              className="tap rounded-[8px] bg-brand-gradient px-6 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60"
-            >
-              {busy ? "Saving" : "Save changes"}
-            </button>
-          </div>
-        </form>
+      <div className="mt-6 inline-flex rounded-[8px] border border-hair bg-surface p-1">
+        {tabs.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            onClick={() => {
+              setTab(t.key);
+              setMsg("");
+              setErr("");
+            }}
+            className={`tap rounded-[6px] px-4 py-2 font-mono text-label uppercase transition-colors ${
+              tab === t.key ? "bg-gold/15 font-bold text-gold" : "text-muted hover:text-ink"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
-      {isOwner ? (
-        <div className="mt-6">
+      <div key={tab} className="portal-view mt-6">
+        {tab === "profile" ? (
+          <div className="rounded-[12px] border border-hair bg-surface p-6">
+            <AvatarUploader
+              name={profile.name}
+              email={profile.email}
+              avatarUrl={profile.avatarUrl}
+              endpoint="/api/portal/me/avatar"
+              onChanged={() => onSaved()}
+            />
+            <form onSubmit={save} className="mt-6 grid gap-4 border-t border-hair pt-6">
+              <label className="grid gap-2">
+                <span className="font-mono text-label uppercase text-muted">Your name</span>
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  maxLength={120}
+                  className={authFieldCls}
+                />
+              </label>
+              <p className="text-body-sm text-dim">
+                Shown on your messages to the studio and in your portal.
+              </p>
+              {feedback}
+              {saveBtn}
+            </form>
+          </div>
+        ) : tab === "account" ? (
+          <div className="grid gap-6">
+            <div className="rounded-[12px] border border-hair bg-surface p-6">
+              <p className="font-mono text-label uppercase text-muted">Account details</p>
+              <form onSubmit={save} className="mt-4 grid gap-4">
+                {isOwner ? (
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <label className="grid gap-2">
+                      <span className="font-mono text-label uppercase text-muted">
+                        Company / SaaS
+                      </span>
+                      <input
+                        value={company}
+                        onChange={(e) => setCompany(e.target.value)}
+                        maxLength={160}
+                        className={authFieldCls}
+                      />
+                    </label>
+                    <label className="grid gap-2">
+                      <span className="font-mono text-label uppercase text-muted">Phone</span>
+                      <input
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        maxLength={40}
+                        className={authFieldCls}
+                      />
+                    </label>
+                  </div>
+                ) : null}
+                <div className="grid gap-2">
+                  <span className="font-mono text-label uppercase text-muted">Sign-in email</span>
+                  <p className="text-body text-ink">{profile.email}</p>
+                  <p className="text-body-sm text-dim">
+                    {isOwner
+                      ? "Your orders and login hang on this email. To change it, write to hi@ghlvideo.com."
+                      : "Your login. To change it, ask the account owner to re-add you with the new one."}
+                  </p>
+                </div>
+                {feedback}
+                {isOwner ? saveBtn : null}
+              </form>
+            </div>
+            <PasswordCard resetRedirect="/portal/set-password/" />
+          </div>
+        ) : (
           <TeamCard endpoint="/api/portal/team/" accountType="customer" />
-        </div>
-      ) : null}
-
-      <div className="mt-6">
-        <PasswordCard resetRedirect="/portal/set-password/" />
+        )}
       </div>
     </div>
   );

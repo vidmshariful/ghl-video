@@ -21,10 +21,12 @@ export async function GET(req: Request) {
   if ("failStatus" in ctx)
     return NextResponse.json({ error: "Unauthorized" }, { status: ctx.failStatus });
 
-  const [profile, memberships] = await Promise.all([
+  const [profile, allMemberships] = await Promise.all([
     profileByEmail(db, user.email),
     membershipsForMember(db, "customer", user.email),
   ]);
+  // a paused membership is not an account you can enter
+  const memberships = allMemberships.filter((m) => m.status !== "paused");
 
   // names for the switcher entries
   const ownerEmails = memberships.map((m) => m.owner_email);

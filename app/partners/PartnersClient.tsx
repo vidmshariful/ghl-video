@@ -1078,11 +1078,13 @@ function SettingsView({
   onSaved,
   canProfile,
   isOwner,
+  selfEmail,
 }: {
   me: Me;
   onSaved: () => void;
   canProfile: boolean;
   isOwner: boolean;
+  selfEmail: string;
 }) {
   const p = me.partner!;
   const [name, setName] = useState(p.name);
@@ -1110,14 +1112,20 @@ function SettingsView({
 
   const viewerName = me.viewer?.name ?? p.name;
   const viewerAvatar = me.viewer?.avatarUrl ?? p.avatarUrl;
+  const [tab, setTab] = useState<"profile" | "account" | "team">("profile");
+  const tabs = [
+    { key: "profile" as const, label: "Profile" },
+    { key: "account" as const, label: "Account" },
+    ...(isOwner ? [{ key: "team" as const, label: "Team" }] : []),
+  ];
 
   return (
     <div className="max-w-3xl">
       <h1 className="font-display text-h2 text-ink">Settings</h1>
       <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
         {isOwner
-          ? "Your public details, photo, password, and team."
-          : "Your photo and password, plus what your access allows."}
+          ? "Your profile, your account, and your team."
+          : "Your profile and your account."}
       </p>
 
       {!isOwner && me.viewer?.actingFor ? (
@@ -1125,80 +1133,109 @@ function SettingsView({
           <p className="text-body-sm text-muted">
             You are working in{" "}
             <span className="font-semibold text-ink">{me.viewer.actingFor.name}</span>
-            &apos;s partner account. The public details below belong to them
-            {canProfile ? ", and your access lets you edit them" : ""}.
+            &apos;s partner account.
+            {canProfile
+              ? " The public details belong to them, and your access lets you edit them."
+              : ""}
           </p>
         </div>
       ) : null}
 
-      <div className="mt-8 rounded-[12px] border border-hair bg-surface p-6">
-        <AvatarUploader
-          name={viewerName}
-          email={p.email ?? ""}
-          avatarUrl={viewerAvatar}
-          endpoint="/api/partners/me/avatar"
-          onChanged={() => onSaved()}
-        />
-        <p className="mt-2 text-body-sm text-dim">
-          Your portal photo. The photo on the public partner page is set by the
-          studio; write to hi@ghlvideo.com to swap it.
-        </p>
+      <div className="mt-6 inline-flex rounded-[8px] border border-hair bg-surface p-1">
+        {tabs.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            onClick={() => {
+              setTab(t.key);
+              setMsg("");
+              setErr("");
+            }}
+            className={`tap rounded-[6px] px-4 py-2 font-mono text-label uppercase transition-colors ${
+              tab === t.key ? "bg-gold/15 font-bold text-gold" : "text-muted hover:text-ink"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
-      {canProfile ? (
-      <form onSubmit={save} className="mt-6 grid gap-5 rounded-[12px] border border-hair bg-surface p-6">
-        <label className="grid gap-2">
-          <span className="font-mono text-label uppercase text-muted">Your name</span>
-          <input value={name} onChange={(e) => setName(e.target.value)} required className={fieldCls} />
-        </label>
-        <label className="grid gap-2">
-          <span className="font-mono text-label uppercase text-muted">Tagline</span>
-          <input
-            value={tagline}
-            onChange={(e) => setTagline(e.target.value)}
-            placeholder="A friend of you is a friend of GHL Video."
-            className={fieldCls}
-            maxLength={200}
-          />
-        </label>
-        <label className="grid gap-2">
-          <span className="font-mono text-label uppercase text-muted">Short bio</span>
-          <textarea
-            value={bio}
-            onChange={(e) => setBio(e.target.value)}
-            rows={4}
-            placeholder="Who you are and who you help."
-            className={fieldCls}
-            maxLength={1200}
-          />
-        </label>
-        {msg && <p className="text-body-sm text-green">{msg}</p>}
-        {err && <p className="text-body-sm text-error">{err}</p>}
-        <div>
-          <button type="submit" disabled={busy} className={btnPrimary}>
-            {busy ? "Saving..." : "Save changes"}
-          </button>
-        </div>
-      </form>
-      ) : null}
+      <div key={tab} className="portal-view mt-6">
+        {tab === "profile" ? (
+          <div className="grid gap-6">
+            <div className="rounded-[12px] border border-hair bg-surface p-6">
+              <AvatarUploader
+                name={viewerName}
+                email={p.email ?? ""}
+                avatarUrl={viewerAvatar}
+                endpoint="/api/partners/me/avatar"
+                onChanged={() => onSaved()}
+              />
+              <p className="mt-2 text-body-sm text-dim">
+                Your portal photo. The photo on the public partner page is set by
+                the studio; write to hi@ghlvideo.com to swap it.
+              </p>
+            </div>
 
-      {isOwner ? (
-        <>
-          <div className="mt-6 rounded-[12px] border border-hair bg-surface p-6">
-            <p className="font-mono text-label uppercase text-muted">Account</p>
-            <p className="mt-2 text-body text-ink">{p.email}</p>
-            <p className="mt-1 text-body-sm text-muted">
-              Sign-in email. To change it, write to hi@ghlvideo.com.
-            </p>
+            {canProfile ? (
+              <form onSubmit={save} className="grid gap-5 rounded-[12px] border border-hair bg-surface p-6">
+                <div>
+                  <p className="font-mono text-label uppercase text-muted">Public details</p>
+                  <p className="mt-1 text-body-sm text-dim">
+                    These feed the partner page your audience sees.
+                  </p>
+                </div>
+                <label className="grid gap-2">
+                  <span className="font-mono text-label uppercase text-muted">Name</span>
+                  <input value={name} onChange={(e) => setName(e.target.value)} required className={fieldCls} />
+                </label>
+                <label className="grid gap-2">
+                  <span className="font-mono text-label uppercase text-muted">Tagline</span>
+                  <input
+                    value={tagline}
+                    onChange={(e) => setTagline(e.target.value)}
+                    placeholder="A friend of you is a friend of GHL Video."
+                    className={fieldCls}
+                    maxLength={200}
+                  />
+                </label>
+                <label className="grid gap-2">
+                  <span className="font-mono text-label uppercase text-muted">Short bio</span>
+                  <textarea
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    rows={4}
+                    placeholder="Who you are and who you help."
+                    className={fieldCls}
+                    maxLength={1200}
+                  />
+                </label>
+                {msg && <p className="text-body-sm text-green">{msg}</p>}
+                {err && <p className="text-body-sm text-error">{err}</p>}
+                <div>
+                  <button type="submit" disabled={busy} className={btnPrimary}>
+                    {busy ? "Saving..." : "Save changes"}
+                  </button>
+                </div>
+              </form>
+            ) : null}
           </div>
-          <div className="mt-6">
-            <TeamCard endpoint="/api/partners/team/" accountType="partner" />
+        ) : tab === "account" ? (
+          <div className="grid gap-6">
+            <div className="rounded-[12px] border border-hair bg-surface p-6">
+              <p className="font-mono text-label uppercase text-muted">Sign-in email</p>
+              <p className="mt-2 text-body text-ink">{selfEmail}</p>
+              <p className="mt-1 text-body-sm text-muted">
+                {isOwner
+                  ? "To change it, write to hi@ghlvideo.com."
+                  : "Your own login. To change it, ask the account owner to re-add you with the new one."}
+              </p>
+            </div>
+            <PasswordCard resetRedirect="/partners/set-password/" />
           </div>
-        </>
-      ) : null}
-
-      <div className="mt-6">
-        <PasswordCard resetRedirect="/partners/set-password/" />
+        ) : (
+          <TeamCard endpoint="/api/partners/team/" accountType="partner" />
+        )}
       </div>
     </div>
   );
@@ -1465,7 +1502,13 @@ export function PartnersClient() {
           ) : view === "resources" ? (
             <ResourcesView me={me} />
           ) : view === "settings" ? (
-            <SettingsView me={me} onSaved={loadMe} canProfile={can("profile")} isOwner={viewer?.isOwner ?? true} />
+            <SettingsView
+              me={me}
+              onSaved={loadMe}
+              canProfile={can("profile")}
+              isOwner={viewer?.isOwner ?? true}
+              selfEmail={session.user.email ?? ""}
+            />
           ) : (
             <DashboardView me={me} can={can} actingLabel={acting?.name ?? null} onNavigate={setView} />
           )}

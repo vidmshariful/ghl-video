@@ -16,8 +16,18 @@ type Member = {
   name: string | null;
   email: string;
   features: string[] | null;
-  status: "invited" | "active";
+  status: "invited" | "active" | "paused";
+  addedAt: string;
 };
+
+const STATUS_CHIP: Record<Member["status"], { label: string; cls: string }> = {
+  active: { label: "Active", cls: "border-green/40 text-green" },
+  invited: { label: "Invited", cls: "border-gold/40 text-gold" },
+  paused: { label: "Paused", cls: "border-hair text-dim" },
+};
+
+const addedOn = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
 const fieldCls =
   "w-full rounded-[8px] border border-hair bg-canvas px-4 py-3 text-body text-ink placeholder:text-dim focus:border-gold focus:outline-none";
@@ -206,6 +216,27 @@ export function TeamCard({
     load();
   }
 
+  async function act(m: Member, action: "pause" | "resume" | "resend") {
+    setNotice("");
+    setErr("");
+    const j = await teamFetch(endpoint, {
+      method: "PATCH",
+      body: JSON.stringify({ id: m.id, action }),
+    });
+    if (j.error) {
+      setErr(j.error);
+      return;
+    }
+    setNotice(
+      action === "resend"
+        ? `Invite sent again to ${m.email}.`
+        : action === "pause"
+          ? `${m.name || m.email} is paused. They cannot sign in to this account until you resume them.`
+          : `${m.name || m.email} is back in.`,
+    );
+    load();
+  }
+
   const summary = (m: Member) =>
     m.features == null ? "Full access" : `${m.features.length} of ${defs.length} areas`;
 
@@ -269,30 +300,48 @@ export function TeamCard({
               ) : (
                 <li
                   key={m.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-[8px] border border-hair bg-canvas px-4 py-3"
+                  className={`flex flex-wrap items-center justify-between gap-3 rounded-[8px] border border-hair bg-canvas px-4 py-3 ${
+                    m.status === "paused" ? "opacity-70" : ""
+                  }`}
                 >
                   <div className="min-w-0">
                     <p className="truncate text-body font-semibold text-ink">
                       {m.name || m.email}
                     </p>
-                    <p className="truncate font-mono text-label text-dim">{m.email}</p>
+                    <p className="truncate font-mono text-label text-dim">
+                      {m.email} / added {addedOn(m.addedAt)}
+                    </p>
                   </div>
                   <div className="flex shrink-0 flex-wrap items-center gap-2">
                     <span
-                      className={`rounded-full border px-2.5 py-0.5 font-mono text-label uppercase ${
-                        m.status === "active"
-                          ? "border-green/40 text-green"
-                          : "border-gold/40 text-gold"
-                      }`}
+                      className={`rounded-full border px-2.5 py-0.5 font-mono text-label uppercase ${STATUS_CHIP[m.status].cls}`}
                     >
-                      {m.status === "active" ? "Active" : "Invited"}
+                      {STATUS_CHIP[m.status].label}
                     </span>
                     <span className="font-mono text-label uppercase text-muted">
                       {summary(m)}
                     </span>
+                    {m.status === "invited" ? (
+                      <button type="button" onClick={() => act(m, "resend")} className={btnGhost}>
+                        Resend invite
+                      </button>
+                    ) : null}
                     <button type="button" onClick={() => setEditing(m)} className={btnGhost}>
                       Edit
                     </button>
+                    {m.status === "active" ? (
+                      <button type="button" onClick={() => act(m, "pause")} className={btnGhost}>
+                        Pause
+                      </button>
+                    ) : m.status === "paused" ? (
+                      <button
+                        type="button"
+                        onClick={() => act(m, "resume")}
+                        className="tap rounded-[8px] border border-gold/40 px-4 py-2 font-mono text-label uppercase text-gold transition-colors hover:border-gold"
+                      >
+                        Resume
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       onClick={() => remove(m)}
