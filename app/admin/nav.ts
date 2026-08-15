@@ -2,6 +2,7 @@
  * (e.g. the dashboard's shortcuts into Orders). */
 export type View =
   | "dashboard"
+  | "journal"
   | "orders"
   | "messages"
   | "subscriptions"
@@ -11,6 +12,7 @@ export type View =
   | "links"
   | "invoices"
   | "customers"
+  | "partners"
   | "code"
   | "pages"
   | "catalog"

@@ -19,7 +19,9 @@ import { CouponsScreen } from "./CouponsScreen";
 import { LinksScreen } from "./LinksScreen";
 import { InvoicesScreen } from "./InvoicesScreen";
 import { CustomersScreen } from "./CustomersScreen";
+import { PartnersScreen } from "./PartnersScreen";
 import { StudioScreen } from "./StudioScreen";
+import { JournalScreen } from "./JournalScreen";
 import { TeamScreen } from "./TeamScreen";
 import { SalesPagesScreen } from "./SalesPagesScreen";
 import { EmailTemplatesScreen } from "./EmailTemplatesScreen";
@@ -349,7 +351,13 @@ export default function AdminPage() {
     );
 
   const groups: { title: string; items: { key: View; label: string }[] }[] = [
-    { title: "", items: [{ key: "dashboard", label: "Dashboard" }] },
+    {
+      title: "",
+      items: [
+        { key: "dashboard", label: "Dashboard" },
+        { key: "journal", label: "Journal" },
+      ],
+    },
     {
       title: "Sales",
       items: [
@@ -366,6 +374,7 @@ export default function AdminPage() {
       items: [
         { key: "messages", label: "Messages" },
         { key: "customers", label: "Customers" },
+        { key: "partners", label: "Partners" },
       ],
     },
     {
@@ -508,8 +517,12 @@ export default function AdminPage() {
             <InvoicesScreen />
           ) : view === "customers" ? (
             <CustomersScreen />
+          ) : view === "partners" ? (
+            <PartnersScreen />
           ) : view === "studio" ? (
             <StudioScreen />
+          ) : view === "journal" ? (
+            <JournalScreen meEmail={me?.email ?? ""} />
           ) : view === "code" ? (
             <CodeScreen />
           ) : view === "pages" ? (

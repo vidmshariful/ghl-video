@@ -24,7 +24,7 @@ export default async function SalesLayout({ children }: { children: React.ReactN
       {chrome.headScripts ? (
         <div suppressHydrationWarning dangerouslySetInnerHTML={{ __html: chrome.headScripts }} />
       ) : null}
-      <div className="sp">
+      <div data-surface="sales" className="sp">
         <div className="sp-topbar">
           <div className="sp-wrap sp-topbar-inner">
             <Logo className="h-6" />

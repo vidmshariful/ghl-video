@@ -16,7 +16,7 @@ export default async function CheckoutLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   const chrome = await getChrome();
   return (
-    <div className="flex min-h-screen w-full flex-col bg-canvas text-ink">
+    <div data-surface="checkout" className="flex min-h-screen w-full flex-col bg-canvas text-ink">
       {/* hard-coded tracking (GTM, Google Ads, Hotjar) so the checkout step of
           the funnel fires the same events as the rest of the site */}
       {chrome.headScripts ? (

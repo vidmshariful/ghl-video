@@ -31,6 +31,13 @@ Stripe + Supabase commerce backend, all on one domain.
   table): dashboard, orders, products, customers, bumps, subscriptions, and
   site tools. **Portal** at `/portal` gives customers their orders, invoices,
   and subscription management. Both are noindex, outside the marketing chrome.
+- **Partner portal** at `/partners` (same Supabase auth): affiliates get
+  their tracked links, promo assets, and profile; `/partners/apply` is the
+  public application. Backed by the `partners` + `partner_assets` tables
+  (admin -> Partners manages them). The checkout discount still reads
+  `lib/affiliates.ts` (code registry) until the DB bridge ships; commissions
+  and payouts live in FirstPromoter (stats sync is phase 2, env vars in
+  `.env.example`).
 
 ### The money path (details in docs/CHECKOUT-BUILD-PROMPT.md)
 
@@ -103,6 +110,21 @@ the in-process limiter as real protection.
 
 ## 5. Design system (locked)
 
+**Four surfaces, four skins, one brand core.** The platform has four visual
+surfaces, each with its own skin so restyling one can never leak into
+another: the **main site** (`app/(site)`, skin = the `:root` defaults in
+`app/globals.css`), the **portals** (`/admin` + `/portal` + `/partners`,
+skin = the `[data-surface="portal"]` block), **checkout**
+(`[data-surface="checkout"]` block), and the **sales pages**
+(`app/(sales)/sales.css`, the `.sp` system, fully separate). Each non-site
+layout stamps `data-surface` on its wrapper. Shared across ALL surfaces on
+purpose: the brand core (gold/blue/green, the gradient, glows, `--error`,
+the two typefaces) plus the top-level shared components (`Logo`, `GhlMark`,
+chat). ESLint part-boundary rules in `eslint.config.mjs` fail the build if
+one surface imports another's UI. To restyle a surface, edit ONLY its skin
+block (fork radius or type scale into a skin the same way when needed).
+The rules below describe the brand core and the main-site skin.
+
 Brand accents (gold, blue, green) are pixel-exact from the logo. The neutral
 hairline and dim grays were tuned for contrast (dim now passes WCAG AA on
 canvas); these are the live values in `app/globals.css`:
@@ -166,15 +188,36 @@ canvas); these are the live values in `app/globals.css`:
 /legal/privacy  /legal/terms  /legal/refund
 /checkout/[sku]  /checkout/intake/[orderId]  /checkout/thank-you  (noindex)
 /portal          /admin                              (noindex)
+/partners  /partners/apply                          (affiliate portal, noindex)
 /api/checkout/*  /api/webhooks/stripe  /api/portal/*  /api/admin/*
-/api/orders/[id]  /api/intake/[orderId]  /api/quote
+/api/orders/[id]  /api/intake/[orderId]  /api/quote  /api/partners/*
 ```
 
 `lib/pages-list.ts` is the canonical page list feeding the sitemap and the
 admin Pages screen. Header nav and footer chrome are backend-managed via
 Supabase (`lib/chrome.ts`) with site.ts values as build-time fallback.
 
-## 8. Quality floor
+## 8. The Journal ritual (shared brain, non-negotiable)
+
+The `journal` table (admin -> Journal) is the owner-facing record of this
+build: the build log, the decision register, and Shariful's idea inbox. It
+exists because he iterates fast and chat context compacts; the journal is
+what survives. Claude maintains it via `scripts/journal.mjs`:
+
+- **Session start:** run `node scripts/journal.mjs ideas` and address any
+  open ideas before or alongside the day's work (discuss, plan, or build;
+  move them with `set-status <seq> planned|done|dropped`).
+- **After finishing a meaningful piece of approved work** (and after any
+  deploy): add a log entry. Founder language, no jargon, follow the copy
+  rules. `node scripts/journal.mjs add --kind log --title "..." --body "..."`
+- **When Shariful approves a direction:** record it.
+  `add --kind decision --title "..." --body "What: ... Why: ..."` and when a
+  decision replaces an older one, pass `--supersedes <seq>` so the old card
+  flips to superseded instead of vanishing.
+
+Entries are for the owner: plain language, what and why, never code dumps.
+
+## 9. Quality floor
 
 Responsive from 320px. Visible keyboard focus everywhere. Reduced motion
 respected. Pinch zoom never disabled. Per-page metadata + canonical; new

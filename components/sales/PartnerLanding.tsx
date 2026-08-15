@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { SpVideo } from "@/components/sales/SpVideo";
 import type { PartnerSalesPage } from "@/lib/sales/pages";
-import { affiliateByRef } from "@/lib/affiliates";
+import { partnerOffer } from "@/lib/partners";
 import {
   clients,
   cta,
@@ -71,11 +71,14 @@ const WORK_PILLARS = [
 
 const WORK_LOOP = ["Send footage", "We edit to your guide", "Unlimited revisions"];
 
-export function PartnerLanding({ page }: { page: PartnerSalesPage }) {
+export async function PartnerLanding({ page }: { page: PartnerSalesPage }) {
   const p = page.partner;
-  const aff = affiliateByRef(page.affiliateRef);
-  const pct = aff?.discountPercent ?? 0;
-  const months = aff?.discountMonths ?? 0;
+  /* discount terms + coupon from the partners table (registry fallback) */
+  const { percent: pct, months, couponCode } = await partnerOffer(page.affiliateRef);
+  /* buy buttons carry the coupon so checkout applies the discount on its
+     own; the ref rides along purely for attribution */
+  const buyLink = (href: string) =>
+    `${href}?ref=${page.affiliateRef}${couponCode ? `&code=${encodeURIComponent(couponCode)}` : ""}`;
   const ft = featuredTestimonial; // Chase Buckner, HighLevel
   const initials = p.name
     .split(/\s+/)
@@ -90,7 +93,7 @@ export function PartnerLanding({ page }: { page: PartnerSalesPage }) {
   const faq = [
     {
       q: `Is the ${pct}% really automatic?`,
-      a: `Yes. Because you came from ${p.name.split(" ")[0]}, the discount is applied to your total at checkout for your first ${months} months. There is no code to enter.`,
+      a: `Yes. Start your plan from this page and the discount is applied to your total at checkout for your first ${months} months, no typing needed.${couponCode ? ` Ordering somewhere else on the site? Enter ${couponCode} at checkout.` : ""}`,
     },
     {
       q: `What happens after ${months} months?`,
@@ -339,7 +342,7 @@ export function PartnerLanding({ page }: { page: PartnerSalesPage }) {
                   </ul>
                   <p className="sp-tier-delivery">No contract, cancel anytime</p>
                   <a
-                    href={`/checkout/${plan.sku}?ref=${page.affiliateRef}`}
+                    href={buyLink(`/checkout/${plan.sku}`)}
                     className="sp-btn sp-btn--primary sp-btn--wide"
                   >
                     {cta.startEditing}

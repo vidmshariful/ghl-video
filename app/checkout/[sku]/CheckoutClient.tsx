@@ -87,13 +87,12 @@ type CommonProps = {
   bumps: CheckoutBump[];
   rating: string;
   clients: number;
-  /* a ?code= in the checkout URL (campaign links); auto-applied on load */
+  /* a ?code= in the checkout URL (campaign + partner links); auto-applied on
+     load. The coupon is the ONE discount rail, one-time and subscription alike. */
   initialCouponCode?: string | null;
-  /* affiliate ref resolved server-side (partner links); sent back with the
-     subscription so the server applies the matching coupon */
+  /* the referring partner's ref (attribution only, never a discount); sent
+     back with the subscription so the sale credits them */
   partnerRef?: string | null;
-  /* subscription discount to display, derived server-side from the same ref */
-  subDiscount?: { percentOff: number; months: number; label: string } | null;
 };
 
 type AppliedCoupon = { code: string; label: string; discountCents: number };
@@ -498,7 +497,7 @@ function SubscriptionCheckout({
   sku,
   rating,
   partnerRef,
-  subDiscount,
+  initialCouponCode,
 }: CommonProps) {
   const [details, setDetails] = useState<Details>(EMPTY);
   const [step, setStep] = useState<"details" | "payment">("details");
@@ -553,8 +552,13 @@ function SubscriptionCheckout({
     [sku],
   );
 
-  // The active discount. A buyer-entered coupon overrides the affiliate
-  // discount; the affiliate ref still credits the partner at create time.
+  /* partner links land with ?code=; apply it on arrival like the one-time flow */
+  useEffect(() => {
+    if (initialCouponCode) applyCoupon(initialCouponCode);
+  }, [initialCouponCode, applyCoupon]);
+
+  // The active discount: the applied coupon, the one discount rail. The
+  // partner ref rides separately for attribution and never changes a price.
   const active: {
     label: string;
     percentOff: number | null;
@@ -569,15 +573,7 @@ function SubscriptionCheckout({
         duration: coupon.subDuration ?? "once",
         months: coupon.subDurationMonths,
       }
-    : subDiscount
-      ? {
-          label: subDiscount.label,
-          percentOff: subDiscount.percentOff,
-          amountOffCents: null,
-          duration: "repeating",
-          months: subDiscount.months,
-        }
-      : null;
+    : null;
 
   const monthlyDiscountCents = active
     ? active.percentOff != null
@@ -688,7 +684,7 @@ function SubscriptionCheckout({
             coupon={coupon ? { code: coupon.code, label: coupon.label, discountCents: monthlyDiscountCents } : null}
             error={couponErr}
             busy={couponBusy}
-            initialInput=""
+            initialInput={initialCouponCode ?? ""}
             onApply={applyCoupon}
             onRemove={() => {
               setCoupon(null);

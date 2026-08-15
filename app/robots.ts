@@ -19,7 +19,7 @@ const AI_BOTS = [
 
 /* Non-marketing routes: never index the app surfaces. They also carry a
  * noindex meta, but disallowing here keeps them out of crawl entirely. */
-const DISALLOW = ["/admin/", "/portal/", "/checkout/"];
+const DISALLOW = ["/admin/", "/portal/", "/partners/", "/checkout/"];
 
 export default function robots(): MetadataRoute.Robots {
   return {

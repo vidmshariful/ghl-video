@@ -12,5 +12,9 @@ export const metadata: Metadata = {
 export default function AdminLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  return <div className="min-h-screen w-full bg-canvas text-ink">{children}</div>;
+  return (
+    <div data-surface="portal" className="min-h-screen w-full bg-canvas text-ink">
+      {children}
+    </div>
+  );
 }

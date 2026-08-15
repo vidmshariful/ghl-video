@@ -4,11 +4,17 @@ import { useEffect, useState } from "react";
 import { supabase } from "./client";
 
 /*
- * Coupon management. A coupon is percent off OR a flat dollar amount
- * off (one or the other), optionally limited to one SKU, with an
- * optional end date and redemption cap. The Active switch is the kill
- * switch: flipping it off stops a code instantly, campaign pages
- * unchanged. Redemption counts come from paid orders.
+ * Coupon management, in two tabs:
+ *
+ *   Store coupons    - campaign codes (percent or dollar off), as before.
+ *   Partner coupons  - one code per affiliate partner, the ONE discount rail
+ *                      of the partner program. Their landing-page buy buttons
+ *                      carry ?code=<code> (auto-applied at checkout); anyone
+ *                      else types it. Creating one here also stamps the code
+ *                      onto the partner row, so their portal shows it.
+ *
+ * The Active switch is the kill switch either way: flipping it off stops a
+ * code instantly. Redemption counts come from paid orders.
  */
 type CouponRow = {
   id: string;
@@ -24,16 +30,33 @@ type CouponRow = {
   sub_eligible: boolean;
   sub_duration: "once" | "forever" | "repeating" | null;
   sub_duration_months: number | null;
+  partner_id: string | null;
+};
+
+type PartnerLite = {
+  id: string;
+  ref: string;
+  name: string;
+  status: string;
+  coupon_code: string | null;
 };
 
 const field =
   "mt-1.5 w-full rounded-[3px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none";
 const lab = "font-mono text-label uppercase text-muted";
+const btn =
+  "tap rounded-[3px] border border-hair px-4 py-2 text-body-sm text-ink transition-colors hover:border-gold/60";
+const btnGold =
+  "tap rounded-[3px] bg-brand-gradient px-5 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60";
 
 const discountLabel = (c: CouponRow) =>
   c.percent_off != null
     ? `${c.percent_off}% off`
     : `$${((c.amount_off_cents ?? 0) / 100).toLocaleString("en-US")} off`;
+
+/* the program-standard code for a partner: their ref, upper, plus the percent */
+const suggestCode = (ref: string, percent: number) =>
+  `${ref.toUpperCase().replace(/[^A-Z0-9]/g, "")}${percent}`.slice(0, 32);
 
 /* timestamptz <-> the datetime-local input, in the admin's local time */
 const toLocalInput = (iso: string | null) => {
@@ -44,12 +67,20 @@ const toLocalInput = (iso: string | null) => {
 };
 const fromLocalInput = (v: string) => (v ? new Date(v).toISOString() : null);
 
+/* keep the partner row's displayed code in sync with its coupon */
+async function syncPartnerCode(partnerId: string | null, code: string | null) {
+  if (!partnerId) return;
+  await supabase.from("partners").update({ coupon_code: code }).eq("id", partnerId);
+}
+
 function CouponForm({
   initial,
+  partners,
   onDone,
   onCancel,
 }: {
   initial: Partial<CouponRow>;
+  partners: PartnerLite[];
   onDone: () => void;
   onCancel: () => void;
 }) {
@@ -69,6 +100,7 @@ function CouponForm({
     subEligible: initial.sub_eligible ?? false,
     subDuration: initial.sub_duration ?? "forever",
     subMonths: initial.sub_duration_months != null ? String(initial.sub_duration_months) : "3",
+    partnerId: initial.partner_id ?? "",
   });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -108,15 +140,22 @@ function CouponForm({
         f.subEligible && f.subDuration === "repeating"
           ? Math.max(1, Math.round(Number(f.subMonths) || 1))
           : null,
+      partner_id: f.partnerId || null,
     };
     const q = supabase.from("coupons");
     const { error } = isNew
       ? await q.insert(payload)
       : await q.update(payload).eq("id", initial.id!);
     if (error) {
-      setErr(error.message);
+      setErr(error.code === "23505" ? "That code already exists." : error.message);
       setBusy(false);
       return;
+    }
+    // partner display sync: the new owner shows this code; a previous owner
+    // (when reassigning) loses it
+    await syncPartnerCode(payload.partner_id, code);
+    if (initial.partner_id && initial.partner_id !== payload.partner_id) {
+      await syncPartnerCode(initial.partner_id, null);
     }
     onDone();
   }
@@ -137,6 +176,21 @@ function CouponForm({
             placeholder="AIFIRST30"
             maxLength={32}
           />
+        </label>
+        <label>
+          <span className={lab}>Belongs to a partner? (optional)</span>
+          <select
+            value={f.partnerId}
+            onChange={(e) => set("partnerId", e.target.value)}
+            className={field}
+          >
+            <option value="">No, a store coupon</option>
+            {partners.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name} (?ref={p.ref})
+              </option>
+            ))}
+          </select>
         </label>
         <label>
           <span className={lab}>Discount type</span>
@@ -256,18 +310,137 @@ function CouponForm({
       </div>
       {err && <p className="mt-4 text-body-sm text-error">{err}</p>}
       <div className="mt-6 flex gap-3">
-        <button
-          type="submit"
-          disabled={busy}
-          className="tap rounded-[3px] bg-brand-gradient px-6 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60"
-        >
+        <button type="submit" disabled={busy} className={btnGold}>
           {busy ? "Saving" : "Save coupon"}
         </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="tap rounded-[3px] border border-hair px-6 py-2.5 text-body text-ink transition-colors hover:border-gold/60"
-        >
+        <button type="button" onClick={onCancel} className={btn}>
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+}
+
+/* one-click generator: partner -> their program-standard coupon */
+function PartnerCouponGenerator({
+  partners,
+  onDone,
+  onCancel,
+}: {
+  partners: PartnerLite[];
+  onDone: () => void;
+  onCancel: () => void;
+}) {
+  const withoutCode = partners.filter((p) => !p.coupon_code);
+  const [partnerId, setPartnerId] = useState(withoutCode[0]?.id ?? partners[0]?.id ?? "");
+  const [percent, setPercent] = useState("10");
+  const [months, setMonths] = useState("3");
+  const [code, setCode] = useState(() => {
+    const p = withoutCode[0] ?? partners[0];
+    return p ? suggestCode(p.ref, 10) : "";
+  });
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const pickPartner = (id: string) => {
+    setPartnerId(id);
+    const p = partners.find((x) => x.id === id);
+    if (p) setCode(suggestCode(p.ref, Math.round(Number(percent)) || 10));
+  };
+  const pickPercent = (v: string) => {
+    setPercent(v);
+    const p = partners.find((x) => x.id === partnerId);
+    if (p) setCode(suggestCode(p.ref, Math.round(Number(v)) || 10));
+  };
+
+  async function create(e: React.FormEvent) {
+    e.preventDefault();
+    const pct = Math.round(Number(percent));
+    const mo = Math.max(1, Math.round(Number(months) || 3));
+    const cleanCode = code.trim().toUpperCase();
+    if (!partnerId) return setErr("Pick a partner.");
+    if (!pct || pct < 1 || pct > 90) return setErr("Percent must be between 1 and 90.");
+    if (cleanCode.length < 3) return setErr("The code needs at least 3 characters.");
+    setBusy(true);
+    setErr("");
+    const { error } = await supabase.from("coupons").insert({
+      code: cleanCode,
+      percent_off: pct,
+      amount_off_cents: null,
+      sku: null,
+      active: true,
+      sub_eligible: true,
+      sub_duration: "repeating",
+      sub_duration_months: mo,
+      partner_id: partnerId,
+    });
+    if (error) {
+      setErr(error.code === "23505" ? "That code already exists." : error.message);
+      setBusy(false);
+      return;
+    }
+    await syncPartnerCode(partnerId, cleanCode);
+    onDone();
+  }
+
+  return (
+    <form onSubmit={create} className="rounded-card border border-gold/40 bg-surface p-6">
+      <p className="font-display text-h4 font-semibold text-ink">Create a partner coupon</p>
+      <p className="mt-1 text-body-sm text-muted">
+        The program standard: percent off any product, and on editing plans it runs for
+        the first months you set. The code lands on the partner row, so their portal and
+        page buttons pick it up instantly.
+      </p>
+      <div className="mt-5 grid gap-4 sm:grid-cols-2">
+        <label>
+          <span className={lab}>Partner</span>
+          <select value={partnerId} onChange={(e) => pickPartner(e.target.value)} className={field}>
+            {partners.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+                {p.coupon_code ? ` (has ${p.coupon_code})` : " (no code yet)"}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span className={lab}>Code</span>
+          <input
+            required
+            value={code}
+            onChange={(e) => setCode(e.target.value.toUpperCase())}
+            className={`${field} font-mono uppercase`}
+            maxLength={32}
+          />
+        </label>
+        <label>
+          <span className={lab}>Percent off</span>
+          <input
+            type="number"
+            min={1}
+            max={90}
+            value={percent}
+            onChange={(e) => pickPercent(e.target.value)}
+            className={field}
+          />
+        </label>
+        <label>
+          <span className={lab}>Months on editing plans</span>
+          <input
+            type="number"
+            min={1}
+            value={months}
+            onChange={(e) => setMonths(e.target.value)}
+            className={field}
+          />
+        </label>
+      </div>
+      {err && <p className="mt-4 text-body-sm text-error">{err}</p>}
+      <div className="mt-6 flex gap-3">
+        <button type="submit" disabled={busy} className={btnGold}>
+          {busy ? "Creating" : "Create coupon"}
+        </button>
+        <button type="button" onClick={onCancel} className={btn}>
           Cancel
         </button>
       </div>
@@ -276,18 +449,28 @@ function CouponForm({
 }
 
 export function CouponsScreen() {
+  const [tab, setTab] = useState<"store" | "partner">("store");
   const [rows, setRows] = useState<CouponRow[]>([]);
+  const [partners, setPartners] = useState<PartnerLite[]>([]);
   const [editing, setEditing] = useState<CouponRow | "new" | null>(null);
+  const [generating, setGenerating] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [err, setErr] = useState("");
+  const [notice, setNotice] = useState("");
 
   async function load() {
-    const { data, error } = await supabase
-      .from("coupons")
-      .select("*")
-      .order("created_at", { ascending: false });
-    if (error) setErr(error.message);
-    else setRows(data as CouponRow[]);
+    const [c, p] = await Promise.all([
+      supabase.from("coupons").select("*").order("created_at", { ascending: false }),
+      supabase
+        .from("partners")
+        .select("id, ref, name, status, coupon_code")
+        .in("status", ["invited", "active"])
+        .order("name"),
+    ]);
+    if (c.error) setErr(c.error.message);
+    else setRows(c.data as CouponRow[]);
+    if (p.error) setErr(p.error.message);
+    else setPartners((p.data ?? []) as PartnerLite[]);
     setLoaded(true);
   }
   useEffect(() => {
@@ -306,35 +489,121 @@ export function CouponsScreen() {
   async function remove(c: CouponRow) {
     if (!confirm(`Delete coupon ${c.code}? Past orders keep their record of it.`)) return;
     const { error } = await supabase.from("coupons").delete().eq("id", c.id);
-    if (error) setErr(error.message);
-    else load();
+    if (error) {
+      setErr(error.message);
+      return;
+    }
+    // the partner row should not keep advertising a dead code
+    if (c.partner_id) {
+      const owner = partners.find((p) => p.id === c.partner_id);
+      if (owner?.coupon_code === c.code) await syncPartnerCode(c.partner_id, null);
+    }
+    load();
+  }
+
+  /* program-standard codes for every partner still missing one */
+  async function createMissing() {
+    const missing = partners.filter((p) => !p.coupon_code);
+    if (missing.length === 0) {
+      setNotice("Every partner already has a code.");
+      return;
+    }
+    if (!confirm(`Create the standard 10% coupon for ${missing.length} partner(s)?`)) return;
+    setErr("");
+    let made = 0;
+    for (const p of missing) {
+      const code = suggestCode(p.ref, 10);
+      const { error } = await supabase.from("coupons").insert({
+        code,
+        percent_off: 10,
+        amount_off_cents: null,
+        sku: null,
+        active: true,
+        sub_eligible: true,
+        sub_duration: "repeating",
+        sub_duration_months: 3,
+        partner_id: p.id,
+      });
+      if (error) {
+        setErr(`Stopped at ${p.name}: ${error.code === "23505" ? `code ${code} already exists` : error.message}`);
+        break;
+      }
+      await syncPartnerCode(p.id, code);
+      made++;
+    }
+    setNotice(made ? `Created ${made} partner coupon(s).` : "");
+    load();
   }
 
   if (!loaded) return <p className="text-body text-muted">Loading coupons...</p>;
 
+  const partnerName = (id: string | null) =>
+    id ? (partners.find((p) => p.id === id)?.name ?? "a partner") : null;
+  const storeRows = rows.filter((c) => !c.partner_id);
+  const partnerRows = rows.filter((c) => c.partner_id);
+  const shown = tab === "store" ? storeRows : partnerRows;
+  const missingCount = partners.filter((p) => !p.coupon_code).length;
+
   return (
     <div className="max-w-4xl">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-h3 text-ink">Coupons</h1>
-        <button
-          type="button"
-          onClick={() => setEditing("new")}
-          className="tap rounded-[3px] bg-brand-gradient px-5 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110"
-        >
-          Add coupon
-        </button>
+        <div className="flex gap-2">
+          {tab === "partner" && missingCount > 0 && (
+            <button type="button" onClick={createMissing} className={btn}>
+              Create missing ({missingCount})
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => (tab === "store" ? setEditing("new") : setGenerating(true))}
+            className={btnGold}
+          >
+            {tab === "store" ? "Add coupon" : "Create partner coupon"}
+          </button>
+        </div>
       </div>
       <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
-        Codes buyers can enter at checkout, or that campaign links apply
-        automatically. Turning Active off stops a code instantly. The
-        discount always applies to the product price, never to order bumps.
+        {tab === "store"
+          ? "Codes buyers can enter at checkout, or that campaign links apply automatically. Turning Active off stops a code instantly. The discount always applies to the product price, never to order bumps."
+          : "One code per partner, the discount rail of the affiliate program. Partner-page buy buttons apply it automatically; everyone else types it at checkout. Creating or deleting here updates what the partner sees in their portal."}
       </p>
+
+      <div className="mt-6 flex gap-1 border-b border-hair">
+        {(
+          [
+            { key: "store", label: `Store coupons (${storeRows.length})` },
+            { key: "partner", label: `Partner coupons (${partnerRows.length})` },
+          ] as const
+        ).map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            onClick={() => {
+              setTab(t.key);
+              setEditing(null);
+              setGenerating(false);
+              setNotice("");
+            }}
+            className={`tap rounded-t-[6px] px-4 py-2.5 text-body-sm transition-colors ${
+              tab === t.key
+                ? "border border-b-0 border-hair bg-surface font-semibold text-gold"
+                : "text-muted hover:text-ink"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
       {err && <p className="mt-4 text-body-sm text-error">{err}</p>}
+      {notice && <p className="mt-4 text-body-sm text-gold">{notice}</p>}
 
       {editing && (
         <div className="mt-6">
           <CouponForm
             initial={editing === "new" ? {} : editing}
+            partners={partners}
             onDone={() => {
               setEditing(null);
               load();
@@ -343,14 +612,28 @@ export function CouponsScreen() {
           />
         </div>
       )}
+      {generating && (
+        <div className="mt-6">
+          <PartnerCouponGenerator
+            partners={partners}
+            onDone={() => {
+              setGenerating(false);
+              load();
+            }}
+            onCancel={() => setGenerating(false)}
+          />
+        </div>
+      )}
 
       <ul className="mt-6 overflow-hidden rounded-card border border-hair">
-        {rows.length === 0 && (
+        {shown.length === 0 && (
           <li className="bg-canvas px-5 py-6 text-body text-muted">
-            No coupons yet. Add the first one.
+            {tab === "store"
+              ? "No store coupons yet. Add the first one."
+              : "No partner coupons yet. Create one, or hit Create missing to cover every partner."}
           </li>
         )}
-        {rows.map((c) => (
+        {shown.map((c) => (
           <li
             key={c.id}
             className="flex flex-wrap items-center justify-between gap-3 border-t border-hair bg-canvas px-5 py-4 first:border-t-0"
@@ -364,7 +647,13 @@ export function CouponsScreen() {
               </p>
               <p className="mt-0.5 font-mono text-label uppercase text-muted">
                 {discountLabel(c)}
+                {c.partner_id ? ` / ${partnerName(c.partner_id)}` : ""}
                 {c.sku ? ` / ${c.sku}` : " / any product"}
+                {c.sub_eligible
+                  ? c.sub_duration === "repeating"
+                    ? ` / editing ${c.sub_duration_months ?? 1} mo`
+                    : ` / editing ${c.sub_duration ?? "once"}`
+                  : ""}
                 {c.valid_until ? ` / until ${c.valid_until.slice(0, 10)}` : ""}
                 {" / used "}
                 {c.redemption_count}
@@ -386,14 +675,14 @@ export function CouponsScreen() {
               <button
                 type="button"
                 onClick={() => setEditing(c)}
-                className="tap rounded-[3px] border border-hair px-4 py-2 text-body-sm text-ink transition-colors hover:border-gold/60"
+                className={btn}
               >
                 Edit
               </button>
               <button
                 type="button"
                 onClick={() => remove(c)}
-                className="tap rounded-[3px] border border-hair px-4 py-2 text-body-sm text-error transition-colors hover:border-error/60"
+                className={`${btn} text-error hover:border-error/60`}
               >
                 Delete
               </button>

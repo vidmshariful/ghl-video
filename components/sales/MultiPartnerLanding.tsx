@@ -4,7 +4,7 @@ import { SpVideo } from "@/components/sales/SpVideo";
 import { GhlMark } from "@/components/GhlMark";
 import { Logo } from "@/components/Logo";
 import type { PartnerSalesPage } from "@/lib/sales/pages";
-import { affiliateByRef } from "@/lib/affiliates";
+import { partnerOffer } from "@/lib/partners";
 import { salesBundles, type SalesBundle } from "@/lib/bundles";
 import {
   clients,
@@ -158,12 +158,11 @@ const CUSTOM_FORMATS = [
   { name: "Onboarding", blurb: "A short series that gets new users to value, fast." },
 ];
 
-export function MultiPartnerLanding({ page }: { page: PartnerSalesPage }) {
+export async function MultiPartnerLanding({ page }: { page: PartnerSalesPage }) {
   const p = page.partner;
-  const aff = affiliateByRef(page.affiliateRef);
-  const pct = aff?.discountPercent ?? 0;
-  const months = aff?.discountMonths ?? 0;
   const ref = page.affiliateRef;
+  /* discount terms + coupon from the partners table (registry fallback) */
+  const { percent: pct, months, couponCode } = await partnerOffer(ref);
   const ft = featuredTestimonial;
   const initials = p.name
     .split(/\s+/)
@@ -173,11 +172,17 @@ export function MultiPartnerLanding({ page }: { page: PartnerSalesPage }) {
     .toUpperCase();
   const photoReady = p.photo ? existsSync(join(process.cwd(), "public", p.photo)) : false;
   const withRef = (href: string) => (href.includes("?") ? `${href}&ref=${ref}` : `${href}?ref=${ref}`);
+  /* buy buttons carry the coupon too, so checkout applies the discount on
+     its own; the ref rides along purely for attribution */
+  const buyLink = (href: string) => {
+    const base = withRef(href);
+    return couponCode ? `${base}&code=${encodeURIComponent(couponCode)}` : base;
+  };
 
   const faq = [
     {
       q: `Is the ${pct}% really automatic?`,
-      a: `Yes. Because you came from ${p.name.split(" ")[0]}, the discount is applied at checkout on premade videos and editing plans. For custom production, our team applies it to your quote.`,
+      a: `Yes. Buy anything from this page and the discount applies at checkout on its own. Ordering somewhere else on the site? Enter ${couponCode ?? "the code above"} at checkout. For custom production, our team applies it to your quote.`,
     },
     {
       q: "Is each video really mine to use anywhere?",
@@ -237,13 +242,13 @@ export function MultiPartnerLanding({ page }: { page: PartnerSalesPage }) {
               <p className="sp-lede" style={{ marginTop: "1.3rem", maxWidth: "36rem" }}>
                 {p.offer}
               </p>
-              {aff?.code ? (
+              {couponCode ? (
                 <div className="sp-codebox">
                   <span className="sp-codebox-label">Your code</span>
-                  <span className="sp-codebox-code">{aff.code}</span>
+                  <span className="sp-codebox-code">{couponCode}</span>
                   <span className="sp-codebox-note">
-                    Your {pct}% is applied automatically at checkout. Enter this code by hand only if
-                    the discount does not show.
+                    Buy from this page and your {pct}% applies at checkout on its own.
+                    Anywhere else on the site, enter this code at checkout.
                   </span>
                 </div>
               ) : null}
@@ -442,7 +447,7 @@ export function MultiPartnerLanding({ page }: { page: PartnerSalesPage }) {
                 </div>
                 <div className="sp-grid-cards" style={{ marginTop: "1.75rem" }}>
                   {vids.map((v) => (
-                    <LibraryCard key={v.slug} v={v} withRef={withRef} />
+                    <LibraryCard key={v.slug} v={v} buyLink={buyLink} />
                   ))}
                 </div>
               </div>
@@ -454,7 +459,7 @@ export function MultiPartnerLanding({ page }: { page: PartnerSalesPage }) {
             <Head eyebrow="Bundle and save" title="Take a set," accent="save more." center />
             <div className="sp-bundles" style={{ marginTop: "2.5rem" }}>
               {salesBundles.map((b) => (
-                <SalesBundleCard key={b.sku} b={b} withRef={withRef} />
+                <SalesBundleCard key={b.sku} b={b} buyLink={buyLink} />
               ))}
             </div>
           </div>
@@ -509,7 +514,7 @@ export function MultiPartnerLanding({ page }: { page: PartnerSalesPage }) {
                     ))}
                   </ul>
                   <p className="sp-tier-delivery">No contract, cancel anytime</p>
-                  <a href={`/checkout/${plan.sku}?ref=${ref}`} className="sp-btn sp-btn--primary sp-btn--wide">
+                  <a href={buyLink(`/checkout/${plan.sku}`)} className="sp-btn sp-btn--primary sp-btn--wide">
                     {cta.startEditing}
                   </a>
                 </div>
@@ -778,7 +783,7 @@ function Head({
   );
 }
 
-function LibraryCard({ v, withRef }: { v: SalesLibVideo; withRef: (href: string) => string }) {
+function LibraryCard({ v, buyLink }: { v: SalesLibVideo; buyLink: (href: string) => string }) {
   const ready = !v.comingSoon && Boolean(v.preview || v.wistiaId);
   const code = codeFor(v.slug);
   return (
@@ -793,7 +798,7 @@ function LibraryCard({ v, withRef }: { v: SalesLibVideo; withRef: (href: string)
         <>
           <div className="sp-vcard-buy">
             <span className="sp-price">{dollars(v.price)}</span>
-            <a href={withRef(`/checkout/${skuFor(v.slug)}`)} className="sp-btn sp-btn--primary sp-btn--sm">
+            <a href={buyLink(`/checkout/${skuFor(v.slug)}`)} className="sp-btn sp-btn--primary sp-btn--sm">
               Order Now
             </a>
           </div>
@@ -833,7 +838,7 @@ function NicheNote({ price = 50 }: { price?: number }) {
   );
 }
 
-function SalesBundleCard({ b, withRef }: { b: SalesBundle; withRef: (href: string) => string }) {
+function SalesBundleCard({ b, buyLink }: { b: SalesBundle; buyLink: (href: string) => string }) {
   const save = b.anchorPrice ? Math.round((1 - b.price / b.anchorPrice) * 100) : 0;
   return (
     <div className={`sp-bundle${b.featured ? " sp-bundle--featured" : ""}`}>
@@ -863,7 +868,7 @@ function SalesBundleCard({ b, withRef }: { b: SalesBundle; withRef: (href: strin
         {b.pickAtIntake ? "Pick your exact videos at intake" : "Every video on this page included"}
       </p>
       <p className="sp-tier-delivery">Delivery in {b.deliveryDays} days</p>
-      <a href={withRef(`/checkout/${b.sku}`)} className="sp-btn sp-btn--primary sp-btn--wide">
+      <a href={buyLink(`/checkout/${b.sku}`)} className="sp-btn sp-btn--primary sp-btn--wide">
         Order Now
       </a>
     </div>

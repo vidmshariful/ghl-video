@@ -3,7 +3,7 @@ import { getActiveProductBySku } from "@/lib/checkout/products";
 import { ensureAuthAccount } from "@/lib/checkout/account";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { stripe } from "@/lib/checkout/stripe";
-import { affiliateByRef, refFromCookieHeader } from "@/lib/affiliates";
+import { normalizeRef, refFromCookieHeader } from "@/lib/affiliates";
 import { checkCouponForSubscription, ensureStripeCouponId } from "@/lib/checkout/coupons";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 
@@ -41,13 +41,13 @@ export async function POST(req: Request) {
   const company = asStr(payload.company) || null;
   const phone = asStr(payload.phone) || null;
 
-  // The referring affiliate, from the posted ref or the first-touch ghlv_ref
-  // cookie. The client only sends a ref; the coupon + discount are derived here
-  // server-side, so a checkout URL can never invent a price.
-  const affiliate =
-    affiliateByRef(asStr(payload.ref)) ??
-    affiliateByRef(refFromCookieHeader(req.headers.get("cookie")));
-  const ref = affiliate?.ref ?? null;
+  // The referring partner's ref, from the posted ref or the first-touch
+  // ghlv_ref cookie. Attribution ONLY (metadata + the HighLevel affiliate
+  // tag): any well-formed ref credits, known partner or not. The discount is
+  // the coupon below, so a ref can never change a price.
+  const ref =
+    normalizeRef(asStr(payload.ref)) ??
+    normalizeRef(refFromCookieHeader(req.headers.get("cookie")));
 
   if (!sku) return NextResponse.json({ error: "Missing plan." }, { status: 400 });
   if (!name) return NextResponse.json({ error: "Name is required." }, { status: 400 });
@@ -123,9 +123,9 @@ export async function POST(req: Request) {
     }
   }
 
-  // Resolve the discount to charge, as a Stripe coupon derived server-side (the
-  // client never sets a price). A buyer-entered code wins over the affiliate
-  // discount; the affiliate ref still credits the partner via metadata below.
+  // Resolve the discount to charge, as a Stripe coupon derived server-side
+  // from the entered code (the client never sets a price). The coupon is the
+  // ONE discount rail; the ref only credits the partner via metadata below.
   // Done AFTER the pending-reuse check so a retry does not re-reserve a slot.
   const couponCodeRaw = asStr(payload.couponCode);
   let discountCouponId: string | null = null;
@@ -158,38 +158,6 @@ export async function POST(req: Request) {
       }
       return NextResponse.json({ error: "Could not apply that code. Please try again." }, { status: 502 });
     }
-  } else if (affiliate) {
-    // The discount SHOWN comes from lib/affiliates.ts; the discount CHARGED comes
-    // from the Stripe coupon. Verify they agree (and the coupon exists) before
-    // charging, so we never bill a different discount than we displayed.
-    try {
-      const coupon = await stripe().coupons.retrieve(affiliate.stripeCouponId);
-      const termsMatch =
-        coupon.valid &&
-        coupon.percent_off === affiliate.discountPercent &&
-        coupon.duration === "repeating" &&
-        coupon.duration_in_months === affiliate.discountMonths;
-      if (!termsMatch) {
-        console.error(
-          `[create-subscription] affiliate coupon ${affiliate.stripeCouponId} != config: ` +
-            `stripe ${coupon.percent_off ?? "-"}%/${coupon.duration}/${coupon.duration_in_months ?? "-"}mo valid=${coupon.valid}; ` +
-            `config ${affiliate.discountPercent}%/repeating/${affiliate.discountMonths}mo`,
-        );
-        return NextResponse.json(
-          { error: "This offer is not available right now. Please contact support." },
-          { status: 502 },
-        );
-      }
-      discountCouponId = affiliate.stripeCouponId;
-    } catch (err) {
-      console.error(
-        `[create-subscription] affiliate coupon ${affiliate.stripeCouponId} lookup failed: ${(err as Error).message}`,
-      );
-      return NextResponse.json(
-        { error: "This offer is not available right now. Please contact support." },
-        { status: 502 },
-      );
-    }
   }
 
   let sub;
@@ -198,8 +166,8 @@ export async function POST(req: Request) {
       {
         customer: stripeCustomerId,
         items: [{ price: priceId }],
-        // The buyer coupon or affiliate discount, resolved to a Stripe coupon
-        // server-side above so the client can never set a price.
+        // The entered coupon, resolved to a Stripe coupon server-side above
+        // so the client can never set a price.
         ...(discountCouponId ? { discounts: [{ coupon: discountCouponId }] } : {}),
         payment_behavior: "default_incomplete",
         payment_settings: { save_default_payment_method: "on_subscription" },

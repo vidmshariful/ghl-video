@@ -84,6 +84,37 @@ const eslintConfig = defineConfig([
     },
   },
   {
+    // Part 3: the portals (site admin, customer portal, partner portal).
+    // One surface, three doors; they share the portal skin + auth and may
+    // use only top-level shared components (Logo, GhlMark, chat).
+    files: [
+      "app/admin/**/*.{ts,tsx}",
+      "app/portal/**/*.{ts,tsx}",
+      "app/partners/**/*.{ts,tsx}",
+      "components/admin/**/*.{ts,tsx}",
+    ],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: [
+                "@/components/home/*",
+                "@/components/pages/*",
+                "@/components/premade/*",
+                "@/components/sales/*",
+                "@/components/checkout/*",
+              ],
+              message:
+                "Portals must not import marketing, sales, or checkout UI. Shared brand pieces (Logo, GhlMark, chat) live at the top level of components/.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     // Part 4: sales landing pages
     files: ["app/(sales)/**/*.{ts,tsx}", "components/sales/**/*.{ts,tsx}"],
     rules: {

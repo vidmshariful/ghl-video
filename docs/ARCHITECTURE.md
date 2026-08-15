@@ -15,12 +15,29 @@ else it touches**.
 |---|------|-------|--------|-----------|---------|
 | 1 | Public marketing | `app/(site)/**` | `app/(site)/layout.tsx` (full chrome) | `components/{home,pages,premade}` | yes |
 | 2 | Checkout (money path) | `app/checkout/**`, `app/api/checkout/**`, `app/api/webhooks/stripe` | `app/checkout/layout.tsx` (minimal) | `components/checkout` | no |
-| 3 | Backend | `app/admin/**`, `app/portal/**`, `app/api/{admin,portal}/**` | `app/admin/layout.tsx`, `app/portal/layout.tsx` | colocated in the route folders | no |
+| 3 | Backend (the portals) | `app/admin/**`, `app/portal/**`, `app/partners/**`, `app/api/{admin,portal,partners}/**` | `app/admin/layout.tsx`, `app/portal/layout.tsx`, `app/partners/layout.tsx` | colocated in the route folders | no |
 | 4 | Sales pages | `app/(sales)/**` | `app/(sales)/layout.tsx` (scoped `.sp` system) | `components/sales` | per-page `indexable` flag |
 
 Each part has its own layout, its own chrome, and its own indexing policy. No
 part imports another part's UI or the money-path internals (enforced, see
 Guardrails).
+
+### Surface skins (design separation)
+
+Each part is also a visual SURFACE with its own skin, so restyling one can
+never leak into another. The skin variables live in `app/globals.css`:
+
+- **Main site**: the `:root` defaults (the reference skin).
+- **Portals** (`/admin` + `/portal` + `/partners`): the `[data-surface="portal"]`
+  block; each portal layout stamps `data-surface="portal"` on its wrapper.
+- **Checkout**: the `[data-surface="checkout"]` block.
+- **Sales pages**: their own system entirely (`app/(sales)/sales.css`, `.sp`).
+
+The skins start as exact copies on purpose. To restyle a surface, edit ONLY
+its block (fork radius/type-scale variables into a skin the same way when a
+surface needs to diverge further). Shared across all surfaces: the brand core
+(gold/blue/green, gradient, glows, `--error`, the two typefaces) and the
+top-level shared components (`Logo`, `GhlMark`, chat).
 
 ## The shared core (single source of truth)
 

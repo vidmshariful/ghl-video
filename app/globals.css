@@ -2,12 +2,23 @@
 
 /* ------------------------------------------------------------------ */
 /* Locked brand tokens (CLAUDE.md section 4). These do not change.     */
+/*                                                                     */
+/* TWO LAYERS, on purpose:                                             */
+/*   1. The SHARED BRAND CORE below: brand colors, gradient, glows,    */
+/*      error, reading measures. Every surface uses these. Changing    */
+/*      one changes the whole platform, which is the point.            */
+/*   2. The SURFACE SKIN: canvas/surface/card/hair + text colors.      */
+/*      :root carries the DEFAULT skin (the main website). The portal  */
+/*      and checkout surfaces re-declare the same variables in their   */
+/*      own [data-surface] blocks further down, so each surface's look */
+/*      is edited in ONE block and can never leak into another. The    */
+/*      sales pages have their own system entirely (app/(sales)).      */
 /* ------------------------------------------------------------------ */
 :root {
   /* native controls, scrollbars, and form widgets render dark */
   color-scheme: dark;
 
-  /* brand */
+  /* ---- shared brand core (all surfaces) ---- */
   --gold: #fcc000;
   --blue: #0090fc;
   --green: #00cc00;
@@ -34,6 +45,7 @@
     (min(100vw - 1.5rem, 80.5rem) - min(100vw - 3rem, 77.5rem)) / 2
   );
 
+  /* ---- default surface skin: the MAIN WEBSITE ---- */
   /* surfaces (near-black, never flat gray) */
   --canvas: #08090d;
   --surface: #111219;
@@ -50,7 +62,38 @@
   --muted: #9096a8;
   --dim: #7d8499;
 
+  /* shared semantic (all surfaces) */
   --error: #ff6b6b;
+}
+
+/* ------------------------------------------------------------------ */
+/* Surface skins. Each surface's layout declares data-surface, and its */
+/* look lives in ONE block here. They start as exact copies of the     */
+/* site skin ON PURPOSE: the surfaces match today. To restyle one      */
+/* surface, edit ONLY its block; the others cannot be affected. To     */
+/* fork more than colors later (radius, type scale), add the variable  */
+/* here and point the @theme mapping at it the same way.               */
+/* ------------------------------------------------------------------ */
+[data-surface="portal"] {
+  /* the three portals: /admin, /portal, /partners */
+  --canvas: #08090d;
+  --surface: #111219;
+  --card: #161821;
+  --hair: #2b2f40;
+  --text: #eef0f6;
+  --muted: #9096a8;
+  --dim: #7d8499;
+}
+
+[data-surface="checkout"] {
+  /* the money path: /checkout */
+  --canvas: #08090d;
+  --surface: #111219;
+  --card: #161821;
+  --hair: #2b2f40;
+  --text: #eef0f6;
+  --muted: #9096a8;
+  --dim: #7d8499;
 }
 
 @theme inline {
