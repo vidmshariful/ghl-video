@@ -75,3 +75,14 @@ export function refFromCookieHeader(cookieHeader: string | null | undefined): st
   const m = cookieHeader.match(/(?:^|;\s*)ghlv_ref=([^;]+)/);
   return m ? normalizeRef(decodeURIComponent(m[1])) : null;
 }
+
+/** FirstPromoter's visitor tracking id, set by its fpr.js on the public
+ *  pages. Passed to Stripe as fp_tid metadata so FP attributes the sale to
+ *  the clicked link even before any email match. */
+export function fpTidFromCookieHeader(cookieHeader: string | null | undefined): string | null {
+  if (!cookieHeader) return null;
+  const m = cookieHeader.match(/(?:^|;\s*)_fprom_tid=([^;]+)/);
+  if (!m) return null;
+  const tid = decodeURIComponent(m[1]).trim().slice(0, 100);
+  return tid || null;
+}

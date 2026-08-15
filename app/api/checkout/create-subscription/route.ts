@@ -3,7 +3,7 @@ import { getActiveProductBySku } from "@/lib/checkout/products";
 import { ensureAuthAccount } from "@/lib/checkout/account";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { stripe } from "@/lib/checkout/stripe";
-import { normalizeRef, refFromCookieHeader } from "@/lib/affiliates";
+import { fpTidFromCookieHeader, normalizeRef, refFromCookieHeader } from "@/lib/affiliates";
 import { checkCouponForSubscription, ensureStripeCouponId } from "@/lib/checkout/coupons";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 
@@ -48,6 +48,8 @@ export async function POST(req: Request) {
   const ref =
     normalizeRef(asStr(payload.ref)) ??
     normalizeRef(refFromCookieHeader(req.headers.get("cookie")));
+  // FirstPromoter's visitor id, stamped on Stripe for sale attribution
+  const fpTid = fpTidFromCookieHeader(req.headers.get("cookie"));
 
   if (!sku) return NextResponse.json({ error: "Missing plan." }, { status: 400 });
   if (!name) return NextResponse.json({ error: "Name is required." }, { status: 400 });
@@ -85,7 +87,15 @@ export async function POST(req: Request) {
 
   let stripeCustomerId: string | null = customer.stripe_customer_id;
   if (!stripeCustomerId) {
-    const sc = await stripe().customers.create({ email, name, phone: phone ?? undefined, metadata: { supabase_customer_id: customer.id } });
+    const sc = await stripe().customers.create({
+      email,
+      name,
+      phone: phone ?? undefined,
+      metadata: {
+        supabase_customer_id: customer.id,
+        ...(fpTid ? { fp_tid: fpTid } : {}),
+      },
+    });
     stripeCustomerId = sc.id;
     await db.from("customers").update({ stripe_customer_id: stripeCustomerId }).eq("id", customer.id);
   }
@@ -175,7 +185,8 @@ export async function POST(req: Request) {
         metadata: {
           sku,
           customer_email: email,
-          ...(ref ? { ref } : {}),
+          ...(ref ? { ref, fp_ref: ref } : {}),
+          ...(fpTid ? { fp_tid: fpTid } : {}),
           ...(couponCode ? { coupon_code: couponCode } : {}),
         },
       },

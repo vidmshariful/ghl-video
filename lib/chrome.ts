@@ -87,7 +87,16 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 
 <!-- gtag loader -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=AW-16454943179">
-</script>`;
+</script>
+
+<!-- FirstPromoter (affiliate click tracking; cid = the FP account id).
+     Standard fpr.js on purpose: the fpr.highlevel.js variant from FP's
+     HighLevel instructions is for HL funnel pages and needs jQuery. -->
+<script>(function(w){w.fpr=w.fpr||function(){w.fpr.q = w.fpr.q||[];w.fpr.q[arguments[0]=='set'?'unshift':'push'](arguments);};})(window);
+fpr("init", {cid:"ri063sv0"});
+fpr("click");
+</script>
+<script src="https://cdn.firstpromoter.com/fpr.js" async></script>`;
 
 /* Injected at body end: the LeadConnector chat widget and the GTM
  * noscript fallback. */

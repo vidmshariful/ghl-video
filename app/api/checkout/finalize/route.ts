@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getActiveProductBySku } from "@/lib/checkout/products";
 import { resolveSelectedBumps } from "@/lib/checkout/bumps";
 import { checkCoupon } from "@/lib/checkout/coupons";
-import { refFromCookieHeader } from "@/lib/affiliates";
+import { fpTidFromCookieHeader, refFromCookieHeader } from "@/lib/affiliates";
 import { ensureAuthAccount } from "@/lib/checkout/account";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { stripe } from "@/lib/checkout/stripe";
@@ -48,6 +48,9 @@ export async function POST(req: Request) {
   // First-touch affiliate ref (set as a cookie by the middleware from a ?ref=
   // link). Recorded on the order for attribution; it never affects the price.
   const ref = refFromCookieHeader(req.headers.get("cookie"));
+  // FirstPromoter's visitor id: stamped on Stripe so FP attributes the sale
+  // to the clicked link (fp_ref rides along as the fallback match).
+  const fpTid = fpTidFromCookieHeader(req.headers.get("cookie"));
 
   if (!paymentIntentId.startsWith("pi_")) {
     return NextResponse.json({ error: "Missing payment." }, { status: 400 });
@@ -191,7 +194,10 @@ export async function POST(req: Request) {
       email,
       name,
       phone: phone ?? undefined,
-      metadata: { supabase_customer_id: customer.id },
+      metadata: {
+        supabase_customer_id: customer.id,
+        ...(fpTid ? { fp_tid: fpTid } : {}),
+      },
     });
     stripeCustomerId = sc.id;
     await db.from("customers").update({ stripe_customer_id: stripeCustomerId }).eq("id", customer.id);
@@ -213,7 +219,8 @@ export async function POST(req: Request) {
       bump_cents: String(bumpsCents),
       coupon_code: couponMeta?.code ?? "",
       discount_cents: couponMeta ? String(discountCents) : "",
-      ...(ref ? { ref } : {}),
+      ...(ref ? { ref, fp_ref: ref } : {}),
+      ...(fpTid ? { fp_tid: fpTid } : {}),
     },
   });
 
