@@ -96,6 +96,60 @@
   --dim: #7d8499;
 }
 
+/* The portals' LIGHT theme. The top-bar switch stamps data-theme on <html>
+   (persisted in localStorage, applied pre-paint by the layouts' init
+   script); only the portal surface responds, the other surfaces are
+   untouched. Values chosen so muted + dim keep AA on white. */
+[data-theme="light"] [data-surface="portal"] {
+  color-scheme: light;
+  --canvas: #f4f6f9;
+  --surface: #ffffff;
+  --card: #ffffff;
+  --hair: #e3e7ef;
+  --text: #101523;
+  --muted: #5b6474;
+  --dim: #737d92;
+}
+/* Buttons on bright brand fills keep near-black text in BOTH themes (the
+   design rule); .text-canvas would flip to near-white in light mode. */
+[data-theme="light"] [data-surface="portal"] .text-canvas {
+  color: #08090d;
+}
+
+/* ---- portal motion: content fades up on view change; groups slide ---- */
+@keyframes portal-view-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.portal-view {
+  animation: portal-view-in 0.22s ease both;
+}
+.portal-group {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.22s ease;
+}
+.portal-group[data-closed="true"] {
+  grid-template-rows: 0fr;
+}
+.portal-group > div {
+  overflow: hidden;
+}
+@media (prefers-reduced-motion: reduce) {
+  .portal-view {
+    animation: none;
+  }
+  .portal-group {
+    transition: none;
+  }
+}
+
 @theme inline {
   --color-gold: var(--gold);
   --color-blue: var(--blue);

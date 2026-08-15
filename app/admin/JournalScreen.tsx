@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "./client";
+import { AdminModal } from "./Modal";
 
 /*
  * The Journal: the platform's shared brain. Three tabs over one table:
@@ -31,12 +32,12 @@ type Entry = {
 type Tab = "log" | "decision" | "idea";
 
 const field =
-  "mt-1.5 w-full rounded-[3px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none";
+  "mt-1.5 w-full rounded-[8px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none";
 const lab = "font-mono text-label uppercase text-muted";
 const btn =
-  "tap rounded-[3px] border border-hair px-4 py-2 text-body-sm text-ink transition-colors hover:border-gold/60";
+  "tap rounded-[8px] border border-hair px-4 py-2 text-body-sm text-ink transition-colors hover:border-gold/60";
 const btnGold =
-  "tap rounded-[3px] bg-brand-gradient px-5 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60";
+  "tap rounded-[8px] bg-brand-gradient px-5 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60";
 
 const IDEA_STATUS_STYLE: Record<string, string> = {
   open: "border-gold/40 text-gold",
@@ -75,19 +76,6 @@ function EntryForm({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
-  const heading =
-    kind === "idea"
-      ? isNew
-        ? "What clicked?"
-        : "Edit idea"
-      : kind === "decision"
-        ? isNew
-          ? "Record a decision"
-          : `Edit decision #${initial.seq}`
-        : isNew
-          ? "Add a log note"
-          : `Edit note #${initial.seq}`;
-
   async function save(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim()) return setErr("A title is required.");
@@ -118,8 +106,7 @@ function EntryForm({
   }
 
   return (
-    <form onSubmit={save} className="rounded-card border border-gold/40 bg-surface p-6">
-      <p className="font-display text-h4 font-semibold text-ink">{heading}</p>
+    <form onSubmit={save}>
       <div className="mt-5 grid gap-4">
         <label>
           <span className={lab}>{kind === "idea" ? "The idea, in one line" : "Title"}</span>
@@ -225,9 +212,9 @@ export function JournalScreen({ meEmail }: { meEmail: string }) {
   }
 
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-4xl">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-display text-h3 text-ink">Journal</h1>
+        <h1 className="font-display text-h2 text-ink">Journal</h1>
         <button type="button" onClick={() => setEditing("new")} className={btnGold}>
           {tab === "log" ? "Add note" : tab === "decision" ? "Record decision" : "Jot an idea"}
         </button>
@@ -249,7 +236,7 @@ export function JournalScreen({ meEmail }: { meEmail: string }) {
               setTab(t.key);
               setEditing(null);
             }}
-            className={`tap rounded-t-[6px] px-4 py-2.5 text-body-sm transition-colors ${
+            className={`tap rounded-t-[8px] px-4 py-2.5 text-body-sm transition-colors ${
               tab === t.key
                 ? "border border-b-0 border-hair bg-surface font-semibold text-gold"
                 : "text-muted hover:text-ink"
@@ -262,8 +249,24 @@ export function JournalScreen({ meEmail }: { meEmail: string }) {
 
       {err && <p className="mt-4 text-body-sm text-error">{err}</p>}
 
-      {editing && (
-        <div className="mt-6">
+      <AdminModal
+        open={!!editing}
+        onClose={() => setEditing(null)}
+        title={
+          editing === "new" || !editing
+            ? tab === "idea"
+              ? "What clicked?"
+              : tab === "decision"
+                ? "Record a decision"
+                : "Add a log note"
+            : tab === "idea"
+              ? "Edit idea"
+              : tab === "decision"
+                ? `Edit decision #${editing.seq}`
+                : `Edit note #${editing.seq}`
+        }
+      >
+        {editing && (
           <EntryForm
             kind={tab}
             initial={editing === "new" ? {} : editing}
@@ -274,8 +277,8 @@ export function JournalScreen({ meEmail }: { meEmail: string }) {
             }}
             onCancel={() => setEditing(null)}
           />
-        </div>
-      )}
+        )}
+      </AdminModal>
 
       {/* ---- build log ---- */}
       {tab === "log" && (
@@ -288,7 +291,7 @@ export function JournalScreen({ meEmail }: { meEmail: string }) {
               <p className="font-mono text-label uppercase tracking-[0.1em] text-gold">{g.day}</p>
               <div className="mt-2 grid gap-3">
                 {g.items.map((e) => (
-                  <div key={e.id} className="rounded-card border border-hair bg-surface p-5">
+                  <div key={e.id} className="rounded-[12px] border border-hair bg-surface p-5">
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <p className="text-body font-semibold text-ink">{e.title}</p>
                       <span className="font-mono text-label uppercase text-dim">
@@ -317,7 +320,7 @@ export function JournalScreen({ meEmail }: { meEmail: string }) {
       {tab === "decision" && (
         <div className="mt-6 grid gap-3">
           {activeDecisions.map((e) => (
-            <div key={e.id} className="rounded-card border border-hair bg-surface p-5">
+            <div key={e.id} className="rounded-[12px] border border-hair bg-surface p-5">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <p className="text-body font-semibold text-ink">
                   <span className="mr-2 font-mono text-label text-gold">#{e.seq}</span>
@@ -350,7 +353,7 @@ export function JournalScreen({ meEmail }: { meEmail: string }) {
               {showClosed && (
                 <div className="mt-3 grid gap-3">
                   {supersededDecisions.map((e) => (
-                    <div key={e.id} className="rounded-card border border-hair bg-canvas p-5 opacity-70">
+                    <div key={e.id} className="rounded-[12px] border border-hair bg-canvas p-5 opacity-70">
                       <p className="text-body font-semibold text-ink">
                         <span className="mr-2 font-mono text-label text-dim">#{e.seq}</span>
                         {e.title}
@@ -384,7 +387,7 @@ export function JournalScreen({ meEmail }: { meEmail: string }) {
             <p className="text-body text-muted">No open ideas. When something clicks, jot it.</p>
           )}
           {openIdeas.map((e) => (
-            <div key={e.id} className="rounded-card border border-hair bg-surface p-5">
+            <div key={e.id} className="rounded-[12px] border border-hair bg-surface p-5">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <p className="text-body font-semibold text-ink">{e.title}</p>
                 <span
@@ -430,7 +433,7 @@ export function JournalScreen({ meEmail }: { meEmail: string }) {
               {showClosed && (
                 <div className="mt-3 grid gap-3">
                   {closedIdeas.map((e) => (
-                    <div key={e.id} className="rounded-card border border-hair bg-canvas p-5 opacity-70">
+                    <div key={e.id} className="rounded-[12px] border border-hair bg-canvas p-5 opacity-70">
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <p className="text-body font-semibold text-ink">{e.title}</p>
                         <span

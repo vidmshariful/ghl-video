@@ -85,7 +85,7 @@ export function AdminModal({
         aria-label={title}
         tabIndex={-1}
         style={{ outline: "none" }}
-        className={`relative w-full ${maxWidth} rounded-card border border-hair bg-surface shadow-2xl`}
+        className={`relative w-full ${maxWidth} rounded-[12px] border border-hair bg-surface shadow-2xl`}
       >
         <div className="flex items-start justify-between gap-4 border-b border-hair px-6 py-4">
           <div className="min-w-0">
@@ -96,7 +96,7 @@ export function AdminModal({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="tap -mr-1.5 shrink-0 rounded-[3px] p-1.5 text-dim transition-colors hover:text-ink focus:text-ink focus:outline-none"
+            className="tap -mr-1.5 shrink-0 rounded-[8px] p-1.5 text-dim transition-colors hover:text-ink focus:text-ink focus:outline-none"
           >
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
               <path

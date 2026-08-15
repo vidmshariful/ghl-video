@@ -11,7 +11,10 @@ export const money = (cents: number, cur = "usd") =>
   (cents / 100).toLocaleString("en-US", {
     style: "currency",
     currency: cur.toUpperCase(),
-    minimumFractionDigits: 0,
+    // whole dollars stay clean ($495); fractional amounts keep BOTH cents
+    // digits so $1,396.50 never renders as the typo-looking $1,396.5
+    minimumFractionDigits: cents % 100 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
   });
 
 export const when = (iso: string) =>

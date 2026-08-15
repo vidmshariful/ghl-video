@@ -107,13 +107,13 @@ export function MessagesView({
   return (
     <div>
       <div className="mb-6">
-        <h1 className="font-display text-h3 text-ink">Messages</h1>
+        <h1 className="font-display text-h2 text-ink">Messages</h1>
         <p className="mt-2 text-body text-muted">Talk to your producer about anything.</p>
       </div>
       <button
         type="button"
         onClick={() => (general ? setOpenId(general.id) : openByOrder(null))}
-        className="tap flex w-full items-center justify-between gap-4 rounded-card border border-hair bg-surface px-5 py-4 text-left transition-colors hover:border-gold/40"
+        className="tap flex w-full items-center justify-between gap-4 rounded-[12px] border border-hair bg-surface px-5 py-4 text-left transition-colors hover:border-gold/40"
       >
         <div className="min-w-0">
           <p className="text-body font-semibold text-ink">General</p>
@@ -134,13 +134,13 @@ export function MessagesView({
       {projectThreads.length > 0 ? (
         <>
           <p className="mt-8 font-mono text-label uppercase text-dim">By project</p>
-          <ul className="mt-3 overflow-hidden rounded-card border border-hair">
+          <ul className="mt-3 overflow-hidden rounded-[12px] border border-hair">
             {projectThreads.map((t) => (
               <li key={t.id} className="border-t border-hair first:border-t-0">
                 <button
                   type="button"
                   onClick={() => setOpenId(t.id)}
-                  className="flex w-full items-center justify-between gap-4 bg-surface px-5 py-4 text-left transition-colors hover:bg-white/[0.02]"
+                  className="flex w-full items-center justify-between gap-4 bg-surface px-5 py-4 text-left transition-colors hover:bg-hair/40"
                 >
                   <div className="min-w-0">
                     <p className="truncate text-body font-semibold text-ink">{t.title}</p>

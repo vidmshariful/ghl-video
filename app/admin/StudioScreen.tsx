@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "./client";
+import { AdminModal } from "./Modal";
 
 /*
  * The Studio Insights board, managed by hand (client decision): the
@@ -38,7 +39,7 @@ type RequestRow = {
 };
 
 const field =
-  "mt-1.5 w-full rounded-[3px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none";
+  "mt-1.5 w-full rounded-[8px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none";
 const lab = "font-mono text-label uppercase text-muted";
 
 const SERVICE_NAMES: Record<SlotRow["service"], string> = {
@@ -84,7 +85,7 @@ function SlotEditor({ slot, onSaved }: { slot: SlotRow; onSaved: () => void }) {
   return (
     <form
       onSubmit={save}
-      className="grid items-end gap-4 rounded-card border border-hair bg-surface p-5 sm:grid-cols-[1.2fr_1fr_1fr_1fr_auto]"
+      className="grid items-end gap-4 rounded-[12px] border border-hair bg-surface p-5 sm:grid-cols-[1.2fr_1fr_1fr_1fr_auto]"
     >
       <div>
         <p className="font-display text-h4 font-semibold text-ink">
@@ -127,7 +128,7 @@ function SlotEditor({ slot, onSaved }: { slot: SlotRow; onSaved: () => void }) {
         <button
           type="submit"
           disabled={busy}
-          className="tap rounded-[3px] bg-brand-gradient px-5 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60"
+          className="tap rounded-[8px] bg-brand-gradient px-5 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60"
         >
           {busy ? "Saving" : "Save"}
         </button>
@@ -192,10 +193,7 @@ function UpdateForm({
   }
 
   return (
-    <form onSubmit={save} className="rounded-card border border-gold/40 bg-surface p-6">
-      <p className="font-display text-h4 font-semibold text-ink">
-        {isNew ? "Add a board entry" : `Edit ${initial.title}`}
-      </p>
+    <form onSubmit={save}>
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
         <label className="sm:col-span-2">
           <span className={lab}>Title</span>
@@ -283,14 +281,14 @@ function UpdateForm({
         <button
           type="submit"
           disabled={busy}
-          className="tap rounded-[3px] bg-brand-gradient px-6 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60"
+          className="tap rounded-[8px] bg-brand-gradient px-6 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60"
         >
           {busy ? "Saving" : "Save entry"}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="tap rounded-[3px] border border-hair px-6 py-2.5 text-body text-ink transition-colors hover:border-gold/60"
+          className="tap rounded-[8px] border border-hair px-6 py-2.5 text-body text-ink transition-colors hover:border-gold/60"
         >
           Cancel
         </button>
@@ -368,8 +366,8 @@ export function StudioScreen() {
   if (!loaded) return <p className="text-body text-muted">Loading the studio board...</p>;
 
   return (
-    <div className="max-w-4xl">
-      <h1 className="font-display text-h3 text-ink">Studio Insights</h1>
+    <div className="w-full">
+      <h1 className="font-display text-h2 text-ink">Studio Insights</h1>
       <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
         What /studio-insights shows. Slots are fully manual: set the total
         and remaining for each line, and set total to 0 to hide that card.
@@ -393,7 +391,7 @@ export function StudioScreen() {
           </span>
         )}
       </h2>
-      <ul className="mt-4 overflow-hidden rounded-card border border-hair">
+      <ul className="mt-4 overflow-hidden rounded-[12px] border border-hair">
         {requests.length === 0 && (
           <li className="bg-canvas px-5 py-5 text-body text-muted">
             No visitor requests yet. They arrive from the board on
@@ -420,14 +418,14 @@ export function StudioScreen() {
                   <button
                     type="button"
                     onClick={() => promote(r)}
-                    className="tap rounded-[3px] bg-brand-gradient px-4 py-2 text-body-sm font-semibold text-canvas transition-all hover:brightness-110"
+                    className="tap rounded-[8px] bg-brand-gradient px-4 py-2 text-body-sm font-semibold text-canvas transition-all hover:brightness-110"
                   >
                     Move to board
                   </button>
                   <button
                     type="button"
                     onClick={() => setRequestStatus(r, "dismissed")}
-                    className="tap rounded-[3px] border border-hair px-4 py-2 text-body-sm text-ink transition-colors hover:border-gold/60"
+                    className="tap rounded-[8px] border border-hair px-4 py-2 text-body-sm text-ink transition-colors hover:border-gold/60"
                   >
                     Dismiss
                   </button>
@@ -436,7 +434,7 @@ export function StudioScreen() {
               <button
                 type="button"
                 onClick={() => removeRequest(r)}
-                className="tap rounded-[3px] border border-hair px-4 py-2 text-body-sm text-error transition-colors hover:border-error/60"
+                className="tap rounded-[8px] border border-hair px-4 py-2 text-body-sm text-error transition-colors hover:border-error/60"
               >
                 Delete
               </button>
@@ -450,14 +448,18 @@ export function StudioScreen() {
         <button
           type="button"
           onClick={() => setEditing("new")}
-          className="tap rounded-[3px] bg-brand-gradient px-5 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110"
+          className="tap rounded-[8px] bg-brand-gradient px-5 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110"
         >
           Add entry
         </button>
       </div>
 
-      {editing && (
-        <div className="mt-5">
+      <AdminModal
+        open={!!editing}
+        onClose={() => setEditing(null)}
+        title={editing === "new" || !editing ? "Add a board entry" : `Edit ${editing.title}`}
+      >
+        {editing && (
           <UpdateForm
             initial={editing === "new" ? {} : editing}
             onDone={() => {
@@ -466,10 +468,10 @@ export function StudioScreen() {
             }}
             onCancel={() => setEditing(null)}
           />
-        </div>
-      )}
+        )}
+      </AdminModal>
 
-      <ul className="mt-5 overflow-hidden rounded-card border border-hair">
+      <ul className="mt-5 overflow-hidden rounded-[12px] border border-hair">
         {updates.length === 0 && (
           <li className="bg-canvas px-5 py-6 text-body text-muted">
             Nothing on the board yet. Add the first entry.
@@ -498,14 +500,14 @@ export function StudioScreen() {
               <button
                 type="button"
                 onClick={() => setEditing(u)}
-                className="tap rounded-[3px] border border-hair px-4 py-2 text-body-sm text-ink transition-colors hover:border-gold/60"
+                className="tap rounded-[8px] border border-hair px-4 py-2 text-body-sm text-ink transition-colors hover:border-gold/60"
               >
                 Edit
               </button>
               <button
                 type="button"
                 onClick={() => remove(u)}
-                className="tap rounded-[3px] border border-hair px-4 py-2 text-body-sm text-error transition-colors hover:border-error/60"
+                className="tap rounded-[8px] border border-hair px-4 py-2 text-body-sm text-error transition-colors hover:border-error/60"
               >
                 Delete
               </button>

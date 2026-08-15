@@ -11,7 +11,7 @@ import { Logo } from "@/components/Logo";
  * The hidden `website` field is the bot honeypot.
  */
 const fieldCls =
-  "w-full rounded-[3px] border border-hair bg-surface px-4 py-3 text-body text-ink placeholder:text-dim focus:border-gold focus:outline-none";
+  "w-full rounded-[8px] border border-hair bg-surface px-4 py-3 text-body text-ink placeholder:text-dim focus:border-gold focus:outline-none";
 const labelCls = "font-mono text-label uppercase text-muted";
 
 const CHANNELS = [
@@ -68,7 +68,7 @@ export function ApplyClient() {
         </div>
         <Link
           href="/partners"
-          className="tap rounded-[3px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
+          className="tap rounded-[8px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
         >
           Partner sign in
         </Link>
@@ -78,7 +78,7 @@ export function ApplyClient() {
         <div className="shell">
           <div className="mx-auto max-w-xl">
             {done ? (
-              <div className="rounded-card border border-gold/40 bg-gold/[0.06] px-6 py-10 text-center">
+              <div className="rounded-[12px] border border-gold/40 bg-gold/[0.06] px-6 py-10 text-center">
                 <p className="font-mono text-label uppercase text-gold">[ Application sent ]</p>
                 <h1 className="mt-4 font-display text-h2 text-ink">Thank you.</h1>
                 <p className="mx-auto mt-3 max-w-md text-body text-muted">
@@ -190,7 +190,7 @@ export function ApplyClient() {
                     <button
                       type="submit"
                       disabled={busy}
-                      className="tap rounded-[3px] bg-brand-gradient px-8 py-3.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60"
+                      className="tap rounded-[8px] bg-brand-gradient px-8 py-3.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60"
                     >
                       {busy ? "Sending..." : "Send application"}
                     </button>

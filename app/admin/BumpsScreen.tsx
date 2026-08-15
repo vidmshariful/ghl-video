@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { money, supabase } from "./client";
+import { AdminModal } from "./Modal";
 
 type BumpRow = {
   id: string;
@@ -16,7 +17,7 @@ type BumpRow = {
 };
 
 const field =
-  "mt-1.5 w-full rounded-[3px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none";
+  "mt-1.5 w-full rounded-[8px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none";
 const lab = "font-mono text-label uppercase text-muted";
 
 const SCOPE_HINT: Record<BumpRow["scope"], string> = {
@@ -88,10 +89,7 @@ function BumpForm({
   }
 
   return (
-    <form onSubmit={save} className="rounded-card border border-gold/40 bg-surface p-6">
-      <p className="font-display text-h4 font-semibold text-ink">
-        {isNew ? "Add an order bump" : `Edit ${initial.name}`}
-      </p>
+    <form onSubmit={save}>
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
         <label className="sm:col-span-2">
           <span className={lab}>Name</span>
@@ -183,14 +181,14 @@ function BumpForm({
         <button
           type="submit"
           disabled={busy}
-          className="tap rounded-[3px] bg-brand-gradient px-6 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60"
+          className="tap rounded-[8px] bg-brand-gradient px-6 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60"
         >
           {busy ? "Saving" : "Save bump"}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="tap rounded-[3px] border border-hair px-6 py-2.5 text-body text-muted transition-colors hover:text-ink"
+          className="tap rounded-[8px] border border-hair px-6 py-2.5 text-body text-muted transition-colors hover:text-ink"
         >
           Cancel
         </button>
@@ -199,7 +197,7 @@ function BumpForm({
   );
 }
 
-export function BumpsScreen() {
+export function BumpsScreen({ embedded = false }: { embedded?: boolean }) {
   const [rows, setRows] = useState<BumpRow[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [editing, setEditing] = useState<BumpRow | "new" | null>(null);
@@ -228,10 +226,10 @@ export function BumpsScreen() {
   if (!loaded) return <p className="text-body text-muted">Loading bumps...</p>;
 
   return (
-    <div className="max-w-4xl">
+    <div className="w-full">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="font-display text-h3 text-ink">Order Bumps</h1>
+          {!embedded && <h1 className="font-display text-h2 text-ink">Order Bumps</h1>}
           <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
             Opt-in add-ons offered at checkout. Choose a price, whether it is
             flat or per video, and which products or groups show it. The checkout
@@ -242,7 +240,7 @@ export function BumpsScreen() {
         <button
           type="button"
           onClick={() => setEditing("new")}
-          className="tap rounded-[3px] bg-brand-gradient px-6 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110"
+          className="tap rounded-[8px] bg-brand-gradient px-6 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110"
         >
           Add bump
         </button>
@@ -250,8 +248,12 @@ export function BumpsScreen() {
 
       {err && <p className="mt-4 text-body-sm text-error">{err}</p>}
 
-      {editing && (
-        <div className="mt-6">
+      <AdminModal
+        open={!!editing}
+        onClose={() => setEditing(null)}
+        title={editing === "new" || !editing ? "Add an order bump" : `Edit ${editing.name}`}
+      >
+        {editing && (
           <BumpForm
             initial={editing === "new" ? {} : editing}
             onDone={() => {
@@ -260,10 +262,10 @@ export function BumpsScreen() {
             }}
             onCancel={() => setEditing(null)}
           />
-        </div>
-      )}
+        )}
+      </AdminModal>
 
-      <ul className="mt-6 overflow-hidden rounded-card border border-hair">
+      <ul className="mt-6 overflow-hidden rounded-[12px] border border-hair">
         {rows.length === 0 ? (
           <li className="bg-surface px-5 py-8 text-center text-body text-muted">
             No bumps yet. Add one to offer an upsell at checkout.
@@ -297,14 +299,14 @@ export function BumpsScreen() {
               <button
                 type="button"
                 onClick={() => setEditing(r)}
-                className="tap rounded-[3px] border border-hair px-3.5 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
+                className="tap rounded-[8px] border border-hair px-3.5 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
               >
                 Edit
               </button>
               <button
                 type="button"
                 onClick={() => remove(r.id, r.name)}
-                className="tap rounded-[3px] border border-hair px-3.5 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-error/60 hover:text-error"
+                className="tap rounded-[8px] border border-hair px-3.5 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-error/60 hover:text-error"
               >
                 Delete
               </button>

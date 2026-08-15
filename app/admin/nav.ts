@@ -7,7 +7,6 @@ export type View =
   | "messages"
   | "subscriptions"
   | "products"
-  | "bumps"
   | "coupons"
   | "links"
   | "invoices"
@@ -17,6 +16,5 @@ export type View =
   | "pages"
   | "catalog"
   | "studio"
-  | "salespages"
   | "emails"
   | "team";

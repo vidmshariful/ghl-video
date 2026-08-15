@@ -36,6 +36,9 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${archivo.variable} ${raveo.variable} h-full antialiased`}
+      // the portals' pre-paint theme script may stamp data-theme before
+      // hydration; that attribute-only diff is intentional
+      suppressHydrationWarning
     >
       {/* the hero-poster preload lives on the homepage only (app/(site)/page.tsx),
           not here: in the root layout it fired on every route (admin, checkout,

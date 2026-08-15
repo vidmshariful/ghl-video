@@ -71,7 +71,7 @@ export function CustomersScreen() {
       ["All orders", String(c.orders.length), "text-muted"],
     ];
     return (
-      <div className="max-w-4xl">
+      <div className="w-full">
         <button
           type="button"
           onClick={() => setOpen(null)}
@@ -80,15 +80,15 @@ export function CustomersScreen() {
           &larr; Customers
         </button>
         <div className="mt-4 border-b border-hair pb-5">
-          <h1 className="font-display text-h3 text-ink">{c.name || c.email}</h1>
+          <h1 className="font-display text-h2 text-ink">{c.name || c.email}</h1>
           {c.company && <p className="mt-1 text-body text-muted">{c.company}</p>}
         </div>
 
-        <div className="mt-6 grid grid-cols-3 gap-px overflow-hidden rounded-card border border-hair bg-hair">
+        <div className="mt-6 grid grid-cols-3 gap-4">
           {stats.map(([label, val, cls]) => (
-            <div key={label} className="bg-surface px-5 py-4">
+            <div key={label} className="rounded-[12px] border border-hair bg-surface p-6">
               <p className="font-mono text-label uppercase text-dim">{label}</p>
-              <p className={`mt-1 font-display text-h4 [font-variant-numeric:tabular-nums] ${cls}`}>
+              <p className={`mt-1 font-display text-h3 [font-variant-numeric:tabular-nums] ${cls}`}>
                 {val}
               </p>
             </div>
@@ -113,7 +113,7 @@ export function CustomersScreen() {
         {c.orders.length === 0 ? (
           <p className="mt-2 text-body-sm text-muted">No orders yet.</p>
         ) : (
-          <ul className="mt-2 overflow-hidden rounded-card border border-hair">
+          <ul className="mt-2 overflow-hidden rounded-[12px] border border-hair">
             {[...c.orders]
               .sort((a, b) => b.created_at.localeCompare(a.created_at))
               .map((o) => (
@@ -151,8 +151,8 @@ export function CustomersScreen() {
   }
 
   return (
-    <div className="max-w-4xl">
-      <h1 className="font-display text-h3 text-ink">Customers</h1>
+    <div className="w-full">
+      <h1 className="font-display text-h2 text-ink">Customers</h1>
       <p className="mt-2 text-body text-muted">
         Everyone who has started a checkout. {rows.length} total.
       </p>
@@ -161,7 +161,7 @@ export function CustomersScreen() {
       {rows.length === 0 ? (
         <p className="mt-8 text-body text-muted">No customers yet.</p>
       ) : (
-        <ul className="mt-6 overflow-hidden rounded-card border border-hair">
+        <ul className="mt-6 overflow-hidden rounded-[12px] border border-hair">
           {rows.map((c) => {
             const paid = c.orders.filter((o) => o.status === "paid");
             const spent = paid.reduce((s, o) => s + o.amount_cents, 0);
@@ -170,7 +170,7 @@ export function CustomersScreen() {
                 <button
                   type="button"
                   onClick={() => setOpen(c.id)}
-                  className="flex w-full flex-wrap items-center justify-between gap-x-6 gap-y-2 bg-surface px-5 py-4 text-left transition-colors hover:bg-white/[0.02]"
+                  className="flex w-full flex-wrap items-center justify-between gap-x-6 gap-y-2 bg-surface px-5 py-4 text-left transition-colors hover:bg-hair/40"
                 >
                   <div className="min-w-0">
                     <p className="text-body font-semibold text-ink">

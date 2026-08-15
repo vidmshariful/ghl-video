@@ -25,18 +25,18 @@ type TeamRow = {
 const GROUPS = ["Sales", "Clients", "Catalog", "Site"] as const;
 
 const btnGold =
-  "tap rounded-[3px] bg-brand-gradient px-5 py-2.5 text-body-sm font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60";
+  "tap rounded-[8px] bg-brand-gradient px-5 py-2.5 text-body-sm font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60";
 const btnGhost =
-  "tap rounded-[3px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold";
+  "tap rounded-[8px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold";
 const inputCls =
-  "mt-2 w-full rounded-[3px] border border-hair bg-canvas px-4 py-2.5 text-body text-ink focus:border-gold focus:outline-none disabled:opacity-60";
+  "mt-2 w-full rounded-[8px] border border-hair bg-canvas px-4 py-2.5 text-body text-ink focus:border-gold focus:outline-none disabled:opacity-60";
 const labelCls = "font-mono text-label uppercase text-muted";
 
 function RoleBadge({ role }: { role: Role }) {
   const cls =
     role === "admin"
       ? "border-gold/40 bg-gold/10 text-gold"
-      : "border-hair bg-white/[0.03] text-muted";
+      : "border-hair bg-hair/30 text-muted";
   return (
     <span className={`rounded-full border px-2.5 py-0.5 font-mono text-label uppercase ${cls}`}>
       {ROLE_LABELS[role]}
@@ -101,7 +101,7 @@ export function TeamScreen({ meEmail }: { meEmail: string }) {
     <div>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="font-display text-h3 text-ink">Team</h1>
+          <h1 className="font-display text-h2 text-ink">Team</h1>
           <p className="mt-1 max-w-xl text-body-sm text-muted">
             Who can sign in to manage the platform, and what each person can see. New
             teammates get a link to set their own password.
@@ -115,7 +115,7 @@ export function TeamScreen({ meEmail }: { meEmail: string }) {
       {notice ? <p className="mt-4 text-body-sm text-gold">{notice}</p> : null}
       {err ? <p className="mt-4 text-body-sm text-error">{err}</p> : null}
 
-      <div className="mt-6 overflow-hidden rounded-card border border-hair">
+      <div className="mt-6 overflow-hidden rounded-[12px] border border-hair">
         {!loaded ? (
           <p className="p-6 text-body-sm text-muted">Loading team...</p>
         ) : team.length === 0 ? (
@@ -155,7 +155,7 @@ export function TeamScreen({ meEmail }: { meEmail: string }) {
                       <button
                         type="button"
                         onClick={() => remove(row)}
-                        className="tap rounded-[3px] border border-hair px-4 py-2 font-mono text-label uppercase text-dim transition-colors hover:border-error/60 hover:text-error"
+                        className="tap rounded-[8px] border border-hair px-4 py-2 font-mono text-label uppercase text-dim transition-colors hover:border-error/60 hover:text-error"
                       >
                         Remove
                       </button>
@@ -280,7 +280,7 @@ function TeamForm({
                 key={r}
                 type="button"
                 onClick={() => changeRole(r)}
-                className={`tap rounded-[3px] border px-4 py-2 text-body-sm transition-colors ${
+                className={`tap rounded-[8px] border px-4 py-2 text-body-sm transition-colors ${
                   role === r
                     ? "border-gold/60 bg-gold/10 font-semibold text-gold"
                     : "border-hair text-muted hover:border-gold/40 hover:text-ink"
@@ -294,7 +294,7 @@ function TeamForm({
         </div>
 
         {role === "admin" ? (
-          <p className="rounded-[6px] border border-gold/25 bg-gold/[0.05] px-4 py-3 text-body-sm text-muted">
+          <p className="rounded-[8px] border border-gold/25 bg-gold/[0.05] px-4 py-3 text-body-sm text-muted">
             Admins see and do everything, including managing the team. The menu list
             below does not apply.
           </p>
@@ -308,7 +308,7 @@ function TeamForm({
               {GROUPS.map((g) => {
                 const items = TOGGLEABLE_VIEWS.filter((v) => v.group === g);
                 return (
-                  <div key={g} className="rounded-[6px] border border-hair p-3">
+                  <div key={g} className="rounded-[8px] border border-hair p-3">
                     <p className="mb-2 font-mono text-label uppercase tracking-[0.1em] text-gold/70">
                       {g}
                     </p>

@@ -26,7 +26,7 @@ const SAMPLE: Record<string, string> = {
 };
 
 const field =
-  "mt-1.5 w-full rounded-[3px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none";
+  "mt-1.5 w-full rounded-[8px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none";
 const lab = "font-mono text-label uppercase text-muted";
 
 export function EmailTemplatesScreen() {
@@ -117,7 +117,7 @@ export function EmailTemplatesScreen() {
     <div>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-h3 text-ink">Email Templates</h1>
+          <h1 className="font-display text-h2 text-ink">Email Templates</h1>
           <p className="mt-1 max-w-2xl text-body-sm text-muted">
             Emails the site sends to clients. Edit the subject and message, and use the
             variables below in double braces. The GHL Video header, colors, and footer
@@ -165,13 +165,13 @@ export function EmailTemplatesScreen() {
             />
           </label>
 
-          <div className="mt-4 rounded-[3px] border border-hair bg-canvas p-4">
+          <div className="mt-4 rounded-[8px] border border-hair bg-canvas p-4">
             <p className={lab}>Variables</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {vars.map((v) => (
                 <code
                   key={v}
-                  className="rounded-[3px] border border-hair bg-surface px-2 py-1 font-mono text-label text-gold/80"
+                  className="rounded-[8px] border border-hair bg-surface px-2 py-1 font-mono text-label text-gold/80"
                 >
                   {`{{${v}}}`}
                 </code>
@@ -184,7 +184,7 @@ export function EmailTemplatesScreen() {
               type="button"
               onClick={save}
               disabled={busy !== null}
-              className="tap rounded-[3px] bg-brand-gradient px-5 py-2.5 text-body-sm font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-50"
+              className="tap rounded-[8px] bg-brand-gradient px-5 py-2.5 text-body-sm font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-50"
             >
               {busy === "save" ? "Saving..." : "Save"}
             </button>
@@ -192,7 +192,7 @@ export function EmailTemplatesScreen() {
               type="button"
               onClick={sendTest}
               disabled={busy !== null}
-              className="tap rounded-[3px] border border-hair px-4 py-2.5 text-body-sm font-semibold text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-50"
+              className="tap rounded-[8px] border border-hair px-4 py-2.5 text-body-sm font-semibold text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-50"
             >
               {busy === "test" ? "Sending..." : "Send test to me"}
             </button>
@@ -200,7 +200,7 @@ export function EmailTemplatesScreen() {
               type="button"
               onClick={resetDefault}
               disabled={busy !== null}
-              className="tap rounded-[3px] border border-hair px-4 py-2.5 text-body-sm font-semibold text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-50"
+              className="tap rounded-[8px] border border-hair px-4 py-2.5 text-body-sm font-semibold text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-50"
             >
               Reset to default
             </button>
@@ -214,7 +214,7 @@ export function EmailTemplatesScreen() {
             title="Email preview"
             sandbox=""
             srcDoc={preview}
-            className="h-[36rem] w-full rounded-[3px] border border-hair bg-white"
+            className="h-[36rem] w-full rounded-[8px] border border-hair bg-white"
           />
         </div>
       </div>

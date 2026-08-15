@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ArrowUpRight, BadgeDollarSign, Clock3, ShoppingCart, Users } from "lucide-react";
 import { money, supabase, when } from "./client";
 import type { View } from "./nav";
 
@@ -16,9 +17,21 @@ type DashOrder = {
   customer: { name: string | null } | null;
 };
 
+const STATUS_STYLE: Record<string, string> = {
+  paid: "border-green/40 text-green",
+  pending: "border-gold/40 text-gold",
+  failed: "border-error/40 text-error",
+  refunded: "border-hair text-dim",
+};
+
+type DayPoint = { key: string; label: string; cents: number };
+
 export function DashboardScreen({ onNavigate }: { onNavigate: (v: View) => void }) {
   const [orders, setOrders] = useState<DashOrder[]>([]);
   const [customerCount, setCustomerCount] = useState(0);
+  const [chart, setChart] = useState<{ days: DayPoint[]; monthCents: number; monthOrders: number }>(
+    { days: [], monthCents: 0, monthOrders: 0 },
+  );
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -34,8 +47,35 @@ export function DashboardScreen({ onNavigate }: { onNavigate: (v: View) => void 
         .select("id", { count: "exact", head: true });
       // supabase types a to-one join as an array; at runtime it is a single
       // object, so cast through unknown.
-      setOrders((data as unknown as DashOrder[]) ?? []);
+      const rows = (data as unknown as DashOrder[]) ?? [];
+      setOrders(rows);
       setCustomerCount(count ?? 0);
+
+      /* last 30 days of PAID revenue, day by day (computed here at load
+         time, not in render, to keep render pure for the compiler) */
+      const paidRows = rows.filter((o) => o.status === "paid");
+      const days: DayPoint[] = [];
+      const now = new Date();
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+        days.push({
+          key: d.toDateString(),
+          label: d.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+          cents: 0,
+        });
+      }
+      for (const o of paidRows) {
+        const key = new Date(o.created_at).toDateString();
+        const slot = days.find((d) => d.key === key);
+        if (slot) slot.cents += o.amount_cents;
+      }
+      setChart({
+        days,
+        monthCents: days.reduce((s, d) => s + d.cents, 0),
+        monthOrders: paidRows.filter(
+          (o) => now.getTime() - new Date(o.created_at).getTime() < 30 * 86_400_000,
+        ).length,
+      });
       setLoaded(true);
     })();
   }, []);
@@ -48,26 +88,67 @@ export function DashboardScreen({ onNavigate }: { onNavigate: (v: View) => void 
   const needsAttention = orders.filter(
     (o) => o.status === "paid" && !o.highlevel_opportunity_id,
   ).length;
-  const recent = orders.slice(0, 6);
+  const recent = orders.slice(0, 7);
+  const { days, monthCents, monthOrders } = chart;
+  const maxDay = Math.max(1, ...days.map((d) => d.cents));
 
-  const stats: [string, string, string][] = [
-    ["Revenue", money(revenue), "text-gold"],
-    ["Paid orders", String(paid.length), "text-green"],
-    ["Customers", String(customerCount), "text-ink"],
-    ["Pending", String(pending), "text-muted"],
+  const stats = [
+    {
+      label: "Revenue, all time",
+      value: money(revenue),
+      icon: <BadgeDollarSign />,
+      tone: "text-gold",
+      chip: "bg-gold/12 text-gold",
+    },
+    {
+      label: "Paid orders",
+      value: String(paid.length),
+      icon: <ShoppingCart />,
+      tone: "text-green",
+      chip: "bg-green/12 text-green",
+    },
+    {
+      label: "Customers",
+      value: String(customerCount),
+      icon: <Users />,
+      tone: "text-ink",
+      chip: "bg-blue/12 text-blue",
+    },
+    {
+      // pending is money in flight, not a disabled state: it gets gold
+      label: "Pending orders",
+      value: String(pending),
+      icon: <Clock3 />,
+      tone: "text-gold",
+      chip: "bg-gold/12 text-gold",
+    },
   ];
 
   return (
-    <div className="max-w-5xl">
-      <h1 className="font-display text-h3 text-ink">Dashboard</h1>
-      <p className="mt-2 text-body text-muted">The business at a glance.</p>
+    <div className="w-full">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="font-display text-h2 text-ink">Dashboard</h1>
+          <p className="mt-1 text-body text-muted">The business at a glance.</p>
+        </div>
+      </div>
 
-      <div className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-card border border-hair bg-hair sm:grid-cols-4">
-        {stats.map(([label, val, cls]) => (
-          <div key={label} className="bg-surface px-5 py-5">
-            <p className="font-mono text-label uppercase text-dim">{label}</p>
-            <p className={`mt-1 font-display text-h3 [font-variant-numeric:tabular-nums] ${cls}`}>
-              {val}
+      {/* stat cards */}
+      <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        {stats.map((s) => (
+          <div key={s.label} className="rounded-[12px] border border-hair bg-surface p-6">
+            <div className="flex items-center gap-2.5">
+              <span
+                className={`grid h-8 w-8 place-items-center rounded-[8px] ${s.chip} [&>svg]:h-[16px] [&>svg]:w-[16px]`}
+              >
+                {s.icon}
+              </span>
+              <p className="font-mono text-label uppercase text-dim">{s.label}</p>
+            </div>
+            <p
+              className={`mt-3 font-display text-h2 [font-variant-numeric:tabular-nums] ${s.tone}`}
+            >
+              {s.value}
             </p>
           </div>
         ))}
@@ -77,53 +158,96 @@ export function DashboardScreen({ onNavigate }: { onNavigate: (v: View) => void 
         <button
           type="button"
           onClick={() => onNavigate("orders")}
-          className="mt-4 block w-full rounded-[8px] border border-error/40 bg-error/[0.06] px-4 py-3 text-left text-body-sm text-muted transition-colors hover:border-error/70"
+          className="mt-4 flex w-full flex-wrap items-center justify-between gap-3 rounded-[12px] border border-error/40 bg-error/[0.06] px-4 py-3 text-left text-body-sm text-ink transition-colors hover:border-error/70"
         >
-          {needsAttention} paid order{needsAttention > 1 ? "s" : ""}{" "}
-          {needsAttention > 1 ? "have" : "has"} not synced to HighLevel. Open
-          Orders to re-sync.
+          <span>
+            {needsAttention} paid order{needsAttention > 1 ? "s" : ""}{" "}
+            {needsAttention > 1 ? "have" : "has"} not synced to HighLevel.
+          </span>
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-[8px] border border-error/50 px-3 py-1.5 font-mono text-label font-bold uppercase text-error">
+            Open Orders <ArrowUpRight size={13} />
+          </span>
         </button>
       )}
 
-      <div className="mt-8 flex items-baseline justify-between">
-        <h2 className="font-display text-h4 font-semibold text-ink">Recent orders</h2>
-        <button
-          type="button"
-          onClick={() => onNavigate("orders")}
-          className="font-mono text-label uppercase text-muted transition-colors hover:text-gold"
-        >
-          View all &rarr;
-        </button>
+      {/* last 30 days */}
+      <div className="mt-6 rounded-[12px] border border-hair bg-surface p-5 md:p-6">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="font-display text-h4 font-semibold text-ink">Last 30 days</h2>
+          <p className="text-body-sm text-muted">
+            <span className="font-semibold text-ink">{money(monthCents)}</span> across{" "}
+            <span className="font-semibold text-ink">{monthOrders}</span> paid order
+            {monthOrders === 1 ? "" : "s"}
+          </p>
+        </div>
+        {monthCents === 0 ? (
+          <p className="mt-4 text-body-sm text-dim">
+            No paid orders in the last 30 days yet. New sales draw themselves here.
+          </p>
+        ) : (
+          <div className="mt-5 flex h-28 items-end gap-[3px]" aria-hidden="true">
+            {days.map((d) => (
+              <div
+                key={d.key}
+                title={`${d.label}: ${money(d.cents)}`}
+                className="flex-1 rounded-t-[3px] bg-gold/80"
+                style={{
+                  height: `${Math.max(3, (d.cents / maxDay) * 100)}%`,
+                  opacity: d.cents ? 1 : 0.16,
+                }}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
-      {recent.length === 0 ? (
-        <p className="mt-4 text-body text-muted">No orders yet.</p>
-      ) : (
-        <ul className="mt-3 overflow-hidden rounded-card border border-hair">
-          {recent.map((o) => (
-            <li
-              key={o.id}
-              className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1 border-t border-hair bg-surface px-5 py-3.5 first:border-t-0"
-            >
-              <div className="min-w-0">
-                <p className="text-body font-semibold text-ink">
-                  {o.customer?.name || o.customer_email}
-                  <span className="ml-3 font-mono text-body-sm text-muted">
-                    {o.product?.name ?? ""}
+      {/* recent orders */}
+      <div className="mt-6 rounded-[12px] border border-hair bg-surface">
+        <div className="flex items-baseline justify-between border-b border-hair px-5 py-4">
+          <h2 className="font-display text-h4 font-semibold text-ink">Recent orders</h2>
+          <button
+            type="button"
+            onClick={() => onNavigate("orders")}
+            className="tap inline-flex items-center gap-1 font-mono text-label uppercase text-muted transition-colors hover:text-gold"
+          >
+            View all <ArrowUpRight size={13} />
+          </button>
+        </div>
+        {recent.length === 0 ? (
+          <p className="px-5 py-6 text-body text-muted">No orders yet.</p>
+        ) : (
+          <ul>
+            {recent.map((o) => (
+              <li
+                key={o.id}
+                className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1 border-t border-hair px-5 py-3.5 first:border-t-0"
+              >
+                <div className="min-w-0">
+                  <p className="text-body font-semibold text-ink">
+                    {o.customer?.name || o.customer_email}
+                    <span className="ml-3 font-mono text-body-sm text-muted">
+                      {o.product?.name ?? ""}
+                    </span>
+                  </p>
+                  <p className="mt-0.5 font-mono text-label uppercase text-dim">
+                    {when(o.created_at)}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-3">
+                  <span
+                    className={`inline-flex rounded-full border px-2.5 py-0.5 font-mono text-label uppercase ${STATUS_STYLE[o.status] ?? "border-hair text-dim"}`}
+                  >
+                    {o.status}
                   </span>
-                </p>
-                <p className="mt-0.5 font-mono text-label uppercase text-dim">{when(o.created_at)}</p>
-              </div>
-              <div className="flex shrink-0 items-center gap-3">
-                <span className="font-mono text-label uppercase text-dim">{o.status}</span>
-                <span className="font-mono text-price font-bold text-ink [font-variant-numeric:tabular-nums]">
-                  {money(o.amount_cents, o.currency)}
-                </span>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+                  <span className="font-mono text-price font-bold text-ink [font-variant-numeric:tabular-nums]">
+                    {money(o.amount_cents, o.currency)}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }

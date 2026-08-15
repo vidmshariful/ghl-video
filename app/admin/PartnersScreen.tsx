@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase, authHeader, when } from "./client";
+import { AdminModal } from "./Modal";
 
 /*
  * Affiliate partner management: the partner list, the application queue
@@ -52,12 +53,12 @@ type AssetRow = {
 type Tab = "partners" | "applications" | "assets";
 
 const field =
-  "mt-1.5 w-full rounded-[3px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none";
+  "mt-1.5 w-full rounded-[8px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none";
 const lab = "font-mono text-label uppercase text-muted";
 const btn =
-  "tap rounded-[3px] border border-hair px-4 py-2 text-body-sm text-ink transition-colors hover:border-gold/60";
+  "tap rounded-[8px] border border-hair px-4 py-2 text-body-sm text-ink transition-colors hover:border-gold/60";
 const btnGold =
-  "tap rounded-[3px] bg-brand-gradient px-5 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60";
+  "tap rounded-[8px] bg-brand-gradient px-5 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60";
 
 const STATUS_STYLE: Record<PartnerRow["status"], string> = {
   active: "border-green/40 text-green",
@@ -146,10 +147,7 @@ function PartnerForm({
   }
 
   return (
-    <form onSubmit={save} className="rounded-card border border-gold/40 bg-surface p-6">
-      <p className="font-display text-h4 font-semibold text-ink">
-        {isNew ? "Add a partner" : `Edit ${initial.name}`}
-      </p>
+    <form onSubmit={save}>
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
         <label>
           <span className={lab}>Name</span>
@@ -354,8 +352,7 @@ function AssetForm({
   }
 
   return (
-    <form onSubmit={save} className="rounded-card border border-gold/40 bg-surface p-6">
-      <p className="font-display text-h4 font-semibold text-ink">Add an asset</p>
+    <form onSubmit={save}>
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
         <label>
           <span className={lab}>Type</span>
@@ -418,7 +415,7 @@ function AssetForm({
                 <input
                   type="file"
                   onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                  className={`${field} file:mr-3 file:rounded-[3px] file:border-0 file:bg-gold/15 file:px-3 file:py-1 file:text-gold`}
+                  className={`${field} file:mr-3 file:rounded-[8px] file:border-0 file:bg-gold/15 file:px-3 file:py-1 file:text-gold`}
                 />
               </label>
             ) : (
@@ -534,9 +531,9 @@ export function PartnersScreen() {
   ];
 
   return (
-    <div className="max-w-5xl">
+    <div className="w-full">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-display text-h3 text-ink">Partners</h1>
+        <h1 className="font-display text-h2 text-ink">Partners</h1>
         {tab === "partners" && (
           <button type="button" onClick={() => setEditing("new")} className={btnGold}>
             Add partner
@@ -560,7 +557,7 @@ export function PartnersScreen() {
             key={t.key}
             type="button"
             onClick={() => setTab(t.key)}
-            className={`tap rounded-t-[6px] px-4 py-2.5 text-body-sm transition-colors ${
+            className={`tap rounded-t-[8px] px-4 py-2.5 text-body-sm transition-colors ${
               tab === t.key
                 ? "border border-b-0 border-hair bg-surface font-semibold text-gold"
                 : "text-muted hover:text-ink"
@@ -574,22 +571,45 @@ export function PartnersScreen() {
       {err && <p className="mt-4 text-body-sm text-error">{err}</p>}
       {notice && <p className="mt-4 text-body-sm text-gold">{notice}</p>}
 
+      <AdminModal
+        open={!!editing}
+        onClose={() => setEditing(null)}
+        title={
+          editing === "new" || !editing
+            ? "Add a partner"
+            : editing.status === "applied"
+              ? `Approve and set up ${editing.name}`
+              : `Edit ${editing.name}`
+        }
+      >
+        {editing && (
+          <PartnerForm
+            initial={editing === "new" ? {} : editing}
+            onDone={() => {
+              setEditing(null);
+              load();
+            }}
+            onCancel={() => setEditing(null)}
+          />
+        )}
+      </AdminModal>
+      <AdminModal open={addingAsset} onClose={() => setAddingAsset(false)} title="Add an asset">
+        {addingAsset && (
+          <AssetForm
+            partners={partners}
+            onDone={() => {
+              setAddingAsset(false);
+              load();
+            }}
+            onCancel={() => setAddingAsset(false)}
+          />
+        )}
+      </AdminModal>
+
       {/* ---- partners tab ---- */}
       {tab === "partners" && (
         <>
-          {editing && (
-            <div className="mt-6">
-              <PartnerForm
-                initial={editing === "new" ? {} : editing}
-                onDone={() => {
-                  setEditing(null);
-                  load();
-                }}
-                onCancel={() => setEditing(null)}
-              />
-            </div>
-          )}
-          <ul className="mt-6 overflow-hidden rounded-card border border-hair">
+          <ul className="mt-6 overflow-hidden rounded-[12px] border border-hair">
             {partners.length === 0 && (
               <li className="bg-canvas px-5 py-6 text-body text-muted">
                 No partners yet. Add the first one.
@@ -654,19 +674,7 @@ export function PartnersScreen() {
       {/* ---- applications tab ---- */}
       {tab === "applications" && (
         <>
-          {editing && editing !== "new" && (
-            <div className="mt-6">
-              <PartnerForm
-                initial={editing}
-                onDone={() => {
-                  setEditing(null);
-                  load();
-                }}
-                onCancel={() => setEditing(null)}
-              />
-            </div>
-          )}
-          <ul className="mt-6 overflow-hidden rounded-card border border-hair">
+          <ul className="mt-6 overflow-hidden rounded-[12px] border border-hair">
             {applications.length === 0 && (
               <li className="bg-canvas px-5 py-6 text-body text-muted">
                 No applications yet. The form lives at /partners/apply.
@@ -718,7 +726,7 @@ export function PartnersScreen() {
                   </div>
                 </div>
                 {openApp === p.id && p.application && (
-                  <dl className="mt-4 grid gap-2 rounded-[3px] border border-hair bg-surface p-4 text-body-sm">
+                  <dl className="mt-4 grid gap-2 rounded-[8px] border border-hair bg-surface p-4 text-body-sm">
                     {Object.entries(p.application)
                       .filter(([k]) => k !== "submittedAt")
                       .map(([k, v]) => (
@@ -743,19 +751,7 @@ export function PartnersScreen() {
       {/* ---- assets tab ---- */}
       {tab === "assets" && (
         <>
-          {addingAsset && (
-            <div className="mt-6">
-              <AssetForm
-                partners={partners}
-                onDone={() => {
-                  setAddingAsset(false);
-                  load();
-                }}
-                onCancel={() => setAddingAsset(false)}
-              />
-            </div>
-          )}
-          <ul className="mt-6 overflow-hidden rounded-card border border-hair">
+          <ul className="mt-6 overflow-hidden rounded-[12px] border border-hair">
             {assets.length === 0 && (
               <li className="bg-canvas px-5 py-6 text-body text-muted">
                 No assets yet. Add banners, logos, and swipe copy; partners see them in

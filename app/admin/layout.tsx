@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { THEME_INIT_SCRIPT } from "@/components/portal/theme-init";
 
 /* The site's managing area. Lives outside the (site) route group on
  * purpose: no marketing header/footer, no tracking scripts, and never
@@ -14,6 +15,8 @@ export default function AdminLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <div data-surface="portal" className="min-h-screen w-full bg-canvas text-ink">
+      {/* saved light/dark applied before paint; see components/portal/theme-init */}
+      <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       {children}
     </div>
   );

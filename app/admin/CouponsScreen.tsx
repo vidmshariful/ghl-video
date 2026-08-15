@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "./client";
+import { AdminModal } from "./Modal";
 
 /*
  * Coupon management, in two tabs:
@@ -42,12 +43,12 @@ type PartnerLite = {
 };
 
 const field =
-  "mt-1.5 w-full rounded-[3px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none";
+  "mt-1.5 w-full rounded-[8px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none";
 const lab = "font-mono text-label uppercase text-muted";
 const btn =
-  "tap rounded-[3px] border border-hair px-4 py-2 text-body-sm text-ink transition-colors hover:border-gold/60";
+  "tap rounded-[8px] border border-hair px-4 py-2 text-body-sm text-ink transition-colors hover:border-gold/60";
 const btnGold =
-  "tap rounded-[3px] bg-brand-gradient px-5 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60";
+  "tap rounded-[8px] bg-brand-gradient px-5 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60";
 
 const discountLabel = (c: CouponRow) =>
   c.percent_off != null
@@ -161,10 +162,7 @@ function CouponForm({
   }
 
   return (
-    <form onSubmit={save} className="rounded-card border border-gold/40 bg-surface p-6">
-      <p className="font-display text-h4 font-semibold text-ink">
-        {isNew ? "Add a coupon" : `Edit ${initial.code}`}
-      </p>
+    <form onSubmit={save}>
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
         <label>
           <span className={lab}>Code (what the buyer types)</span>
@@ -258,7 +256,7 @@ function CouponForm({
             className={field}
           />
         </label>
-        <div className="rounded-[3px] border border-hair p-4 sm:col-span-2">
+        <div className="rounded-[8px] border border-hair p-4 sm:col-span-2">
           <label className="flex items-center gap-3">
             <input
               type="checkbox"
@@ -384,9 +382,8 @@ function PartnerCouponGenerator({
   }
 
   return (
-    <form onSubmit={create} className="rounded-card border border-gold/40 bg-surface p-6">
-      <p className="font-display text-h4 font-semibold text-ink">Create a partner coupon</p>
-      <p className="mt-1 text-body-sm text-muted">
+    <form onSubmit={create}>
+      <p className="text-body-sm text-muted">
         The program standard: percent off any product, and on editing plans it runs for
         the first months you set. The code lands on the partner row, so their portal and
         page buttons pick it up instantly.
@@ -545,9 +542,9 @@ export function CouponsScreen() {
   const missingCount = partners.filter((p) => !p.coupon_code).length;
 
   return (
-    <div className="max-w-4xl">
+    <div className="w-full">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-display text-h3 text-ink">Coupons</h1>
+        <h1 className="font-display text-h2 text-ink">Coupons</h1>
         <div className="flex gap-2">
           {tab === "partner" && missingCount > 0 && (
             <button type="button" onClick={createMissing} className={btn}>
@@ -585,7 +582,7 @@ export function CouponsScreen() {
               setGenerating(false);
               setNotice("");
             }}
-            className={`tap rounded-t-[6px] px-4 py-2.5 text-body-sm transition-colors ${
+            className={`tap rounded-t-[8px] px-4 py-2.5 text-body-sm transition-colors ${
               tab === t.key
                 ? "border border-b-0 border-hair bg-surface font-semibold text-gold"
                 : "text-muted hover:text-ink"
@@ -599,8 +596,12 @@ export function CouponsScreen() {
       {err && <p className="mt-4 text-body-sm text-error">{err}</p>}
       {notice && <p className="mt-4 text-body-sm text-gold">{notice}</p>}
 
-      {editing && (
-        <div className="mt-6">
+      <AdminModal
+        open={!!editing}
+        onClose={() => setEditing(null)}
+        title={editing === "new" || !editing ? "Add a coupon" : `Edit ${editing.code}`}
+      >
+        {editing && (
           <CouponForm
             initial={editing === "new" ? {} : editing}
             partners={partners}
@@ -610,10 +611,14 @@ export function CouponsScreen() {
             }}
             onCancel={() => setEditing(null)}
           />
-        </div>
-      )}
-      {generating && (
-        <div className="mt-6">
+        )}
+      </AdminModal>
+      <AdminModal
+        open={generating}
+        onClose={() => setGenerating(false)}
+        title="Create a partner coupon"
+      >
+        {generating && (
           <PartnerCouponGenerator
             partners={partners}
             onDone={() => {
@@ -622,10 +627,10 @@ export function CouponsScreen() {
             }}
             onCancel={() => setGenerating(false)}
           />
-        </div>
-      )}
+        )}
+      </AdminModal>
 
-      <ul className="mt-6 overflow-hidden rounded-card border border-hair">
+      <ul className="mt-6 overflow-hidden rounded-[12px] border border-hair">
         {shown.length === 0 && (
           <li className="bg-canvas px-5 py-6 text-body text-muted">
             {tab === "store"
@@ -664,7 +669,7 @@ export function CouponsScreen() {
               <button
                 type="button"
                 onClick={() => toggleActive(c)}
-                className={`tap rounded-[3px] border px-4 py-2 text-body-sm transition-colors ${
+                className={`tap rounded-[8px] border px-4 py-2 text-body-sm transition-colors ${
                   c.active
                     ? "border-hair text-ink hover:border-gold/60"
                     : "border-gold/50 bg-gold/10 text-gold hover:bg-gold/20"

@@ -6,15 +6,33 @@ import { sitePages } from "@/lib/pages-list";
 import { site } from "@/lib/site";
 import { HEAD_SCRIPTS, BODY_END_SCRIPTS } from "@/lib/chrome";
 import { supabase, authHeader } from "./client";
-import { Logo } from "@/components/Logo";
 import type { View } from "./nav";
+import { PortalSidebar, PortalTopbar, type NavGroup } from "@/components/portal/Shell";
+import {
+  BarChart3,
+  BookOpen,
+  Code,
+  FileText,
+  Film,
+  Globe,
+  Handshake,
+  LayoutDashboard,
+  Link2,
+  Mail,
+  MessageSquare,
+  Package,
+  Repeat,
+  Shield,
+  ShoppingCart,
+  Ticket,
+  Users,
+} from "lucide-react";
 import { DashboardScreen } from "./DashboardScreen";
 import { OrdersScreen } from "./OrdersScreen";
 import { MessagesScreen } from "./MessagesScreen";
 import { SubscriptionsScreen } from "./SubscriptionsScreen";
 import { chatGet } from "@/components/chat/api";
 import { ProductsScreen } from "./ProductsScreen";
-import { BumpsScreen } from "./BumpsScreen";
 import { CouponsScreen } from "./CouponsScreen";
 import { LinksScreen } from "./LinksScreen";
 import { InvoicesScreen } from "./InvoicesScreen";
@@ -23,7 +41,6 @@ import { PartnersScreen } from "./PartnersScreen";
 import { StudioScreen } from "./StudioScreen";
 import { JournalScreen } from "./JournalScreen";
 import { TeamScreen } from "./TeamScreen";
-import { SalesPagesScreen } from "./SalesPagesScreen";
 import { EmailTemplatesScreen } from "./EmailTemplatesScreen";
 import { CatalogScreen } from "./CatalogScreen";
 import { canAccess, type Role } from "./roles";
@@ -83,7 +100,7 @@ function Login({ onError, error }: { onError: (m: string) => void; error: string
     <div className="flex min-h-screen items-center justify-center px-6">
       <form
         onSubmit={reset ? sendReset : signIn}
-        className="w-full max-w-sm rounded-card border border-hair bg-surface p-8"
+        className="w-full max-w-sm rounded-[12px] border border-hair bg-surface p-8"
       >
         <p className="font-display text-h4 font-semibold text-ink">
           GHL Video <span className="text-gradient">Site Admin</span>
@@ -101,7 +118,7 @@ function Login({ onError, error }: { onError: (m: string) => void; error: string
             autoComplete="username"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mt-2 w-full rounded-[3px] border border-hair bg-canvas px-4 py-3 text-body text-ink focus:border-gold focus:outline-none"
+            className="mt-2 w-full rounded-[8px] border border-hair bg-canvas px-4 py-3 text-body text-ink focus:border-gold focus:outline-none"
           />
         </label>
         {!reset && (
@@ -113,7 +130,7 @@ function Login({ onError, error }: { onError: (m: string) => void; error: string
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-2 w-full rounded-[3px] border border-hair bg-canvas px-4 py-3 text-body text-ink focus:border-gold focus:outline-none"
+              className="mt-2 w-full rounded-[8px] border border-hair bg-canvas px-4 py-3 text-body text-ink focus:border-gold focus:outline-none"
             />
           </label>
         )}
@@ -122,7 +139,7 @@ function Login({ onError, error }: { onError: (m: string) => void; error: string
         <button
           type="submit"
           disabled={busy}
-          className="tap mt-6 w-full rounded-[3px] bg-brand-gradient px-6 py-3 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60"
+          className="tap mt-6 w-full rounded-[8px] bg-brand-gradient px-6 py-3 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60"
         >
           {reset ? (busy ? "Sending" : "Send reset link") : busy ? "Signing in" : "Sign in"}
         </button>
@@ -160,8 +177,8 @@ function CodeScreen() {
   ];
 
   return (
-    <div className="max-w-3xl">
-      <h1 className="font-display text-h3 text-ink">Header &amp; Footer Code</h1>
+    <div className="max-w-4xl">
+      <h1 className="font-display text-h2 text-ink">Header &amp; Footer Code</h1>
       <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
         These tracking and verification snippets are hard-coded in the site
         source and injected on every public page: the marketing site, the
@@ -176,7 +193,7 @@ function CodeScreen() {
         <div key={b.label} className="mt-8">
           <span className="font-mono text-label uppercase text-muted">{b.label}</span>
           <p className="mt-1 text-body-sm text-dim">{b.where}</p>
-          <pre className="mt-2 max-h-80 w-full overflow-auto rounded-[6px] border border-hair bg-[#05060a] p-4 font-mono text-body-sm leading-relaxed text-ink">
+          <pre className="mt-2 max-h-80 w-full overflow-auto rounded-[8px] border border-hair bg-[#05060a] p-4 font-mono text-body-sm leading-relaxed text-ink">
             {b.code}
           </pre>
         </div>
@@ -199,13 +216,13 @@ function PagesScreen() {
   }
 
   return (
-    <div className="max-w-4xl">
-      <h1 className="font-display text-h3 text-ink">Pages</h1>
+    <div className="w-full">
+      <h1 className="font-display text-h2 text-ink">Pages</h1>
       <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
         Every page the website ships. Pages marked direct link only are not
         in the navigation; this list is where you get their links.
       </p>
-      <ul className="mt-8 overflow-hidden rounded-card border border-hair">
+      <ul className="mt-8 overflow-hidden rounded-[12px] border border-hair">
         {sitePages.map((p) => {
           const url = `${site.url}${p.path}`;
           return (
@@ -228,7 +245,7 @@ function PagesScreen() {
                 <button
                   type="button"
                   onClick={() => copy(url)}
-                  className="tap rounded-[3px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
+                  className="tap rounded-[8px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
                 >
                   {copied === url ? "Copied" : "Copy link"}
                 </button>
@@ -236,7 +253,7 @@ function PagesScreen() {
                   href={p.path}
                   target="_blank"
                   rel="noopener"
-                  className="tap rounded-[3px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
+                  className="tap rounded-[8px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
                 >
                   Open
                 </a>
@@ -343,66 +360,70 @@ export default function AdminPage() {
         <button
           type="button"
           onClick={() => supabase.auth.signOut()}
-          className="tap rounded-[3px] border border-hair px-5 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
+          className="tap rounded-[8px] border border-hair px-5 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
         >
           Sign out
         </button>
       </div>
     );
 
-  const groups: { title: string; items: { key: View; label: string }[] }[] = [
+  /* The menu, in working order: the daily pair on top, then money, people,
+     partners, what we sell, the site itself, and access last. Icons follow
+     the reference language; groups collapse (see PortalSidebar). */
+  const groups: { title: string; items: { key: View; label: string; icon: React.ReactNode; badge?: number }[] }[] = [
     {
       title: "",
       items: [
-        { key: "dashboard", label: "Dashboard" },
-        { key: "journal", label: "Journal" },
+        { key: "dashboard", label: "Dashboard", icon: <LayoutDashboard /> },
+        { key: "journal", label: "Journal", icon: <BookOpen /> },
       ],
     },
     {
       title: "Sales",
       items: [
-        { key: "orders", label: "Orders" },
-        { key: "invoices", label: "Invoices" },
-        { key: "subscriptions", label: "Subscriptions" },
-        { key: "links", label: "Buy Links" },
-        { key: "coupons", label: "Coupons" },
-        { key: "salespages", label: "Sales Pages" },
+        { key: "orders", label: "Orders", icon: <ShoppingCart /> },
+        { key: "subscriptions", label: "Subscriptions", icon: <Repeat /> },
+        { key: "invoices", label: "Invoices", icon: <FileText /> },
+        { key: "coupons", label: "Coupons", icon: <Ticket /> },
+        { key: "links", label: "Links", icon: <Link2 /> },
       ],
     },
     {
       title: "Clients",
       items: [
-        { key: "messages", label: "Messages" },
-        { key: "customers", label: "Customers" },
-        { key: "partners", label: "Partners" },
+        { key: "customers", label: "Customers", icon: <Users /> },
+        { key: "messages", label: "Messages", icon: <MessageSquare />, badge: msgUnread || undefined },
       ],
+    },
+    {
+      title: "Partners",
+      items: [{ key: "partners", label: "Partners", icon: <Handshake /> }],
     },
     {
       title: "Catalog",
       items: [
-        { key: "catalog", label: "Catalog" },
-        { key: "products", label: "Products & Pricing" },
-        { key: "bumps", label: "Order Bumps" },
+        { key: "catalog", label: "Catalog", icon: <Film /> },
+        { key: "products", label: "Products & Pricing", icon: <Package /> },
       ],
     },
     {
       title: "Site",
       items: [
-        { key: "pages", label: "Pages" },
-        { key: "studio", label: "Studio Insights" },
-        { key: "emails", label: "Email Templates" },
-        { key: "code", label: "Header & Footer Code" },
+        { key: "pages", label: "Pages", icon: <Globe /> },
+        { key: "studio", label: "Studio Insights", icon: <BarChart3 /> },
+        { key: "emails", label: "Email Templates", icon: <Mail /> },
+        { key: "code", label: "Header & Footer Code", icon: <Code /> },
       ],
     },
     {
       title: "Access",
-      items: [{ key: "team", label: "Team" }],
+      items: [{ key: "team", label: "Team", icon: <Shield /> }],
     },
   ];
 
   // Gate the menu to what this admin may see; while `me` loads, show only
   // Dashboard.
-  const visibleGroups = groups
+  const visibleGroups: NavGroup[] = groups
     .map((g) => ({
       ...g,
       items: g.items.filter((it) =>
@@ -413,90 +434,35 @@ export default function AdminPage() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      {/* top bar */}
-      <header className="flex items-center justify-between border-b border-hair bg-surface px-6 py-4">
-        <div className="flex items-center gap-3">
-          <Logo className="h-6" />
-          <span className="font-mono text-label uppercase text-muted">/ Site Admin</span>
-        </div>
-        <div className="flex items-center gap-4">
-          <span className="hidden font-mono text-label text-dim sm:inline">
-            {session.user.email}
-          </span>
-          <button
-            type="button"
-            onClick={() => supabase.auth.signOut()}
-            className="tap rounded-[3px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
-          >
-            Sign out
-          </button>
-        </div>
-      </header>
+      <PortalTopbar
+        area="Site Admin"
+        right={
+          <>
+            <span className="hidden max-w-[16rem] truncate font-mono text-label text-dim sm:inline">
+              {session.user.email}
+            </span>
+            <button
+              type="button"
+              onClick={() => supabase.auth.signOut()}
+              className="tap rounded-[8px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
+            >
+              Sign out
+            </button>
+          </>
+        }
+      />
 
       <div className="flex flex-1 flex-col md:flex-row">
-        {/* side menu */}
-        <nav className="border-b border-hair bg-surface/50 p-4 md:w-64 md:shrink-0 md:border-b-0 md:border-r">
-          {/* mobile: one grouped dropdown to stay compact */}
-          <select
-            value={view}
-            onChange={(e) => setView(e.target.value as View)}
-            className="w-full rounded-[6px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none md:hidden"
-          >
-            {visibleGroups.map((group) => {
-              const opts = group.items.map((item) => (
-                <option key={item.key} value={item.key}>
-                  {item.label}
-                  {item.key === "messages" && msgUnread > 0 ? ` (${msgUnread})` : ""}
-                </option>
-              ));
-              return group.title ? (
-                <optgroup key={group.title} label={group.title}>
-                  {opts}
-                </optgroup>
-              ) : (
-                opts
-              );
-            })}
-          </select>
+        <PortalSidebar
+          groups={visibleGroups}
+          active={view}
+          onSelect={(k) => setView(k as View)}
+          storageKey="ghlv-admin-nav"
+        />
 
-          {/* desktop: grouped sidebar */}
-          <div className="hidden flex-col md:flex">
-            {visibleGroups.map((group, gi) => (
-              <div key={group.title || "main"} className={gi > 0 ? "mt-5 border-t border-hair pt-5" : ""}>
-                {group.title ? (
-                  <p className="mb-2 px-3 font-mono text-body-sm font-bold uppercase tracking-[0.14em] text-gold/70">
-                    {group.title}
-                  </p>
-                ) : null}
-                <ul className="flex flex-col gap-0.5">
-                  {group.items.map((item) => (
-                    <li key={item.key}>
-                      <button
-                        type="button"
-                        onClick={() => setView(item.key)}
-                        className={`tap flex w-full items-center justify-between gap-2 rounded-[6px] px-3 py-2 text-left text-body-sm transition-colors ${
-                          view === item.key
-                            ? "bg-gold/15 font-semibold text-gold"
-                            : "text-muted hover:bg-white/[0.04] hover:text-ink"
-                        }`}
-                      >
-                        <span>{item.label}</span>
-                        {item.key === "messages" && msgUnread > 0 ? (
-                          <span className="rounded-full bg-gold px-1.5 py-0.5 font-mono text-label font-bold text-canvas">
-                            {msgUnread}
-                          </span>
-                        ) : null}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </nav>
-
-        {/* content */}
-        <section className="flex-1 p-6 md:p-10">
+        {/* content: keyed on the view so each screen fades up as it opens */}
+        <section className="min-w-0 flex-1 p-4 md:p-8">
+          <div key={view} className="portal-view">
           {view === "dashboard" ? (
             <DashboardScreen onNavigate={setView} />
           ) : view === "orders" ? (
@@ -507,8 +473,6 @@ export default function AdminPage() {
             <SubscriptionsScreen />
           ) : view === "products" ? (
             <ProductsScreen />
-          ) : view === "bumps" ? (
-            <BumpsScreen />
           ) : view === "coupons" ? (
             <CouponsScreen />
           ) : view === "links" ? (
@@ -529,8 +493,6 @@ export default function AdminPage() {
             <PagesScreen />
           ) : view === "catalog" ? (
             <CatalogScreen />
-          ) : view === "salespages" ? (
-            <SalesPagesScreen />
           ) : view === "emails" ? (
             <EmailTemplatesScreen />
           ) : view === "team" ? (
@@ -540,6 +502,7 @@ export default function AdminPage() {
             // dashboard for safety rather than a blank screen
             <DashboardScreen onNavigate={setView} />
           )}
+          </div>
         </section>
       </div>
     </div>

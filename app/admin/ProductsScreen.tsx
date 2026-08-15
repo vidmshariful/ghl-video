@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { authHeader, money, supabase } from "./client";
+import { AdminModal } from "./Modal";
+import { BumpsScreen } from "./BumpsScreen";
 
 type ProductRow = {
   id: string;
@@ -16,7 +18,7 @@ type ProductRow = {
 };
 
 const field =
-  "mt-1.5 w-full rounded-[3px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none";
+  "mt-1.5 w-full rounded-[8px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none";
 const lab = "font-mono text-label uppercase text-muted";
 
 function ProductForm({
@@ -80,10 +82,7 @@ function ProductForm({
   }
 
   return (
-    <form onSubmit={save} className="rounded-card border border-gold/40 bg-surface p-6">
-      <p className="font-display text-h4 font-semibold text-ink">
-        {isNew ? "Add a product" : `Edit ${initial.name}`}
-      </p>
+    <form onSubmit={save}>
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
         <label>
           <span className={lab}>SKU (checkout slug)</span>
@@ -162,14 +161,14 @@ function ProductForm({
         <button
           type="submit"
           disabled={busy}
-          className="tap rounded-[3px] bg-brand-gradient px-6 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60"
+          className="tap rounded-[8px] bg-brand-gradient px-6 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60"
         >
           {busy ? "Saving" : "Save product"}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="tap rounded-[3px] border border-hair px-6 py-2.5 text-body text-muted transition-colors hover:text-ink"
+          className="tap rounded-[8px] border border-hair px-6 py-2.5 text-body text-muted transition-colors hover:text-ink"
         >
           Cancel
         </button>
@@ -179,6 +178,7 @@ function ProductForm({
 }
 
 export function ProductsScreen() {
+  const [tab, setTab] = useState<"products" | "bumps">("products");
   const [rows, setRows] = useState<ProductRow[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [editing, setEditing] = useState<ProductRow | "new" | null>(null);
@@ -233,34 +233,64 @@ export function ProductsScreen() {
   if (!loaded) return <p className="text-body text-muted">Loading products...</p>;
 
   return (
-    <div className="max-w-4xl">
+    <div className="w-full">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="font-display text-h3 text-ink">Products &amp; Pricing</h1>
-          <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
-            The checkout reads the price straight from here at purchase time, so
-            edits take effect immediately. {rows.length} product
-            {rows.length === 1 ? "" : "s"}.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={sync}
-            disabled={syncing}
-            className="tap rounded-[3px] border border-hair px-5 py-2.5 text-body font-semibold text-ink transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-60"
-          >
-            {syncing ? "Syncing" : "Sync from catalog"}
-          </button>
-          <button
-            type="button"
-            onClick={() => setEditing("new")}
-            className="tap rounded-[3px] bg-brand-gradient px-6 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110"
-          >
-            Add product
-          </button>
-        </div>
+        <h1 className="font-display text-h2 text-ink">Products &amp; Pricing</h1>
+        {tab === "products" && (
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={sync}
+              disabled={syncing}
+              className="tap rounded-[8px] border border-hair px-5 py-2.5 text-body font-semibold text-ink transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-60"
+            >
+              {syncing ? "Syncing" : "Sync from catalog"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditing("new")}
+              className="tap rounded-[8px] bg-brand-gradient px-6 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110"
+            >
+              Add product
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* what we sell, in two tabs: the sellable products and their bumps */}
+      <div className="mt-6 flex gap-1 border-b border-hair">
+        {(
+          [
+            ["products", "Products"],
+            ["bumps", "Order bumps"],
+          ] as const
+        ).map(([k, label]) => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => setTab(k)}
+            className={`tap rounded-t-[8px] px-4 py-2.5 text-body-sm transition-colors ${
+              tab === k
+                ? "border border-b-0 border-hair bg-surface font-semibold text-gold"
+                : "text-muted hover:text-ink"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "bumps" ? (
+        <div className="mt-6">
+          <BumpsScreen embedded />
+        </div>
+      ) : (
+        <>
+      <p className="mt-4 max-w-[var(--measure-body)] text-body text-muted">
+        The checkout reads the price straight from here at purchase time, so
+        edits take effect immediately. {rows.length} product
+        {rows.length === 1 ? "" : "s"}.
+      </p>
 
       {syncMsg && (
         <p className="mt-4 rounded-[8px] border border-gold/30 bg-gold/[0.06] px-4 py-3 text-body-sm text-muted">
@@ -278,8 +308,12 @@ export function ProductsScreen() {
 
       {err && <p className="mt-4 text-body-sm text-error">{err}</p>}
 
-      {editing && (
-        <div className="mt-6">
+      <AdminModal
+        open={!!editing}
+        onClose={() => setEditing(null)}
+        title={editing === "new" || !editing ? "Add a product" : `Edit ${editing.name}`}
+      >
+        {editing && (
           <ProductForm
             initial={editing === "new" ? {} : editing}
             onDone={() => {
@@ -288,10 +322,10 @@ export function ProductsScreen() {
             }}
             onCancel={() => setEditing(null)}
           />
-        </div>
-      )}
+        )}
+      </AdminModal>
 
-      <ul className="mt-6 overflow-hidden rounded-card border border-hair">
+      <ul className="mt-6 overflow-hidden rounded-[12px] border border-hair">
         {rows.map((r) => (
           <li
             key={r.id}
@@ -316,13 +350,15 @@ export function ProductsScreen() {
             <button
               type="button"
               onClick={() => setEditing(r)}
-              className="tap shrink-0 rounded-[3px] border border-hair px-3.5 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
+              className="tap shrink-0 rounded-[8px] border border-hair px-3.5 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
             >
               Edit
             </button>
           </li>
         ))}
       </ul>
+        </>
+      )}
     </div>
   );
 }

@@ -79,7 +79,7 @@ const stripeBase = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.startsWith("p
   ? "https://dashboard.stripe.com/test"
   : "https://dashboard.stripe.com";
 const actionBtn =
-  "tap rounded-[3px] border border-hair px-3.5 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-50";
+  "tap rounded-[8px] border border-hair px-3.5 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-50";
 
 function OrderActions({ order, onChanged }: { order: OrderRow; onChanged: () => void }) {
   const [busy, setBusy] = useState<null | "resync" | "refund">(null);
@@ -148,7 +148,7 @@ function OrderActions({ order, onChanged }: { order: OrderRow; onChanged: () => 
 
 const STAGES = ["paid", "intake", "production", "review", "delivered"];
 const fField =
-  "mt-1.5 w-full rounded-[3px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none";
+  "mt-1.5 w-full rounded-[8px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none";
 const fLab = "font-mono text-label uppercase text-dim";
 
 function FulfillmentEditor({ order, onChanged }: { order: OrderRow; onChanged: () => void }) {
@@ -189,7 +189,7 @@ function FulfillmentEditor({ order, onChanged }: { order: OrderRow; onChanged: (
   }
 
   const btn =
-    "tap rounded-[3px] px-5 py-2 text-body-sm font-semibold transition-all disabled:opacity-50";
+    "tap rounded-[8px] px-5 py-2 text-body-sm font-semibold transition-all disabled:opacity-50";
 
   return (
     <div className="mt-6 rounded-[8px] border border-gold/30 bg-gold/[0.04] p-5">
@@ -290,7 +290,7 @@ function BrandingBrief({ orderId }: { orderId: string }) {
 
   const lab = "shrink-0 font-mono text-label uppercase text-dim";
   const chip =
-    "rounded-[3px] border border-hair px-3 py-1 font-mono text-label uppercase text-ink hover:border-gold/60";
+    "rounded-[8px] border border-hair px-3 py-1 font-mono text-label uppercase text-ink hover:border-gold/60";
   // map a picked video slug to its title, for the fulfillment team
   const slugTitle = useMemo(() => bundlePickTitles(), []);
   const pickCats: { key: "master" | "demo" | "feature"; label: string }[] = [
@@ -329,7 +329,7 @@ function BrandingBrief({ orderId }: { orderId: string }) {
           </div>
           {brief.videoSelections &&
           pickCats.some((c) => (brief.videoSelections?.[c.key] ?? []).length) ? (
-            <div className="grid gap-1 rounded-[3px] border border-hair/60 bg-canvas/40 p-3">
+            <div className="grid gap-1 rounded-[8px] border border-hair/60 bg-canvas/40 p-3">
               <span className="font-mono text-label uppercase text-gold/80">Chosen videos</span>
               {pickCats.map((c) => {
                 const slugs = brief.videoSelections?.[c.key] ?? [];
@@ -433,7 +433,7 @@ function OrderDetail({
           {updates === null ? (
             <li className="text-body-sm text-muted">Loading...</li>
           ) : updates.length === 0 ? (
-            <li className="rounded-[3px] border border-dashed border-hair px-4 py-3 text-body-sm text-muted">
+            <li className="rounded-[8px] border border-dashed border-hair px-4 py-3 text-body-sm text-muted">
               No updates posted yet. Post one above: the client is emailed and sees it in
               their portal, and it shows here too.
             </li>
@@ -441,7 +441,7 @@ function OrderDetail({
             updates.map((u) => (
               <li
                 key={u.id}
-                className="rounded-[3px] border border-hair bg-surface px-4 py-3"
+                className="rounded-[8px] border border-hair bg-surface px-4 py-3"
               >
                 <p className="font-mono text-label uppercase text-dim">{when(u.created_at)}</p>
                 <p className="mt-1 whitespace-pre-wrap text-body-sm text-ink">{u.body}</p>
@@ -459,7 +459,7 @@ function OrderDetail({
             <p className="mt-6 font-mono text-label uppercase text-dim">Extra-work invoices</p>
             <ul className="mt-2 grid gap-2">
               {attachedInvoices.map((i) => (
-                <li key={i.id} className="rounded-[3px] border border-hair bg-surface px-4 py-3">
+                <li key={i.id} className="rounded-[8px] border border-hair bg-surface px-4 py-3">
                   <div className="flex items-center justify-between gap-3">
                     <span className="font-mono text-body-sm text-gold/80">{i.number}</span>
                     <span className="font-mono text-body-sm font-bold text-ink [font-variant-numeric:tabular-nums]">
@@ -677,7 +677,7 @@ function ManualOrderForm({ onDone }: { onDone: () => void }) {
       <button
         type="submit"
         disabled={busy}
-        className="tap justify-self-start rounded-[3px] bg-brand-gradient px-6 py-2.5 text-body-sm font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-50"
+        className="tap justify-self-start rounded-[8px] bg-brand-gradient px-6 py-2.5 text-body-sm font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-50"
       >
         {busy ? "Creating..." : "Create order"}
       </button>
@@ -766,7 +766,7 @@ export function OrdersScreen() {
     const inv = invoiceTitle(openOrder);
     const attached = invoices.filter((i) => i.parent_order_id === openOrder.id);
     return (
-      <div className="max-w-5xl">
+      <div className="w-full">
         <button
           type="button"
           onClick={() => setOpen(null)}
@@ -776,7 +776,7 @@ export function OrdersScreen() {
         </button>
         <div className="mt-4 flex flex-wrap items-start justify-between gap-x-6 gap-y-3 border-b border-hair pb-5">
           <div className="min-w-0">
-            <h1 className="font-display text-h3 text-ink">
+            <h1 className="font-display text-h2 text-ink">
               {openOrder.customer?.name || openOrder.customer_email}
             </h1>
             <p className="mt-1 font-mono text-body-sm text-muted">
@@ -812,7 +812,7 @@ export function OrdersScreen() {
               type="button"
               onClick={() => archive(openOrder.id, !openOrder.archived)}
               disabled={busyId === openOrder.id}
-              className="tap rounded-[3px] border border-hair px-3 py-1 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-50"
+              className="tap rounded-[8px] border border-hair px-3 py-1 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-50"
             >
               {openOrder.archived ? "Unarchive" : "Archive"}
             </button>
@@ -830,8 +830,9 @@ export function OrdersScreen() {
   const summary: [string, string, string][] = [
     ["Revenue", money(paid.reduce((s, r) => s + r.amount_cents, 0)), "text-gold"],
     ["Paid", String(paid.length), "text-green"],
-    ["Pending", String(rows.filter((r) => r.status === "pending").length), "text-muted"],
-    ["Orders", String(rows.length), "text-muted"],
+    // pending is money in flight, same gold treatment as the dashboard
+    ["Pending", String(rows.filter((r) => r.status === "pending").length), "text-gold"],
+    ["Orders", String(rows.length), "text-ink"],
   ];
 
   // Manage: only real work (paid/refunded, not archived, not a nested child).
@@ -868,7 +869,7 @@ export function OrdersScreen() {
         <button
           type="button"
           onClick={() => setOpen(r.id)}
-          className="flex w-full flex-wrap items-center justify-between gap-x-6 gap-y-2 bg-surface px-5 py-4 pr-28 text-left transition-colors hover:bg-white/[0.02]"
+          className="flex w-full flex-wrap items-center justify-between gap-x-6 gap-y-2 bg-surface px-5 py-4 pr-28 text-left transition-colors hover:bg-hair/40"
         >
           <div className="min-w-0">
             <p className="text-body font-semibold text-ink">
@@ -909,7 +910,7 @@ export function OrdersScreen() {
           type="button"
           onClick={() => archive(r.id, !r.archived)}
           disabled={busyId === r.id}
-          className="absolute right-4 top-1/2 -translate-y-1/2 rounded-[3px] border border-hair bg-surface px-2 py-1 font-mono text-label uppercase text-dim opacity-0 transition-all hover:border-gold/60 hover:text-gold group-hover/row:opacity-100 focus-visible:opacity-100 disabled:opacity-50"
+          className="absolute right-4 top-1/2 -translate-y-1/2 rounded-[8px] border border-hair bg-surface px-2 py-1 font-mono text-label uppercase text-dim opacity-0 transition-all hover:border-gold/60 hover:text-gold group-hover/row:opacity-100 focus-visible:opacity-100 disabled:opacity-50"
         >
           {r.archived ? "Unarch" : "Archive"}
         </button>
@@ -918,10 +919,10 @@ export function OrdersScreen() {
   };
 
   return (
-    <div className="max-w-5xl">
+    <div className="w-full">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="font-display text-h3 text-ink">Orders</h1>
+          <h1 className="font-display text-h2 text-ink">Orders</h1>
           <p className="mt-2 text-body text-muted">
             {view === "manage"
               ? "Your active pipeline. New and in-production up top."
@@ -932,7 +933,7 @@ export function OrdersScreen() {
           <button
             type="button"
             onClick={() => setShowManual(true)}
-            className="tap rounded-[3px] bg-brand-gradient px-4 py-2 font-mono text-label font-semibold uppercase text-canvas transition-all hover:brightness-110"
+            className="tap rounded-[8px] bg-brand-gradient px-4 py-2 font-mono text-label font-semibold uppercase text-canvas transition-all hover:brightness-110"
           >
             Add manual order
           </button>
@@ -940,7 +941,7 @@ export function OrdersScreen() {
             <button
               type="button"
               onClick={() => exportOrdersCsv(rows)}
-              className="tap rounded-[3px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
+              className="tap rounded-[8px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
             >
               Export CSV
             </button>
@@ -956,9 +957,9 @@ export function OrdersScreen() {
             role="tab"
             aria-selected={view === k}
             onClick={() => setView(k)}
-            className={`min-h-11 px-4 font-mono text-body-sm transition-colors ${
+            className={`tap rounded-t-[8px] px-4 py-2.5 text-body-sm transition-colors ${
               view === k
-                ? "border-b-2 border-gold font-semibold text-gold"
+                ? "border border-b-0 border-hair bg-surface font-semibold text-gold"
                 : "text-muted hover:text-ink"
             }`}
           >
@@ -982,7 +983,7 @@ export function OrdersScreen() {
               {b.items.length === 0 ? (
                 <p className="mt-2 text-body-sm text-dim">Nothing here.</p>
               ) : (
-                <ul className="mt-2 overflow-hidden rounded-card border border-hair">
+                <ul className="mt-2 overflow-hidden rounded-[12px] border border-hair">
                   {b.items.map(row)}
                 </ul>
               )}
@@ -991,11 +992,11 @@ export function OrdersScreen() {
         </div>
       ) : (
         <>
-          <div className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-card border border-hair bg-hair sm:grid-cols-4">
+          <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
             {summary.map(([label, val, cls]) => (
-              <div key={label} className="bg-surface px-5 py-4">
+              <div key={label} className="rounded-[12px] border border-hair bg-surface p-6">
                 <p className="font-mono text-label uppercase text-dim">{label}</p>
-                <p className={`mt-1 font-display text-h4 [font-variant-numeric:tabular-nums] ${cls}`}>
+                <p className={`mt-1 font-display text-h3 [font-variant-numeric:tabular-nums] ${cls}`}>
                   {val}
                 </p>
               </div>
@@ -1004,7 +1005,7 @@ export function OrdersScreen() {
           {rows.length === 0 ? (
             <p className="mt-8 text-body text-muted">No orders yet.</p>
           ) : (
-            <ul className="mt-6 overflow-hidden rounded-card border border-hair">{rows.map(row)}</ul>
+            <ul className="mt-6 overflow-hidden rounded-[12px] border border-hair">{rows.map(row)}</ul>
           )}
         </>
       )}

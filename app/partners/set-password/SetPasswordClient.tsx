@@ -12,7 +12,7 @@ import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
  * it, updateUser sets the password, then we head into /partners.
  */
 const fieldCls =
-  "w-full rounded-[3px] border border-hair bg-surface px-4 py-3.5 text-body text-ink placeholder:text-dim focus:border-gold focus:outline-none";
+  "w-full rounded-[8px] border border-hair bg-surface px-4 py-3.5 text-body text-ink placeholder:text-dim focus:border-gold focus:outline-none";
 
 export function SetPasswordClient() {
   const router = useRouter();
@@ -84,7 +84,7 @@ export function SetPasswordClient() {
                 </p>
                 <Link
                   href="/partners"
-                  className="tap mt-6 inline-block rounded-[3px] bg-brand-gradient px-8 py-3.5 text-body font-semibold text-canvas transition-all hover:brightness-110"
+                  className="tap mt-6 inline-block rounded-[8px] bg-brand-gradient px-8 py-3.5 text-body font-semibold text-canvas transition-all hover:brightness-110"
                 >
                   Back to sign in
                 </Link>
@@ -124,7 +124,7 @@ export function SetPasswordClient() {
                   <button
                     type="submit"
                     disabled={busy}
-                    className="tap mt-1 rounded-[3px] bg-brand-gradient px-8 py-3.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60"
+                    className="tap mt-1 rounded-[8px] bg-brand-gradient px-8 py-3.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60"
                   >
                     {busy ? "Saving..." : "Save password"}
                   </button>

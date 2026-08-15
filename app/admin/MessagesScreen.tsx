@@ -45,13 +45,13 @@ export function MessagesScreen() {
   const selected = selId ? (threads?.find((t) => t.id === selId) ?? null) : null;
 
   return (
-    <div className="max-w-6xl">
-      <h1 className="font-display text-h3 text-ink">Messages</h1>
+    <div className="w-full">
+      <h1 className="font-display text-h2 text-ink">Messages</h1>
       <p className="mt-2 text-body text-muted">Client conversations, newest activity first.</p>
 
       <div className="mt-6 grid gap-4 md:grid-cols-[20rem_1fr]">
         <div
-          className={`${selId ? "hidden md:block" : ""} overflow-hidden rounded-card border border-hair`}
+          className={`${selId ? "hidden md:block" : ""} overflow-hidden rounded-[12px] border border-hair`}
         >
           {threads === null ? (
             <p className="p-5 text-body-sm text-muted">Loading...</p>
@@ -65,7 +65,7 @@ export function MessagesScreen() {
                     type="button"
                     onClick={() => setSelId(t.id)}
                     className={`flex w-full flex-col gap-1 px-4 py-3 text-left transition-colors ${
-                      selId === t.id ? "bg-gold/[0.06]" : "hover:bg-white/[0.02]"
+                      selId === t.id ? "bg-gold/[0.06]" : "hover:bg-hair/40"
                     }`}
                   >
                     <span className="flex items-center justify-between gap-2">
@@ -95,7 +95,7 @@ export function MessagesScreen() {
         </div>
 
         <div
-          className={`${selId ? "" : "hidden md:block"} rounded-card border border-hair p-4 md:p-5`}
+          className={`${selId ? "" : "hidden md:block"} rounded-[12px] border border-hair p-4 md:p-5`}
         >
           {!selected ? (
             <div className="grid h-full min-h-[50vh] place-items-center">

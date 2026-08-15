@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { money, supabase } from "./client";
+import { SalesPagesScreen } from "./SalesPagesScreen";
 
 /*
  * Buy Links: ready-to-send checkout links for every product, with an optional
@@ -38,7 +39,7 @@ function CopyField({ url }: { url: string }) {
         readOnly
         value={url}
         onFocus={(e) => e.currentTarget.select()}
-        className="w-full min-w-0 rounded-[3px] border border-hair bg-canvas px-3 py-2 font-mono text-body-sm text-muted focus:border-gold/60 focus:outline-none"
+        className="w-full min-w-0 rounded-[8px] border border-hair bg-canvas px-3 py-2 font-mono text-body-sm text-muted focus:border-gold/60 focus:outline-none"
       />
       <button
         type="button"
@@ -51,7 +52,7 @@ function CopyField({ url }: { url: string }) {
             /* selectable fallback */
           }
         }}
-        className="tap shrink-0 rounded-[3px] border border-hair px-3.5 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
+        className="tap shrink-0 rounded-[8px] border border-hair px-3.5 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
       >
         {done ? "Copied" : "Copy"}
       </button>
@@ -67,6 +68,7 @@ function couponLabel(c: Coupon): string {
 }
 
 export function LinksScreen() {
+  const [tab, setTab] = useState<"buy" | "pages">("buy");
   const [products, setProducts] = useState<Prod[] | null>(null);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [coupon, setCoupon] = useState("");
@@ -99,19 +101,49 @@ export function LinksScreen() {
     `${SITE}/checkout/${p.sku}/${coupon && p.type === "one_time" ? `?code=${encodeURIComponent(coupon)}` : ""}`;
 
   return (
-    <div className="max-w-4xl">
-      <h1 className="font-display text-h3 text-ink">Buy Links</h1>
-      <p className="mt-2 text-body text-muted">
+    <div className="w-full">
+      <h1 className="font-display text-h2 text-ink">Links</h1>
+
+      {/* every link the team sends: checkout links and landing pages */}
+      <div className="mt-6 flex gap-1 border-b border-hair">
+        {(
+          [
+            ["buy", "Buy links"],
+            ["pages", "Sales pages"],
+          ] as const
+        ).map(([k, label]) => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => setTab(k)}
+            className={`tap rounded-t-[8px] px-4 py-2.5 text-body-sm transition-colors ${
+              tab === k
+                ? "border border-b-0 border-hair bg-surface font-semibold text-gold"
+                : "text-muted hover:text-ink"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "pages" ? (
+        <div className="mt-6">
+          <SalesPagesScreen embedded />
+        </div>
+      ) : (
+        <>
+      <p className="mt-4 text-body text-muted">
         Ready-to-send checkout links for every product. For custom-priced deals, use Invoices.
       </p>
 
-      <div className="mt-6 flex flex-wrap items-center gap-3 rounded-card border border-hair bg-surface px-5 py-4">
+      <div className="mt-6 flex flex-wrap items-center gap-3 rounded-[12px] border border-hair bg-surface px-5 py-4">
         <label className="flex items-center gap-3">
           <span className={fLab}>Append coupon</span>
           <select
             value={coupon}
             onChange={(e) => setCoupon(e.target.value)}
-            className="rounded-[3px] border border-hair bg-canvas px-3 py-2 text-body text-ink focus:border-gold focus:outline-none"
+            className="rounded-[8px] border border-hair bg-canvas px-3 py-2 text-body text-ink focus:border-gold focus:outline-none"
           >
             <option value="">None</option>
             {coupons.map((c) => (
@@ -138,7 +170,7 @@ export function LinksScreen() {
       ) : (
         <ul className="mt-3 grid gap-3">
           {catalog.map((p) => (
-            <li key={p.id} className="rounded-card border border-hair bg-surface p-4">
+            <li key={p.id} className="rounded-[12px] border border-hair bg-surface p-4">
               <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                 <p className="font-semibold text-ink">
                   {p.metadata?.code ? (
@@ -161,6 +193,8 @@ export function LinksScreen() {
             </li>
           ))}
         </ul>
+      )}
+        </>
       )}
     </div>
   );

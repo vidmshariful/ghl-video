@@ -28,14 +28,12 @@ export const TOGGLEABLE_VIEWS: { key: View; label: string; group: string }[] = [
   { key: "orders", label: "Orders", group: "Sales" },
   { key: "invoices", label: "Invoices", group: "Sales" },
   { key: "subscriptions", label: "Subscriptions", group: "Sales" },
-  { key: "links", label: "Buy Links", group: "Sales" },
+  { key: "links", label: "Links", group: "Sales" },
   { key: "coupons", label: "Coupons", group: "Sales" },
-  { key: "salespages", label: "Sales Pages", group: "Sales" },
   { key: "messages", label: "Messages", group: "Clients" },
   { key: "customers", label: "Customers", group: "Clients" },
   { key: "partners", label: "Partners", group: "Clients" },
   { key: "products", label: "Products & Pricing", group: "Catalog" },
-  { key: "bumps", label: "Order Bumps", group: "Catalog" },
   { key: "catalog", label: "Catalog", group: "Catalog" },
   { key: "journal", label: "Journal", group: "Site" },
   { key: "pages", label: "Pages", group: "Site" },
@@ -50,7 +48,7 @@ const ALL_TOGGLEABLE = TOGGLEABLE_VIEWS.map((v) => v.key);
 export const ROLE_DEFAULT_FEATURES: Record<Role, View[]> = {
   admin: ALL_TOGGLEABLE,
   manager: ALL_TOGGLEABLE.filter((k) => k !== "code"),
-  sales_rep: ["orders", "invoices", "links", "salespages", "messages", "customers"],
+  sales_rep: ["orders", "invoices", "links", "messages", "customers"],
 };
 
 /* A user's effective granted menu items (excludes dashboard + team). A null

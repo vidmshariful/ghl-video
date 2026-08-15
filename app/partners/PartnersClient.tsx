@@ -4,7 +4,16 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Session } from "@supabase/supabase-js";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
-import { Logo } from "@/components/Logo";
+import { PortalSidebar, PortalTopbar } from "@/components/portal/Shell";
+import {
+  BarChart3,
+  BookOpen,
+  LayoutDashboard,
+  Link2,
+  Settings,
+  Users,
+  Wallet,
+} from "lucide-react";
 
 /*
  * The affiliate partner portal at /partners. Password login (same Supabase
@@ -55,14 +64,14 @@ type View =
   | "resources"
   | "settings";
 
-const NAV: { key: View; label: string }[] = [
-  { key: "dashboard", label: "Dashboard" },
-  { key: "performance", label: "Performance" },
-  { key: "referrals", label: "Referrals" },
-  { key: "earnings", label: "Earnings & Payouts" },
-  { key: "assets", label: "Links & Assets" },
-  { key: "resources", label: "Resources" },
-  { key: "settings", label: "Settings" },
+const NAV = [
+  { key: "dashboard", label: "Dashboard", icon: <LayoutDashboard /> },
+  { key: "performance", label: "Performance", icon: <BarChart3 /> },
+  { key: "referrals", label: "Referrals", icon: <Users /> },
+  { key: "earnings", label: "Earnings & Payouts", icon: <Wallet /> },
+  { key: "assets", label: "Links & Assets", icon: <Link2 /> },
+  { key: "resources", label: "Resources", icon: <BookOpen /> },
+  { key: "settings", label: "Settings", icon: <Settings /> },
 ];
 
 /* ---- FirstPromoter-backed data payloads ---- */
@@ -133,7 +142,7 @@ function useFpData<T extends FpGate>(path: string) {
 function FpStateCard({ data, err }: { data: FpGate | null; err: boolean }) {
   if (err || data?.unavailable)
     return (
-      <div className="mt-8 rounded-card border border-hair bg-surface px-6 py-10 text-center">
+      <div className="mt-8 rounded-[12px] border border-hair bg-surface px-6 py-10 text-center">
         <p className="font-display text-h4 text-ink">Stats are catching their breath.</p>
         <p className="mx-auto mt-2 max-w-md text-body text-muted">
           We could not reach the tracking system just now. Give it a minute and reload.
@@ -142,7 +151,7 @@ function FpStateCard({ data, err }: { data: FpGate | null; err: boolean }) {
     );
   if (data && !data.configured)
     return (
-      <div className="mt-8 rounded-card border border-hair bg-surface px-6 py-10 text-center">
+      <div className="mt-8 rounded-[12px] border border-hair bg-surface px-6 py-10 text-center">
         <p className="font-mono text-label uppercase text-gold">[ Almost live ]</p>
         <p className="mt-3 font-display text-h4 text-ink">Stats sync is being switched on.</p>
         <p className="mx-auto mt-2 max-w-md text-body text-muted">
@@ -153,7 +162,7 @@ function FpStateCard({ data, err }: { data: FpGate | null; err: boolean }) {
     );
   if (data && data.configured && data.found === false)
     return (
-      <div className="mt-8 rounded-card border border-hair bg-surface px-6 py-10 text-center">
+      <div className="mt-8 rounded-[12px] border border-hair bg-surface px-6 py-10 text-center">
         <p className="font-display text-h4 text-ink">Your tracking profile is not linked yet.</p>
         <p className="mx-auto mt-2 max-w-md text-body text-muted">
           We match by email and could not find yours. Write to hi@ghlvideo.com and we
@@ -167,11 +176,11 @@ function FpStateCard({ data, err }: { data: FpGate | null; err: boolean }) {
 }
 
 const fieldCls =
-  "w-full rounded-[3px] border border-hair bg-canvas px-4 py-3 text-body text-ink placeholder:text-dim focus:border-gold focus:outline-none";
+  "w-full rounded-[8px] border border-hair bg-canvas px-4 py-3 text-body text-ink placeholder:text-dim focus:border-gold focus:outline-none";
 const btnPrimary =
-  "tap rounded-[3px] bg-brand-gradient px-6 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60";
+  "tap rounded-[8px] bg-brand-gradient px-6 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60";
 const btnGhost =
-  "tap rounded-[3px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold";
+  "tap rounded-[8px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold";
 
 async function authedFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const { data } = await supabase.auth.getSession();
@@ -257,7 +266,7 @@ function LoginView() {
           </h1>
 
           {notice ? (
-            <div className="mt-8 rounded-card border border-gold/40 bg-gold/[0.06] px-6 py-8">
+            <div className="mt-8 rounded-[12px] border border-gold/40 bg-gold/[0.06] px-6 py-8">
               <p className="font-display text-h4 text-ink">Check your email.</p>
               <p className="mt-2 text-body text-muted">{notice}</p>
               <button
@@ -376,15 +385,15 @@ function DashboardView({ me, onNavigate }: { me: Me; onNavigate: (v: View) => vo
   const live = st?.configured && st.found && st.stats;
 
   return (
-    <div className="max-w-4xl">
-      <h1 className="font-display text-h3 text-ink">Welcome back, {first}.</h1>
+    <div className="w-full">
+      <h1 className="font-display text-h2 text-ink">Welcome back, {first}.</h1>
       <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
         Your audience gets {p.discountPercent}% off every GHL Video service with your
         code{p.couponCode ? ` ${p.couponCode}` : ""}. Your links credit every sale to you.
       </p>
 
       {live ? (
-        <div className="mt-8 grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-5">
           {[
             { label: "Your balance", value: fpMoney(st!.balanceCents ?? 0), gold: true },
             { label: "Revenue driven", value: fpMoney(st!.stats!.revenueCents) },
@@ -394,12 +403,12 @@ function DashboardView({ me, onNavigate }: { me: Me; onNavigate: (v: View) => vo
           ].map((tile) => (
             <div
               key={tile.label}
-              className={`rounded-card border p-4 ${
+              className={`rounded-[12px] border p-6 ${
                 tile.gold ? "border-gold/40 bg-gold/[0.06]" : "border-hair bg-surface"
               }`}
             >
               <p className="font-mono text-label uppercase text-muted">{tile.label}</p>
-              <p className={`mt-1.5 font-display text-h4 font-semibold ${tile.gold ? "text-gold" : "text-ink"}`}>
+              <p className={`mt-2 font-display text-h3 font-semibold ${tile.gold ? "text-gold" : "text-ink"}`}>
                 {tile.value}
               </p>
             </div>
@@ -408,7 +417,7 @@ function DashboardView({ me, onNavigate }: { me: Me; onNavigate: (v: View) => vo
       ) : null}
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2">
-        <div className="rounded-card border border-hair bg-surface p-6">
+        <div className="rounded-[12px] border border-hair bg-surface p-6">
           <p className="font-mono text-label uppercase text-muted">Your main link</p>
           <p className="mt-2 break-all font-mono text-body-sm text-ink">{me.primaryLink}</p>
           <button
@@ -419,7 +428,7 @@ function DashboardView({ me, onNavigate }: { me: Me; onNavigate: (v: View) => vo
             {copied === "primary" ? "Copied" : "Copy link"}
           </button>
         </div>
-        <div className="rounded-card border border-hair bg-surface p-6">
+        <div className="rounded-[12px] border border-hair bg-surface p-6">
           <p className="font-mono text-label uppercase text-muted">Your coupon</p>
           {p.couponCode ? (
             <>
@@ -447,7 +456,7 @@ function DashboardView({ me, onNavigate }: { me: Me; onNavigate: (v: View) => vo
       </div>
 
       {me.pages && me.pages.length > 0 && (
-        <div className="mt-4 rounded-card border border-gold/30 bg-gold/[0.04] p-6">
+        <div className="mt-4 rounded-[12px] border border-gold/30 bg-gold/[0.04] p-6">
           <p className="font-mono text-label uppercase text-gold">Your partner page</p>
           {me.pages.map((pg) => (
             <div
@@ -480,7 +489,7 @@ function DashboardView({ me, onNavigate }: { me: Me; onNavigate: (v: View) => vo
         <button
           type="button"
           onClick={() => onNavigate("assets")}
-          className="tap rounded-card border border-hair bg-surface p-6 text-left transition-colors hover:border-gold/50"
+          className="tap rounded-[12px] border border-hair bg-surface p-6 text-left transition-colors hover:border-gold/50"
         >
           <p className="font-display text-h4 text-ink">Links &amp; assets</p>
           <p className="mt-1 text-body-sm text-muted">
@@ -491,7 +500,7 @@ function DashboardView({ me, onNavigate }: { me: Me; onNavigate: (v: View) => vo
           <button
             type="button"
             onClick={() => onNavigate("earnings")}
-            className="tap rounded-card border border-hair bg-surface p-6 text-left transition-colors hover:border-gold/50"
+            className="tap rounded-[12px] border border-hair bg-surface p-6 text-left transition-colors hover:border-gold/50"
           >
             <p className="font-display text-h4 text-ink">Earnings &amp; payouts</p>
             <p className="mt-1 text-body-sm text-muted">
@@ -499,7 +508,7 @@ function DashboardView({ me, onNavigate }: { me: Me; onNavigate: (v: View) => vo
             </p>
           </button>
         ) : (
-          <div className="rounded-card border border-hair bg-surface p-6">
+          <div className="rounded-[12px] border border-hair bg-surface p-6">
             <p className="font-display text-h4 text-ink">Earnings &amp; stats</p>
             <p className="mt-1 text-body-sm text-muted">
               {st && st.configured && st.found === false
@@ -530,8 +539,8 @@ function PerformanceView() {
   );
 
   return (
-    <div className="max-w-4xl">
-      <h1 className="font-display text-h3 text-ink">Performance</h1>
+    <div className="w-full">
+      <h1 className="font-display text-h2 text-ink">Performance</h1>
       <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
         Every click and sale through your links, synced automatically. Lifetime first,
         then the last 30 days.
@@ -539,22 +548,22 @@ function PerformanceView() {
       {gate}
       {data?.configured && data.found && data.stats ? (
         <>
-          <div className="mt-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
             {[
               { label: "Clicks, lifetime", value: data.stats.clicks.toLocaleString("en-US") },
               { label: "Referrals, lifetime", value: data.stats.referrals.toLocaleString("en-US") },
               { label: "Customers", value: data.stats.customers.toLocaleString("en-US") },
               { label: "Revenue driven", value: fpMoney(data.stats.revenueCents) },
             ].map((tile) => (
-              <div key={tile.label} className="rounded-card border border-hair bg-surface p-4">
+              <div key={tile.label} className="rounded-[12px] border border-hair bg-surface p-6">
                 <p className="font-mono text-label uppercase text-muted">{tile.label}</p>
-                <p className="mt-1.5 font-display text-h4 font-semibold text-ink">{tile.value}</p>
+                <p className="mt-2 font-display text-h3 font-semibold text-ink">{tile.value}</p>
               </div>
             ))}
           </div>
 
           <h2 className="mt-10 font-display text-h4 text-ink">The last 30 days</h2>
-          <div className="mt-4 rounded-card border border-hair bg-surface p-5">
+          <div className="mt-4 rounded-[12px] border border-hair bg-surface p-5">
             <div className="flex flex-wrap gap-x-8 gap-y-2">
               <p className="text-body-sm text-muted">
                 Clicks <span className="ml-1 font-semibold text-ink">{last30.clicks.toLocaleString("en-US")}</span>
@@ -590,7 +599,7 @@ function PerformanceView() {
           {data.campaigns && data.campaigns.length > 0 ? (
             <>
               <h2 className="mt-10 font-display text-h4 text-ink">Your campaigns</h2>
-              <ul className="mt-4 overflow-hidden rounded-card border border-hair">
+              <ul className="mt-4 overflow-hidden rounded-[12px] border border-hair">
                 {data.campaigns.map((c, i) => (
                   <li
                     key={`${c.name}-${i}`}
@@ -636,22 +645,22 @@ function ReferralsView() {
   const { data, err } = useFpData<ReferralsPayload>("/api/partners/referrals");
   const rows = data?.referrals ?? [];
   return (
-    <div className="max-w-4xl">
-      <h1 className="font-display text-h3 text-ink">Referrals</h1>
+    <div className="w-full">
+      <h1 className="font-display text-h2 text-ink">Referrals</h1>
       <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
         Everyone who came through your links. Emails are shortened for their privacy.
       </p>
       <FpStateCard data={data} err={err} />
       {data?.configured && data.found ? (
         rows.length === 0 ? (
-          <div className="mt-8 rounded-card border border-hair bg-surface px-6 py-10 text-center">
+          <div className="mt-8 rounded-[12px] border border-hair bg-surface px-6 py-10 text-center">
             <p className="font-display text-h4 text-ink">No referrals yet.</p>
             <p className="mx-auto mt-2 max-w-md text-body text-muted">
               Share your link or your partner page and the first ones will show up here.
             </p>
           </div>
         ) : (
-          <ul className="mt-8 overflow-hidden rounded-card border border-hair">
+          <ul className="mt-8 overflow-hidden rounded-[12px] border border-hair">
             {rows.map((r) => (
               <li
                 key={r.id}
@@ -693,8 +702,8 @@ function EarningsView() {
   const { data, err } = useFpData<PayoutsPayload>("/api/partners/payouts");
   const rows = data?.payouts ?? [];
   return (
-    <div className="max-w-4xl">
-      <h1 className="font-display text-h3 text-ink">Earnings &amp; Payouts</h1>
+    <div className="w-full">
+      <h1 className="font-display text-h2 text-ink">Earnings &amp; Payouts</h1>
       <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
         What you have earned and what has been paid. Payouts run on the program
         schedule; this page always shows where things stand.
@@ -703,19 +712,19 @@ function EarningsView() {
       {data?.configured && data.found ? (
         <>
           <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="rounded-card border border-gold/40 bg-gold/[0.06] p-5">
+            <div className="rounded-[12px] border border-gold/40 bg-gold/[0.06] p-5">
               <p className="font-mono text-label uppercase text-muted">Current balance</p>
               <p className="mt-1.5 font-display text-h3 font-semibold text-gold">
                 {fpMoney(data.balanceCents ?? 0)}
               </p>
             </div>
-            <div className="rounded-card border border-hair bg-surface p-5">
+            <div className="rounded-[12px] border border-hair bg-surface p-5">
               <p className="font-mono text-label uppercase text-muted">Paid out, lifetime</p>
               <p className="mt-1.5 font-display text-h3 font-semibold text-ink">
                 {fpMoney(data.lifetimePaidCents ?? 0)}
               </p>
             </div>
-            <div className="rounded-card border border-hair bg-surface p-5">
+            <div className="rounded-[12px] border border-hair bg-surface p-5">
               <p className="font-mono text-label uppercase text-muted">Revenue you drove</p>
               <p className="mt-1.5 font-display text-h3 font-semibold text-ink">
                 {fpMoney(data.revenueCents ?? 0)}
@@ -729,7 +738,7 @@ function EarningsView() {
               No payouts yet. Your first one lands here once your balance is due.
             </p>
           ) : (
-            <ul className="mt-4 overflow-hidden rounded-card border border-hair">
+            <ul className="mt-4 overflow-hidden rounded-[12px] border border-hair">
               {rows.map((p) => (
                 <li
                   key={p.id}
@@ -787,15 +796,15 @@ function AssetsView({ me }: { me: Me }) {
   const copyAssets = (assets ?? []).filter((a) => a.kind === "copy");
 
   return (
-    <div className="max-w-4xl">
-      <h1 className="font-display text-h3 text-ink">Links &amp; Assets</h1>
+    <div className="w-full">
+      <h1 className="font-display text-h2 text-ink">Links &amp; Assets</h1>
       <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
         Every link below carries your referral, so your discount and your credit apply
         automatically. Assets are yours to use anywhere you promote.
       </p>
 
       {/* tracked links */}
-      <div className="mt-8 rounded-card border border-hair bg-surface">
+      <div className="mt-8 rounded-[12px] border border-hair bg-surface">
         <p className="border-b border-hair px-5 py-3 font-mono text-label uppercase text-muted">
           Tracked links
         </p>
@@ -859,7 +868,7 @@ function AssetsView({ me }: { me: Me }) {
       )}
       <div className="mt-4 grid gap-4">
         {copyAssets.map((a) => (
-          <div key={a.id} className="rounded-card border border-hair bg-surface p-5">
+          <div key={a.id} className="rounded-[12px] border border-hair bg-surface p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-body font-semibold text-ink">
@@ -882,7 +891,7 @@ function AssetsView({ me }: { me: Me }) {
                 {copied === a.id ? "Copied" : "Copy text"}
               </button>
             </div>
-            <pre className="mt-3 max-h-56 overflow-auto whitespace-pre-wrap rounded-[3px] border border-hair bg-canvas p-4 font-mono text-body-sm leading-relaxed text-muted">
+            <pre className="mt-3 max-h-56 overflow-auto whitespace-pre-wrap rounded-[8px] border border-hair bg-canvas p-4 font-mono text-body-sm leading-relaxed text-muted">
               {a.body}
             </pre>
           </div>
@@ -898,7 +907,7 @@ function AssetsView({ me }: { me: Me }) {
       )}
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         {files.map((a) => (
-          <div key={a.id} className="rounded-card border border-hair bg-surface p-5">
+          <div key={a.id} className="rounded-[12px] border border-hair bg-surface p-5">
             <p className="font-mono text-label uppercase text-muted">{KIND_LABEL[a.kind]}</p>
             <p className="mt-1 text-body font-semibold text-ink">
               {a.title}
@@ -971,8 +980,8 @@ function ResourcesView({ me }: { me: Me }) {
   ];
 
   return (
-    <div className="max-w-3xl">
-      <h1 className="font-display text-h3 text-ink">Resources</h1>
+    <div className="max-w-4xl">
+      <h1 className="font-display text-h2 text-ink">Resources</h1>
       <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
         How the program works and how to get the most out of it.
       </p>
@@ -980,7 +989,7 @@ function ResourcesView({ me }: { me: Me }) {
       <h2 className="mt-8 font-display text-h4 text-ink">Getting started</h2>
       <ol className="mt-4 grid gap-3">
         {steps.map((st, i) => (
-          <li key={st.title} className="flex gap-4 rounded-card border border-hair bg-surface p-5">
+          <li key={st.title} className="flex gap-4 rounded-[12px] border border-hair bg-surface p-5">
             <span className="font-mono text-h4 font-semibold text-gold">
               {String(i + 1).padStart(2, "0")}
             </span>
@@ -995,7 +1004,7 @@ function ResourcesView({ me }: { me: Me }) {
       <h2 className="mt-10 font-display text-h4 text-ink">Good to know</h2>
       <div className="mt-4 grid gap-3">
         {faqs.map((f) => (
-          <div key={f.q} className="rounded-card border border-hair bg-surface p-5">
+          <div key={f.q} className="rounded-[12px] border border-hair bg-surface p-5">
             <p className="text-body font-semibold text-ink">{f.q}</p>
             <p className="mt-1 text-body-sm text-muted">{f.a}</p>
           </div>
@@ -1050,14 +1059,14 @@ function SettingsView({ me, onSaved }: { me: Me; onSaved: () => void }) {
   }
 
   return (
-    <div className="max-w-2xl">
-      <h1 className="font-display text-h3 text-ink">Settings</h1>
+    <div className="max-w-3xl">
+      <h1 className="font-display text-h2 text-ink">Settings</h1>
       <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
         Your public details. These feed your partner page, so keep them how you want
         your audience to see them.
       </p>
 
-      <form onSubmit={save} className="mt-8 grid gap-5 rounded-card border border-hair bg-surface p-6">
+      <form onSubmit={save} className="mt-8 grid gap-5 rounded-[12px] border border-hair bg-surface p-6">
         <label className="grid gap-2">
           <span className="font-mono text-label uppercase text-muted">Your name</span>
           <input value={name} onChange={(e) => setName(e.target.value)} required className={fieldCls} />
@@ -1092,7 +1101,7 @@ function SettingsView({ me, onSaved }: { me: Me; onSaved: () => void }) {
         </div>
       </form>
 
-      <div className="mt-6 rounded-card border border-hair bg-surface p-6">
+      <div className="mt-6 rounded-[12px] border border-hair bg-surface p-6">
         <p className="font-mono text-label uppercase text-muted">Account</p>
         <p className="mt-2 text-body text-ink">{p.email}</p>
         <p className="mt-1 text-body-sm text-muted">
@@ -1191,37 +1200,14 @@ export function PartnersClient() {
     <div className="flex min-h-screen flex-col">
       <Topbar email={session.user.email ?? ""} onSignOut={() => supabase.auth.signOut()} />
       <div className="flex flex-1 flex-col md:flex-row">
-        <nav className="border-b border-hair bg-surface/50 p-4 md:w-60 md:shrink-0 md:border-b-0 md:border-r">
-          <select
-            value={view}
-            onChange={(e) => setView(e.target.value as View)}
-            className="w-full rounded-[6px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none md:hidden"
-          >
-            {NAV.map((n) => (
-              <option key={n.key} value={n.key}>
-                {n.label}
-              </option>
-            ))}
-          </select>
-          <ul className="hidden flex-col gap-0.5 md:flex">
-            {NAV.map((n) => (
-              <li key={n.key}>
-                <button
-                  type="button"
-                  onClick={() => setView(n.key)}
-                  className={`tap flex w-full items-center rounded-[6px] px-3 py-2 text-left text-body-sm transition-colors ${
-                    view === n.key
-                      ? "bg-gold/15 font-semibold text-gold"
-                      : "text-muted hover:bg-white/[0.04] hover:text-ink"
-                  }`}
-                >
-                  {n.label}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </nav>
-        <section className="flex-1 p-6 md:p-10">
+        <PortalSidebar
+          groups={[{ title: "", items: NAV }]}
+          active={view}
+          onSelect={(k) => setView(k as View)}
+          storageKey="ghlv-partners-nav"
+        />
+        <section className="min-w-0 flex-1 p-4 md:p-8">
+          <div key={view} className="portal-view">
           {view === "dashboard" ? (
             <DashboardView me={me} onNavigate={setView} />
           ) : view === "performance" ? (
@@ -1237,6 +1223,7 @@ export function PartnersClient() {
           ) : (
             <SettingsView me={me} onSaved={loadMe} />
           )}
+          </div>
         </section>
       </div>
     </div>
@@ -1245,19 +1232,20 @@ export function PartnersClient() {
 
 function Topbar({ email, onSignOut }: { email?: string; onSignOut?: () => void }) {
   return (
-    <header className="flex items-center justify-between border-b border-hair bg-surface px-6 py-4">
-      <div className="flex items-center gap-3">
-        <Logo className="h-6" />
-        <span className="font-mono text-label uppercase text-muted">/ Partners</span>
-      </div>
-      {email && onSignOut ? (
-        <div className="flex items-center gap-4">
-          <span className="hidden font-mono text-label text-dim sm:inline">{email}</span>
-          <button type="button" onClick={onSignOut} className={btnGhost}>
-            Sign out
-          </button>
-        </div>
-      ) : null}
-    </header>
+    <PortalTopbar
+      area="Partners"
+      right={
+        email && onSignOut ? (
+          <>
+            <span className="hidden max-w-[14rem] truncate font-mono text-label text-dim sm:inline">
+              {email}
+            </span>
+            <button type="button" onClick={onSignOut} className={btnGhost}>
+              Sign out
+            </button>
+          </>
+        ) : null
+      }
+    />
   );
 }

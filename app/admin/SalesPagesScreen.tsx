@@ -8,7 +8,7 @@ import { salesPages, salesPageUrl } from "@/lib/sales/pages";
  * with a copy-link so the team (Sales Reps especially) can grab the URL to
  * send. Pages are code-defined; this screen lists them.
  */
-export function SalesPagesScreen() {
+export function SalesPagesScreen({ embedded = false }: { embedded?: boolean }) {
   const [copied, setCopied] = useState<string | null>(null);
   const origin = typeof window !== "undefined" ? window.location.origin : "https://www.ghlvideo.com";
 
@@ -24,7 +24,7 @@ export function SalesPagesScreen() {
 
   return (
     <div>
-      <h1 className="font-display text-h3 text-ink">Sales Pages</h1>
+      {!embedded && <h1 className="font-display text-h2 text-ink">Sales Pages</h1>}
       <p className="mt-1 max-w-xl text-body-sm text-muted">
         Landing pages for cold outreach and campaigns. Copy a link to send it to a prospect.
       </p>
@@ -34,7 +34,7 @@ export function SalesPagesScreen() {
           const url = `${origin}${salesPageUrl(p.slug)}`;
           const live = p.status === "live";
           return (
-            <div key={p.slug} className="rounded-card border border-hair bg-surface/40 p-5">
+            <div key={p.slug} className="rounded-[12px] border border-hair bg-surface/40 p-5">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2.5">
@@ -43,7 +43,7 @@ export function SalesPagesScreen() {
                       className={`rounded-full border px-2.5 py-0.5 font-mono text-label uppercase ${
                         live
                           ? "border-green/40 bg-green/10 text-green"
-                          : "border-hair bg-white/[0.03] text-muted"
+                          : "border-hair bg-hair/30 text-muted"
                       }`}
                     >
                       {live ? "Live" : "Draft"}
@@ -56,7 +56,7 @@ export function SalesPagesScreen() {
                   <button
                     type="button"
                     onClick={() => copy(p.slug)}
-                    className="tap rounded-[3px] bg-brand-gradient px-4 py-2 font-mono text-label uppercase text-canvas transition-all hover:brightness-110"
+                    className="tap rounded-[8px] bg-brand-gradient px-4 py-2 font-mono text-label uppercase text-canvas transition-all hover:brightness-110"
                   >
                     {copied === p.slug ? "Copied" : "Copy link"}
                   </button>
@@ -64,7 +64,7 @@ export function SalesPagesScreen() {
                     href={salesPageUrl(p.slug)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="tap rounded-[3px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
+                    className="tap rounded-[8px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
                   >
                     Open
                   </a>

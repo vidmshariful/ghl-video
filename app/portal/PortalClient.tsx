@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import type { Session } from "@supabase/supabase-js";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
-import { Logo } from "@/components/Logo";
+import { PortalSidebar, PortalTopbar } from "@/components/portal/Shell";
+import { LayoutDashboard, MessageSquare, Repeat, ShoppingCart } from "lucide-react";
 import { MessagesView } from "./MessagesView";
 import { chatGet } from "@/components/chat/api";
 
@@ -64,7 +64,7 @@ function Shell({ children }: { children: React.ReactNode }) {
 /* ---- login ---- */
 const LOGIN_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const authFieldCls =
-  "w-full rounded-[3px] border border-hair bg-surface px-4 py-3.5 text-body text-ink placeholder:text-dim focus:border-gold focus:outline-none";
+  "w-full rounded-[8px] border border-hair bg-surface px-4 py-3.5 text-body text-ink placeholder:text-dim focus:border-gold focus:outline-none";
 
 const LOGIN_HEADINGS = {
   signin: "Sign in to your portal.",
@@ -140,7 +140,7 @@ function LoginView() {
         <h1 className="mt-4 font-display text-h2 text-ink">{LOGIN_HEADINGS[mode]}</h1>
 
         {notice ? (
-          <div className="mt-8 rounded-card border border-gold/40 bg-gold/[0.06] px-6 py-8">
+          <div className="mt-8 rounded-[12px] border border-gold/40 bg-gold/[0.06] px-6 py-8">
             <p className="font-display text-h4 text-ink">Check your email.</p>
             <p className="mt-2 text-body text-muted">{notice}</p>
             <button
@@ -183,7 +183,7 @@ function LoginView() {
               <button
                 type="submit"
                 disabled={busy}
-                className="tap mt-1 rounded-[3px] bg-brand-gradient px-8 py-3.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60"
+                className="tap mt-1 rounded-[8px] bg-brand-gradient px-8 py-3.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60"
               >
                 {submitLabel}
               </button>
@@ -228,7 +228,7 @@ function LoginView() {
 /* ---- placeholder for not-yet-built sections ---- */
 function ComingSoon({ title, line }: { title: string; line: string }) {
   return (
-    <div className="rounded-card border border-hair bg-surface px-6 py-12 text-center">
+    <div className="rounded-[12px] border border-hair bg-surface px-6 py-12 text-center">
       <p className="font-mono text-label uppercase text-gold">[ Coming soon ]</p>
       <p className="mt-4 font-display text-h3 text-ink">{title}</p>
       <p className="mx-auto mt-2 max-w-md text-body text-muted">{line}</p>
@@ -323,7 +323,7 @@ function OrderDetailView({
       </div>
 
       {order.status !== "refunded" && (
-        <div className="rounded-card border border-hair bg-surface p-6 md:p-8">
+        <div className="rounded-[12px] border border-hair bg-surface p-6 md:p-8">
           <p className="mb-5 font-mono text-label uppercase text-muted">Progress</p>
           <ProgressTracker stage={order.stage} />
         </div>
@@ -331,7 +331,7 @@ function OrderDetailView({
 
       {/* branding brief */}
       {order.status !== "refunded" && (
-        <div className="rounded-card border border-hair bg-surface p-6 md:p-8">
+        <div className="rounded-[12px] border border-hair bg-surface p-6 md:p-8">
           <p className="font-mono text-label uppercase text-muted">Branding brief</p>
           {order.intakeCompleted ? (
             <>
@@ -341,7 +341,7 @@ function OrderDetailView({
               </p>
               <a
                 href={`/checkout/intake/${id}`}
-                className="tap mt-5 inline-flex items-center gap-2 rounded-[3px] border border-hair px-6 py-3 font-mono text-label uppercase text-ink transition-colors hover:border-gold/60 hover:text-gold"
+                className="tap mt-5 inline-flex items-center gap-2 rounded-[8px] border border-hair px-6 py-3 font-mono text-label uppercase text-ink transition-colors hover:border-gold/60 hover:text-gold"
               >
                 View or update brief
               </a>
@@ -354,7 +354,7 @@ function OrderDetailView({
               </p>
               <a
                 href={`/checkout/intake/${id}`}
-                className="tap mt-5 inline-flex items-center gap-2 rounded-[3px] bg-brand-gradient px-8 py-3.5 text-body font-semibold text-canvas transition-all hover:brightness-110"
+                className="tap mt-5 inline-flex items-center gap-2 rounded-[8px] bg-brand-gradient px-8 py-3.5 text-body font-semibold text-canvas transition-all hover:brightness-110"
               >
                 Complete your branding brief
                 <span aria-hidden="true">&rarr;</span>
@@ -365,7 +365,7 @@ function OrderDetailView({
       )}
 
       {/* delivery */}
-      <div className="rounded-card border border-hair bg-surface p-6 md:p-8">
+      <div className="rounded-[12px] border border-hair bg-surface p-6 md:p-8">
         <p className="font-mono text-label uppercase text-muted">Delivery</p>
         {order.deliveryUrl ? (
           <>
@@ -374,7 +374,7 @@ function OrderDetailView({
               href={order.deliveryUrl}
               target="_blank"
               rel="noopener"
-              className="tap mt-5 inline-flex items-center gap-2 rounded-[3px] bg-brand-gradient px-8 py-3.5 text-body font-semibold text-canvas transition-all hover:brightness-110"
+              className="tap mt-5 inline-flex items-center gap-2 rounded-[8px] bg-brand-gradient px-8 py-3.5 text-body font-semibold text-canvas transition-all hover:brightness-110"
             >
               Access your files
               <span aria-hidden="true">&rarr;</span>
@@ -388,7 +388,7 @@ function OrderDetailView({
       </div>
 
       {/* producer */}
-      <div className="rounded-card border border-hair bg-surface p-6 md:p-8">
+      <div className="rounded-[12px] border border-hair bg-surface p-6 md:p-8">
         <p className="font-mono text-label uppercase text-muted">Your producer</p>
         <div className="mt-4 flex items-center gap-4">
           <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-brand-gradient font-display text-body font-bold text-canvas">
@@ -403,24 +403,24 @@ function OrderDetailView({
           <button
             type="button"
             onClick={() => onMessageStudio(id)}
-            className="tap rounded-[3px] border border-gold/50 bg-gold/[0.06] px-4 py-2 font-mono text-label uppercase text-gold transition-colors hover:bg-gold/[0.12]"
+            className="tap rounded-[8px] border border-gold/50 bg-gold/[0.06] px-4 py-2 font-mono text-label uppercase text-gold transition-colors hover:bg-gold/[0.12]"
           >
             Message the studio
           </button>
-          <a href="mailto:hi@ghlvideo.com" className="tap rounded-[3px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold">
+          <a href="mailto:hi@ghlvideo.com" className="tap rounded-[8px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold">
             Email
           </a>
-          <a href="https://wa.me/" target="_blank" rel="noopener" className="tap rounded-[3px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold">
+          <a href="https://wa.me/" target="_blank" rel="noopener" className="tap rounded-[8px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold">
             WhatsApp
           </a>
-          <a href="/contact/" className="tap rounded-[3px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold">
+          <a href="/contact/" className="tap rounded-[8px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold">
             Book a call
           </a>
         </div>
       </div>
 
       {/* updates */}
-      <div className="rounded-card border border-hair bg-surface p-6 md:p-8">
+      <div className="rounded-[12px] border border-hair bg-surface p-6 md:p-8">
         <p className="font-mono text-label uppercase text-muted">Updates</p>
         {updates.length === 0 ? (
           <p className="mt-3 text-body text-muted">No updates yet. Your producer will post progress here.</p>
@@ -461,7 +461,7 @@ function OrdersList({ onOpen }: { onOpen: (id: string) => void }) {
   if (!loaded) return <p className="text-body text-muted">Loading your orders...</p>;
   if (failed)
     return (
-      <div className="rounded-card border border-hair bg-surface px-6 py-12 text-center">
+      <div className="rounded-[12px] border border-hair bg-surface px-6 py-12 text-center">
         <p className="font-display text-h4 text-ink">We could not load your orders.</p>
         <p className="mt-2 text-body text-muted">
           Please refresh the page, or sign in again if your session has expired.
@@ -470,7 +470,7 @@ function OrdersList({ onOpen }: { onOpen: (id: string) => void }) {
     );
   if (orders.length === 0)
     return (
-      <div className="rounded-card border border-hair bg-surface px-6 py-12 text-center">
+      <div className="rounded-[12px] border border-hair bg-surface px-6 py-12 text-center">
         <p className="font-display text-h4 text-ink">No orders yet.</p>
         <p className="mt-2 text-body text-muted">When you place an order it will show up here.</p>
       </div>
@@ -483,7 +483,7 @@ function OrdersList({ onOpen }: { onOpen: (id: string) => void }) {
           <button
             type="button"
             onClick={() => onOpen(o.id)}
-            className="flex w-full flex-wrap items-center justify-between gap-x-6 gap-y-2 rounded-card border border-hair bg-surface px-5 py-5 text-left transition-colors hover:border-gold/40"
+            className="flex w-full flex-wrap items-center justify-between gap-x-6 gap-y-2 rounded-[12px] border border-hair bg-surface px-5 py-5 text-left transition-colors hover:border-gold/40"
           >
             <div className="min-w-0">
               {o.productCode && (
@@ -591,7 +591,7 @@ function SubscriptionsView() {
   return (
     <div className="grid gap-4">
       {subs.map((s) => (
-        <div key={s.id} className="rounded-card border border-hair bg-surface p-6 md:p-8">
+        <div key={s.id} className="rounded-[12px] border border-hair bg-surface p-6 md:p-8">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="font-display text-h4 text-ink">{s.planName}</p>
@@ -623,7 +623,7 @@ function SubscriptionsView() {
                     setCancel(s.id, true);
                 }}
                 disabled={busy}
-                className="tap rounded-[3px] border border-hair px-5 py-2.5 font-mono text-label uppercase text-muted transition-colors hover:border-error/60 hover:text-error disabled:opacity-50"
+                className="tap rounded-[8px] border border-hair px-5 py-2.5 font-mono text-label uppercase text-muted transition-colors hover:border-error/60 hover:text-error disabled:opacity-50"
               >
                 Cancel plan
               </button>
@@ -633,7 +633,7 @@ function SubscriptionsView() {
                 type="button"
                 onClick={() => setCancel(s.id, false)}
                 disabled={busy}
-                className="tap rounded-[3px] border border-gold/40 px-5 py-2.5 font-mono text-label uppercase text-gold transition-colors hover:border-gold disabled:opacity-50"
+                className="tap rounded-[8px] border border-gold/40 px-5 py-2.5 font-mono text-label uppercase text-gold transition-colors hover:border-gold disabled:opacity-50"
               >
                 Resume plan
               </button>
@@ -642,7 +642,7 @@ function SubscriptionsView() {
               type="button"
               onClick={manage}
               disabled={busy}
-              className="tap rounded-[3px] border border-hair px-5 py-2.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-50"
+              className="tap rounded-[8px] border border-hair px-5 py-2.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-50"
             >
               {busy ? "..." : "Manage billing"}
             </button>
@@ -660,7 +660,7 @@ type PortalSection = "dashboard" | "orders" | "messages" | "subscriptions";
 function PageHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <div>
-      <h1 className="font-display text-h3 text-ink">{title}</h1>
+      <h1 className="font-display text-h2 text-ink">{title}</h1>
       {subtitle ? <p className="mt-2 text-body text-muted">{subtitle}</p> : null}
     </div>
   );
@@ -681,7 +681,7 @@ function StatCard({
     <button
       type="button"
       onClick={onClick}
-      className="tap rounded-card border border-hair bg-surface px-5 py-4 text-left transition-colors hover:border-gold/40"
+      className="tap rounded-[12px] border border-hair bg-surface px-5 py-4 text-left transition-colors hover:border-gold/40"
     >
       <p className="font-mono text-label uppercase text-dim">{label}</p>
       <p
@@ -720,9 +720,9 @@ function PortalDashboard({
   const num = (v: number) => (orders === null ? "-" : String(v));
 
   const primary =
-    "tap inline-flex items-center gap-2 rounded-[3px] bg-brand-gradient px-6 py-3 text-body font-semibold text-canvas transition-all hover:brightness-110";
+    "tap inline-flex items-center gap-2 rounded-[8px] bg-brand-gradient px-6 py-3 text-body font-semibold text-canvas transition-all hover:brightness-110";
   const ghost =
-    "tap inline-flex items-center gap-2 rounded-[3px] border border-hair px-6 py-3 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold";
+    "tap inline-flex items-center gap-2 rounded-[8px] border border-hair px-6 py-3 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold";
 
   return (
     <div>
@@ -742,7 +742,7 @@ function PortalDashboard({
       </div>
 
       {latest ? (
-        <div className="mt-6 rounded-card border border-hair bg-surface p-6">
+        <div className="mt-6 rounded-[12px] border border-hair bg-surface p-6">
           <p className="font-mono text-label uppercase text-muted">Latest project</p>
           <div className="mt-3 flex flex-wrap items-center justify-between gap-4">
             <div className="min-w-0">
@@ -763,7 +763,7 @@ function PortalDashboard({
           </div>
         </div>
       ) : orders !== null && list.length === 0 ? (
-        <div className="mt-6 rounded-card border border-hair bg-surface p-6">
+        <div className="mt-6 rounded-[12px] border border-hair bg-surface p-6">
           <p className="font-display text-h4 text-ink">No projects yet.</p>
           <p className="mt-2 text-body text-muted">
             Browse the premade library or book a call to start a custom video.
@@ -828,39 +828,24 @@ function Portal({ session }: { session: Session }) {
     setSection("messages");
   };
 
-  const nav: { key: PortalSection; label: string }[] = [
-    { key: "dashboard", label: "Dashboard" },
-    { key: "orders", label: "Orders" },
-    { key: "messages", label: "Messages" },
-    { key: "subscriptions", label: "Subscriptions" },
+  const nav = [
+    { key: "dashboard", label: "Dashboard", icon: <LayoutDashboard /> },
+    { key: "orders", label: "Orders", icon: <ShoppingCart /> },
+    { key: "messages", label: "Messages", icon: <MessageSquare />, badge: msgUnread || undefined },
+    { key: "subscriptions", label: "Subscriptions", icon: <Repeat /> },
   ];
 
   return (
     <div className="flex flex-1 flex-col md:flex-row">
-      <nav className="border-b border-hair bg-surface/50 p-4 md:w-60 md:shrink-0 md:border-b-0 md:border-r">
-        <ul className="flex gap-2 overflow-x-auto md:flex-col md:overflow-visible">
-          {nav.map((item) => (
-            <li key={item.key}>
-              <button
-                type="button"
-                onClick={() => go(item.key)}
-                className={`tap flex items-center justify-between gap-2 whitespace-nowrap rounded-[6px] px-4 py-2.5 text-left text-body transition-colors md:w-full ${
-                  section === item.key
-                    ? "bg-gold/15 font-semibold text-gold"
-                    : "text-muted hover:bg-white/[0.04] hover:text-ink"
-                }`}
-              >
-                <span>{item.label}</span>
-                {item.key === "messages" && msgUnread > 0 ? (
-                  <span className="h-2 w-2 shrink-0 rounded-full bg-gold" />
-                ) : null}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </nav>
+      <PortalSidebar
+        groups={[{ title: "", items: nav }]}
+        active={section}
+        onSelect={(k) => go(k as PortalSection)}
+        storageKey="ghlv-portal-nav"
+      />
 
-      <section className="min-w-0 flex-1 p-6 md:p-10">
+      <section className="min-w-0 flex-1 p-4 md:p-8">
+        <div key={section + (openOrder ?? "")} className="portal-view">
         {section === "dashboard" ? (
           <PortalDashboard
             session={session}
@@ -900,6 +885,7 @@ function Portal({ session }: { session: Session }) {
             </div>
           </div>
         )}
+        </div>
       </section>
     </div>
   );
@@ -955,13 +941,13 @@ function ProfileMenu({ email }: { email: string }) {
         </svg>
       </button>
       {open ? (
-        <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-card border border-hair bg-surface p-2 shadow-2xl">
+        <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-[12px] border border-hair bg-surface p-2 shadow-2xl">
           <p className="break-all px-3 py-2 font-mono text-label uppercase text-dim">{email}</p>
           <div className="my-1 border-t border-hair" />
           <button
             type="button"
             onClick={changePassword}
-            className="tap w-full rounded-[4px] px-3 py-2 text-left text-body-sm text-muted transition-colors hover:bg-white/[0.04] hover:text-ink"
+            className="tap w-full rounded-[4px] px-3 py-2 text-left text-body-sm text-muted transition-colors hover:bg-hair/40 hover:text-ink"
           >
             Change password
           </button>
@@ -969,7 +955,7 @@ function ProfileMenu({ email }: { email: string }) {
           <button
             type="button"
             onClick={() => supabase.auth.signOut()}
-            className="tap w-full rounded-[4px] px-3 py-2 text-left text-body-sm text-muted transition-colors hover:bg-white/[0.04] hover:text-error"
+            className="tap w-full rounded-[4px] px-3 py-2 text-left text-body-sm text-muted transition-colors hover:bg-hair/40 hover:text-error"
           >
             Sign out
           </button>
@@ -981,13 +967,10 @@ function ProfileMenu({ email }: { email: string }) {
 
 function PortalTopBar({ session }: { session: Session | null }) {
   return (
-    <header className="flex items-center justify-between border-b border-hair bg-surface px-6 py-3">
-      <Link href="/portal" className="flex items-center gap-3">
-        <Logo className="h-6" />
-        <span className="font-mono text-label uppercase text-muted">/ Portal</span>
-      </Link>
-      {session ? <ProfileMenu email={session.user.email ?? ""} /> : null}
-    </header>
+    <PortalTopbar
+      area="Portal"
+      right={session ? <ProfileMenu email={session.user.email ?? ""} /> : null}
+    />
   );
 }
 

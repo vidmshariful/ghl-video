@@ -66,9 +66,9 @@ export function SubscriptionsScreen() {
   }
 
   const btn =
-    "tap rounded-[3px] border border-hair px-3 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-50";
+    "tap rounded-[8px] border border-hair px-3 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-50";
   const btnDanger =
-    "tap rounded-[3px] border border-hair px-3 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-error/60 hover:text-error disabled:opacity-50";
+    "tap rounded-[8px] border border-hair px-3 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-error/60 hover:text-error disabled:opacity-50";
 
   if (!loaded) return <p className="text-body text-muted">Loading subscriptions...</p>;
 
@@ -81,15 +81,15 @@ export function SubscriptionsScreen() {
   ];
 
   return (
-    <div className="max-w-4xl">
-      <h1 className="font-display text-h3 text-ink">Subscriptions</h1>
+    <div className="w-full">
+      <h1 className="font-display text-h2 text-ink">Subscriptions</h1>
       <p className="mt-2 text-body text-muted">Editing plans, newest first. {rows.length} total.</p>
 
-      <div className="mt-6 grid grid-cols-3 gap-px overflow-hidden rounded-card border border-hair bg-hair">
+      <div className="mt-6 grid grid-cols-3 gap-4">
         {summary.map(([label, val, cls]) => (
-          <div key={label} className="bg-surface px-5 py-4">
+          <div key={label} className="rounded-[12px] border border-hair bg-surface p-6">
             <p className="font-mono text-label uppercase text-dim">{label}</p>
-            <p className={`mt-1 font-display text-h4 [font-variant-numeric:tabular-nums] ${cls}`}>{val}</p>
+            <p className={`mt-1 font-display text-h3 [font-variant-numeric:tabular-nums] ${cls}`}>{val}</p>
           </div>
         ))}
       </div>
@@ -99,7 +99,7 @@ export function SubscriptionsScreen() {
       {rows.length === 0 ? (
         <p className="mt-8 text-body text-muted">No subscriptions yet.</p>
       ) : (
-        <ul className="mt-6 overflow-hidden rounded-card border border-hair">
+        <ul className="mt-6 overflow-hidden rounded-[12px] border border-hair">
           {rows.map((r) => (
             <li
               key={r.id}

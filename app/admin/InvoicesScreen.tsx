@@ -11,7 +11,7 @@ import { authHeader, money, supabase, when } from "./client";
  */
 const SITE = "https://www.ghlvideo.com";
 const fField =
-  "mt-1.5 w-full rounded-[3px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none";
+  "mt-1.5 w-full rounded-[8px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none";
 const fLab = "font-mono text-label uppercase text-dim";
 
 type LineItem = { description: string; amount_cents: number };
@@ -46,7 +46,7 @@ function CopyField({ url }: { url: string }) {
         readOnly
         value={url}
         onFocus={(e) => e.currentTarget.select()}
-        className="w-full min-w-0 rounded-[3px] border border-hair bg-canvas px-3 py-2 font-mono text-body-sm text-muted focus:outline-none"
+        className="w-full min-w-0 rounded-[8px] border border-hair bg-canvas px-3 py-2 font-mono text-body-sm text-muted focus:outline-none"
       />
       <button
         type="button"
@@ -59,7 +59,7 @@ function CopyField({ url }: { url: string }) {
             /* selectable fallback */
           }
         }}
-        className="tap shrink-0 rounded-[3px] border border-hair px-3.5 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
+        className="tap shrink-0 rounded-[8px] border border-hair px-3.5 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
       >
         {done ? "Copied" : "Copy"}
       </button>
@@ -163,15 +163,15 @@ export function InvoicesScreen() {
   }
 
   return (
-    <div className="max-w-4xl">
-      <h1 className="font-display text-h3 text-ink">Invoices</h1>
+    <div className="w-full">
+      <h1 className="font-display text-h2 text-ink">Invoices</h1>
       <p className="mt-2 text-body text-muted">
         Itemized invoices for custom videos and one-off deals. Create one, send the link, and it is
         marked paid the moment the client pays, right inside Orders.
       </p>
 
       {/* create */}
-      <form onSubmit={create} className="mt-6 rounded-card border border-gold/30 bg-gold/[0.04] p-5">
+      <form onSubmit={create} className="mt-6 rounded-[12px] border border-gold/30 bg-gold/[0.04] p-5">
         <p className="font-mono text-label uppercase text-gold">New invoice</p>
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
           <label>
@@ -204,7 +204,7 @@ export function InvoicesScreen() {
                     setRows((p) => p.map((x, j) => (j === i ? { ...x, description: e.target.value } : x)))
                   }
                   placeholder="Description (e.g. Custom explainer video, 60s)"
-                  className="min-w-0 flex-1 rounded-[3px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none"
+                  className="min-w-0 flex-1 rounded-[8px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none"
                 />
                 <input
                   type="number"
@@ -215,12 +215,12 @@ export function InvoicesScreen() {
                     setRows((p) => p.map((x, j) => (j === i ? { ...x, amount: e.target.value } : x)))
                   }
                   placeholder="Amount"
-                  className="w-32 shrink-0 rounded-[3px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none"
+                  className="w-32 shrink-0 rounded-[8px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none"
                 />
                 <button
                   type="button"
                   onClick={() => setRows((p) => (p.length > 1 ? p.filter((_, j) => j !== i) : p))}
-                  className="tap shrink-0 rounded-[3px] border border-hair px-3 py-2.5 text-dim transition-colors hover:border-error/60 hover:text-error"
+                  className="tap shrink-0 rounded-[8px] border border-hair px-3 py-2.5 text-dim transition-colors hover:border-error/60 hover:text-error"
                   aria-label="Remove line"
                 >
                   ×
@@ -285,7 +285,7 @@ export function InvoicesScreen() {
         <button
           type="submit"
           disabled={busy}
-          className="tap mt-4 rounded-[3px] bg-brand-gradient px-6 py-2.5 text-body-sm font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-50"
+          className="tap mt-4 rounded-[8px] bg-brand-gradient px-6 py-2.5 text-body-sm font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-50"
         >
           {busy ? "Creating..." : "Create invoice"}
         </button>
@@ -302,7 +302,7 @@ export function InvoicesScreen() {
           {invoices.map((inv) => (
             <li
               key={inv.id}
-              className={`rounded-card border border-hair bg-surface p-4 ${inv.status === "void" ? "opacity-60" : ""}`}
+              className={`rounded-[12px] border border-hair bg-surface p-4 ${inv.status === "void" ? "opacity-60" : ""}`}
             >
               <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                 <p className="font-semibold text-ink">
@@ -335,7 +335,7 @@ export function InvoicesScreen() {
                   href={`/invoice/${inv.token}/`}
                   target="_blank"
                   rel="noopener"
-                  className="tap shrink-0 rounded-[3px] border border-hair px-3.5 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
+                  className="tap shrink-0 rounded-[8px] border border-hair px-3.5 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
                 >
                   View
                 </a>
@@ -345,7 +345,7 @@ export function InvoicesScreen() {
                       <button
                         type="button"
                         onClick={() => act(inv.id, "sent")}
-                        className="tap shrink-0 rounded-[3px] border border-hair px-3.5 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
+                        className="tap shrink-0 rounded-[8px] border border-hair px-3.5 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
                       >
                         Mark sent
                       </button>
@@ -353,7 +353,7 @@ export function InvoicesScreen() {
                     <button
                       type="button"
                       onClick={() => act(inv.id, "void")}
-                      className="tap shrink-0 rounded-[3px] border border-hair px-3.5 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-error/60 hover:text-error"
+                      className="tap shrink-0 rounded-[8px] border border-hair px-3.5 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-error/60 hover:text-error"
                     >
                       Void
                     </button>

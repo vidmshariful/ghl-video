@@ -43,7 +43,7 @@ const CATEGORIES = [
 const money = (cents: number) => `$${(cents / 100).toLocaleString("en-US")}`;
 
 const field =
-  "mt-1.5 w-full rounded-[3px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none";
+  "mt-1.5 w-full rounded-[8px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none";
 const lab = "font-mono text-label uppercase text-muted";
 
 export function CatalogScreen() {
@@ -139,7 +139,7 @@ export function CatalogScreen() {
     <div>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="font-display text-h3 text-ink">Catalog</h1>
+          <h1 className="font-display text-h2 text-ink">Catalog</h1>
           <p className="mt-1 max-w-xl text-body-sm text-muted">
             Every video in one place: link, code, price, category, featured, release date, and buy link.
             {" "}
@@ -151,7 +151,7 @@ export function CatalogScreen() {
             type="button"
             onClick={publish}
             disabled={publishing}
-            className="tap rounded-[3px] border border-hair px-4 py-2.5 text-body-sm font-semibold text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-50"
+            className="tap rounded-[8px] border border-hair px-4 py-2.5 text-body-sm font-semibold text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-50"
             title="Push catalog prices and visibility to checkout"
           >
             {publishing ? "Publishing..." : "Publish to checkout"}
@@ -159,7 +159,7 @@ export function CatalogScreen() {
           <button
             type="button"
             onClick={() => setEditing("new")}
-            className="tap rounded-[3px] bg-brand-gradient px-5 py-2.5 text-body-sm font-semibold text-canvas transition-all hover:brightness-110"
+            className="tap rounded-[8px] bg-brand-gradient px-5 py-2.5 text-body-sm font-semibold text-canvas transition-all hover:brightness-110"
           >
             Add video
           </button>
@@ -187,7 +187,7 @@ export function CatalogScreen() {
         ))}
       </div>
 
-      <div className="mt-6 overflow-hidden rounded-card border border-hair">
+      <div className="mt-6 overflow-hidden rounded-[12px] border border-hair">
         {!loaded ? (
           <p className="p-6 text-body-sm text-muted">Loading catalog...</p>
         ) : shown.length === 0 ? (
@@ -237,7 +237,7 @@ export function CatalogScreen() {
                   <button
                     type="button"
                     onClick={() => remove(row)}
-                    className="tap rounded-[3px] border border-hair px-3 py-1.5 font-mono text-label uppercase text-dim transition-colors hover:border-error/60 hover:text-error"
+                    className="tap rounded-[8px] border border-hair px-3 py-1.5 font-mono text-label uppercase text-dim transition-colors hover:border-error/60 hover:text-error"
                   >
                     Delete
                   </button>
@@ -264,7 +264,7 @@ export function CatalogScreen() {
 }
 
 const btnGhost =
-  "tap rounded-[3px] border border-hair px-3 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold";
+  "tap rounded-[8px] border border-hair px-3 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold";
 
 function CatalogForm({
   row,
@@ -393,7 +393,7 @@ function CatalogForm({
         </div>
         {err ? <p className="text-body-sm text-error sm:col-span-2">{err}</p> : null}
         <div className="flex items-center gap-3 border-t border-hair pt-4 sm:col-span-2">
-          <button type="submit" disabled={busy} className="tap rounded-[3px] bg-brand-gradient px-6 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60">
+          <button type="submit" disabled={busy} className="tap rounded-[8px] bg-brand-gradient px-6 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60">
             {busy ? "Saving..." : isEdit ? "Save changes" : "Add video"}
           </button>
           <button type="button" onClick={onClose} className={btnGhost}>Cancel</button>
