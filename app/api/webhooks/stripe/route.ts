@@ -225,6 +225,9 @@ async function handleChargeRefunded(
         event_type: "refunded",
         payload: { source: "stripe", amount_cents: charge.amount_refunded },
       });
+      // exactly-once via the flip; fail-soft inside
+      const { sendOrderRefundedEmail } = await import("@/lib/email/notify");
+      await sendOrderRefundedEmail(db, order.id, charge.amount_refunded);
     }
   } else if (charge.amount_refunded > 0) {
     await db.from("order_events").insert({
@@ -269,6 +272,12 @@ async function handleDisputeCreated(
       amount_cents: dispute.amount,
       status: dispute.status,
     },
+  });
+  // time-sensitive team alert; fail-soft inside
+  const { sendDisputeAlertEmail } = await import("@/lib/email/notify");
+  await sendDisputeAlertEmail(db, order.id, {
+    amountCents: dispute.amount,
+    reason: String(dispute.reason ?? ""),
   });
 }
 
@@ -345,7 +354,12 @@ async function handleSubscription(
       .is("metadata->>hl_synced", null)
       .select("id")
       .maybeSingle();
-    if (claimed) await syncSubscriptionToHighLevel(db, row);
+    if (claimed) {
+      await syncSubscriptionToHighLevel(db, row);
+      // same atomic claim = exactly-once welcome email; fail-soft inside
+      const { sendSubscriptionStartedEmail } = await import("@/lib/email/notify");
+      await sendSubscriptionStartedEmail(db, row.id);
+    }
   }
 }
 
@@ -425,8 +439,16 @@ async function handleSubscriptionDeleted(
   db: ReturnType<typeof supabaseAdmin>,
   sub: Stripe.Subscription,
 ) {
-  await db
+  // conditional flip: the first delivery wins and sends the goodbye email once
+  const { data: flipped } = await db
     .from("subscriptions")
     .update({ status: "canceled", cancel_at_period_end: false })
-    .eq("stripe_subscription_id", sub.id);
+    .eq("stripe_subscription_id", sub.id)
+    .neq("status", "canceled")
+    .select("id")
+    .maybeSingle();
+  if (flipped) {
+    const { sendSubscriptionCanceledEmail } = await import("@/lib/email/notify");
+    await sendSubscriptionCanceledEmail(db, flipped.id);
+  }
 }

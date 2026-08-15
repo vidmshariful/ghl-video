@@ -44,8 +44,30 @@ export async function POST(
   if (typeof body.archived === "boolean") patch.archived = body.archived;
 
   if (Object.keys(patch).length) {
-    const { error } = await db.from("orders").update(patch).eq("id", id);
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    // a move INTO Delivered triggers the delivery email exactly once: the
+    // conditional update below only matches while the stage is still not
+    // delivered, so re-saves and double-clicks cannot resend it
+    if (patch.fulfillment_stage === "delivered") {
+      const { data: transitioned, error } = await db
+        .from("orders")
+        .update(patch)
+        .eq("id", id)
+        .neq("fulfillment_stage", "delivered")
+        .select("id")
+        .maybeSingle();
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      if (transitioned) {
+        const { sendOrderDeliveredEmail } = await import("@/lib/email/notify");
+        await sendOrderDeliveredEmail(db, id);
+      } else {
+        // already delivered: apply the non-stage fields normally
+        const { error: e2 } = await db.from("orders").update(patch).eq("id", id);
+        if (e2) return NextResponse.json({ error: e2.message }, { status: 500 });
+      }
+    } else {
+      const { error } = await db.from("orders").update(patch).eq("id", id);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    }
   }
   if (typeof body.update === "string" && body.update.trim()) {
     const msg = body.update.trim();

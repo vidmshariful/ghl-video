@@ -89,6 +89,10 @@ export async function settlePaidIntent(
         event_type: "payment_succeeded",
         payload: { stripe_payment_intent_id: pi.id, amount_cents: chargedCents },
       });
+      // The winner of the flip is the exactly-once place for the customer
+      // confirmation + team alert. Fail-soft inside; never blocks settlement.
+      const { sendOrderPaidEmails } = await import("@/lib/email/notify");
+      await sendOrderPaidEmails(db, order.id as string);
       // (coupon redemption is now reserved atomically at finalize, before the
       // charge, via reserve_coupon_redemption; nothing to count here.)
       if (mismatch) {

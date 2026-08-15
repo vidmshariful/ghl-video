@@ -59,6 +59,12 @@ export async function POST(req: Request) {
       note,
       opportunityName: `Quote: ${company || name}`,
     });
+    // confirmation to the lead; fail-soft, never blocks the response
+    const [{ supabaseAdmin }, { sendQuoteReceivedEmail }] = await Promise.all([
+      import("@/lib/checkout/supabase-admin"),
+      import("@/lib/email/notify"),
+    ]);
+    await sendQuoteReceivedEmail(supabaseAdmin(), email, name);
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("quote lead sync failed:", (err as Error).message);

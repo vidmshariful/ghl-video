@@ -29,7 +29,7 @@ export async function POST(req: Request) {
   const db = supabaseAdmin();
   const { data: partner, error } = await db
     .from("partners")
-    .select("id, email, status")
+    .select("id, email, name, status")
     .eq("id", id)
     .maybeSingle();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -49,6 +49,10 @@ export async function POST(req: Request) {
       .eq("id", id);
     if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 });
   }
+
+  // the invite email with the sign-in path; fail-soft, invite still succeeds
+  const { sendPartnerInviteEmail } = await import("@/lib/email/notify");
+  await sendPartnerInviteEmail(db, { email: partner.email, name: partner.name ?? "" });
 
   return NextResponse.json({ ok: true });
 }

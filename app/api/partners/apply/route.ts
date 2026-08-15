@@ -86,5 +86,8 @@ export async function POST(req: Request) {
       { status: 502 },
     );
   }
+  // applicant confirmation + team alert; fail-soft, never blocks the response
+  const { sendPartnerApplicationEmails } = await import("@/lib/email/notify");
+  await sendPartnerApplicationEmails(db, { email, name, channel, audience });
   return NextResponse.json({ ok: true });
 }

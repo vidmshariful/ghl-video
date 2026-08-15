@@ -30,7 +30,10 @@ async function main() {
     subject: t.subject,
     body: t.body,
   }));
-  const { error } = await sb.from("email_templates").upsert(rows, { onConflict: "key" });
+  // insert-only: NEVER overwrite a template the team has edited in admin
+  const { error } = await sb
+    .from("email_templates")
+    .upsert(rows, { onConflict: "key", ignoreDuplicates: true });
   if (error) {
     console.error("seed failed:", error.message);
     process.exit(1);

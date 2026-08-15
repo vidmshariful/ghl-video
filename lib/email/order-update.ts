@@ -1,7 +1,8 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendEmail } from "./send";
-import { DEFAULT_TEMPLATES, SITE_URL, escapeHtml, renderTemplate, wrapEmail } from "./templates";
+import { loadTemplate } from "./notify";
+import { SITE_URL, escapeHtml, renderTemplate, wrapEmail } from "./templates";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -12,17 +13,6 @@ const STAGE_LABELS: Record<string, string> = {
   review: "In review",
   delivered: "Delivered",
 };
-
-async function loadTemplate(db: SupabaseClient, key: string) {
-  const { data } = await db
-    .from("email_templates")
-    .select("subject,body,enabled")
-    .eq("key", key)
-    .maybeSingle();
-  if (data) return data as { subject: string; body: string; enabled: boolean };
-  const def = DEFAULT_TEMPLATES.find((t) => t.key === key);
-  return def ? { subject: def.subject, body: def.body, enabled: true } : null;
-}
 
 /*
  * Email the client the order-update template for one order. Fail-soft: any
