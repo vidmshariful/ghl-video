@@ -12,6 +12,15 @@ import {
 } from "@/components/portal/Shell";
 import { AvatarUploader, PasswordCard } from "@/components/portal/account";
 import { PortalHelp } from "@/components/portal/help";
+import { TeamCard } from "@/components/portal/team";
+import {
+  actForHeader,
+  getActFor,
+  hasChosenAccount,
+  initActFor,
+  setActFor,
+} from "@/components/portal/act-for";
+import { memberCan } from "@/lib/team-features";
 import {
   LayoutDashboard,
   LifeBuoy,
@@ -49,6 +58,8 @@ const money = (cents: number, cur = "usd") =>
   (cents / 100).toLocaleString("en-US", { style: "currency", currency: cur.toUpperCase(), minimumFractionDigits: 0 });
 const day = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
+const ACT_FOR_KEY = "ghlv-portal-act-for";
+
 async function authedFetch(path: string, init?: RequestInit) {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
@@ -57,6 +68,7 @@ async function authedFetch(path: string, init?: RequestInit) {
     headers: {
       ...(init?.headers ?? {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...actForHeader(),
       ...(init?.body ? { "Content-Type": "application/json" } : {}),
     },
     cache: "no-store",
@@ -70,6 +82,10 @@ type MyProfile = {
   company: string | null;
   phone: string | null;
   avatarUrl: string | null;
+  isOwner: boolean;
+  features: string[] | null;
+  actingFor: { email: string; name: string | null } | null;
+  memberships: { ownerEmail: string; ownerName: string | null; status: string }[];
 };
 
 type OrderSummary = {
@@ -307,10 +323,12 @@ function OrderDetailView({
   id,
   onBack,
   onMessageStudio,
+  canMessage = true,
 }: {
   id: string;
   onBack: () => void;
   onMessageStudio: (orderId: string) => void;
+  canMessage?: boolean;
 }) {
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [updates, setUpdates] = useState<Update[]>([]);
@@ -431,13 +449,15 @@ function OrderDetailView({
           </div>
         </div>
         <div className="mt-5 flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => onMessageStudio(id)}
-            className="tap rounded-[8px] border border-gold/50 bg-gold/[0.06] px-4 py-2 font-mono text-label uppercase text-gold transition-colors hover:bg-gold/[0.12]"
-          >
-            Message the studio
-          </button>
+          {canMessage ? (
+            <button
+              type="button"
+              onClick={() => onMessageStudio(id)}
+              className="tap rounded-[8px] border border-gold/50 bg-gold/[0.06] px-4 py-2 font-mono text-label uppercase text-gold transition-colors hover:bg-gold/[0.12]"
+            >
+              Message the studio
+            </button>
+          ) : null}
           <a href="mailto:hi@ghlvideo.com" className="tap rounded-[8px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold">
             Email
           </a>
@@ -558,7 +578,7 @@ type Sub = {
   cancelAtPeriodEnd: boolean;
 };
 
-function SubscriptionsView() {
+function SubscriptionsView({ canBilling = true }: { canBilling?: boolean }) {
   const [subs, setSubs] = useState<Sub[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -641,8 +661,14 @@ function SubscriptionsView() {
               {s.status}
             </span>
           </div>
+          {!canBilling ? (
+            <p className="mt-4 text-body-sm text-dim">
+              Billing changes are limited on your access. The account owner
+              manages the plan.
+            </p>
+          ) : null}
           <div className="mt-5 flex flex-wrap gap-3">
-            {(s.status === "active" || s.status === "trialing") && !s.cancelAtPeriodEnd ? (
+            {canBilling && (s.status === "active" || s.status === "trialing") && !s.cancelAtPeriodEnd ? (
               <button
                 type="button"
                 onClick={() => {
@@ -659,7 +685,7 @@ function SubscriptionsView() {
                 Cancel plan
               </button>
             ) : null}
-            {s.cancelAtPeriodEnd ? (
+            {canBilling && s.cancelAtPeriodEnd ? (
               <button
                 type="button"
                 onClick={() => setCancel(s.id, false)}
@@ -669,14 +695,16 @@ function SubscriptionsView() {
                 Resume plan
               </button>
             ) : null}
-            <button
-              type="button"
-              onClick={manage}
-              disabled={busy}
-              className="tap rounded-[8px] border border-hair px-5 py-2.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-50"
-            >
-              {busy ? "..." : "Manage billing"}
-            </button>
+            {canBilling ? (
+              <button
+                type="button"
+                onClick={manage}
+                disabled={busy}
+                className="tap rounded-[8px] border border-hair px-5 py-2.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-50"
+              >
+                {busy ? "..." : "Manage billing"}
+              </button>
+            ) : null}
           </div>
           {err && <p className="mt-3 text-body-sm text-error">{err}</p>}
         </div>
@@ -699,6 +727,7 @@ function SettingsView({
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
+  const isOwner = profile.isOwner;
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -707,7 +736,7 @@ function SettingsView({
     setErr("");
     const j = await authedFetch("/api/portal/me", {
       method: "PATCH",
-      body: JSON.stringify({ name, company, phone }),
+      body: JSON.stringify(isOwner ? { name, company, phone } : { name }),
     });
     setBusy(false);
     if (j.ok) {
@@ -720,8 +749,21 @@ function SettingsView({
     <div className="max-w-3xl">
       <h1 className="font-display text-h2 text-ink">Settings</h1>
       <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
-        Your details, photo, and password.
+        {isOwner ? "Your details, photo, password, and team." : "Your details, photo, and password."}
       </p>
+
+      {!isOwner && profile.actingFor ? (
+        <div className="mt-6 rounded-[12px] border border-gold/30 bg-gold/[0.04] p-5">
+          <p className="text-body-sm text-muted">
+            You are working in{" "}
+            <span className="font-semibold text-ink">
+              {profile.actingFor.name || profile.actingFor.email}
+            </span>
+            &apos;s portal. Account details and the team belong to them; what you
+            see here is your own profile.
+          </p>
+        </div>
+      ) : null}
 
       <div className="mt-8 rounded-[12px] border border-hair bg-surface p-6">
         <AvatarUploader
@@ -742,32 +784,35 @@ function SettingsView({
               className={authFieldCls}
             />
           </label>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="grid gap-2">
-              <span className="font-mono text-label uppercase text-muted">Company / SaaS</span>
-              <input
-                value={company}
-                onChange={(e) => setCompany(e.target.value)}
-                maxLength={160}
-                className={authFieldCls}
-              />
-            </label>
-            <label className="grid gap-2">
-              <span className="font-mono text-label uppercase text-muted">Phone</span>
-              <input
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                maxLength={40}
-                className={authFieldCls}
-              />
-            </label>
-          </div>
+          {isOwner ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="grid gap-2">
+                <span className="font-mono text-label uppercase text-muted">Company / SaaS</span>
+                <input
+                  value={company}
+                  onChange={(e) => setCompany(e.target.value)}
+                  maxLength={160}
+                  className={authFieldCls}
+                />
+              </label>
+              <label className="grid gap-2">
+                <span className="font-mono text-label uppercase text-muted">Phone</span>
+                <input
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  maxLength={40}
+                  className={authFieldCls}
+                />
+              </label>
+            </div>
+          ) : null}
           <div className="grid gap-2">
             <span className="font-mono text-label uppercase text-muted">Sign-in email</span>
             <p className="text-body text-ink">{profile.email}</p>
             <p className="text-body-sm text-dim">
-              Your orders and login hang on this email. To change it, write to
-              hi@ghlvideo.com.
+              {isOwner
+                ? "Your orders and login hang on this email. To change it, write to hi@ghlvideo.com."
+                : "Your login. To change it, ask the account owner to re-add you with the new one."}
             </p>
           </div>
           {msg && <p className="text-body-sm text-green">{msg}</p>}
@@ -783,6 +828,12 @@ function SettingsView({
           </div>
         </form>
       </div>
+
+      {isOwner ? (
+        <div className="mt-6">
+          <TeamCard endpoint="/api/portal/team/" accountType="customer" />
+        </div>
+      ) : null}
 
       <div className="mt-6">
         <PasswordCard resetRedirect="/portal/set-password/" />
@@ -835,22 +886,31 @@ function StatCard({
 function PortalDashboard({
   session,
   firstName,
+  actingForLabel,
+  can,
   unread,
   onOpenOrder,
   onGo,
 }: {
   session: Session;
   firstName: string | null;
+  actingForLabel: string | null;
+  can: (key: string) => boolean;
   unread: number;
   onOpenOrder: (id: string) => void;
   onGo: (s: PortalSection) => void;
 }) {
   const [orders, setOrders] = useState<OrderSummary[] | null>(null);
+  const canOrders = can("orders");
   useEffect(() => {
+    if (!canOrders) {
+      setOrders([]);
+      return;
+    }
     authedFetch("/api/portal/orders")
       .then((j) => setOrders(j.orders ?? []))
       .catch(() => setOrders([]));
-  }, []);
+  }, [canOrders]);
 
   const list = orders ?? [];
   const active = list.filter((o) => o.status === "paid" && o.stage !== "delivered");
@@ -869,17 +929,27 @@ function PortalDashboard({
       <h1 className="mt-3 font-display text-h2 text-ink">
         {firstName ? `Welcome back, ${firstName}.` : "Welcome back."}
       </h1>
-      <p className="mt-1 font-mono text-label uppercase text-dim">{session.user.email}</p>
+      <p className="mt-1 font-mono text-label uppercase text-dim">
+        {actingForLabel
+          ? `Working in ${actingForLabel}'s portal`
+          : session.user.email}
+      </p>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-3">
-        <StatCard label="Active projects" value={num(active.length)} onClick={() => onGo("orders")} />
-        <StatCard
-          label="Unread messages"
-          value={String(unread)}
-          accent={unread > 0}
-          onClick={() => onGo("messages")}
-        />
-        <StatCard label="Delivered" value={num(delivered.length)} onClick={() => onGo("orders")} />
+        {can("orders") ? (
+          <StatCard label="Active projects" value={num(active.length)} onClick={() => onGo("orders")} />
+        ) : null}
+        {can("messages") ? (
+          <StatCard
+            label="Unread messages"
+            value={String(unread)}
+            accent={unread > 0}
+            onClick={() => onGo("messages")}
+          />
+        ) : null}
+        {can("orders") ? (
+          <StatCard label="Delivered" value={num(delivered.length)} onClick={() => onGo("orders")} />
+        ) : null}
       </div>
 
       {latest ? (
@@ -922,9 +992,11 @@ function PortalDashboard({
 
       <p className="mt-10 font-mono text-label uppercase text-dim">Quick actions</p>
       <div className="mt-3 flex flex-wrap gap-3">
-        <button type="button" onClick={() => onGo("messages")} className={ghost}>
-          Message the studio
-        </button>
+        {can("messages") ? (
+          <button type="button" onClick={() => onGo("messages")} className={ghost}>
+            Message the studio
+          </button>
+        ) : null}
         <a href="/contact/" className={ghost}>
           Book a call
         </a>
@@ -946,8 +1018,49 @@ function Portal({ session }: { session: Session }) {
   const [msgUnread, setMsgUnread] = useState(0);
   const [profile, setProfile] = useState<MyProfile | null>(null);
 
+  /* which account this person works in, and what they may use there */
+  const can = (key: string) =>
+    !profile || profile.isOwner || memberCan(profile.features, key);
+
+  // Who is signed in and which account they act for. Handles two edge
+  // cases: a stale saved account (membership revoked -> fall back to self),
+  // and a member's first sign-in (auto-enter their only membership).
+  const loadProfile = async () => {
+    initActFor(ACT_FOR_KEY);
+    let j = await authedFetch("/api/portal/me").catch(() => null);
+    if ((!j || j.error) && getActFor()) {
+      setActFor(ACT_FOR_KEY, null);
+      j = await authedFetch("/api/portal/me").catch(() => null);
+    }
+    if (j?.email) {
+      const p = j as MyProfile;
+      if (
+        p.isOwner &&
+        !hasChosenAccount(ACT_FOR_KEY) &&
+        p.memberships.length === 1
+      ) {
+        setActFor(ACT_FOR_KEY, p.memberships[0].ownerEmail);
+        const acted = await authedFetch("/api/portal/me").catch(() => null);
+        if (acted?.email) {
+          setProfile(acted as MyProfile);
+          return;
+        }
+      }
+      setProfile(p);
+      return;
+    }
+    // a session the server no longer accepts (revoked or deleted account):
+    // sign out locally so the login screen appears instead of a stuck loader
+    await supabase.auth.signOut();
+  };
+  useEffect(() => {
+    loadProfile();
+     
+  }, []);
+
   // Poll the unread count so the Messages badge stays live from any section.
   useEffect(() => {
+    if (!profile || !can("messages")) return;
     let active = true;
     const tick = async () => {
       const j = await chatGet<{ unreadCount?: number }>("/api/portal/conversations");
@@ -959,17 +1072,8 @@ function Portal({ session }: { session: Session }) {
       active = false;
       window.clearInterval(t);
     };
-  }, []);
-
-  // Who is signed in: name + photo for the top bar and Settings.
-  const loadProfile = () => {
-    authedFetch("/api/portal/me")
-      .then((j) => {
-        if (j?.email) setProfile(j as MyProfile);
-      })
-      .catch(() => {});
-  };
-  useEffect(loadProfile, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- restart when access changes
+  }, [profile]);
 
   const go = (s: PortalSection) => {
     setSection(s);
@@ -980,26 +1084,84 @@ function Portal({ session }: { session: Session }) {
     setSection("messages");
   };
 
+  const switchAccount = (ownerEmail: string | null) => {
+    setActFor(ACT_FOR_KEY, ownerEmail);
+    window.location.reload();
+  };
+
   /* bell links: "orders", "orders/<id>", "messages", "subscriptions" */
   const openHref = (href: string) => {
     const [head, tail] = href.split("/");
-    if (head === "orders" && tail) {
+    if (head === "orders" && tail && can("orders")) {
       setSection("orders");
       setOpenOrder(tail);
       return;
     }
+    if (["orders", "messages", "subscriptions"].includes(head) && !can(head)) return;
     if (["dashboard", "orders", "messages", "subscriptions", "settings", "help"].includes(head)) {
       go(head as PortalSection);
     }
   };
 
   const email = session.user.email ?? "";
+
+  if (!profile) {
+    return (
+      <>
+        <PortalTopbar area="Portal" />
+        <Shell>
+          <p className="text-body text-muted">Loading your portal...</p>
+        </Shell>
+      </>
+    );
+  }
+
+  const acting = profile.actingFor;
   const nav = [
     { key: "dashboard", label: "Dashboard", icon: <LayoutDashboard /> },
-    { key: "orders", label: "Orders", icon: <ShoppingCart /> },
-    { key: "messages", label: "Messages", icon: <MessageSquare />, badge: msgUnread || undefined },
-    { key: "subscriptions", label: "Subscriptions", icon: <Repeat /> },
+    ...(can("orders") ? [{ key: "orders", label: "Orders", icon: <ShoppingCart /> }] : []),
+    ...(can("messages")
+      ? [{ key: "messages", label: "Messages", icon: <MessageSquare />, badge: msgUnread || undefined }]
+      : []),
+    ...(can("subscriptions")
+      ? [{ key: "subscriptions", label: "Subscriptions", icon: <Repeat /> }]
+      : []),
   ];
+
+  /* the account switcher inside the profile menu, shown to anyone on a team */
+  const switcher =
+    profile.memberships.length > 0 ? (
+      <div>
+        <p className="px-3 pb-1 pt-2 font-mono text-label font-bold uppercase tracking-[0.1em] text-dim">
+          Switch account
+        </p>
+        <button
+          type="button"
+          onClick={() => switchAccount(null)}
+          className={`tap flex w-full items-center justify-between rounded-[8px] px-3 py-2 text-left text-body-sm transition-colors ${
+            profile.isOwner ? "font-semibold text-gold" : "text-muted hover:bg-hair/40 hover:text-ink"
+          }`}
+        >
+          Your account
+          {profile.isOwner ? <span aria-hidden="true">&#10003;</span> : null}
+        </button>
+        {profile.memberships.map((m) => (
+          <button
+            key={m.ownerEmail}
+            type="button"
+            onClick={() => switchAccount(m.ownerEmail)}
+            className={`tap flex w-full items-center justify-between gap-2 rounded-[8px] px-3 py-2 text-left text-body-sm transition-colors ${
+              acting?.email === m.ownerEmail
+                ? "font-semibold text-gold"
+                : "text-muted hover:bg-hair/40 hover:text-ink"
+            }`}
+          >
+            <span className="min-w-0 truncate">{m.ownerName || m.ownerEmail}</span>
+            {acting?.email === m.ownerEmail ? <span aria-hidden="true">&#10003;</span> : null}
+          </button>
+        ))}
+      </div>
+    ) : undefined;
 
   return (
     <>
@@ -1007,13 +1169,11 @@ function Portal({ session }: { session: Session }) {
         area="Portal"
         right={
           <>
-            <TopIconButton
-              label="Messages"
-              badge={msgUnread}
-              onClick={() => go("messages")}
-            >
-              <MessageSquare size={16} />
-            </TopIconButton>
+            {can("messages") ? (
+              <TopIconButton label="Messages" badge={msgUnread} onClick={() => go("messages")}>
+                <MessageSquare size={16} />
+              </TopIconButton>
+            ) : null}
             <TopIconButton label="Help & guide" mobileHidden onClick={() => go("help")}>
               <LifeBuoy size={16} />
             </TopIconButton>
@@ -1023,12 +1183,13 @@ function Portal({ session }: { session: Session }) {
               onOpenHref={openHref}
             />
             <ProfileMenu
-              name={profile?.name}
+              name={profile.name}
               email={email}
-              avatarUrl={profile?.avatarUrl}
+              avatarUrl={profile.avatarUrl}
               onSettings={() => go("settings")}
               onHelp={() => go("help")}
               onSignOut={() => supabase.auth.signOut()}
+              extra={switcher}
             />
           </>
         }
@@ -1047,7 +1208,9 @@ function Portal({ session }: { session: Session }) {
           {section === "dashboard" ? (
             <PortalDashboard
               session={session}
-              firstName={profile?.name?.split(" ")[0] ?? null}
+              firstName={profile.name?.split(" ")[0] ?? null}
+              actingForLabel={acting ? acting.name || acting.email : null}
+              can={can}
               unread={msgUnread}
               onOpenOrder={(id) => {
                 setSection("orders");
@@ -1055,12 +1218,13 @@ function Portal({ session }: { session: Session }) {
               }}
               onGo={go}
             />
-          ) : section === "orders" ? (
+          ) : section === "orders" && can("orders") ? (
             openOrder ? (
               <OrderDetailView
                 id={openOrder}
                 onBack={() => setOpenOrder(null)}
                 onMessageStudio={messageStudio}
+                canMessage={can("messages")}
               />
             ) : (
               <div>
@@ -1070,27 +1234,36 @@ function Portal({ session }: { session: Session }) {
                 </div>
               </div>
             )
-          ) : section === "messages" ? (
+          ) : section === "messages" && can("messages") ? (
             <MessagesView
               pendingOrderId={pendingOrderId}
               onConsumePending={() => setPendingOrderId(null)}
               onUnread={setMsgUnread}
             />
           ) : section === "settings" ? (
-            profile ? (
-              <SettingsView profile={profile} onSaved={loadProfile} />
-            ) : (
-              <p className="text-body text-muted">Loading your account...</p>
-            )
+            <SettingsView profile={profile} onSaved={loadProfile} />
           ) : section === "help" ? (
             <PortalHelp audience="customer" />
-          ) : (
+          ) : section === "subscriptions" && can("subscriptions") ? (
             <div>
               <PageHeader title="Subscriptions" subtitle="Manage your editing plan and billing." />
               <div className="mt-6">
-                <SubscriptionsView />
+                <SubscriptionsView canBilling={can("billing")} />
               </div>
             </div>
+          ) : (
+            <PortalDashboard
+              session={session}
+              firstName={profile.name?.split(" ")[0] ?? null}
+              actingForLabel={acting ? acting.name || acting.email : null}
+              can={can}
+              unread={msgUnread}
+              onOpenOrder={(id) => {
+                setSection("orders");
+                setOpenOrder(id);
+              }}
+              onGo={go}
+            />
           )}
           </div>
         </section>

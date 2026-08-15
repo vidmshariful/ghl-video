@@ -12,6 +12,15 @@ import {
   TopIconButton,
 } from "@/components/portal/Shell";
 import { AvatarUploader, PasswordCard } from "@/components/portal/account";
+import { TeamCard } from "@/components/portal/team";
+import {
+  actForHeader,
+  getActFor,
+  hasChosenAccount,
+  initActFor,
+  setActFor,
+} from "@/components/portal/act-for";
+import { memberCan } from "@/lib/team-features";
 import {
   BarChart3,
   BookOpen,
@@ -31,6 +40,8 @@ import {
  * Performance stats sync from FirstPromoter in a later phase; the money
  * (commission rules, payouts) stays in FirstPromoter.
  */
+
+type Membership = { ownerEmail: string; ownerName: string | null; status: string };
 
 type Me = {
   status: "none" | "applied" | "paused" | "active";
@@ -52,7 +63,18 @@ type Me = {
   pages?: { title: string; url: string }[];
   primaryLink?: string;
   links?: { label: string; url: string }[];
+  memberships?: Membership[];
+  viewer?: {
+    name: string | null;
+    avatarUrl: string | null;
+    isOwner: boolean;
+    features: string[] | null;
+    actingFor: { email: string; name: string } | null;
+    memberships: Membership[];
+  };
 };
+
+const ACT_FOR_KEY = "ghlv-partners-act-for";
 
 type Asset = {
   id: string;
@@ -131,6 +153,7 @@ function useFpData<T extends FpGate>(path: string) {
   const [data, setData] = useState<T | null>(null);
   const [err, setErr] = useState(false);
   useEffect(() => {
+    if (!path) return; // gated off for this viewer
     let active = true;
     authedFetch<T>(path)
       .then((j) => {
@@ -198,6 +221,7 @@ async function authedFetch<T>(path: string, init?: RequestInit): Promise<T> {
     headers: {
       ...(init?.headers ?? {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...actForHeader(),
       ...(init?.body ? { "Content-Type": "application/json" } : {}),
     },
     cache: "no-store",
@@ -385,16 +409,32 @@ function GateScreen({
 }
 
 /* ---- dashboard ---- */
-function DashboardView({ me, onNavigate }: { me: Me; onNavigate: (v: View) => void }) {
+function DashboardView({
+  me,
+  can,
+  actingLabel,
+  onNavigate,
+}: {
+  me: Me;
+  can: (key: string) => boolean;
+  actingLabel: string | null;
+  onNavigate: (v: View) => void;
+}) {
   const p = me.partner!;
   const { copied, copy } = useCopy();
-  const first = p.name.split(" ")[0];
-  const { data: st } = useFpData<StatsPayload>("/api/partners/stats");
-  const live = st?.configured && st.found && st.stats;
+  const first = (actingLabel ? me.viewer?.name ?? p.name : p.name).split(" ")[0];
+  const canPerf = can("performance");
+  const { data: st } = useFpData<StatsPayload>(canPerf ? "/api/partners/stats" : "");
+  const live = canPerf && st?.configured && st.found && st.stats;
 
   return (
     <div className="w-full">
       <h1 className="font-display text-h2 text-ink">Welcome back, {first}.</h1>
+      {actingLabel ? (
+        <p className="mt-1 font-mono text-label uppercase text-dim">
+          Working in {actingLabel}&apos;s partner account
+        </p>
+      ) : null}
       <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
         Your audience gets {p.discountPercent}% off every GHL Video service with your
         code{p.couponCode ? ` ${p.couponCode}` : ""}. Your links credit every sale to you.
@@ -403,7 +443,9 @@ function DashboardView({ me, onNavigate }: { me: Me; onNavigate: (v: View) => vo
       {live ? (
         <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-5">
           {[
-            { label: "Your balance", value: fpMoney(st!.balanceCents ?? 0), gold: true },
+            ...(st!.balanceCents !== undefined && can("earnings")
+              ? [{ label: "Your balance", value: fpMoney(st!.balanceCents), gold: true }]
+              : []),
             { label: "Revenue driven", value: fpMoney(st!.stats!.revenueCents) },
             { label: "Clicks", value: st!.stats!.clicks.toLocaleString("en-US") },
             { label: "Referrals", value: st!.stats!.referrals.toLocaleString("en-US") },
@@ -504,7 +546,7 @@ function DashboardView({ me, onNavigate }: { me: Me; onNavigate: (v: View) => vo
             Tracked links to every page, banners, and ready-to-send copy.
           </p>
         </button>
-        {live ? (
+        {live && can("earnings") ? (
           <button
             type="button"
             onClick={() => onNavigate("earnings")}
@@ -515,7 +557,7 @@ function DashboardView({ me, onNavigate }: { me: Me; onNavigate: (v: View) => vo
               Your balance, commission history, and payout status.
             </p>
           </button>
-        ) : (
+        ) : !can("earnings") ? null : (
           <div className="rounded-[12px] border border-hair bg-surface p-6">
             <p className="font-display text-h4 text-ink">Earnings &amp; stats</p>
             <p className="mt-1 text-body-sm text-muted">
@@ -1031,7 +1073,17 @@ function ResourcesView({ me }: { me: Me }) {
 }
 
 /* ---- settings ---- */
-function SettingsView({ me, onSaved }: { me: Me; onSaved: () => void }) {
+function SettingsView({
+  me,
+  onSaved,
+  canProfile,
+  isOwner,
+}: {
+  me: Me;
+  onSaved: () => void;
+  canProfile: boolean;
+  isOwner: boolean;
+}) {
   const p = me.partner!;
   const [name, setName] = useState(p.name);
   const [tagline, setTagline] = useState(p.tagline ?? "");
@@ -1056,28 +1108,44 @@ function SettingsView({ me, onSaved }: { me: Me; onSaved: () => void }) {
     } else setErr(j.error ?? "Could not save. Try again.");
   }
 
+  const viewerName = me.viewer?.name ?? p.name;
+  const viewerAvatar = me.viewer?.avatarUrl ?? p.avatarUrl;
+
   return (
     <div className="max-w-3xl">
       <h1 className="font-display text-h2 text-ink">Settings</h1>
       <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
-        Your public details. These feed your partner page, so keep them how you want
-        your audience to see them.
+        {isOwner
+          ? "Your public details, photo, password, and team."
+          : "Your photo and password, plus what your access allows."}
       </p>
+
+      {!isOwner && me.viewer?.actingFor ? (
+        <div className="mt-6 rounded-[12px] border border-gold/30 bg-gold/[0.04] p-5">
+          <p className="text-body-sm text-muted">
+            You are working in{" "}
+            <span className="font-semibold text-ink">{me.viewer.actingFor.name}</span>
+            &apos;s partner account. The public details below belong to them
+            {canProfile ? ", and your access lets you edit them" : ""}.
+          </p>
+        </div>
+      ) : null}
 
       <div className="mt-8 rounded-[12px] border border-hair bg-surface p-6">
         <AvatarUploader
-          name={p.name}
+          name={viewerName}
           email={p.email ?? ""}
-          avatarUrl={p.avatarUrl}
+          avatarUrl={viewerAvatar}
           endpoint="/api/partners/me/avatar"
           onChanged={() => onSaved()}
         />
         <p className="mt-2 text-body-sm text-dim">
-          Your portal photo. The photo on your public partner page is set by the
+          Your portal photo. The photo on the public partner page is set by the
           studio; write to hi@ghlvideo.com to swap it.
         </p>
       </div>
 
+      {canProfile ? (
       <form onSubmit={save} className="mt-6 grid gap-5 rounded-[12px] border border-hair bg-surface p-6">
         <label className="grid gap-2">
           <span className="font-mono text-label uppercase text-muted">Your name</span>
@@ -1112,14 +1180,22 @@ function SettingsView({ me, onSaved }: { me: Me; onSaved: () => void }) {
           </button>
         </div>
       </form>
+      ) : null}
 
-      <div className="mt-6 rounded-[12px] border border-hair bg-surface p-6">
-        <p className="font-mono text-label uppercase text-muted">Account</p>
-        <p className="mt-2 text-body text-ink">{p.email}</p>
-        <p className="mt-1 text-body-sm text-muted">
-          Sign-in email. To change it, write to hi@ghlvideo.com.
-        </p>
-      </div>
+      {isOwner ? (
+        <>
+          <div className="mt-6 rounded-[12px] border border-hair bg-surface p-6">
+            <p className="font-mono text-label uppercase text-muted">Account</p>
+            <p className="mt-2 text-body text-ink">{p.email}</p>
+            <p className="mt-1 text-body-sm text-muted">
+              Sign-in email. To change it, write to hi@ghlvideo.com.
+            </p>
+          </div>
+          <div className="mt-6">
+            <TeamCard endpoint="/api/partners/team/" accountType="partner" />
+          </div>
+        </>
+      ) : null}
 
       <div className="mt-6">
         <PasswordCard resetRedirect="/partners/set-password/" />
@@ -1144,10 +1220,37 @@ export function PartnersClient() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  const loadMe = () => {
-    authedFetch<Me & { error?: string }>("/api/partners/me")
-      .then((j) => setMe(j.error ? { status: "none" } : j))
-      .catch(() => setMe({ status: "none" }));
+  const loadMe = async () => {
+    initActFor(ACT_FOR_KEY);
+    let j = await authedFetch<Me & { error?: string }>("/api/partners/me").catch(() => null);
+    // a stale saved account (membership revoked): fall back to self
+    if ((!j || j.error) && getActFor()) {
+      setActFor(ACT_FOR_KEY, null);
+      j = await authedFetch<Me & { error?: string }>("/api/partners/me").catch(() => null);
+    }
+    if (!j || j.error) {
+      // a session the server no longer accepts: back to the login screen
+      if (j?.error === "Unauthorized") {
+        await supabase.auth.signOut();
+        return;
+      }
+      setMe({ status: "none" });
+      return;
+    }
+    // a team member's first sign-in: enter their only membership on its own
+    if (
+      j.status === "none" &&
+      !hasChosenAccount(ACT_FOR_KEY) &&
+      (j.memberships ?? []).length === 1
+    ) {
+      setActFor(ACT_FOR_KEY, j.memberships![0].ownerEmail);
+      const acted = await authedFetch<Me & { error?: string }>("/api/partners/me").catch(() => null);
+      if (acted && !acted.error) {
+        setMe(acted);
+        return;
+      }
+    }
+    setMe(j);
   };
 
   useEffect(() => {
@@ -1156,6 +1259,7 @@ export function PartnersClient() {
       return;
     }
     loadMe();
+     
   }, [session]);
 
   if (!ready) return null;
@@ -1176,7 +1280,53 @@ export function PartnersClient() {
       </div>
     );
 
-  if (me.status === "none")
+  if (me.status === "none") {
+    const memberships = me.memberships ?? [];
+    if (memberships.length > 0) {
+      /* on a team (or several): pick whose partner account to open */
+      return (
+        <div className="flex min-h-screen flex-col">
+          <Topbar />
+          <section className="relative flex-1 py-12 md:py-16">
+            <div className="shell">
+              <div className="mx-auto max-w-md">
+                <p className="font-mono text-label uppercase text-gold">[ Partner portal ]</p>
+                <h1 className="mt-4 font-display text-h2 text-ink">Pick an account.</h1>
+                <p className="mt-3 text-body text-muted">
+                  You are on {memberships.length === 1 ? "a partner team" : "several partner teams"}.
+                  Choose whose portal to open.
+                </p>
+                <div className="mt-6 grid gap-2">
+                  {memberships.map((m) => (
+                    <button
+                      key={m.ownerEmail}
+                      type="button"
+                      onClick={() => {
+                        setActFor(ACT_FOR_KEY, m.ownerEmail);
+                        window.location.reload();
+                      }}
+                      className="tap rounded-[12px] border border-hair bg-surface px-5 py-4 text-left transition-colors hover:border-gold/50"
+                    >
+                      <p className="text-body font-semibold text-ink">
+                        {m.ownerName || m.ownerEmail}
+                      </p>
+                      <p className="mt-0.5 font-mono text-label text-dim">{m.ownerEmail}</p>
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => supabase.auth.signOut()}
+                  className={`${btnGhost} mt-6`}
+                >
+                  Sign out
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>
+      );
+    }
     return (
       <div className="flex min-h-screen flex-col">
         <Topbar />
@@ -1187,6 +1337,7 @@ export function PartnersClient() {
         />
       </div>
     );
+  }
   if (me.status === "applied")
     return (
       <div className="flex min-h-screen flex-col">
@@ -1208,12 +1359,62 @@ export function PartnersClient() {
       </div>
     );
 
+  const viewer = me.viewer;
+  const can = (key: string) => !viewer || viewer.isOwner || memberCan(viewer.features, key);
+  const acting = viewer?.actingFor ?? null;
+
   const openHref = (href: string) => {
     const key = href.split("/")[0];
+    if (["performance", "referrals", "earnings", "assets"].includes(key) && !can(key)) return;
     if (["dashboard", "performance", "referrals", "earnings", "assets", "resources", "settings"].includes(key)) {
       setView(key as View);
     }
   };
+
+  const nav = NAV.filter(
+    (it) =>
+      ["dashboard", "resources"].includes(it.key) || can(it.key),
+  );
+
+  const switchAccount = (ownerEmail: string | null) => {
+    setActFor(ACT_FOR_KEY, ownerEmail);
+    window.location.reload();
+  };
+
+  const memberships = viewer?.memberships ?? [];
+  const switcher =
+    memberships.length > 0 ? (
+      <div>
+        <p className="px-3 pb-1 pt-2 font-mono text-label font-bold uppercase tracking-[0.1em] text-dim">
+          Switch account
+        </p>
+        <button
+          type="button"
+          onClick={() => switchAccount(null)}
+          className={`tap flex w-full items-center justify-between rounded-[8px] px-3 py-2 text-left text-body-sm transition-colors ${
+            viewer?.isOwner ? "font-semibold text-gold" : "text-muted hover:bg-hair/40 hover:text-ink"
+          }`}
+        >
+          Your account
+          {viewer?.isOwner ? <span aria-hidden="true">&#10003;</span> : null}
+        </button>
+        {memberships.map((m) => (
+          <button
+            key={m.ownerEmail}
+            type="button"
+            onClick={() => switchAccount(m.ownerEmail)}
+            className={`tap flex w-full items-center justify-between gap-2 rounded-[8px] px-3 py-2 text-left text-body-sm transition-colors ${
+              acting?.email === m.ownerEmail
+                ? "font-semibold text-gold"
+                : "text-muted hover:bg-hair/40 hover:text-ink"
+            }`}
+          >
+            <span className="min-w-0 truncate">{m.ownerName || m.ownerEmail}</span>
+            {acting?.email === m.ownerEmail ? <span aria-hidden="true">&#10003;</span> : null}
+          </button>
+        ))}
+      </div>
+    ) : undefined;
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -1230,19 +1431,20 @@ export function PartnersClient() {
               onOpenHref={openHref}
             />
             <ProfileMenu
-              name={me.partner?.name}
+              name={viewer?.name ?? me.partner?.name}
               email={session.user.email ?? ""}
-              avatarUrl={me.partner?.avatarUrl}
+              avatarUrl={viewer?.avatarUrl ?? me.partner?.avatarUrl}
               onSettings={() => setView("settings")}
               onHelp={() => setView("resources")}
               onSignOut={() => supabase.auth.signOut()}
+              extra={switcher}
             />
           </>
         }
       />
       <div className="flex flex-1 flex-col md:flex-row">
         <PortalSidebar
-          groups={[{ title: "", items: NAV }]}
+          groups={[{ title: "", items: nav }]}
           active={view}
           onSelect={(k) => setView(k as View)}
           storageKey="ghlv-partners-nav"
@@ -1251,19 +1453,21 @@ export function PartnersClient() {
         <section className="min-w-0 flex-1 p-4 md:p-8">
           <div key={view} className="portal-view">
           {view === "dashboard" ? (
-            <DashboardView me={me} onNavigate={setView} />
-          ) : view === "performance" ? (
+            <DashboardView me={me} can={can} actingLabel={acting?.name ?? null} onNavigate={setView} />
+          ) : view === "performance" && can("performance") ? (
             <PerformanceView />
-          ) : view === "referrals" ? (
+          ) : view === "referrals" && can("referrals") ? (
             <ReferralsView />
-          ) : view === "earnings" ? (
+          ) : view === "earnings" && can("earnings") ? (
             <EarningsView />
-          ) : view === "assets" ? (
+          ) : view === "assets" && can("assets") ? (
             <AssetsView me={me} />
           ) : view === "resources" ? (
             <ResourcesView me={me} />
+          ) : view === "settings" ? (
+            <SettingsView me={me} onSaved={loadMe} canProfile={can("profile")} isOwner={viewer?.isOwner ?? true} />
           ) : (
-            <SettingsView me={me} onSaved={loadMe} />
+            <DashboardView me={me} can={can} actingLabel={acting?.name ?? null} onNavigate={setView} />
           )}
           </div>
         </section>

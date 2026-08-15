@@ -284,6 +284,7 @@ export function ProfileMenu({
   onSettings,
   onHelp,
   onSignOut,
+  extra,
 }: {
   name?: string | null;
   email: string;
@@ -291,6 +292,8 @@ export function ProfileMenu({
   onSettings: () => void;
   onHelp: () => void;
   onSignOut: () => void;
+  /* e.g. the account switcher for team members; rendered above Sign out */
+  extra?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -344,6 +347,7 @@ export function ProfileMenu({
               <LifeBuoy size={15} className="shrink-0 text-dim" />
               Help &amp; guide
             </button>
+            {extra}
             <div className="my-1.5 border-t border-hair" />
             <button
               type="button"

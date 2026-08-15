@@ -17,7 +17,7 @@ function mask(email: string | null | undefined): string {
 }
 
 export async function GET(req: Request) {
-  const gate = await requireActivePartner(req);
+  const gate = await requireActivePartner(req, "referrals");
   if ("failStatus" in gate)
     return NextResponse.json({ error: "Unauthorized" }, { status: gate.failStatus });
   if (!fpConfigured()) return NextResponse.json({ configured: false });

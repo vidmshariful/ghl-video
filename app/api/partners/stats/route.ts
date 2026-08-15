@@ -14,7 +14,7 @@ export const runtime = "nodejs";
  * `unavailable` so the portal can say "try again shortly" honestly.
  */
 export async function GET(req: Request) {
-  const gate = await requireActivePartner(req);
+  const gate = await requireActivePartner(req, "performance");
   if ("failStatus" in gate)
     return NextResponse.json({ error: "Unauthorized" }, { status: gate.failStatus });
   if (!fpConfigured()) return NextResponse.json({ configured: false });
@@ -24,6 +24,10 @@ export async function GET(req: Request) {
     if (!promoter) return NextResponse.json({ configured: true, found: false });
 
     const series = await getDailySeries(promoter, 30);
+    // the money figure needs the earnings grant; performance alone gets
+    // clicks and referrals but no balance
+    const { memberCan } = await import("@/lib/team-features");
+    const showBalance = gate.isOwner || memberCan(gate.features, "earnings");
     return NextResponse.json({
       configured: true,
       found: true,
@@ -35,7 +39,9 @@ export async function GET(req: Request) {
         sales: promoter.stats?.sales_count ?? 0,
         revenueCents: promoter.stats?.revenue_amount ?? 0,
       },
-      balanceCents: promoter.balances?.current_balance?.cash ?? 0,
+      ...(showBalance
+        ? { balanceCents: promoter.balances?.current_balance?.cash ?? 0 }
+        : {}),
       joinedAt: promoter.joined_at ?? null,
       campaigns: (promoter.promoter_campaigns ?? []).map((c) => ({
         name: c.campaign?.name ?? "Campaign",

@@ -1,12 +1,15 @@
 "use client";
 
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
+import { actForHeader } from "@/components/portal/act-for";
 
 /*
  * Authed fetch helpers for the chat UI, shared by the portal and the admin.
  * Both surfaces use the same Supabase browser session, so the bearer token is
  * simply whoever is signed in; the server routes decide what that identity can
- * see (own email in the portal, admins allowlist in admin).
+ * see (own email in the portal, admins allowlist in admin). The X-Act-For
+ * header rides along when a team member works in an owner's portal; admin
+ * routes simply ignore it.
  */
 export type ChatAttachment = { name: string; size: number; type: string; url: string | null };
 export type ChatMessage = {
@@ -34,7 +37,7 @@ function canonical(path: string): string {
 export async function chatGet<T>(path: string): Promise<T> {
   const t = await token();
   const r = await fetch(canonical(path), {
-    headers: t ? { Authorization: `Bearer ${t}` } : {},
+    headers: { ...(t ? { Authorization: `Bearer ${t}` } : {}), ...actForHeader() },
     cache: "no-store",
   });
   return r.json();
@@ -44,7 +47,7 @@ export async function chatPostForm<T>(path: string, form: FormData): Promise<T> 
   const t = await token();
   const r = await fetch(canonical(path), {
     method: "POST",
-    headers: t ? { Authorization: `Bearer ${t}` } : {},
+    headers: { ...(t ? { Authorization: `Bearer ${t}` } : {}), ...actForHeader() },
     body: form,
   });
   return r.json();
@@ -54,7 +57,11 @@ export async function chatPostJson<T>(path: string, body: unknown): Promise<T> {
   const t = await token();
   const r = await fetch(canonical(path), {
     method: "POST",
-    headers: { ...(t ? { Authorization: `Bearer ${t}` } : {}), "Content-Type": "application/json" },
+    headers: {
+      ...(t ? { Authorization: `Bearer ${t}` } : {}),
+      ...actForHeader(),
+      "Content-Type": "application/json",
+    },
     body: JSON.stringify(body),
   });
   return r.json();

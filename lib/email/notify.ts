@@ -112,6 +112,7 @@ export async function sendOrderPaidEmails(db: SupabaseClient, orderId: string): 
     title: "Your order is confirmed",
     body: `${o.productName}, ${money(o.amountCents, o.currency)}. Next step: your branding brief.`,
     href: `orders/${orderId}`,
+    feature: "orders",
   });
   await pushAdminNotifications(db, {
     kind: "order_paid",
@@ -121,17 +122,30 @@ export async function sendOrderPaidEmails(db: SupabaseClient, orderId: string): 
   });
 }
 
-/** Delivery email, sent when the stage first moves to Delivered. */
+/** Delivery email, sent when the stage first moves to Delivered. Project
+ *  progress also goes to the customer's team members who can see orders;
+ *  money emails (confirmation, refunds) stay with the owner alone. */
 export async function sendOrderDeliveredEmail(db: SupabaseClient, orderId: string): Promise<void> {
   const o = await orderFor(db, orderId);
   if (!o) return;
-  await sendTemplate(db, "order_delivered", o.email, o.name, {
+  const vars = {
     customer_name: escapeHtml(o.name || "there"),
     product_name: escapeHtml(o.productName),
     order_code: escapeHtml(o.code),
     delivery_url: escapeHtml(o.deliveryUrl || `${SITE_URL}/portal`),
     portal_url: `${SITE_URL}/portal`,
-  });
+  };
+  await sendTemplate(db, "order_delivered", o.email, o.name, vars);
+  const { teamRecipients } = await import("@/lib/account-team");
+  const team = (await teamRecipients(db, "customer", o.email, "orders")).filter(
+    (e) => e !== o.email.toLowerCase(),
+  );
+  for (const memberEmail of team) {
+    await sendTemplate(db, "order_delivered", memberEmail, null, {
+      ...vars,
+      customer_name: escapeHtml("there"),
+    });
+  }
   await pushNotification(db, {
     audience: "customer",
     email: o.email,
@@ -139,6 +153,7 @@ export async function sendOrderDeliveredEmail(db: SupabaseClient, orderId: strin
     title: "Your videos are delivered",
     body: `${o.productName} is ready. Grab your files.`,
     href: `orders/${orderId}`,
+    feature: "orders",
   });
 }
 
@@ -165,6 +180,7 @@ export async function sendOrderRefundedEmail(
     title: "Your refund is on the way",
     body: `${refunded} back to your card for ${o.productName}.`,
     href: `orders/${orderId}`,
+    feature: "orders",
   });
   await pushAdminNotifications(db, {
     kind: "order_refunded",
@@ -209,6 +225,7 @@ export async function sendSubscriptionStartedEmail(db: SupabaseClient, rowId: st
     title: "Your editing plan is live",
     body: `${s.planName}, ${money(s.amountCents, s.currency)} monthly.`,
     href: "subscriptions",
+    feature: "subscriptions",
   });
   await pushAdminNotifications(db, {
     kind: "subscription_started",
@@ -234,6 +251,7 @@ export async function sendSubscriptionCanceledEmail(db: SupabaseClient, rowId: s
     title: "Your plan has ended",
     body: `${s.planName} is canceled. Restart anytime from your portal.`,
     href: "subscriptions",
+    feature: "subscriptions",
   });
   await pushAdminNotifications(db, {
     kind: "subscription_canceled",
@@ -301,6 +319,38 @@ export async function sendPartnerInviteEmail(
     title: "Welcome to the partner program",
     body: "Your portal is live. Grab your links, assets, and coupon.",
     href: "dashboard",
+    ownerOnly: true,
+  });
+}
+
+/** A customer or partner added a teammate: email them the way in, and put
+ *  the invite on their bell (personal, never fanned out). */
+export async function sendTeamInviteEmail(
+  db: SupabaseClient,
+  input: {
+    accountType: "customer" | "partner";
+    ownerName: string;
+    memberName: string;
+    memberEmail: string;
+  },
+): Promise<void> {
+  const portalLabel = input.accountType === "customer" ? "customer portal" : "partner portal";
+  const portalPath = input.accountType === "customer" ? "/portal" : "/partners";
+  await sendTemplate(db, "team_invite", input.memberEmail, input.memberName || null, {
+    member_name: escapeHtml(input.memberName || "there"),
+    member_email: escapeHtml(input.memberEmail),
+    owner_name: escapeHtml(input.ownerName || "The account owner"),
+    portal_label: portalLabel,
+    portal_url: `${SITE_URL}${portalPath}`,
+  });
+  await pushNotification(db, {
+    audience: input.accountType,
+    email: input.memberEmail,
+    kind: "team_invited",
+    title: `You joined ${input.ownerName || "a"} team`,
+    body: `${input.ownerName || "The account owner"} added you to their ${portalLabel}.`,
+    href: "dashboard",
+    ownerOnly: true,
   });
 }
 

@@ -1,17 +1,21 @@
 import { NextResponse } from "next/server";
-import { getSessionEmail } from "@/lib/account/session";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
+import { contextCan, resolvePortalContext } from "@/lib/account-team";
 
 export const runtime = "nodejs";
 
-/* The signed-in customer's own orders. Filtered by their verified email; a
- * customer can never see another customer's orders. Returns only the fields
- * the portal shows. */
+/* The acting account's orders: the owner, or a team member the owner
+ * granted the orders area. Data is always scoped to the owner's email. */
 export async function GET(req: Request) {
-  const email = await getSessionEmail(req);
-  if (!email) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  const db = supabaseAdmin();
+  const ctx = await resolvePortalContext(db, req, "customer");
+  if ("failStatus" in ctx)
+    return NextResponse.json({ error: "Unauthorized." }, { status: ctx.failStatus });
+  if (!contextCan(ctx, "orders"))
+    return NextResponse.json({ error: "You do not have access to orders." }, { status: 403 });
+  const email = ctx.ownerEmail;
 
-  const { data } = await supabaseAdmin()
+  const { data } = await db
     .from("orders")
     .select(
       "id, amount_cents, currency, status, fulfillment_stage, invoice_number, created_at, product:products(name, sku, metadata)",

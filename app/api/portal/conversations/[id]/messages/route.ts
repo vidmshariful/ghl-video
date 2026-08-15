@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { getSessionEmail } from "@/lib/account/session";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { rateLimit } from "@/lib/rate-limit";
 import {
@@ -9,6 +8,7 @@ import {
   type ConversationRow,
   type StoredAttachment,
 } from "@/lib/chat";
+import { contextCan, resolvePortalContext, type PortalContext } from "@/lib/account-team";
 
 export const runtime = "nodejs";
 
@@ -33,11 +33,23 @@ async function owned(db: DB, id: string, email: string): Promise<ConversationRow
   return (data as ConversationRow) ?? null;
 }
 
+async function gate(
+  db: DB,
+  req: Request,
+): Promise<PortalContext | { failStatus: 401 | 403 }> {
+  const ctx = await resolvePortalContext(db, req, "customer");
+  if ("failStatus" in ctx) return ctx;
+  if (!contextCan(ctx, "messages")) return { failStatus: 403 };
+  return ctx;
+}
+
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const email = await getSessionEmail(req);
-  if (!email) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-  const { id } = await params;
   const db = supabaseAdmin();
+  const ctx = await gate(db, req);
+  if ("failStatus" in ctx)
+    return NextResponse.json({ error: "Unauthorized." }, { status: ctx.failStatus });
+  const email = ctx.ownerEmail;
+  const { id } = await params;
   const conv = await owned(db, id, email);
   if (!conv) return NextResponse.json({ error: "Not found." }, { status: 404 });
 
@@ -59,10 +71,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const email = await getSessionEmail(req);
-  if (!email) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  const db = supabaseAdmin();
+  const ctx = await gate(db, req);
+  if ("failStatus" in ctx)
+    return NextResponse.json({ error: "Unauthorized." }, { status: ctx.failStatus });
+  const email = ctx.ownerEmail;
 
-  const rl = rateLimit(`chat:${email}`, 30, 60_000);
+  // rate-limit the person typing, not the account they act for
+  const rl = rateLimit(`chat:${ctx.selfEmail}`, 30, 60_000);
   if (!rl.ok) {
     return NextResponse.json(
       { error: "Too many messages. Please slow down a moment." },
@@ -71,7 +87,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   }
 
   const { id } = await params;
-  const db = supabaseAdmin();
   const conv = await owned(db, id, email);
   if (!conv) return NextResponse.json({ error: "Not found." }, { status: 404 });
 
@@ -94,16 +109,26 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ error: (e as Error).message }, { status: 400 });
   }
 
-  const { data: customer } = await db
-    .from("customers")
-    .select("name")
-    .eq("email", email)
-    .maybeSingle();
+  // the message is signed by whoever typed it: the owner's customer name,
+  // or a team member's own profile name, so the studio knows who is talking
+  let senderName: string | null = null;
+  if (ctx.isOwner) {
+    const { data: customer } = await db
+      .from("customers")
+      .select("name")
+      .eq("email", email)
+      .maybeSingle();
+    senderName = (customer?.name as string | null) ?? null;
+  } else {
+    const { profileByEmail } = await import("@/lib/profiles");
+    const profile = await profileByEmail(db, ctx.selfEmail);
+    senderName = profile.displayName ?? ctx.selfEmail;
+  }
 
   const message = await postMessage(db, {
     conversationId: id,
     senderRole: "customer",
-    senderName: customer?.name ?? null,
+    senderName,
     body,
     attachments,
   });

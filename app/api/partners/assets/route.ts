@@ -9,7 +9,7 @@ export const runtime = "nodejs";
  * replaced by their tracked homepage link; files come back as public URLs.
  */
 export async function GET(req: Request) {
-  const gate = await requireActivePartner(req);
+  const gate = await requireActivePartner(req, "assets");
   if ("failStatus" in gate)
     return NextResponse.json({ error: "Unauthorized" }, { status: gate.failStatus });
   const partner = gate.partner;

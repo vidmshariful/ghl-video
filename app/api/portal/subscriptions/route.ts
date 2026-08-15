@@ -1,15 +1,20 @@
 import { NextResponse } from "next/server";
-import { getSessionEmail } from "@/lib/account/session";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
+import { contextCan, resolvePortalContext } from "@/lib/account-team";
 
 export const runtime = "nodejs";
 
-/* The signed-in customer's own subscriptions. */
+/* The acting account's subscriptions (view; changing them needs billing). */
 export async function GET(req: Request) {
-  const email = await getSessionEmail(req);
-  if (!email) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  const db = supabaseAdmin();
+  const ctx = await resolvePortalContext(db, req, "customer");
+  if ("failStatus" in ctx)
+    return NextResponse.json({ error: "Unauthorized." }, { status: ctx.failStatus });
+  if (!contextCan(ctx, "subscriptions"))
+    return NextResponse.json({ error: "You do not have access to plans." }, { status: 403 });
+  const email = ctx.ownerEmail;
 
-  const { data } = await supabaseAdmin()
+  const { data } = await db
     .from("subscriptions")
     .select("id, plan_name, status, amount_cents, currency, interval, current_period_end, cancel_at_period_end")
     .eq("customer_email", email)

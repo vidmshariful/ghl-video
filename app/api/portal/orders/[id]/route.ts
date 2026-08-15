@@ -1,21 +1,25 @@
 import { NextResponse } from "next/server";
-import { getSessionEmail } from "@/lib/account/session";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
+import { contextCan, resolvePortalContext } from "@/lib/account-team";
 
 export const runtime = "nodejs";
 
 /* One order's detail for the portal. The ownership check (order email must
- * equal the session email) is the gate; a mismatch returns 404 so the route
- * never confirms another customer's order even exists. */
+ * equal the acting account's owner email) is the gate; a mismatch returns
+ * 404 so the route never confirms another customer's order even exists. */
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const email = await getSessionEmail(req);
-  if (!email) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  const db = supabaseAdmin();
+  const ctx = await resolvePortalContext(db, req, "customer");
+  if ("failStatus" in ctx)
+    return NextResponse.json({ error: "Unauthorized." }, { status: ctx.failStatus });
+  if (!contextCan(ctx, "orders"))
+    return NextResponse.json({ error: "You do not have access to orders." }, { status: 403 });
+  const email = ctx.ownerEmail;
 
   const { id } = await params;
-  const db = supabaseAdmin();
   const { data: o } = await db
     .from("orders")
     .select("*, product:products(name, sku, metadata)")

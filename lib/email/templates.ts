@@ -48,6 +48,7 @@ export const TEMPLATE_VARIABLES: Record<string, string[]> = {
   quote_received: ["name", "contact_url"],
   partner_application_received: ["name", "partners_url"],
   partner_invite: ["partner_name", "partner_email", "partners_url"],
+  team_invite: ["member_name", "member_email", "owner_name", "portal_label", "portal_url"],
   admin_new_order: ["customer_name", "customer_email", "product_name", "order_code", "amount", "admin_url"],
   admin_new_application: ["name", "email", "channel", "audience", "admin_url"],
   admin_dispute: ["customer_email", "product_name", "order_code", "amount", "reason", "admin_url"],
@@ -194,6 +195,17 @@ ${btn("{{contact_url}}", "Book a call")}`,
 <p style="${P}">Hi {{partner_name}}, your partner account is ready. Your links, promo assets, live stats, and earnings all live in your portal.</p>
 ${btn("{{partners_url}}", "Open your portal")}
 <p style="${SMALL}margin-top:22px;">First time signing in? Use <strong style="color:#9096a8;">{{partner_email}}</strong> and pick "Set it by email" on the sign-in page to create your password.</p>`,
+  },
+  {
+    key: "team_invite",
+    name: "Portal team invite",
+    description:
+      "Sent when a customer or partner adds a team member to their portal.",
+    subject: "{{owner_name}} added you to their GHL Video {{portal_label}}",
+    body: `<h1 style="${H}">You have been added to a team.</h1>
+<p style="${P}"><strong style="${STRONG}">{{owner_name}}</strong> added you, {{member_name}}, to their GHL Video {{portal_label}}, so you can work in it with them.</p>
+${btn("{{portal_url}}", "Open the portal")}
+<p style="${SMALL}margin-top:22px;">First time signing in? Use <strong style="color:#9096a8;">{{member_email}}</strong> and pick "Set it by email" on the sign-in page to create your password.</p>`,
   },
   {
     key: "admin_new_order",

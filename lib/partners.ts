@@ -154,15 +154,38 @@ export function trackedLink(p: Pick<PartnerRow, "ref" | "fp_ref">, path = "/"): 
   return url.toString();
 }
 
-/* Shared gate for the partner data routes: a valid session whose email is an
- * active (or invited) partner. Returns the row, or a status to respond with. */
+/* Shared gate for the partner data routes: a valid session that is either
+ * an active (or invited) partner, or a team member acting for one via the
+ * validated X-Act-For header. When `feature` is given, members also need
+ * that grant; owners always pass. Returns the OWNER's partner row (data is
+ * always the owner's), or a status to respond with. */
 export async function requireActivePartner(
   req: Request,
-): Promise<{ partner: PartnerRow } | { failStatus: 401 | 403 }> {
-  const { getSessionEmail } = await import("@/lib/account/session");
-  const email = await getSessionEmail(req);
-  if (!email) return { failStatus: 401 };
-  const partner = await partnerByEmail(email);
+  feature?: string,
+): Promise<
+  | { partner: PartnerRow; isOwner: boolean; features: string[] | null }
+  | { failStatus: 401 | 403 }
+> {
+  const { getSessionUser } = await import("@/lib/account/session");
+  const user = await getSessionUser(req);
+  if (!user) return { failStatus: 401 };
+  const actFor = req.headers.get("x-act-for")?.trim().toLowerCase() || null;
+
+  if (!actFor || actFor === user.email) {
+    const partner = await partnerByEmail(user.email);
+    if (!partner || !["active", "invited"].includes(partner.status)) return { failStatus: 403 };
+    return { partner, isOwner: true, features: null };
+  }
+
+  const { supabaseAdmin } = await import("@/lib/checkout/supabase-admin");
+  const { resolvePortalContext } = await import("@/lib/account-team");
+  const ctx = await resolvePortalContext(supabaseAdmin(), req, "partner");
+  if ("failStatus" in ctx) return ctx;
+  const partner = await partnerByEmail(ctx.ownerEmail);
   if (!partner || !["active", "invited"].includes(partner.status)) return { failStatus: 403 };
-  return { partner };
+  if (feature) {
+    const { memberCan } = await import("@/lib/team-features");
+    if (!memberCan(ctx.features, feature)) return { failStatus: 403 };
+  }
+  return { partner, isOwner: false, features: ctx.features };
 }

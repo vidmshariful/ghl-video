@@ -8,7 +8,7 @@ export const runtime = "nodejs";
  * history, both straight from FirstPromoter (which stays the system that
  * actually pays). */
 export async function GET(req: Request) {
-  const gate = await requireActivePartner(req);
+  const gate = await requireActivePartner(req, "earnings");
   if ("failStatus" in gate)
     return NextResponse.json({ error: "Unauthorized" }, { status: gate.failStatus });
   if (!fpConfigured()) return NextResponse.json({ configured: false });

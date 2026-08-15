@@ -1,17 +1,22 @@
 import { NextResponse } from "next/server";
-import { getSessionEmail } from "@/lib/account/session";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { hasUnread, threadTitle, type ConversationRow, type OrderJoin } from "@/lib/chat";
+import { contextCan, resolvePortalContext } from "@/lib/account-team";
 
 export const runtime = "nodejs";
 
-/* The signed-in customer's own chat threads (general + per project), newest
- * activity first. Scoped to their verified email. */
+/* The acting account's chat threads (general + per project), newest
+ * activity first. Team members need the messages grant. */
 export async function GET(req: Request) {
-  const email = await getSessionEmail(req);
-  if (!email) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  const db = supabaseAdmin();
+  const ctx = await resolvePortalContext(db, req, "customer");
+  if ("failStatus" in ctx)
+    return NextResponse.json({ error: "Unauthorized." }, { status: ctx.failStatus });
+  if (!contextCan(ctx, "messages"))
+    return NextResponse.json({ threads: [], unreadCount: 0 });
+  const email = ctx.ownerEmail;
 
-  const { data } = await supabaseAdmin()
+  const { data } = await db
     .from("conversations")
     .select("*, order:orders(invoice_number, product:products(name, sku, metadata))")
     .eq("customer_email", email)

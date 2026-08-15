@@ -32,19 +32,31 @@ type PushInput = {
   title: string;
   body?: string;
   href?: string;
+  /* the team grant this event belongs to; members without it are skipped */
+  feature?: string;
+  /* personal events (e.g. the invite itself) never fan out to the team */
+  ownerOnly?: boolean;
 };
 
 export async function pushNotification(db: SupabaseClient, n: PushInput): Promise<void> {
   try {
     if (!n.email) return;
-    const { error } = await db.from("notifications").insert({
+    let recipients = [n.email.toLowerCase()];
+    // customer and partner accounts can have team members; every recipient
+    // gets their own row, so each person has their own read state
+    if (!n.ownerOnly && (n.audience === "customer" || n.audience === "partner")) {
+      const { teamRecipients } = await import("@/lib/account-team");
+      recipients = await teamRecipients(db, n.audience, n.email, n.feature);
+    }
+    const rows = recipients.map((email) => ({
       audience: n.audience,
-      recipient_email: n.email.toLowerCase(),
+      recipient_email: email,
       kind: n.kind,
       title: n.title,
       body: n.body ?? null,
       href: n.href ?? null,
-    });
+    }));
+    const { error } = await db.from("notifications").insert(rows);
     if (error) console.error(`[notify] ${n.kind} not stored for ${n.email}:`, error.message);
   } catch (e) {
     console.error(`[notify] ${n.kind} failed:`, e instanceof Error ? e.message : e);

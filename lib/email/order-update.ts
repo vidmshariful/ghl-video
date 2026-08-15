@@ -67,6 +67,21 @@ export async function sendOrderUpdateEmail(
       html: wrapEmail(renderTemplate(tpl.body, vars)),
     });
     if (!result.ok) console.error("[email] order update not sent:", result.error);
+
+    // project progress also reaches team members who can see orders
+    const { teamRecipients } = await import("@/lib/account-team");
+    const team = (
+      await teamRecipients(db, "customer", o.customer_email as string, "orders")
+    ).filter((e) => e !== (o.customer_email as string).toLowerCase());
+    for (const memberEmail of team) {
+      const memberVars = { ...vars, customer_name: escapeHtml("there") };
+      await sendEmail({
+        to: memberEmail,
+        toName: null,
+        subject: renderTemplate(tpl.subject, memberVars),
+        html: wrapEmail(renderTemplate(tpl.body, memberVars)),
+      }).catch(() => {});
+    }
     return result.ok;
   } catch (e) {
     console.error("[email] order update send failed", e instanceof Error ? e.message : e);

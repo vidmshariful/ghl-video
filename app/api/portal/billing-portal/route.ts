@@ -1,18 +1,26 @@
 import { NextResponse } from "next/server";
-import { getSessionEmail } from "@/lib/account/session";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { stripe } from "@/lib/checkout/stripe";
+import { contextCan, resolvePortalContext } from "@/lib/account-team";
 
 export const runtime = "nodejs";
 
-/* Opens Stripe's hosted billing portal for the signed-in customer, where
- * they change plan, update card, or cancel. Stripe handles it securely; we
- * just mint a session for their Stripe customer and return the URL. */
+/* Opens Stripe's hosted billing portal for the acting account, where plan,
+ * card, and cancellation live. Card data on the other side of this URL:
+ * team members need the `billing` grant. */
 export async function POST(req: Request) {
-  const email = await getSessionEmail(req);
-  if (!email) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  const db = supabaseAdmin();
+  const ctx = await resolvePortalContext(db, req, "customer");
+  if ("failStatus" in ctx)
+    return NextResponse.json({ error: "Unauthorized." }, { status: ctx.failStatus });
+  if (!contextCan(ctx, "billing"))
+    return NextResponse.json(
+      { error: "Billing changes are limited on your access." },
+      { status: 403 },
+    );
+  const email = ctx.ownerEmail;
 
-  const { data: customer } = await supabaseAdmin()
+  const { data: customer } = await db
     .from("customers")
     .select("stripe_customer_id")
     .eq("email", email)

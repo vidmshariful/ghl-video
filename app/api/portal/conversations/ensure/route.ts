@@ -1,20 +1,24 @@
 import { NextResponse } from "next/server";
-import { getSessionEmail } from "@/lib/account/session";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { ensureConversation } from "@/lib/chat";
+import { contextCan, resolvePortalContext } from "@/lib/account-team";
 
 export const runtime = "nodejs";
 
-/* Get or create a thread for the signed-in customer: the general thread when
+/* Get or create a thread for the acting account: the general thread when
  * no orderId is given, otherwise the thread for that order (which must belong
- * to them). Returns the conversation id the client then opens. */
+ * to it). Returns the conversation id the client then opens. */
 export async function POST(req: Request) {
-  const email = await getSessionEmail(req);
-  if (!email) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  const db = supabaseAdmin();
+  const ctx = await resolvePortalContext(db, req, "customer");
+  if ("failStatus" in ctx)
+    return NextResponse.json({ error: "Unauthorized." }, { status: ctx.failStatus });
+  if (!contextCan(ctx, "messages"))
+    return NextResponse.json({ error: "You do not have access to messages." }, { status: 403 });
+  const email = ctx.ownerEmail;
 
   const body = (await req.json().catch(() => ({}))) as { orderId?: unknown };
   const orderId = typeof body.orderId === "string" && body.orderId ? body.orderId : null;
-  const db = supabaseAdmin();
 
   if (orderId) {
     const { data: order } = await db
