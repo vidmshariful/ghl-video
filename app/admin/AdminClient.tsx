@@ -4,7 +4,6 @@ import { type Session } from "@supabase/supabase-js";
 import { useEffect, useState } from "react";
 import { sitePages } from "@/lib/pages-list";
 import { site } from "@/lib/site";
-import { HEAD_SCRIPTS, BODY_END_SCRIPTS } from "@/lib/chrome";
 import { supabase, authHeader } from "./client";
 import { ALL_VIEWS, type View } from "./nav";
 import {
@@ -19,7 +18,7 @@ import { PortalHelp } from "@/components/portal/help";
 import {
   BarChart3,
   BookOpen,
-  Code,
+  Clapperboard,
   FileText,
   Film,
   Globe,
@@ -27,7 +26,6 @@ import {
   LayoutDashboard,
   LifeBuoy,
   Link2,
-  Mail,
   MessageSquare,
   Package,
   Repeat,
@@ -50,7 +48,7 @@ import { PartnersScreen } from "./PartnersScreen";
 import { StudioScreen } from "./StudioScreen";
 import { JournalScreen } from "./JournalScreen";
 import { SettingsScreen } from "./SettingsScreen";
-import { EmailTemplatesScreen } from "./EmailTemplatesScreen";
+import { ProductionScreen } from "./ProductionScreen";
 import { CatalogScreen } from "./CatalogScreen";
 import { canAccess, type Role } from "./roles";
 
@@ -166,52 +164,6 @@ function Login({ onError, error }: { onError: (m: string) => void; error: string
           {reset ? "Back to sign in" : "First time here, or forgot your password?"}
         </button>
       </form>
-    </div>
-  );
-}
-
-/* ---------------------------------------------------------------- */
-/* Screen 1: Header & Footer code                                    */
-/* ---------------------------------------------------------------- */
-function CodeScreen() {
-  // The tracking snippets are hard-coded in lib/chrome.ts (see the note there)
-  // and injected on every public page. This screen only mirrors them so the
-  // team can confirm exactly what is live without touching the source.
-  const blocks: { label: string; where: string; code: string }[] = [
-    {
-      label: "Header code (GTM, Google Ads, Hotjar)",
-      where: "Injected at body start on every public page.",
-      code: HEAD_SCRIPTS,
-    },
-    {
-      label: "Footer code (GTM noscript, chat widget)",
-      where: "Injected right before the closing body tag.",
-      code: BODY_END_SCRIPTS,
-    },
-  ];
-
-  return (
-    <div className="max-w-4xl">
-      <h1 className="font-display text-h2 text-ink">Header &amp; Footer Code</h1>
-      <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
-        These tracking and verification snippets are hard-coded in the site
-        source and injected on every public page: the marketing site, the
-        sales pages, and checkout. They are never added to the customer portal
-        or this admin. This screen is read-only, so what you see below is
-        exactly what is live. To change it, edit{" "}
-        <span className="font-mono text-body-sm text-ink">lib/chrome.ts</span>{" "}
-        and deploy.
-      </p>
-
-      {blocks.map((b) => (
-        <div key={b.label} className="mt-8">
-          <span className="font-mono text-label uppercase text-muted">{b.label}</span>
-          <p className="mt-1 text-body-sm text-dim">{b.where}</p>
-          <pre className="mt-2 max-h-80 w-full overflow-auto rounded-[8px] border border-hair bg-[#05060a] p-4 font-mono text-body-sm leading-relaxed text-ink">
-            {b.code}
-          </pre>
-        </div>
-      ))}
     </div>
   );
 }
@@ -399,9 +351,10 @@ export function AdminClient({ initialView }: { initialView: View }) {
       </div>
     );
 
-  /* The menu, in working order: the daily pair on top, then money, people,
-     partners, what we sell, the site itself, and access last. Icons follow
-     the reference language; groups collapse (see PortalSidebar). */
+  /* The menu, restructured (owner decision, August 2026): the daily pair
+     on top, then Sales (money), Production (fulfillment), Affiliate,
+     Products & Packs (what we sell), and CMS (the website). Emails and the
+     site code live inside Settings. */
   const groups: { title: string; items: { key: View; label: string; icon: React.ReactNode; badge?: number }[] }[] = [
     {
       title: "",
@@ -418,33 +371,32 @@ export function AdminClient({ initialView }: { initialView: View }) {
         { key: "invoices", label: "Invoices", icon: <FileText /> },
         { key: "coupons", label: "Coupons", icon: <Ticket /> },
         { key: "links", label: "Links", icon: <Link2 /> },
+        { key: "customers", label: "Customers", icon: <Users /> },
       ],
     },
     {
-      title: "Clients",
+      title: "Production",
       items: [
-        { key: "customers", label: "Customers", icon: <Users /> },
+        { key: "production", label: "Production", icon: <Clapperboard /> },
         { key: "messages", label: "Messages", icon: <MessageSquare />, badge: msgUnread || undefined },
       ],
     },
     {
-      title: "Partners",
+      title: "Affiliate",
       items: [{ key: "partners", label: "Partners", icon: <Handshake /> }],
     },
     {
-      title: "Catalog",
+      title: "Products & Packs",
       items: [
-        { key: "catalog", label: "Catalog", icon: <Film /> },
+        { key: "catalog", label: "Videos", icon: <Film /> },
         { key: "products", label: "Products & Pricing", icon: <Package /> },
       ],
     },
     {
-      title: "Site",
+      title: "CMS",
       items: [
         { key: "pages", label: "Pages", icon: <Globe /> },
         { key: "studio", label: "Studio Insights", icon: <BarChart3 /> },
-        { key: "emails", label: "Email Templates", icon: <Mail /> },
-        { key: "code", label: "Header & Footer Code", icon: <Code /> },
       ],
     },
   ];
@@ -539,14 +491,18 @@ export function AdminClient({ initialView }: { initialView: View }) {
             <StudioScreen />
           ) : view === "journal" ? (
             <JournalScreen meEmail={me?.email ?? ""} />
-          ) : view === "code" ? (
-            <CodeScreen />
           ) : view === "pages" ? (
             <PagesScreen />
           ) : view === "catalog" ? (
             <CatalogScreen />
-          ) : view === "emails" ? (
-            <EmailTemplatesScreen />
+          ) : view === "production" ? (
+            <ProductionScreen onNavigate={go} />
+          ) : view === "emails" || view === "code" ? (
+            me ? (
+              <SettingsScreen me={me} onMeChanged={loadMe} initialTab={view} />
+            ) : (
+              <p className="text-body text-muted">Loading your account...</p>
+            )
           ) : view === "settings" ? (
             me ? (
               <SettingsScreen me={me} onMeChanged={loadMe} />

@@ -473,15 +473,17 @@ export function PortalSidebar({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- initial mount only
   }, []);
 
-  /* never hide the active item: opening its group is a correction, not a choice */
+  /* never hide the active item: opening its group is a correction, not a
+   * choice, so it is not persisted. Reacts to `groups` too: menus can arrive
+   * late (admin items load with the account) or be regrouped between visits,
+   * in which case the stored choices say nothing about the new titles. */
   useEffect(() => {
     if (!open) return;
     const g = groups.find((x) => x.title && x.items.some((it) => it.key === active));
-    if (g && open[g.title] === false) {
+    if (g && open[g.title] !== true) {
       setOpen((o) => ({ ...(o ?? {}), [g.title]: true }));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- react to view changes
-  }, [active]);
+  }, [active, groups, open]);
 
   function toggle(title: string) {
     setOpen((o) => {

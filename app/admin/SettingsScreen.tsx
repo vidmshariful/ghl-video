@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import { authHeader } from "./client";
 import { TeamScreen } from "./TeamScreen";
+import { EmailTemplatesScreen } from "./EmailTemplatesScreen";
+import { HEAD_SCRIPTS, BODY_END_SCRIPTS } from "@/lib/chrome";
 import { AvatarUploader, PasswordCard } from "@/components/portal/account";
-import type { Role } from "./roles";
+import { effectiveFeatures, type Role } from "./roles";
 
 /*
  * Admin Settings: the pinned hub at the bottom of the menu. My profile is
@@ -17,6 +19,7 @@ type Me = {
   email: string;
   name: string | null;
   role: Role;
+  features: string[] | null;
   avatarUrl: string | null;
 };
 
@@ -37,17 +40,21 @@ const fieldCls =
 const btnGold =
   "tap rounded-[8px] bg-brand-gradient px-6 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60";
 
-type Tab = "profile" | "team" | "integrations";
+type Tab = "profile" | "team" | "integrations" | "emails" | "code";
 
 export function SettingsScreen({
   me,
   onMeChanged,
+  initialTab = "profile",
 }: {
   me: Me;
   onMeChanged: () => void;
+  /* deep links (/admin/emails/, /admin/code/) open Settings on their tab */
+  initialTab?: Tab;
 }) {
-  const [tab, setTab] = useState<Tab>("profile");
+  const [tab, setTab] = useState<Tab>(initialTab);
   const isAdmin = me.role === "admin";
+  const granted = effectiveFeatures(me.role, me.features) as string[];
   const tabs: { key: Tab; label: string }[] = [
     { key: "profile", label: "My profile" },
     ...(isAdmin
@@ -56,6 +63,8 @@ export function SettingsScreen({
           { key: "integrations", label: "Integrations" },
         ] as { key: Tab; label: string }[])
       : []),
+    ...(granted.includes("emails") ? [{ key: "emails" as Tab, label: "Emails" }] : []),
+    ...(granted.includes("code") ? [{ key: "code" as Tab, label: "Site code" }] : []),
   ];
 
   return (
@@ -85,10 +94,50 @@ export function SettingsScreen({
           <TeamScreen meEmail={me.email} embedded />
         ) : tab === "integrations" && isAdmin ? (
           <IntegrationsTab />
+        ) : tab === "emails" && granted.includes("emails") ? (
+          <EmailTemplatesScreen embedded />
+        ) : tab === "code" && granted.includes("code") ? (
+          <CodeTab />
         ) : (
           <ProfileTab me={me} onMeChanged={onMeChanged} />
         )}
       </div>
+    </div>
+  );
+}
+
+/* ---------------- site code (read-only mirror) ---------------- */
+function CodeTab() {
+  const blocks: { label: string; where: string; code: string }[] = [
+    {
+      label: "Header code (GTM, Google Ads, Hotjar, FirstPromoter)",
+      where: "Injected at body start on every public page.",
+      code: HEAD_SCRIPTS,
+    },
+    {
+      label: "Footer code (GTM noscript, chat widget)",
+      where: "Injected right before the closing body tag.",
+      code: BODY_END_SCRIPTS,
+    },
+  ];
+  return (
+    <div className="max-w-4xl">
+      <p className="max-w-[var(--measure-body)] text-body text-muted">
+        These tracking and verification snippets are hard-coded in the site
+        source and injected on every public page: the marketing site, the
+        sales pages, and checkout. Never the portals or this admin. This view
+        is read-only, so what you see below is exactly what is live. To change
+        it, edit <span className="font-mono text-body-sm text-ink">lib/chrome.ts</span> and deploy.
+      </p>
+      {blocks.map((b) => (
+        <div key={b.label} className="mt-8">
+          <span className="font-mono text-label uppercase text-muted">{b.label}</span>
+          <p className="mt-1 text-body-sm text-dim">{b.where}</p>
+          <pre className="mt-2 max-h-80 w-full overflow-auto rounded-[8px] border border-hair bg-[#05060a] p-4 font-mono text-body-sm leading-relaxed text-ink">
+            {b.code}
+          </pre>
+        </div>
+      ))}
     </div>
   );
 }

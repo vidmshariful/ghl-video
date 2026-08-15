@@ -23,7 +23,10 @@ export async function POST(
   const db = supabaseAdmin();
 
   const patch: Record<string, unknown> = {};
-  if (typeof body.stage === "string" && STAGES.includes(body.stage)) patch.fulfillment_stage = body.stage;
+  if (typeof body.stage === "string" && STAGES.includes(body.stage)) {
+    patch.fulfillment_stage = body.stage;
+    patch.stage_changed_at = new Date().toISOString();
+  }
   if (typeof body.manager === "string") patch.assigned_manager = body.manager.trim() || "Tanvir Prince";
   if (typeof body.deliveryUrl === "string") {
     // Rendered to the customer as an href, so only allow http(s) (blocks

@@ -22,7 +22,7 @@ type TeamRow = {
   created_at: string;
 };
 
-const GROUPS = ["Sales", "Clients", "Catalog", "Site"] as const;
+const GROUPS = ["Sales", "Production", "Affiliate", "Products & Packs", "CMS", "Settings"] as const;
 
 const btnGold =
   "tap rounded-[8px] bg-brand-gradient px-5 py-2.5 text-body-sm font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60";

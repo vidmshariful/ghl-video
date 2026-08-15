@@ -29,7 +29,7 @@ const field =
   "mt-1.5 w-full rounded-[8px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none";
 const lab = "font-mono text-label uppercase text-muted";
 
-export function EmailTemplatesScreen() {
+export function EmailTemplatesScreen({ embedded = false }: { embedded?: boolean } = {}) {
   const [rows, setRows] = useState<Record<string, Row>>({});
   const [sel, setSel] = useState<string>(DEFAULT_TEMPLATES[0].key);
   const [subject, setSubject] = useState("");
@@ -117,8 +117,8 @@ export function EmailTemplatesScreen() {
     <div>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-h2 text-ink">Email Templates</h1>
-          <p className="mt-1 max-w-2xl text-body-sm text-muted">
+          {!embedded && <h1 className="font-display text-h2 text-ink">Email Templates</h1>}
+          <p className={`${embedded ? "" : "mt-1 "}max-w-2xl text-body-sm text-muted`}>
             Emails the site sends to clients. Edit the subject and message, and use the
             variables below in double braces. The GHL Video header, colors, and footer
             are added automatically, so you only edit the message. The order update

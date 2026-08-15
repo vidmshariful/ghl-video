@@ -18,6 +18,7 @@ export type View =
   | "catalog"
   | "studio"
   | "emails"
+  | "production"
   | "settings"
   | "help";
 
@@ -38,6 +39,7 @@ export const ALL_VIEWS: View[] = [
   "catalog",
   "studio",
   "emails",
+  "production",
   "settings",
   "help",
 ];

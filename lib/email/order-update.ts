@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendEmail } from "./send";
-import { loadTemplate } from "./notify";
+import { loadTemplate, productLabel } from "./notify";
 import { SITE_URL, escapeHtml, renderTemplate, wrapEmail } from "./templates";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -41,7 +41,7 @@ export async function sendOrderUpdateEmail(
       audience: "customer",
       email: o.customer_email as string,
       kind: "order_update",
-      title: `New update on ${o.products?.name ?? "your project"}`,
+      title: `New update on ${productLabel(o.products)}`,
       body: updateMessage.length > 120 ? `${updateMessage.slice(0, 117)}...` : updateMessage,
       href: `orders/${orderId}`,
     });
@@ -52,7 +52,7 @@ export async function sendOrderUpdateEmail(
     const code = o.products?.metadata?.code ?? o.products?.sku?.toUpperCase() ?? "";
     const vars: Record<string, string> = {
       customer_name: escapeHtml(o.customers?.name || "there"),
-      product_name: escapeHtml(o.products?.name || "your order"),
+      product_name: escapeHtml(productLabel(o.products)),
       order_code: escapeHtml(code),
       update_message: escapeHtml(updateMessage).replace(/\n/g, "<br>"),
       stage: escapeHtml(STAGE_LABELS[o.fulfillment_stage ?? ""] ?? o.fulfillment_stage ?? ""),

@@ -62,6 +62,31 @@ const money = (cents: number, currency = "usd") =>
     minimumFractionDigits: cents % 100 === 0 ? 0 : 2,
   });
 
+/**
+ * What the buyer actually ordered, said plainly: "Marketing Video: Unified
+ * Inbox" instead of the bare "Unified Inbox" (which reads like anything).
+ * The type comes from the product metadata the catalog sync writes; plans
+ * keep their own names, packs and bundles say what they are.
+ */
+export function productLabel(
+  p: { name?: string | null; metadata?: Record<string, unknown> | null } | null | undefined,
+): string {
+  const name = (p?.name as string | null) || "your order";
+  const md = (p?.metadata ?? {}) as Record<string, unknown>;
+  const kind = typeof md.kind === "string" ? md.kind : null;
+  const rawType =
+    typeof md.video_type === "string" && md.video_type
+      ? md.video_type
+      : typeof md.category === "string" && md.category
+        ? md.category
+        : null;
+  if (kind === "video") return `${rawType ? `${rawType} ` : ""}Video: ${name}`;
+  if (kind === "pack")
+    return `${rawType ? `${rawType} ` : "Video "}Pack: ${name}`;
+  if (kind === "bundle") return `Bundle: ${name}`;
+  return name;
+}
+
 /* fetch the fields every order email needs */
 async function orderFor(db: SupabaseClient, orderId: string) {
   const { data } = await db
@@ -76,7 +101,7 @@ async function orderFor(db: SupabaseClient, orderId: string) {
   return {
     email: o.customer_email as string,
     name: (o.customers?.name as string | null) ?? null,
-    productName: (o.products?.name as string | null) ?? "your order",
+    productName: productLabel(o.products),
     code: (o.products?.metadata?.code ?? o.products?.sku?.toUpperCase() ?? "") as string,
     amountCents: o.amount_cents as number,
     currency: (o.currency as string | null) ?? "usd",
