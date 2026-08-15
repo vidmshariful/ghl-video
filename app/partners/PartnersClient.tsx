@@ -21,6 +21,7 @@ import {
   setActFor,
 } from "@/components/portal/act-for";
 import { memberCan } from "@/lib/team-features";
+import { PROGRAM_RULES, tierDef } from "@/lib/partner-program";
 import { BookACallView, WhiteLabelView } from "@/components/portal/booking";
 import { PARTNER_VIEWS, type View } from "./views";
 import {
@@ -54,6 +55,7 @@ type Me = {
     email: string | null;
     ref: string;
     status: string;
+    tier: "affiliate" | "vip" | "partnership";
     photoPath: string | null;
     roleLine: string;
     tagline: string | null;
@@ -433,6 +435,10 @@ function DashboardView({
           Working in {actingLabel}&apos;s partner account
         </p>
       ) : null}
+      <p className="mt-1 font-mono text-label uppercase text-gold">
+        {tierDef(p.tier).name}: {tierDef(p.tier).firstOrderPct}% on a client&apos;s first
+        order, {tierDef(p.tier).followOnPct}% on everything after, for life
+      </p>
       <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
         {p.couponCode
           ? `Your audience gets ${p.discountPercent}% off every GHL Video service with your code ${p.couponCode}. Your links credit every sale to you.`
@@ -1060,6 +1066,34 @@ function ResourcesView({ me }: { me: Me }) {
           </li>
         ))}
       </ol>
+
+      <h2 className="mt-10 font-display text-h4 text-ink">Your terms</h2>
+      <div className="mt-4 rounded-[12px] border border-gold/30 bg-gold/[0.04] p-5">
+        <p className="text-body font-semibold text-ink">{tierDef(p.tier).name}</p>
+        <p className="mt-1 text-body-sm text-muted">
+          {tierDef(p.tier).firstOrderPct}% on a referred client&apos;s first order,{" "}
+          {tierDef(p.tier).followOnPct}% on every order after, for the life of the
+          client. Tracking window: {tierDef(p.tier).cookieDays} days from click.
+          {tierDef(p.tier).audienceDiscountPct
+            ? ` Your audience gets ${tierDef(p.tier).audienceDiscountPct}% off.`
+            : ""}
+        </p>
+      </div>
+      <ul className="mt-3 grid gap-2">
+        {PROGRAM_RULES.map((r) => (
+          <li key={r.slice(0, 24)} className="flex gap-3 rounded-[12px] border border-hair bg-surface px-5 py-3.5">
+            <span aria-hidden="true" className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-green" />
+            <span className="text-body-sm text-muted">{r}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-3 text-body-sm text-dim">
+        The full terms live at{" "}
+        <a href="/legal/partner-terms/" target="_blank" rel="noopener" className="text-gold hover:brightness-110">
+          ghlvideo.com/legal/partner-terms
+        </a>
+        .
+      </p>
 
       <h2 className="mt-10 font-display text-h4 text-ink">Good to know</h2>
       <div className="mt-4 grid gap-3">

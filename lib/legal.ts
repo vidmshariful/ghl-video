@@ -15,6 +15,122 @@ export type LegalDoc = {
 };
 
 export const legalDocs: Record<string, LegalDoc> = {
+  "partner-terms": {
+    "title": "Partner Program Terms",
+    "effective": "Effective Date: August 16th, 2026",
+    "sections": [
+      {
+        "h": "",
+        "items": [
+          {
+            "t": "p",
+            "text": "These terms govern the GHL Video partnership program, operated by Vidiosa LLC (GHL Video is its brand). By joining any tier of the program, sharing a referral link, or accepting a commission, you agree to these terms. The program has three tiers: Affiliate Partner (open signup), VIP Affiliate Partner (invitation only), and Partnership Program (by signed agreement). Your tier's commission rates are shown in your partner portal and in your welcome email.",
+          },
+        ],
+      },
+      {
+        "h": "1. How Commission Works",
+        "items": [
+          {
+            "t": "p",
+            "text": "Commission attaches to the client, not the product. The first order a referred client places pays your tier's first-order rate. Every order that same client places afterward, on any product including subscription renewals, pays your tier's follow-on rate, for as long as they remain a client.",
+          },
+          {
+            "t": "li",
+            "text": "Commission is calculated on net product revenue: after any partner discount, excluding tax and payment processing fees.",
+          },
+          {
+            "t": "li",
+            "text": "Refunded and charged-back orders reverse their commission in full.",
+          },
+          {
+            "t": "li",
+            "text": "Commission is earned on delivery of the order, payable net 30 after the refund window closes. Test transactions are excluded from payouts.",
+          },
+        ],
+      },
+      {
+        "h": "2. Attribution",
+        "items": [
+          {
+            "t": "li",
+            "text": "Your referral link is the tracking method. Tracking windows are 45 days for Affiliate Partners and 60 days for VIP Affiliate Partners and Partnership Program members, measured from the click.",
+          },
+          {
+            "t": "li",
+            "text": "A client is attributed once, permanently. Once a client is attributed to a partner, every later order from that client pays that partner the follow-on rate, regardless of how the client returns to the site.",
+          },
+          {
+            "t": "li",
+            "text": "Where two partner links touch the same visitor before purchase, the last click within the window wins.",
+          },
+        ],
+      },
+      {
+        "h": "3. Conduct",
+        "items": [
+          {
+            "t": "li",
+            "text": "No self-referral. Your own link or code never applies to your own orders; this is enforced at checkout.",
+          },
+          {
+            "t": "li",
+            "text": "No paid search on GHL Video brand terms or close variants.",
+          },
+          {
+            "t": "li",
+            "text": "No implying affiliation with or endorsement by GoHighLevel Inc. GHL Video is an independent studio; your materials carry the same disclaimer ours do.",
+          },
+          {
+            "t": "li",
+            "text": "No discounts beyond the ones defined in your tier, and any prices quoted in your own materials must match the live site.",
+          },
+        ],
+      },
+      {
+        "h": "4. Tiers and Reviews",
+        "items": [
+          {
+            "t": "li",
+            "text": "Affiliate Partner is open to anyone and approved instantly. Moving up to VIP Affiliate Partner is by invitation, earned through sustained referral volume.",
+          },
+          {
+            "t": "li",
+            "text": "VIP Affiliate Partner accounts are reviewed every six months against a referral floor; accounts below the floor return to Affiliate Partner terms.",
+          },
+          {
+            "t": "li",
+            "text": "Partnership Program membership is contract-bound and changes only at the term of the agreement.",
+          },
+          {
+            "t": "li",
+            "text": "Rate changes never apply retroactively: clients already attributed keep the rate in force at the time of attribution.",
+          },
+        ],
+      },
+      {
+        "h": "5. The Relationship",
+        "items": [
+          {
+            "t": "li",
+            "text": "Referred clients are GHL Video clients. Partners are paid for the introduction and the ongoing relationship, not for owning the account.",
+          },
+          {
+            "t": "li",
+            "text": "We may pause or remove a partner account that violates these terms; earned, compliant commissions are still paid out.",
+          },
+          {
+            "t": "li",
+            "text": "We may update these terms; changes are posted on this page with the effective date updated, and continued participation constitutes acceptance.",
+          },
+          {
+            "t": "li",
+            "text": "Questions and payout matters: hi@ghlvideo.com.",
+          },
+        ],
+      },
+    ],
+  },
   "privacy": {
     "title": "Privacy Policy",
     "effective": "Effective Date: January 5th, 2025",

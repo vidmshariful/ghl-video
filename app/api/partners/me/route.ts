@@ -40,6 +40,7 @@ function shape(p: PartnerRow) {
     email: p.email,
     ref: p.ref,
     status: p.status,
+    tier: p.tier,
     photoPath: p.photo_path,
     roleLine: p.role_line,
     tagline: p.tagline,

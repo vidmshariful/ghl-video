@@ -3,12 +3,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
+import { TIERS } from "@/lib/partner-program";
 
 /*
- * Public application for the affiliate partner program. Submits to
- * /api/partners/apply, which files it as a partners row with status
- * 'applied'; the team reviews in admin -> Partners -> Applications.
- * The hidden `website` field is the bot honeypot.
+ * The public partnership program page: the Tier 1 pitch with real rates
+ * (from lib/partner-program, the program's source of truth), the other two
+ * tiers listed as invitation-only and by-agreement, and the instant-approval
+ * signup. Submitting creates an ACTIVE affiliate partner on the spot (see
+ * /api/partners/apply). The hidden `website` field is the bot honeypot.
  */
 const fieldCls =
   "w-full rounded-[8px] border border-hair bg-surface px-4 py-3 text-body text-ink placeholder:text-dim focus:border-gold focus:outline-none";
@@ -34,6 +36,7 @@ export function ApplyClient() {
     message: "",
     website: "", // honeypot
   });
+  const [agreed, setAgreed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [done, setDone] = useState(false);
@@ -76,30 +79,68 @@ export function ApplyClient() {
 
       <section className="relative flex-1 py-12 md:py-16">
         <div className="shell">
-          <div className="mx-auto max-w-xl">
+          <div className="mx-auto max-w-2xl">
             {done ? (
               <div className="rounded-[12px] border border-gold/40 bg-gold/[0.06] px-6 py-10 text-center">
-                <p className="font-mono text-label uppercase text-gold">[ Application sent ]</p>
-                <h1 className="mt-4 font-display text-h2 text-ink">Thank you.</h1>
+                <p className="font-mono text-label uppercase text-gold">[ You are in ]</p>
+                <h1 className="mt-4 font-display text-h2 text-ink">Welcome to the program.</h1>
                 <p className="mx-auto mt-3 max-w-md text-body text-muted">
-                  We review every application by hand and reply by email, usually within a
-                  couple of days. If it is a fit, you get your own partner page, tracked
-                  links, and a standing discount for your audience.
+                  Your partner portal is live: your tracked link, live stats, and
+                  payouts. Check your email for the way in, then sign in with the
+                  same email you just used.
                 </p>
+                <Link
+                  href="/partners"
+                  className="tap mt-6 inline-flex rounded-[8px] bg-brand-gradient px-8 py-3.5 text-body font-semibold text-canvas transition-all hover:brightness-110"
+                >
+                  Open your partner portal
+                </Link>
               </div>
             ) : (
               <>
-                <p className="font-mono text-label uppercase text-gold">[ Partner program ]</p>
+                <p className="font-mono text-label uppercase text-gold">[ Partnership program ]</p>
                 <h1 className="mt-4 font-display text-h2 text-ink">
-                  Send people to GHL Video. <span className="text-gradient">Earn on every referral.</span>
+                  Send people to GHL Video. <span className="text-gradient">Earn for the life of the client.</span>
                 </h1>
-                <p className="mt-3 text-body text-muted">
-                  Partners get a dedicated page built around them, tracked links, promo
-                  assets, and a standing discount for their audience on every service:
-                  premade videos, editing, and custom production.
+                <p className="mt-3 max-w-[var(--measure-body)] text-body text-muted">
+                  {TIERS.affiliate.copy}
                 </p>
 
-                <form onSubmit={submit} className="mt-10 grid gap-5">
+                <div className="mt-8 grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-[12px] border border-gold/40 bg-gold/[0.06] p-5">
+                    <p className="font-mono text-label uppercase text-gold">{TIERS.affiliate.name}</p>
+                    <p className="mt-2 font-display text-h3 font-semibold text-ink">
+                      {TIERS.affiliate.firstOrderPct}% <span className="text-body text-muted">first order</span>
+                    </p>
+                    <p className="font-display text-h4 font-semibold text-ink">
+                      {TIERS.affiliate.followOnPct}% <span className="text-body-sm text-muted">every order after, for life</span>
+                    </p>
+                    <p className="mt-2 text-body-sm text-muted">Open signup. You are in instantly, below.</p>
+                  </div>
+                  <div className="rounded-[12px] border border-hair bg-surface p-5">
+                    <p className="font-mono text-label uppercase text-muted">{TIERS.vip.name}</p>
+                    <p className="mt-2 font-display text-h4 font-semibold text-ink">
+                      {TIERS.vip.firstOrderPct}% / {TIERS.vip.followOnPct}%
+                    </p>
+                    <p className="mt-2 text-body-sm text-muted">
+                      Invitation only: a dedicated page under your name and 10% off for
+                      your audience. Earned through sustained referrals.
+                    </p>
+                  </div>
+                  <div className="rounded-[12px] border border-hair bg-surface p-5">
+                    <p className="font-mono text-label uppercase text-muted">{TIERS.partnership.name}</p>
+                    <p className="mt-2 font-display text-h4 font-semibold text-ink">
+                      {TIERS.partnership.firstOrderPct}% / {TIERS.partnership.followOnPct}%
+                    </p>
+                    <p className="mt-2 text-body-sm text-muted">
+                      By signed agreement, limited seats: a co-branded page and dedicated
+                      account handling for platforms and studios.
+                    </p>
+                  </div>
+                </div>
+
+                <h2 className="mt-10 font-display text-h4 text-ink">Join as an Affiliate Partner</h2>
+                <form onSubmit={submit} className="mt-5 grid gap-5">
                   <div className="grid gap-5 sm:grid-cols-2">
                     <label className="grid gap-2">
                       <span className={labelCls}>Your name</span>
@@ -185,14 +226,36 @@ export function ApplyClient() {
                       onChange={(e) => set("website", e.target.value)}
                     />
                   </label>
+                  <label className="flex items-start gap-3 text-body-sm text-muted">
+                    <input
+                      type="checkbox"
+                      required
+                      checked={agreed}
+                      onChange={(e) => setAgreed(e.target.checked)}
+                      className="mt-1 h-4 w-4 accent-[#FCC000]"
+                    />
+                    <span>
+                      I agree to the{" "}
+                      <a
+                        href="/legal/partner-terms/"
+                        target="_blank"
+                        rel="noopener"
+                        className="text-gold hover:brightness-110"
+                      >
+                        partner program terms
+                      </a>
+                      : link-based tracking, commission on net revenue, no
+                      self-referral, no brand bidding.
+                    </span>
+                  </label>
                   {err && <p className="text-body-sm text-error">{err}</p>}
                   <div>
                     <button
                       type="submit"
-                      disabled={busy}
+                      disabled={busy || !agreed}
                       className="tap rounded-[8px] bg-brand-gradient px-8 py-3.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60"
                     >
-                      {busy ? "Sending..." : "Send application"}
+                      {busy ? "One moment..." : "Join the program"}
                     </button>
                   </div>
                 </form>

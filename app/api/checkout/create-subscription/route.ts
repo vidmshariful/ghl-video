@@ -45,11 +45,27 @@ export async function POST(req: Request) {
   // ghlv_ref cookie. Attribution ONLY (metadata + the HighLevel affiliate
   // tag): any well-formed ref credits, known partner or not. The discount is
   // the coupon below, so a ref can never change a price.
-  const ref =
+  let ref =
     normalizeRef(asStr(payload.ref)) ??
     normalizeRef(refFromCookieHeader(req.headers.get("cookie")));
   // FirstPromoter's visitor id, stamped on Stripe for sale attribution
-  const fpTid = fpTidFromCookieHeader(req.headers.get("cookie"));
+  let fpTid = fpTidFromCookieHeader(req.headers.get("cookie"));
+
+  // No self-referral (program rule): a partner's own link never applies to
+  // their own order.
+  if (ref) {
+    try {
+      const { partnerByRef } = await import("@/lib/partners");
+      const selfPartner = await partnerByRef(ref);
+      if (selfPartner?.email && selfPartner.email.toLowerCase() === email) {
+        console.warn(`[create-subscription] self-referral blocked: ${ref}`);
+        ref = null;
+        fpTid = null;
+      }
+    } catch {
+      /* best-effort; never blocks checkout */
+    }
+  }
 
   if (!sku) return NextResponse.json({ error: "Missing plan." }, { status: 400 });
   if (!name) return NextResponse.json({ error: "Name is required." }, { status: 400 });
@@ -162,6 +178,18 @@ export async function POST(req: Request) {
   if (couponCodeRaw) {
     const v = await checkCouponForSubscription(couponCodeRaw, sku);
     if (!v.ok) return NextResponse.json({ error: v.reason }, { status: 400 });
+    // a partner's own audience coupon never discounts their own order
+    const { data: couponOwner } = await db
+      .from("partners")
+      .select("email")
+      .eq("coupon_code", v.coupon.code)
+      .maybeSingle();
+    if (couponOwner?.email && (couponOwner.email as string).toLowerCase() === email) {
+      return NextResponse.json(
+        { error: "Your own partner code does not apply to your own orders." },
+        { status: 400 },
+      );
+    }
     couponCode = v.coupon.code;
     // reserve the redemption cap atomically before charging (released on failure)
     const { data: reserved, error: reserveErr } = await db.rpc("reserve_coupon_redemption", {

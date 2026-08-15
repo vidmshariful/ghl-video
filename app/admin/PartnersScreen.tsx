@@ -22,6 +22,8 @@ type PartnerRow = {
   name: string;
   email: string | null;
   status: "applied" | "invited" | "active" | "paused" | "rejected";
+  tier: "affiliate" | "vip" | "partnership";
+  review_at: string | null;
   photo_path: string | null;
   role_line: string;
   tagline: string | null;
@@ -68,6 +70,17 @@ const STATUS_STYLE: Record<PartnerRow["status"], string> = {
   rejected: "border-error/40 text-error",
 };
 
+const TIER_STYLE: Record<PartnerRow["tier"], string> = {
+  affiliate: "border-hair text-muted",
+  vip: "border-gold/40 bg-gold/10 text-gold",
+  partnership: "border-blue/40 bg-blue/10 text-blue",
+};
+const TIER_LABEL: Record<PartnerRow["tier"], string> = {
+  affiliate: "Affiliate",
+  vip: "VIP",
+  partnership: "Partnership",
+};
+
 const KINDS: AssetRow["kind"][] = ["banner", "graphic", "logo", "video", "doc", "copy"];
 
 /* ---------------- partner form ---------------- */
@@ -86,6 +99,8 @@ function PartnerForm({
     email: initial.email ?? "",
     ref: initial.ref ?? "",
     status: initial.status ?? "invited",
+    tier: initial.tier ?? "affiliate",
+    review_at: initial.review_at ?? "",
     coupon_code: initial.coupon_code ?? "",
     discount_percent: String(initial.discount_percent ?? 10),
     discount_months: String(initial.discount_months ?? 3),
@@ -119,6 +134,8 @@ function PartnerForm({
       email: f.email.trim().toLowerCase() || null,
       ref,
       status: f.status,
+      tier: f.tier,
+      review_at: f.review_at || null,
       coupon_code: f.coupon_code.trim().toUpperCase() || null,
       discount_percent: Math.min(90, Math.max(0, Math.round(Number(f.discount_percent) || 0))),
       discount_months: Math.min(36, Math.max(0, Math.round(Number(f.discount_months) || 0))),
@@ -183,6 +200,25 @@ function PartnerForm({
             <option value="rejected">Rejected</option>
           </select>
         </label>
+        <label>
+          <span className={lab}>Tier (rates live in FirstPromoter campaigns)</span>
+          <select value={f.tier} onChange={(e) => set("tier", e.target.value)} className={field}>
+            <option value="affiliate">Affiliate Partner (10% first order, 5% after)</option>
+            <option value="vip">VIP Affiliate Partner (20% / 10%, audience coupon, own page)</option>
+            <option value="partnership">Partnership Program (30% / 15%, contracted)</option>
+          </select>
+        </label>
+        {f.tier === "vip" ? (
+          <label>
+            <span className={lab}>Next VIP review (every six months)</span>
+            <input
+              type="date"
+              value={f.review_at}
+              onChange={(e) => set("review_at", e.target.value)}
+              className={field}
+            />
+          </label>
+        ) : null}
         <label>
           <span className={lab}>Coupon code (their checkout backup)</span>
           <input
@@ -628,11 +664,21 @@ export function PartnersScreen() {
                     >
                       {p.status}
                     </span>
+                    <span
+                      className={`ml-1.5 inline-flex rounded-full border px-2.5 py-0.5 font-mono text-label uppercase ${TIER_STYLE[p.tier]}`}
+                    >
+                      {TIER_LABEL[p.tier]}
+                    </span>
+                    {p.tier === "vip" && p.review_at && new Date(p.review_at) <= new Date() ? (
+                      <span className="ml-1.5 inline-flex rounded-full border border-error/40 px-2.5 py-0.5 font-mono text-label uppercase text-error">
+                        Review due
+                      </span>
+                    ) : null}
                   </p>
                   <p className="mt-0.5 font-mono text-label uppercase text-muted">
                     ?ref={p.ref}
                     {p.coupon_code ? ` / ${p.coupon_code}` : ""}
-                    {` / ${p.discount_percent}% for ${p.discount_months} mo`}
+                    {p.tier === "vip" ? ` / ${p.discount_percent}% for ${p.discount_months} mo` : ""}
                     {p.email ? ` / ${p.email}` : " / no email yet"}
                   </p>
                 </div>

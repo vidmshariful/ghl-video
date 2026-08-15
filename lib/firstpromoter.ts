@@ -27,6 +27,83 @@ export function fpConfigured(): boolean {
   return Boolean(process.env.FIRSTPROMOTER_API_KEY && process.env.FIRSTPROMOTER_ACCOUNT_ID);
 }
 
+/**
+ * Create a promoter in FirstPromoter for an auto-approved Tier 1 signup.
+ * The ref token is set to OUR partner ref so ?ref=<slug> links match FP's
+ * tracking with no second token. New promoters land in the account's
+ * default campaign (the Affiliate Program per the program document), and
+ * FP's own invite email is suppressed: ours is the one that sends.
+ * Fail-soft: on any error the partner still exists and the portal shows
+ * its graceful "not linked yet" card; the team links by hand later.
+ */
+export async function createPromoter(input: {
+  email: string;
+  name: string;
+  ref: string;
+}): Promise<{ id: string; refToken: string | null } | null> {
+  if (!fpConfigured()) return null;
+  const [first, ...rest] = input.name.trim().split(/\s+/);
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 15_000);
+  try {
+    const r = await fetch(`${BASE}/company/promoters`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.FIRSTPROMOTER_API_KEY}`,
+        "ACCOUNT-ID": process.env.FIRSTPROMOTER_ACCOUNT_ID ?? "",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: input.email,
+        first_name: first || input.name,
+        last_name: rest.join(" ") || undefined,
+        ref_id: input.ref,
+        skip_email_notification: true,
+      }),
+      signal: ctrl.signal,
+      cache: "no-store",
+    });
+    const body = (await r.json().catch(() => null)) as {
+      id?: number | string;
+      promoter_campaigns?: { id?: number | string; ref_token?: string }[];
+    } | null;
+    if (!r.ok || !body?.id) {
+      console.error(`[fp] promoter create failed (${r.status}):`, JSON.stringify(body)?.slice(0, 300));
+      return null;
+    }
+
+    // FP mints its own ref token at create; align it with OUR ref so the
+    // partner's ?ref=<slug> link is the one FP tracks (verified live: the
+    // promoter_campaign PATCH is what changes the token).
+    let refToken = body.promoter_campaigns?.[0]?.ref_token ?? null;
+    const campaignId = body.promoter_campaigns?.[0]?.id;
+    if (campaignId && refToken !== input.ref) {
+      const patch = await fetch(`${BASE}/company/promoter_campaigns/${campaignId}`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${process.env.FIRSTPROMOTER_API_KEY}`,
+          "ACCOUNT-ID": process.env.FIRSTPROMOTER_ACCOUNT_ID ?? "",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ref_token: input.ref }),
+        cache: "no-store",
+      });
+      const patched = (await patch.json().catch(() => null)) as { ref_token?: string } | null;
+      if (patch.ok && patched?.ref_token === input.ref) refToken = input.ref;
+      else
+        console.error(
+          `[fp] ref token align failed for ${input.ref} (${patch.status}); FP token stays ${refToken}`,
+        );
+    }
+    return { id: String(body.id), refToken };
+  } catch (e) {
+    console.error("[fp] promoter create failed:", e instanceof Error ? e.message : e);
+    return null;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 /* tiny per-instance cache so a partner clicking around does not hammer FP */
 const cache = new Map<string, { at: number; body: unknown }>();
 const CACHE_MS = 60_000;

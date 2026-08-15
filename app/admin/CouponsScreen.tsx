@@ -458,10 +458,13 @@ export function CouponsScreen() {
   async function load() {
     const [c, p] = await Promise.all([
       supabase.from("coupons").select("*").order("created_at", { ascending: false }),
+      // audience coupons are a VIP-tier benefit only (program rules):
+      // affiliates and partnership members run on links alone
       supabase
         .from("partners")
         .select("id, ref, name, status, coupon_code")
         .in("status", ["invited", "active"])
+        .eq("tier", "vip")
         .order("name"),
     ]);
     if (c.error) setErr(c.error.message);

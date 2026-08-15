@@ -47,10 +47,27 @@ export async function POST(req: Request) {
 
   // First-touch affiliate ref (set as a cookie by the middleware from a ?ref=
   // link). Recorded on the order for attribution; it never affects the price.
-  const ref = refFromCookieHeader(req.headers.get("cookie"));
+  let ref = refFromCookieHeader(req.headers.get("cookie"));
   // FirstPromoter's visitor id: stamped on Stripe so FP attributes the sale
   // to the clicked link (fp_ref rides along as the fallback match).
-  const fpTid = fpTidFromCookieHeader(req.headers.get("cookie"));
+  let fpTid = fpTidFromCookieHeader(req.headers.get("cookie"));
+
+  // No self-referral (program rule): a partner's own link never applies to
+  // their own order. Drop the attribution entirely so neither our records
+  // nor FirstPromoter credit the sale.
+  if (ref) {
+    try {
+      const { partnerByRef } = await import("@/lib/partners");
+      const selfPartner = await partnerByRef(ref);
+      if (selfPartner?.email && selfPartner.email.toLowerCase() === email) {
+        console.warn(`[finalize] self-referral blocked: ${ref} bought with own link`);
+        ref = null;
+        fpTid = null;
+      }
+    } catch {
+      /* attribution stays; the rule is best-effort, never blocks checkout */
+    }
+  }
 
   if (!paymentIntentId.startsWith("pi_")) {
     return NextResponse.json({ error: "Missing payment." }, { status: 400 });
@@ -84,6 +101,18 @@ export async function POST(req: Request) {
     const chk = await checkCoupon(couponCode, product.sku);
     if (!chk.ok) {
       return NextResponse.json({ error: chk.reason }, { status: 400 });
+    }
+    // a partner's own audience coupon never discounts their own order
+    const { data: couponOwner } = await supabaseAdmin()
+      .from("partners")
+      .select("email")
+      .eq("coupon_code", chk.code)
+      .maybeSingle();
+    if (couponOwner?.email && (couponOwner.email as string).toLowerCase() === email) {
+      return NextResponse.json(
+        { error: "Your own partner code does not apply to your own orders." },
+        { status: 400 },
+      );
     }
     discountCents = chk.discountFor(product.price_cents);
     couponMeta = { code: chk.code, label: chk.label, discount_cents: discountCents };

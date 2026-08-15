@@ -22,6 +22,8 @@ export type PartnerRow = {
   name: string;
   email: string | null;
   status: PartnerStatus;
+  tier: "affiliate" | "vip" | "partnership";
+  review_at: string | null;
   photo_path: string | null;
   role_line: string;
   tagline: string | null;

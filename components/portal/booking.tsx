@@ -239,7 +239,7 @@ export function AffiliateApplyView({
       if (!r.ok) return setErr(j.error ?? "Something went wrong. Try again.");
       setDone(
         j.note ??
-          "Application received. We review every one by hand and reply by email, usually within a couple of days.",
+          "Welcome to the program. You earn 10% on every referred client's first order and 5% on everything they order after, for as long as they stay a client.",
       );
     } catch {
       setBusy(false);
@@ -252,12 +252,21 @@ export function AffiliateApplyView({
       <div className="max-w-3xl">
         <h1 className="font-display text-h2 text-ink">Affiliate program</h1>
         <div className="mt-8 rounded-[12px] border border-gold/40 bg-gold/[0.06] px-6 py-8">
-          <p className="font-display text-h4 text-ink">Application received.</p>
+          <p className="font-display text-h4 text-ink">You are in.</p>
           <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">{done}</p>
           <p className="mt-2 max-w-[var(--measure-body)] text-body-sm text-dim">
-            Once approved you get your own partner portal: your tracked link,
-            live stats, and payouts.
+            Your partner portal is live: your tracked link, live stats, and
+            payouts. Check your email for the way in, then sign in with this
+            same email.
           </p>
+          <a
+            href="/partners/"
+            target="_blank"
+            rel="noopener"
+            className="tap mt-5 inline-flex rounded-[8px] bg-brand-gradient px-6 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110"
+          >
+            Open your partner portal
+          </a>
         </div>
       </div>
     );
@@ -298,12 +307,12 @@ export function AffiliateApplyView({
       <ol className="mt-4 grid gap-3">
         {[
           {
-            title: "Apply below",
+            title: "Sign up below",
             line: "Two minutes. Tell us who you would send our way.",
           },
           {
-            title: "Get approved",
-            line: "We review by hand and reply by email, usually within a couple of days.",
+            title: "You are in instantly",
+            line: "No waiting. Your partner portal and tracked link go live the moment you sign up.",
           },
           {
             title: "Share your link",

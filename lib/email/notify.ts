@@ -303,6 +303,28 @@ export async function sendPartnerApplicationEmails(
   });
 }
 
+/** An auto-approved Tier 1 affiliate just joined: their portal is live
+ *  (partner_invite carries the way in), and the team gets a heads-up. */
+export async function sendAffiliateJoinedEmails(
+  db: SupabaseClient,
+  joined: { email: string; name: string; channel: string; audience: string },
+): Promise<void> {
+  await sendPartnerInviteEmail(db, { email: joined.email, name: joined.name });
+  await sendTemplate(db, "admin_new_application", adminAlertEmail(), null, {
+    name: escapeHtml(joined.name),
+    email: escapeHtml(joined.email),
+    channel: escapeHtml(joined.channel || "not said"),
+    audience: escapeHtml(joined.audience || "not said"),
+    admin_url: `${SITE_URL}/admin`,
+  });
+  await pushAdminNotifications(db, {
+    kind: "partner_joined",
+    title: "New affiliate partner joined",
+    body: `${joined.name}, ${joined.channel || "channel not said"}. Auto-approved into Tier 1.`,
+    href: "partners",
+  });
+}
+
 export async function sendPartnerInviteEmail(
   db: SupabaseClient,
   partner: { email: string; name: string },

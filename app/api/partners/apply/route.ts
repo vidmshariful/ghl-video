@@ -8,12 +8,14 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const s = (v: unknown, max: number) => String(v ?? "").trim().slice(0, max);
 
 /*
- * Public partner application (from /partners/apply). Creates a partners row
- * with status 'applied' and the answers on `application`; the team reviews
- * it in admin -> Partners -> Applications and approves or rejects from
- * there. The ref slug is derived from the name only as a suggestion; the
- * team sets the real one at approval. Honeypot + per-IP rate limit, same
- * discipline as the quote form.
+ * Tier 1 affiliate signup (from /partners/apply and the customer portal),
+ * AUTO-APPROVED per the program document: the partners row is created
+ * active, their login exists immediately, a FirstPromoter promoter is
+ * created with the same ref token so their ?ref= link tracks from minute
+ * one, and the welcome email carries the way into the portal. The team
+ * gets a joined alert instead of a review queue. VIP and Partnership
+ * tiers never enter here (invitation and contract only).
+ * Honeypot + per-IP rate limit, same discipline as the quote form.
  */
 export async function POST(req: Request) {
   const rl = rateLimit(`partner-apply:${clientIp(req)}`, 3, 600_000); // 3 per 10 min
@@ -66,28 +68,53 @@ export async function POST(req: Request) {
 
   const db = supabaseAdmin();
   const insert = (ref: string) =>
-    db.from("partners").insert({ ref, name, email, status: "applied", application });
+    db
+      .from("partners")
+      .insert({ ref, name, email, status: "active", tier: "affiliate", application })
+      .select("id, ref")
+      .single();
 
-  let { error } = await insert(base);
+  let { data: row, error } = await insert(base);
   if (error?.code === "23505" && /partners_ref_key|partners\.ref/i.test(error.message ?? "")) {
-    ({ error } = await insert(`${base}-${suffix}`));
+    ({ data: row, error } = await insert(`${base}-${suffix}`));
   }
-  if (error) {
-    if (error.code === "23505") {
-      // one row per email: an application or account already exists
+  if (error || !row) {
+    if (error?.code === "23505") {
+      // one row per email: an account already exists
       return NextResponse.json({
         ok: true,
-        note: "We already have this email on file. If you have an account, sign in at /partners.",
+        note: "We already have this email on file. Sign in at /partners to open your portal.",
       });
     }
-    console.error("partner apply failed:", error.message);
+    console.error("partner apply failed:", error?.message);
     return NextResponse.json(
       { error: "Something went wrong. Please email hi@ghlvideo.com and we'll set you up." },
       { status: 502 },
     );
   }
-  // applicant confirmation + team alert; fail-soft, never blocks the response
-  const { sendPartnerApplicationEmails } = await import("@/lib/email/notify");
-  await sendPartnerApplicationEmails(db, { email, name, channel, audience });
-  return NextResponse.json({ ok: true });
+
+  // their login, from minute one (they set a password from the sign-in page)
+  const { ensureAuthAccount } = await import("@/lib/checkout/account");
+  await ensureAuthAccount(email);
+
+  // their FirstPromoter promoter, same ref token as the link; fail-soft
+  // (the portal shows its graceful not-linked card until the team fixes it)
+  const { createPromoter } = await import("@/lib/firstpromoter");
+  const promoter = await createPromoter({ email, name, ref: row.ref });
+  if (promoter) {
+    await db
+      .from("partners")
+      .update({
+        fp_promoter_id: promoter.id,
+        ...(promoter.refToken && promoter.refToken !== row.ref
+          ? { fp_ref: promoter.refToken }
+          : {}),
+      })
+      .eq("id", row.id);
+  }
+
+  // welcome email with the way in + team joined alert; never blocks
+  const { sendAffiliateJoinedEmails } = await import("@/lib/email/notify");
+  await sendAffiliateJoinedEmails(db, { email, name, channel, audience });
+  return NextResponse.json({ ok: true, approved: true });
 }

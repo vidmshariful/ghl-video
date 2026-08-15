@@ -29,4 +29,5 @@ export const sitePages: readonly SitePage[] = [
   { name: "Privacy Policy", path: "/legal/privacy/", inNav: false, note: "footer" },
   { name: "Terms", path: "/legal/terms/", inNav: false, note: "footer" },
   { name: "Refund Policy", path: "/legal/refund/", inNav: false, note: "footer" },
+  { name: "Partner Program Terms", path: "/legal/partner-terms/", inNav: false, note: "direct link only" },
 ] as const;
