@@ -10,6 +10,7 @@ export const PORTAL_SECTIONS = [
   "book",
   "affiliate",
   "whitelabel",
+  "socialx",
   "settings",
   "help",
 ] as const;

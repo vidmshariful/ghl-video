@@ -117,41 +117,84 @@ export function BookACallView() {
 }
 
 /* ---------------- White-label ---------------- */
+const WL_SERVICES = [
+  {
+    title: "Custom video production",
+    line: "Explainers, demos, and feature videos, scripted and produced for your clients' brands. You brief us, we build it, you deliver it as yours.",
+  },
+  {
+    title: "Video editing",
+    line: "Ongoing editing for your clients' content: shorts, ads, podcasts, repurposing. Your editors, as far as anyone knows.",
+  },
+];
+
+const WL_STEPS = [
+  {
+    title: "Book the partnership call",
+    line: "We map the services you want to resell and the volume you expect.",
+  },
+  {
+    title: "Get your flat pricing",
+    line: "One wholesale rate per service, the same every time. No quotes, no surprises, easy to build an offer on.",
+  },
+  {
+    title: "Sell at your price",
+    line: "Your brand, your invoice, your margin. We deliver clean, unbranded files, and your clients never hear from us.",
+  },
+];
+
 export function WhiteLabelView() {
   return (
     <div className="w-full max-w-5xl">
       <h1 className="font-display text-h2 text-ink">White-label our studio</h1>
       <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
-        Run an agency or serve HighLevel clients? Offer our videos under your
-        own brand: your name on the work, our team behind it.
+        You run an agency. Your clients keep asking for video production and
+        editing. Instead of hiring a team, resell ours under your own brand:
+        flat pricing to you, your price to them.
       </p>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-3">
-        {[
-          {
-            title: "Your brand on everything",
-            line: "Explainers, demos, and editing delivered clean, ready to hand to your clients as yours.",
-          },
-          {
-            title: "Agency pricing",
-            line: "Wholesale rates that leave room for your margin on every project.",
-          },
-          {
-            title: "We stay invisible",
-            line: "Your clients never hear from us. You own the relationship end to end.",
-          },
-        ].map((c) => (
+      <h2 className="mt-8 font-display text-h4 text-ink">What you can white-label</h2>
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        {WL_SERVICES.map((c) => (
           <div key={c.title} className="rounded-[12px] border border-hair bg-surface p-5">
             <p className="text-body font-semibold text-ink">{c.title}</p>
             <p className="mt-1 text-body-sm text-muted">{c.line}</p>
           </div>
         ))}
       </div>
+      <p className="mt-3 text-body-sm text-dim">
+        White-label covers our custom production and editing services. The
+        premade library stays GHL Video branded.
+      </p>
 
-      <h2 className="mt-10 font-display text-h4 text-ink">Talk it through</h2>
+      <h2 className="mt-10 font-display text-h4 text-ink">How it works</h2>
+      <ol className="mt-4 grid gap-3">
+        {WL_STEPS.map((st, i) => (
+          <li key={st.title} className="flex gap-4 rounded-[12px] border border-hair bg-surface p-5">
+            <span className="font-mono text-h4 font-semibold text-gold">
+              {String(i + 1).padStart(2, "0")}
+            </span>
+            <div>
+              <p className="text-body font-semibold text-ink">{st.title}</p>
+              <p className="mt-0.5 text-body-sm text-muted">{st.line}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+
+      <div className="mt-8 rounded-[12px] border border-gold/30 bg-gold/[0.04] p-6">
+        <p className="font-mono text-label uppercase text-gold">Why agencies do this</p>
+        <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
+          Video is the service your clients ask for and the hardest one to
+          staff. A HighLevel-only studio behind your brand means you say yes
+          to every request, keep the margin, and never manage an editor.
+        </p>
+      </div>
+
+      <h2 className="mt-10 font-display text-h4 text-ink">Book the partnership call</h2>
       <p className="mt-2 max-w-[var(--measure-body)] text-body-sm text-muted">
-        Grab a slot on the partnership call and we will map your offer,
-        volume, and pricing together.
+        Thirty minutes. You leave with your flat rates and a clear way to
+        package them.
       </p>
       <div className="mt-5">
         <CalendarEmbed slug={WHITE_LABEL_CALENDAR_SLUG} title="Book: Agency Partnership / White-Label Call" />
@@ -212,8 +255,8 @@ export function AffiliateApplyView({
           <p className="font-display text-h4 text-ink">Application received.</p>
           <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">{done}</p>
           <p className="mt-2 max-w-[var(--measure-body)] text-body-sm text-dim">
-            Once approved you get your own partner portal: tracked links, promo
-            assets, live stats, and a standing discount for your audience.
+            Once approved you get your own partner portal: your tracked link,
+            live stats, and payouts.
           </p>
         </div>
       </div>
@@ -221,15 +264,66 @@ export function AffiliateApplyView({
   }
 
   return (
-    <div className="max-w-3xl">
-      <h1 className="font-display text-h2 text-ink">Affiliate program</h1>
+    <div className="max-w-4xl">
+      <h1 className="font-display text-h2 text-ink">Recommend us. Get paid.</h1>
       <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
-        Recommend GHL Video to your audience and earn on every sale. Your
-        people get a standing discount, you get tracked links, promo assets,
-        and recurring commissions.
+        You already know what our work does for your SaaS. Other founders in
+        your network are still explaining HighLevel with screen recordings.
+        Send them our way and earn a commission on every sale they make.
       </p>
 
-      <form onSubmit={submit} className="mt-8 grid gap-5 rounded-[12px] border border-hair bg-surface p-6">
+      <div className="mt-8 grid gap-4 sm:grid-cols-3">
+        {[
+          {
+            title: "You earn on every sale",
+            line: "Every order and plan that comes through your link credits you. Payouts run on the program schedule.",
+          },
+          {
+            title: "We do the selling",
+            line: "Your link lands them on the studio. Our work, our reviews, and our team close them. One intro is your whole job.",
+          },
+          {
+            title: "Track it live",
+            line: "Your own partner portal shows clicks, referrals, earnings, and payout history in real time.",
+          },
+        ].map((c) => (
+          <div key={c.title} className="rounded-[12px] border border-hair bg-surface p-5">
+            <p className="text-body font-semibold text-ink">{c.title}</p>
+            <p className="mt-1 text-body-sm text-muted">{c.line}</p>
+          </div>
+        ))}
+      </div>
+
+      <h2 className="mt-10 font-display text-h4 text-ink">How it works</h2>
+      <ol className="mt-4 grid gap-3">
+        {[
+          {
+            title: "Apply below",
+            line: "Two minutes. Tell us who you would send our way.",
+          },
+          {
+            title: "Get approved",
+            line: "We review by hand and reply by email, usually within a couple of days.",
+          },
+          {
+            title: "Share your link",
+            line: "A founder friend needs a video, you send one link, and the sale credits you automatically.",
+          },
+        ].map((st, i) => (
+          <li key={st.title} className="flex gap-4 rounded-[12px] border border-hair bg-surface p-5">
+            <span className="font-mono text-h4 font-semibold text-gold">
+              {String(i + 1).padStart(2, "0")}
+            </span>
+            <div>
+              <p className="text-body font-semibold text-ink">{st.title}</p>
+              <p className="mt-0.5 text-body-sm text-muted">{st.line}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+
+      <h2 className="mt-10 font-display text-h4 text-ink">Apply now</h2>
+      <form onSubmit={submit} className="mt-4 grid gap-5 rounded-[12px] border border-hair bg-surface p-6">
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="grid gap-2">
             <span className="font-mono text-label uppercase text-muted">Your name</span>
@@ -246,7 +340,7 @@ export function AffiliateApplyView({
             <input
               value={channel}
               onChange={(e) => setChannel(e.target.value)}
-              placeholder="YouTube, newsletter, community, clients"
+              placeholder="Your network, community, YouTube, clients"
               maxLength={120}
               className={fieldCls}
             />
@@ -273,13 +367,13 @@ export function AffiliateApplyView({
           />
         </label>
         <label className="grid gap-2">
-          <span className="font-mono text-label uppercase text-muted">How would you promote us</span>
+          <span className="font-mono text-label uppercase text-muted">Who would you send our way</span>
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             required
             rows={4}
-            placeholder="A few lines is plenty."
+            placeholder="Fellow SaaS founders, an agency circle, a community. A few lines is plenty."
             maxLength={2000}
             className={fieldCls}
           />
@@ -295,6 +389,132 @@ export function AffiliateApplyView({
           </button>
         </div>
       </form>
+    </div>
+  );
+}
+
+/* ---------------- SocialX (customer portal) ---------------- */
+/* Set when SocialX's site URL should be linked from the portal; empty
+ * hides the button. */
+const SOCIALX_URL = "";
+
+export function SocialXView({ authedFetch }: {
+  authedFetch: (path: string, init?: RequestInit) => Promise<unknown>;
+}) {
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [done, setDone] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setErr("");
+    try {
+      const j = (await authedFetch("/api/portal/socialx/", {
+        method: "POST",
+        body: JSON.stringify({ message }),
+      })) as { ok?: boolean; error?: string };
+      setBusy(false);
+      if (j.ok) setDone(true);
+      else setErr(j.error ?? "Something went wrong. Try again.");
+    } catch {
+      setBusy(false);
+      setErr("Something went wrong. Try again.");
+    }
+  }
+
+  return (
+    <div className="w-full max-w-4xl">
+      <h1 className="font-display text-h2 text-ink">SocialX: your social media, managed</h1>
+      <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
+        The same studio behind your videos also runs social media for SaaS
+        brands: content, design, and posting handled end to end, so your
+        channels stay alive while you build.
+      </p>
+
+      <div className="mt-8 grid gap-4 sm:grid-cols-3">
+        {[
+          {
+            title: "Made for SaaS",
+            line: "Content that explains a product, not generic motivation posts. We already know your world.",
+          },
+          {
+            title: "Videos included in the loop",
+            line: "Your GHL Video work gets cut into posts, so both services feed each other.",
+          },
+          {
+            title: "One team, no handoffs",
+            line: "The people who know your brand from your videos run your feed too.",
+          },
+        ].map((c) => (
+          <div key={c.title} className="rounded-[12px] border border-hair bg-surface p-5">
+            <p className="text-body font-semibold text-ink">{c.title}</p>
+            <p className="mt-1 text-body-sm text-muted">{c.line}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-8 rounded-[12px] border border-gold/30 bg-gold/[0.04] p-6">
+        <p className="font-mono text-label uppercase text-gold">Your client deal</p>
+        <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
+          As a GHL Video client you get an extra <span className="font-semibold text-ink">10% off</span>,
+          on top of the pricing already shown on the SocialX site. Request your
+          personal code below and it lands in your inbox within a day.
+        </p>
+        {SOCIALX_URL ? (
+          <a
+            href={SOCIALX_URL}
+            target="_blank"
+            rel="noopener"
+            className="tap mt-4 inline-flex rounded-[8px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
+          >
+            See the plans
+          </a>
+        ) : null}
+      </div>
+
+      {done ? (
+        <div className="mt-6 rounded-[12px] border border-gold/40 bg-gold/[0.06] px-6 py-8">
+          <p className="font-display text-h4 text-ink">Done. Your code is on the way.</p>
+          <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
+            We send it to your account email personally, usually within a day.
+            It stacks with the pricing shown on the SocialX site.
+          </p>
+        </div>
+      ) : (
+        <form onSubmit={submit} className="mt-6 grid gap-4 rounded-[12px] border border-hair bg-surface p-6">
+          <div>
+            <p className="font-mono text-label uppercase text-muted">Get your 10% code</p>
+            <p className="mt-1 text-body-sm text-dim">
+              We know your account already; nothing else to fill in.
+            </p>
+          </div>
+          <label className="grid gap-2">
+            <span className="font-mono text-label uppercase text-muted">
+              Anything we should know (optional)
+            </span>
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              rows={3}
+              placeholder="Which channels you care about, posting volume, timing."
+              maxLength={1000}
+              className={fieldCls}
+            />
+          </label>
+          {err && <p className="text-body-sm text-error">{err}</p>}
+          <div>
+            <button
+              type="submit"
+              disabled={busy}
+              className="tap rounded-[8px] bg-brand-gradient px-6 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60"
+            >
+              {busy ? "Sending" : "Request my code"}
+            </button>
+          </div>
+        </form>
+      )}
     </div>
   );
 }

@@ -434,8 +434,9 @@ function DashboardView({
         </p>
       ) : null}
       <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
-        Your audience gets {p.discountPercent}% off every GHL Video service with your
-        code{p.couponCode ? ` ${p.couponCode}` : ""}. Your links credit every sale to you.
+        {p.couponCode
+          ? `Your audience gets ${p.discountPercent}% off every GHL Video service with your code ${p.couponCode}. Your links credit every sale to you.`
+          : "Your links credit every sale to you automatically. Share them anywhere you recommend the studio."}
       </p>
 
       {live ? (
@@ -497,7 +498,8 @@ function DashboardView({
             </>
           ) : (
             <p className="mt-2 text-body text-muted">
-              No coupon code is set for your account yet. We are on it.
+              Your account runs on tracked links alone: share your link and
+              every sale credits you. No code needed.
             </p>
           )}
         </div>
@@ -991,18 +993,26 @@ function AssetsView({ me }: { me: Me }) {
 function ResourcesView({ me }: { me: Me }) {
   const p = me.partner!;
   const steps = [
-    {
-      title: "Share your partner page",
-      line: "It carries your face, your offer, and your discount. It is the strongest first touch.",
-    },
+    ...(me.pages && me.pages.length > 0
+      ? [
+          {
+            title: "Share your partner page",
+            line: "It carries your face, your offer, and your discount. It is the strongest first touch.",
+          },
+        ]
+      : []),
     {
       title: "Use tracked links everywhere",
       line: "Every link in Links & Assets carries your referral, so every sale credits you on its own.",
     },
-    {
-      title: "Share your code with every recommendation",
-      line: `${p.couponCode ?? "Your coupon"} is how your audience gets their discount at checkout. On your partner page, the buy buttons apply it for them.`,
-    },
+    ...(p.couponCode
+      ? [
+          {
+            title: "Share your code with every recommendation",
+            line: `${p.couponCode} is how your audience gets their discount at checkout. On your partner page, the buy buttons apply it for them.`,
+          },
+        ]
+      : []),
     {
       title: "Send warm intros to hi@ghlvideo.com",
       line: "For bigger fish, a direct intro works better than a link. We will take great care of them, on your credit.",
@@ -1010,8 +1020,10 @@ function ResourcesView({ me }: { me: Me }) {
   ];
   const faqs = [
     {
-      q: "What does my audience get?",
-      a: `${p.discountPercent}% off every GHL Video service. On editing plans it runs for the first ${p.discountMonths} months; on one-time orders it applies to the purchase.`,
+      q: p.couponCode ? "What does my audience get?" : "How do my referrals buy?",
+      a: p.couponCode
+        ? `${p.discountPercent}% off every GHL Video service. On editing plans it runs for the first ${p.discountMonths} months; on one-time orders it applies to the purchase.`
+        : "They buy at standard pricing through your link; the sale credits you automatically. Your commission comes from us, not from a discount.",
     },
     {
       q: "How do I get credited?",

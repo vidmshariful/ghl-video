@@ -13,7 +13,12 @@ import {
 import { AvatarUploader, PasswordCard } from "@/components/portal/account";
 import { PortalHelp } from "@/components/portal/help";
 import { TeamCard } from "@/components/portal/team";
-import { AffiliateApplyView, BookACallView, WhiteLabelView } from "@/components/portal/booking";
+import {
+  AffiliateApplyView,
+  BookACallView,
+  SocialXView,
+  WhiteLabelView,
+} from "@/components/portal/booking";
 import { PORTAL_SECTIONS, type PortalSection } from "./sections";
 import {
   actForHeader,
@@ -28,6 +33,7 @@ import {
   Layers,
   LayoutDashboard,
   LifeBuoy,
+  Megaphone,
   MessageSquare,
   PhoneCall,
   Repeat,
@@ -1233,6 +1239,7 @@ function Portal({
             items: [
               { key: "affiliate", label: "Affiliate program", icon: <Handshake /> },
               { key: "whitelabel", label: "White-label", icon: <Layers /> },
+              { key: "socialx", label: "SocialX", icon: <Megaphone /> },
             ],
           },
         ]
@@ -1360,6 +1367,8 @@ function Portal({
             />
           ) : section === "whitelabel" && profile.isOwner ? (
             <WhiteLabelView />
+          ) : section === "socialx" && profile.isOwner ? (
+            <SocialXView authedFetch={authedFetch} />
           ) : section === "settings" ? (
             <SettingsView profile={profile} onSaved={loadProfile} />
           ) : section === "help" ? (
