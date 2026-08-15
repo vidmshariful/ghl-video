@@ -197,10 +197,27 @@ export async function POST(req: Request) {
       metadata: {
         supabase_customer_id: customer.id,
         ...(fpTid ? { fp_tid: fpTid } : {}),
+        ...(fpTid && ref ? { fp_ref: ref } : {}),
       },
     });
     stripeCustomerId = sc.id;
     await db.from("customers").update({ stripe_customer_id: stripeCustomerId }).eq("id", customer.id);
+  } else if (fpTid) {
+    // A returning buyer arriving via a partner link. FirstPromoter's Stripe
+    // integration matches sales on CUSTOMER metadata, so the visitor id must
+    // live there too; but never overwrite an existing fp_tid, because a
+    // client is attributed to a partner once, permanently.
+    try {
+      const existing = await stripe().customers.retrieve(stripeCustomerId);
+      const meta = (existing as { metadata?: Record<string, string> }).metadata ?? {};
+      if (!meta.fp_tid) {
+        await stripe().customers.update(stripeCustomerId, {
+          metadata: { fp_tid: fpTid, ...(ref ? { fp_ref: ref } : {}) },
+        });
+      }
+    } catch (e) {
+      console.error("[finalize] fp_tid customer stamp failed:", (e as Error).message);
+    }
   }
 
   // Stamp the intent with the authoritative amount, the customer, and the
