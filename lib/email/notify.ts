@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendEmail } from "./send";
 import { DEFAULT_TEMPLATES, SITE_URL, escapeHtml, renderTemplate, wrapEmail } from "./templates";
+import { pushNotification, pushAdminNotifications } from "@/lib/notifications";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -104,6 +105,20 @@ export async function sendOrderPaidEmails(db: SupabaseClient, orderId: string): 
     customer_email: escapeHtml(o.email),
     admin_url: `${SITE_URL}/admin`,
   });
+  await pushNotification(db, {
+    audience: "customer",
+    email: o.email,
+    kind: "order_paid",
+    title: "Your order is confirmed",
+    body: `${o.productName}, ${money(o.amountCents, o.currency)}. Next step: your branding brief.`,
+    href: `orders/${orderId}`,
+  });
+  await pushAdminNotifications(db, {
+    kind: "order_paid",
+    title: `New order: ${money(o.amountCents, o.currency)}`,
+    body: `${o.productName} for ${o.email}`,
+    href: "orders",
+  });
 }
 
 /** Delivery email, sent when the stage first moves to Delivered. */
@@ -116,6 +131,14 @@ export async function sendOrderDeliveredEmail(db: SupabaseClient, orderId: strin
     order_code: escapeHtml(o.code),
     delivery_url: escapeHtml(o.deliveryUrl || `${SITE_URL}/portal`),
     portal_url: `${SITE_URL}/portal`,
+  });
+  await pushNotification(db, {
+    audience: "customer",
+    email: o.email,
+    kind: "order_delivered",
+    title: "Your videos are delivered",
+    body: `${o.productName} is ready. Grab your files.`,
+    href: `orders/${orderId}`,
   });
 }
 
@@ -133,6 +156,21 @@ export async function sendOrderRefundedEmail(
     order_code: escapeHtml(o.code),
     amount: money(refundedCents || o.amountCents, o.currency),
     portal_url: `${SITE_URL}/portal`,
+  });
+  const refunded = money(refundedCents || o.amountCents, o.currency);
+  await pushNotification(db, {
+    audience: "customer",
+    email: o.email,
+    kind: "order_refunded",
+    title: "Your refund is on the way",
+    body: `${refunded} back to your card for ${o.productName}.`,
+    href: `orders/${orderId}`,
+  });
+  await pushAdminNotifications(db, {
+    kind: "order_refunded",
+    title: `Order refunded: ${refunded}`,
+    body: `${o.productName} for ${o.email}`,
+    href: "orders",
   });
 }
 
@@ -164,6 +202,20 @@ export async function sendSubscriptionStartedEmail(db: SupabaseClient, rowId: st
     amount: money(s.amountCents, s.currency),
     portal_url: `${SITE_URL}/portal`,
   });
+  await pushNotification(db, {
+    audience: "customer",
+    email: s.email,
+    kind: "subscription_started",
+    title: "Your editing plan is live",
+    body: `${s.planName}, ${money(s.amountCents, s.currency)} monthly.`,
+    href: "subscriptions",
+  });
+  await pushAdminNotifications(db, {
+    kind: "subscription_started",
+    title: `New subscription: ${s.planName}`,
+    body: `${s.email}, ${money(s.amountCents, s.currency)} monthly`,
+    href: "subscriptions",
+  });
 }
 
 /** The plan actually ended (Stripe subscription deleted). */
@@ -174,6 +226,20 @@ export async function sendSubscriptionCanceledEmail(db: SupabaseClient, rowId: s
     customer_name: escapeHtml(s.name || "there"),
     plan_name: escapeHtml(s.planName),
     portal_url: `${SITE_URL}/portal`,
+  });
+  await pushNotification(db, {
+    audience: "customer",
+    email: s.email,
+    kind: "subscription_canceled",
+    title: "Your plan has ended",
+    body: `${s.planName} is canceled. Restart anytime from your portal.`,
+    href: "subscriptions",
+  });
+  await pushAdminNotifications(db, {
+    kind: "subscription_canceled",
+    title: "Subscription canceled",
+    body: `${s.email}, ${s.planName}`,
+    href: "subscriptions",
   });
 }
 
@@ -187,6 +253,11 @@ export async function sendQuoteReceivedEmail(
   await sendTemplate(db, "quote_received", email, name || null, {
     name: escapeHtml(name || "there"),
     contact_url: `${SITE_URL}/contact`,
+  });
+  await pushAdminNotifications(db, {
+    kind: "quote_received",
+    title: "New quote request",
+    body: `${name || "Someone"}, ${email}. The lead is in HighLevel.`,
   });
 }
 
@@ -206,6 +277,12 @@ export async function sendPartnerApplicationEmails(
     audience: escapeHtml(applicant.audience || "not said"),
     admin_url: `${SITE_URL}/admin`,
   });
+  await pushAdminNotifications(db, {
+    kind: "partner_application",
+    title: "New partner application",
+    body: `${applicant.name}, ${applicant.channel || "channel not said"}`,
+    href: "partners",
+  });
 }
 
 export async function sendPartnerInviteEmail(
@@ -216,6 +293,14 @@ export async function sendPartnerInviteEmail(
     partner_name: escapeHtml(partner.name || "there"),
     partner_email: escapeHtml(partner.email),
     partners_url: `${SITE_URL}/partners`,
+  });
+  await pushNotification(db, {
+    audience: "partner",
+    email: partner.email,
+    kind: "partner_invited",
+    title: "Welcome to the partner program",
+    body: "Your portal is live. Grab your links, assets, and coupon.",
+    href: "dashboard",
   });
 }
 
@@ -234,5 +319,11 @@ export async function sendDisputeAlertEmail(
     amount: money(dispute.amountCents, o?.currency ?? "usd"),
     reason: escapeHtml(dispute.reason || "not given"),
     admin_url: `${SITE_URL}/admin`,
+  });
+  await pushAdminNotifications(db, {
+    kind: "dispute",
+    title: `Payment dispute: ${money(dispute.amountCents, o?.currency ?? "usd")}`,
+    body: `${o?.email ?? "unknown"}, ${o?.productName ?? "unknown product"}. Respond in Stripe.`,
+    href: "orders",
   });
 }

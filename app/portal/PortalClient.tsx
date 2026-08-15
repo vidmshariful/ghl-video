@@ -1,10 +1,25 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
-import { PortalSidebar, PortalTopbar } from "@/components/portal/Shell";
-import { LayoutDashboard, MessageSquare, Repeat, ShoppingCart } from "lucide-react";
+import {
+  NotificationsBell,
+  PortalSidebar,
+  PortalTopbar,
+  ProfileMenu,
+  TopIconButton,
+} from "@/components/portal/Shell";
+import { AvatarUploader, PasswordCard } from "@/components/portal/account";
+import { PortalHelp } from "@/components/portal/help";
+import {
+  LayoutDashboard,
+  LifeBuoy,
+  MessageSquare,
+  Repeat,
+  Settings,
+  ShoppingCart,
+} from "lucide-react";
 import { MessagesView } from "./MessagesView";
 import { chatGet } from "@/components/chat/api";
 
@@ -34,12 +49,28 @@ const money = (cents: number, cur = "usd") =>
   (cents / 100).toLocaleString("en-US", { style: "currency", currency: cur.toUpperCase(), minimumFractionDigits: 0 });
 const day = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
-async function authedFetch(path: string) {
+async function authedFetch(path: string, init?: RequestInit) {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
-  const r = await fetch(path, { headers: token ? { Authorization: `Bearer ${token}` } : {}, cache: "no-store" });
+  const r = await fetch(path, {
+    ...init,
+    headers: {
+      ...(init?.headers ?? {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(init?.body ? { "Content-Type": "application/json" } : {}),
+    },
+    cache: "no-store",
+  });
   return r.json();
 }
+
+type MyProfile = {
+  email: string;
+  name: string | null;
+  company: string | null;
+  phone: string | null;
+  avatarUrl: string | null;
+};
 
 type OrderSummary = {
   id: string;
@@ -654,8 +685,114 @@ function SubscriptionsView() {
   );
 }
 
+/* ---- settings ---- */
+function SettingsView({
+  profile,
+  onSaved,
+}: {
+  profile: MyProfile;
+  onSaved: () => void;
+}) {
+  const [name, setName] = useState(profile.name ?? "");
+  const [company, setCompany] = useState(profile.company ?? "");
+  const [phone, setPhone] = useState(profile.phone ?? "");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setMsg("");
+    setErr("");
+    const j = await authedFetch("/api/portal/me", {
+      method: "PATCH",
+      body: JSON.stringify({ name, company, phone }),
+    });
+    setBusy(false);
+    if (j.ok) {
+      setMsg("Saved.");
+      onSaved();
+    } else setErr(j.error ?? "Could not save. Try again.");
+  }
+
+  return (
+    <div className="max-w-3xl">
+      <h1 className="font-display text-h2 text-ink">Settings</h1>
+      <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
+        Your details, photo, and password.
+      </p>
+
+      <div className="mt-8 rounded-[12px] border border-hair bg-surface p-6">
+        <AvatarUploader
+          name={profile.name}
+          email={profile.email}
+          avatarUrl={profile.avatarUrl}
+          endpoint="/api/portal/me/avatar"
+          onChanged={() => onSaved()}
+        />
+        <form onSubmit={save} className="mt-6 grid gap-4 border-t border-hair pt-6">
+          <label className="grid gap-2">
+            <span className="font-mono text-label uppercase text-muted">Your name</span>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              maxLength={120}
+              className={authFieldCls}
+            />
+          </label>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="grid gap-2">
+              <span className="font-mono text-label uppercase text-muted">Company / SaaS</span>
+              <input
+                value={company}
+                onChange={(e) => setCompany(e.target.value)}
+                maxLength={160}
+                className={authFieldCls}
+              />
+            </label>
+            <label className="grid gap-2">
+              <span className="font-mono text-label uppercase text-muted">Phone</span>
+              <input
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                maxLength={40}
+                className={authFieldCls}
+              />
+            </label>
+          </div>
+          <div className="grid gap-2">
+            <span className="font-mono text-label uppercase text-muted">Sign-in email</span>
+            <p className="text-body text-ink">{profile.email}</p>
+            <p className="text-body-sm text-dim">
+              Your orders and login hang on this email. To change it, write to
+              hi@ghlvideo.com.
+            </p>
+          </div>
+          {msg && <p className="text-body-sm text-green">{msg}</p>}
+          {err && <p className="text-body-sm text-error">{err}</p>}
+          <div>
+            <button
+              type="submit"
+              disabled={busy}
+              className="tap rounded-[8px] bg-brand-gradient px-6 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60"
+            >
+              {busy ? "Saving" : "Save changes"}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div className="mt-6">
+        <PasswordCard resetRedirect="/portal/set-password/" />
+      </div>
+    </div>
+  );
+}
+
 /* ---- signed-in portal (app shell) ---- */
-type PortalSection = "dashboard" | "orders" | "messages" | "subscriptions";
+type PortalSection = "dashboard" | "orders" | "messages" | "subscriptions" | "settings" | "help";
 
 function PageHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
@@ -697,11 +834,13 @@ function StatCard({
 
 function PortalDashboard({
   session,
+  firstName,
   unread,
   onOpenOrder,
   onGo,
 }: {
   session: Session;
+  firstName: string | null;
   unread: number;
   onOpenOrder: (id: string) => void;
   onGo: (s: PortalSection) => void;
@@ -727,7 +866,9 @@ function PortalDashboard({
   return (
     <div>
       <p className="font-mono text-label uppercase text-gold">[ Your portal ]</p>
-      <h1 className="mt-3 font-display text-h2 text-ink">Welcome back.</h1>
+      <h1 className="mt-3 font-display text-h2 text-ink">
+        {firstName ? `Welcome back, ${firstName}.` : "Welcome back."}
+      </h1>
       <p className="mt-1 font-mono text-label uppercase text-dim">{session.user.email}</p>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-3">
@@ -803,6 +944,7 @@ function Portal({ session }: { session: Session }) {
   const [openOrder, setOpenOrder] = useState<string | null>(null);
   const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
   const [msgUnread, setMsgUnread] = useState(0);
+  const [profile, setProfile] = useState<MyProfile | null>(null);
 
   // Poll the unread count so the Messages badge stays live from any section.
   useEffect(() => {
@@ -819,6 +961,16 @@ function Portal({ session }: { session: Session }) {
     };
   }, []);
 
+  // Who is signed in: name + photo for the top bar and Settings.
+  const loadProfile = () => {
+    authedFetch("/api/portal/me")
+      .then((j) => {
+        if (j?.email) setProfile(j as MyProfile);
+      })
+      .catch(() => {});
+  };
+  useEffect(loadProfile, []);
+
   const go = (s: PortalSection) => {
     setSection(s);
     setOpenOrder(null);
@@ -828,6 +980,20 @@ function Portal({ session }: { session: Session }) {
     setSection("messages");
   };
 
+  /* bell links: "orders", "orders/<id>", "messages", "subscriptions" */
+  const openHref = (href: string) => {
+    const [head, tail] = href.split("/");
+    if (head === "orders" && tail) {
+      setSection("orders");
+      setOpenOrder(tail);
+      return;
+    }
+    if (["dashboard", "orders", "messages", "subscriptions", "settings", "help"].includes(head)) {
+      go(head as PortalSection);
+    }
+  };
+
+  const email = session.user.email ?? "";
   const nav = [
     { key: "dashboard", label: "Dashboard", icon: <LayoutDashboard /> },
     { key: "orders", label: "Orders", icon: <ShoppingCart /> },
@@ -836,141 +1002,100 @@ function Portal({ session }: { session: Session }) {
   ];
 
   return (
-    <div className="flex flex-1 flex-col md:flex-row">
-      <PortalSidebar
-        groups={[{ title: "", items: nav }]}
-        active={section}
-        onSelect={(k) => go(k as PortalSection)}
-        storageKey="ghlv-portal-nav"
-      />
-
-      <section className="min-w-0 flex-1 p-4 md:p-8">
-        <div key={section + (openOrder ?? "")} className="portal-view">
-        {section === "dashboard" ? (
-          <PortalDashboard
-            session={session}
-            unread={msgUnread}
-            onOpenOrder={(id) => {
-              setSection("orders");
-              setOpenOrder(id);
-            }}
-            onGo={go}
-          />
-        ) : section === "orders" ? (
-          openOrder ? (
-            <OrderDetailView
-              id={openOrder}
-              onBack={() => setOpenOrder(null)}
-              onMessageStudio={messageStudio}
+    <>
+      <PortalTopbar
+        area="Portal"
+        right={
+          <>
+            <TopIconButton
+              label="Messages"
+              badge={msgUnread}
+              onClick={() => go("messages")}
+            >
+              <MessageSquare size={16} />
+            </TopIconButton>
+            <TopIconButton label="Help & guide" mobileHidden onClick={() => go("help")}>
+              <LifeBuoy size={16} />
+            </TopIconButton>
+            <NotificationsBell
+              endpoint="/api/portal/notifications"
+              fetcher={authedFetch}
+              onOpenHref={openHref}
             />
+            <ProfileMenu
+              name={profile?.name}
+              email={email}
+              avatarUrl={profile?.avatarUrl}
+              onSettings={() => go("settings")}
+              onHelp={() => go("help")}
+              onSignOut={() => supabase.auth.signOut()}
+            />
+          </>
+        }
+      />
+      <div className="flex flex-1 flex-col md:flex-row">
+        <PortalSidebar
+          groups={[{ title: "", items: nav }]}
+          active={section}
+          onSelect={(k) => go(k as PortalSection)}
+          storageKey="ghlv-portal-nav"
+          bottom={[{ key: "settings", label: "Settings", icon: <Settings /> }]}
+        />
+
+        <section className="min-w-0 flex-1 p-4 md:p-8">
+          <div key={section + (openOrder ?? "")} className="portal-view">
+          {section === "dashboard" ? (
+            <PortalDashboard
+              session={session}
+              firstName={profile?.name?.split(" ")[0] ?? null}
+              unread={msgUnread}
+              onOpenOrder={(id) => {
+                setSection("orders");
+                setOpenOrder(id);
+              }}
+              onGo={go}
+            />
+          ) : section === "orders" ? (
+            openOrder ? (
+              <OrderDetailView
+                id={openOrder}
+                onBack={() => setOpenOrder(null)}
+                onMessageStudio={messageStudio}
+              />
+            ) : (
+              <div>
+                <PageHeader title="Orders" subtitle="Your projects, delivery, and invoices." />
+                <div className="mt-6">
+                  <OrdersList onOpen={setOpenOrder} />
+                </div>
+              </div>
+            )
+          ) : section === "messages" ? (
+            <MessagesView
+              pendingOrderId={pendingOrderId}
+              onConsumePending={() => setPendingOrderId(null)}
+              onUnread={setMsgUnread}
+            />
+          ) : section === "settings" ? (
+            profile ? (
+              <SettingsView profile={profile} onSaved={loadProfile} />
+            ) : (
+              <p className="text-body text-muted">Loading your account...</p>
+            )
+          ) : section === "help" ? (
+            <PortalHelp audience="customer" />
           ) : (
             <div>
-              <PageHeader title="Orders" subtitle="Your projects, delivery, and invoices." />
+              <PageHeader title="Subscriptions" subtitle="Manage your editing plan and billing." />
               <div className="mt-6">
-                <OrdersList onOpen={setOpenOrder} />
+                <SubscriptionsView />
               </div>
             </div>
-          )
-        ) : section === "messages" ? (
-          <MessagesView
-            pendingOrderId={pendingOrderId}
-            onConsumePending={() => setPendingOrderId(null)}
-            onUnread={setMsgUnread}
-          />
-        ) : (
-          <div>
-            <PageHeader title="Subscriptions" subtitle="Manage your editing plan and billing." />
-            <div className="mt-6">
-              <SubscriptionsView />
-            </div>
+          )}
           </div>
-        )}
-        </div>
-      </section>
-    </div>
-  );
-}
-
-/* ---- top bar + profile menu ---- */
-function ProfileMenu({ email }: { email: string }) {
-  const [open, setOpen] = useState(false);
-  const [notice, setNotice] = useState("");
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const onDown = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, []);
-
-  const initials = (email.trim()[0] ?? "?").toUpperCase();
-
-  async function changePassword() {
-    setNotice("Sending...");
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/portal/set-password/`,
-    });
-    setNotice(error ? error.message : "Check your email for a link to change your password.");
-  }
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        className="tap flex items-center gap-2 rounded-full border border-hair py-1 pl-1 pr-2.5 transition-colors hover:border-gold/50"
-      >
-        <span className="grid h-7 w-7 place-items-center rounded-full bg-brand-gradient font-display text-label font-bold text-canvas">
-          {initials}
-        </span>
-        <span className="hidden max-w-[14rem] truncate font-mono text-label uppercase text-muted sm:inline">
-          {email}
-        </span>
-        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" className="text-dim">
-          <path
-            d="M5 8l5 5 5-5"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </button>
-      {open ? (
-        <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-[12px] border border-hair bg-surface p-2 shadow-2xl">
-          <p className="break-all px-3 py-2 font-mono text-label uppercase text-dim">{email}</p>
-          <div className="my-1 border-t border-hair" />
-          <button
-            type="button"
-            onClick={changePassword}
-            className="tap w-full rounded-[4px] px-3 py-2 text-left text-body-sm text-muted transition-colors hover:bg-hair/40 hover:text-ink"
-          >
-            Change password
-          </button>
-          {notice ? <p className="px-3 py-1 text-body-sm text-gold">{notice}</p> : null}
-          <button
-            type="button"
-            onClick={() => supabase.auth.signOut()}
-            className="tap w-full rounded-[4px] px-3 py-2 text-left text-body-sm text-muted transition-colors hover:bg-hair/40 hover:text-error"
-          >
-            Sign out
-          </button>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function PortalTopBar({ session }: { session: Session | null }) {
-  return (
-    <PortalTopbar
-      area="Portal"
-      right={session ? <ProfileMenu email={session.user.email ?? ""} /> : null}
-    />
+        </section>
+      </div>
+    </>
   );
 }
 
@@ -989,15 +1114,20 @@ export function PortalClient() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <PortalTopBar session={session} />
       {!ready ? (
-        <Shell>
-          <p className="text-body text-muted">Loading...</p>
-        </Shell>
+        <>
+          <PortalTopbar area="Portal" />
+          <Shell>
+            <p className="text-body text-muted">Loading...</p>
+          </Shell>
+        </>
       ) : session ? (
         <Portal session={session} />
       ) : (
-        <LoginView />
+        <>
+          <PortalTopbar area="Portal" />
+          <LoginView />
+        </>
       )}
     </div>
   );

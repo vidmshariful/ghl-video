@@ -100,10 +100,18 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ error: (e as Error).message }, { status: 400 });
   }
 
+  // sign with the teammate's display name, not their raw email
+  const [profile, { data: adminRow }] = await Promise.all([
+    import("@/lib/profiles").then((m) => m.profileByEmail(db, admin.email)),
+    db.from("admins").select("name").ilike("email", admin.email).maybeSingle(),
+  ]);
+  const senderName =
+    profile.displayName || ((adminRow?.name as string | null) ?? null) || admin.email;
+
   const message = await postMessage(db, {
     conversationId: id,
     senderRole: "studio",
-    senderName: admin.email,
+    senderName,
     body,
     attachments,
   });

@@ -22,8 +22,9 @@ export const ROLE_BLURB: Record<Role, string> = {
   sales_rep: "Sales tools: orders, clients, invoices, and buy links.",
 };
 
-/* The menu items that can be granted or removed per user. 'dashboard' is
- * always visible; 'team' is admin-only and never a per-user toggle. */
+/* The menu items that can be granted or removed per user. 'dashboard',
+ * 'settings', and 'help' are always visible; inside Settings, the Team and
+ * Integrations tabs are admin-only and never a per-user toggle. */
 export const TOGGLEABLE_VIEWS: { key: View; label: string; group: string }[] = [
   { key: "orders", label: "Orders", group: "Sales" },
   { key: "invoices", label: "Invoices", group: "Sales" },
@@ -51,7 +52,7 @@ export const ROLE_DEFAULT_FEATURES: Record<Role, View[]> = {
   sales_rep: ["orders", "invoices", "links", "messages", "customers"],
 };
 
-/* A user's effective granted menu items (excludes dashboard + team). A null
+/* A user's effective granted menu items (excludes the always-on views). A null
  * features value means "use the role default"; an array is an explicit
  * override the admin has set. */
 export function effectiveFeatures(
@@ -69,8 +70,7 @@ export function canAccess(
   role: Role,
   features: string[] | null | undefined,
 ): boolean {
-  if (view === "dashboard") return true;
-  if (view === "team") return role === "admin";
+  if (view === "dashboard" || view === "settings" || view === "help") return true;
   return effectiveFeatures(role, features).includes(view);
 }
 

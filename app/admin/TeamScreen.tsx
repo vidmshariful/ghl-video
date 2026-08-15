@@ -44,7 +44,14 @@ function RoleBadge({ role }: { role: Role }) {
   );
 }
 
-export function TeamScreen({ meEmail }: { meEmail: string }) {
+export function TeamScreen({
+  meEmail,
+  embedded = false,
+}: {
+  meEmail: string;
+  /* true when rendered as a Settings tab: the tab bar already names it */
+  embedded?: boolean;
+}) {
   const [team, setTeam] = useState<TeamRow[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [err, setErr] = useState("");
@@ -101,8 +108,8 @@ export function TeamScreen({ meEmail }: { meEmail: string }) {
     <div>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="font-display text-h2 text-ink">Team</h1>
-          <p className="mt-1 max-w-xl text-body-sm text-muted">
+          {!embedded && <h1 className="font-display text-h2 text-ink">Team</h1>}
+          <p className={`${embedded ? "" : "mt-1 "}max-w-xl text-body-sm text-muted`}>
             Who can sign in to manage the platform, and what each person can see. New
             teammates get a link to set their own password.
           </p>

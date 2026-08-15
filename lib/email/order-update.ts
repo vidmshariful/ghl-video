@@ -25,9 +25,6 @@ export async function sendOrderUpdateEmail(
   updateMessage: string,
 ): Promise<boolean> {
   try {
-    const tpl = await loadTemplate(db, "order_update");
-    if (!tpl || !tpl.enabled) return false;
-
     const { data: order } = await db
       .from("orders")
       .select(
@@ -37,6 +34,20 @@ export async function sendOrderUpdateEmail(
       .maybeSingle();
     const o = order as any;
     if (!o?.customer_email) return false;
+
+    // the in-portal bell rings even when the email template is switched off
+    const { pushNotification } = await import("@/lib/notifications");
+    await pushNotification(db, {
+      audience: "customer",
+      email: o.customer_email as string,
+      kind: "order_update",
+      title: `New update on ${o.products?.name ?? "your project"}`,
+      body: updateMessage.length > 120 ? `${updateMessage.slice(0, 117)}...` : updateMessage,
+      href: `orders/${orderId}`,
+    });
+
+    const tpl = await loadTemplate(db, "order_update");
+    if (!tpl || !tpl.enabled) return false;
 
     const code = o.products?.metadata?.code ?? o.products?.sku?.toUpperCase() ?? "";
     const vars: Record<string, string> = {

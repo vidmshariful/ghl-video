@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { getSessionEmail } from "@/lib/account/session";
+import { getSessionEmail, getSessionUser } from "@/lib/account/session";
+import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
+import { profileByEmail, upsertProfile } from "@/lib/profiles";
 import {
   activateIfInvited,
   pagesForRef,
@@ -62,10 +64,11 @@ export async function GET(req: Request) {
     return NextResponse.json({ status: "paused", partner: { name: partner.name } });
   }
   partner = await activateIfInvited(partner);
+  const profile = await profileByEmail(supabaseAdmin(), email);
 
   return NextResponse.json({
     status: "active",
-    partner: shape(partner),
+    partner: { ...shape(partner), avatarUrl: profile.avatarUrl },
     pages: pagesForRef(partner.ref),
     primaryLink: trackedLink(partner),
     links: LINK_TARGETS.map((t) => ({ label: t.label, url: trackedLink(partner!, t.path) })),
@@ -75,8 +78,9 @@ export async function GET(req: Request) {
 /* Partners may edit their own display fields (these feed their partner
  * page once pages go DB-driven): name, tagline, bio. Nothing else. */
 export async function PATCH(req: Request) {
-  const email = await getSessionEmail(req);
-  if (!email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const user = await getSessionUser(req);
+  const email = user?.email ?? null;
+  if (!user || !email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const partner = await partnerByEmail(email);
   if (!partner || partner.status === "rejected" || partner.status === "applied") {
     return NextResponse.json({ error: "No partner account." }, { status: 403 });
@@ -95,8 +99,10 @@ export async function PATCH(req: Request) {
   if (typeof body.bio === "string") patch.bio = s(body.bio, 1200);
   if (Object.keys(patch).length === 0) return NextResponse.json({ ok: true });
 
-  const { supabaseAdmin } = await import("@/lib/checkout/supabase-admin");
-  const { error } = await supabaseAdmin().from("partners").update(patch).eq("id", partner.id);
+  const db = supabaseAdmin();
+  const { error } = await db.from("partners").update(patch).eq("id", partner.id);
   if (error) return NextResponse.json({ error: "Could not save. Try again." }, { status: 500 });
+  // keep the portal chrome's display name in step with the partner name
+  if (patch.name) await upsertProfile(db, user, { displayName: patch.name });
   return NextResponse.json({ ok: true });
 }

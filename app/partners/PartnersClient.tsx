@@ -4,11 +4,19 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Session } from "@supabase/supabase-js";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
-import { PortalSidebar, PortalTopbar } from "@/components/portal/Shell";
+import {
+  NotificationsBell,
+  PortalSidebar,
+  PortalTopbar,
+  ProfileMenu,
+  TopIconButton,
+} from "@/components/portal/Shell";
+import { AvatarUploader, PasswordCard } from "@/components/portal/account";
 import {
   BarChart3,
   BookOpen,
   LayoutDashboard,
+  LifeBuoy,
   Link2,
   Settings,
   Users,
@@ -39,6 +47,7 @@ type Me = {
     discountPercent: number;
     discountMonths: number;
     fpRef: string | null;
+    avatarUrl: string | null;
   };
   pages?: { title: string; url: string }[];
   primaryLink?: string;
@@ -71,7 +80,6 @@ const NAV = [
   { key: "earnings", label: "Earnings & Payouts", icon: <Wallet /> },
   { key: "assets", label: "Links & Assets", icon: <Link2 /> },
   { key: "resources", label: "Resources", icon: <BookOpen /> },
-  { key: "settings", label: "Settings", icon: <Settings /> },
 ];
 
 /* ---- FirstPromoter-backed data payloads ---- */
@@ -1031,7 +1039,6 @@ function SettingsView({ me, onSaved }: { me: Me; onSaved: () => void }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
-  const [pwNotice, setPwNotice] = useState("");
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -1049,15 +1056,6 @@ function SettingsView({ me, onSaved }: { me: Me; onSaved: () => void }) {
     } else setErr(j.error ?? "Could not save. Try again.");
   }
 
-  async function sendPasswordLink() {
-    if (!p.email) return;
-    setPwNotice("");
-    const { error } = await supabase.auth.resetPasswordForEmail(p.email, {
-      redirectTo: `${window.location.origin}/partners/set-password/`,
-    });
-    setPwNotice(error ? error.message : `We sent a password link to ${p.email}.`);
-  }
-
   return (
     <div className="max-w-3xl">
       <h1 className="font-display text-h2 text-ink">Settings</h1>
@@ -1066,7 +1064,21 @@ function SettingsView({ me, onSaved }: { me: Me; onSaved: () => void }) {
         your audience to see them.
       </p>
 
-      <form onSubmit={save} className="mt-8 grid gap-5 rounded-[12px] border border-hair bg-surface p-6">
+      <div className="mt-8 rounded-[12px] border border-hair bg-surface p-6">
+        <AvatarUploader
+          name={p.name}
+          email={p.email ?? ""}
+          avatarUrl={p.avatarUrl}
+          endpoint="/api/partners/me/avatar"
+          onChanged={() => onSaved()}
+        />
+        <p className="mt-2 text-body-sm text-dim">
+          Your portal photo. The photo on your public partner page is set by the
+          studio; write to hi@ghlvideo.com to swap it.
+        </p>
+      </div>
+
+      <form onSubmit={save} className="mt-6 grid gap-5 rounded-[12px] border border-hair bg-surface p-6">
         <label className="grid gap-2">
           <span className="font-mono text-label uppercase text-muted">Your name</span>
           <input value={name} onChange={(e) => setName(e.target.value)} required className={fieldCls} />
@@ -1107,10 +1119,10 @@ function SettingsView({ me, onSaved }: { me: Me; onSaved: () => void }) {
         <p className="mt-1 text-body-sm text-muted">
           Sign-in email. To change it, write to hi@ghlvideo.com.
         </p>
-        <button type="button" onClick={sendPasswordLink} className={`${btnGhost} mt-4`}>
-          Change password by email
-        </button>
-        {pwNotice && <p className="mt-3 text-body-sm text-gold">{pwNotice}</p>}
+      </div>
+
+      <div className="mt-6">
+        <PasswordCard resetRedirect="/partners/set-password/" />
       </div>
     </div>
   );
@@ -1196,15 +1208,45 @@ export function PartnersClient() {
       </div>
     );
 
+  const openHref = (href: string) => {
+    const key = href.split("/")[0];
+    if (["dashboard", "performance", "referrals", "earnings", "assets", "resources", "settings"].includes(key)) {
+      setView(key as View);
+    }
+  };
+
   return (
     <div className="flex min-h-screen flex-col">
-      <Topbar email={session.user.email ?? ""} onSignOut={() => supabase.auth.signOut()} />
+      <PortalTopbar
+        area="Partners"
+        right={
+          <>
+            <TopIconButton label="Program guide" onClick={() => setView("resources")}>
+              <LifeBuoy size={16} />
+            </TopIconButton>
+            <NotificationsBell
+              endpoint="/api/partners/notifications"
+              fetcher={(path, init) => authedFetch(path, init)}
+              onOpenHref={openHref}
+            />
+            <ProfileMenu
+              name={me.partner?.name}
+              email={session.user.email ?? ""}
+              avatarUrl={me.partner?.avatarUrl}
+              onSettings={() => setView("settings")}
+              onHelp={() => setView("resources")}
+              onSignOut={() => supabase.auth.signOut()}
+            />
+          </>
+        }
+      />
       <div className="flex flex-1 flex-col md:flex-row">
         <PortalSidebar
           groups={[{ title: "", items: NAV }]}
           active={view}
           onSelect={(k) => setView(k as View)}
           storageKey="ghlv-partners-nav"
+          bottom={[{ key: "settings", label: "Settings", icon: <Settings /> }]}
         />
         <section className="min-w-0 flex-1 p-4 md:p-8">
           <div key={view} className="portal-view">

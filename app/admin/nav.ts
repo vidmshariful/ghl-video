@@ -17,4 +17,5 @@ export type View =
   | "catalog"
   | "studio"
   | "emails"
-  | "team";
+  | "settings"
+  | "help";

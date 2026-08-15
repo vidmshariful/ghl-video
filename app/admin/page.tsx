@@ -7,7 +7,15 @@ import { site } from "@/lib/site";
 import { HEAD_SCRIPTS, BODY_END_SCRIPTS } from "@/lib/chrome";
 import { supabase, authHeader } from "./client";
 import type { View } from "./nav";
-import { PortalSidebar, PortalTopbar, type NavGroup } from "@/components/portal/Shell";
+import {
+  NotificationsBell,
+  PortalSidebar,
+  PortalTopbar,
+  ProfileMenu,
+  TopIconButton,
+  type NavGroup,
+} from "@/components/portal/Shell";
+import { PortalHelp } from "@/components/portal/help";
 import {
   BarChart3,
   BookOpen,
@@ -17,12 +25,13 @@ import {
   Globe,
   Handshake,
   LayoutDashboard,
+  LifeBuoy,
   Link2,
   Mail,
   MessageSquare,
   Package,
   Repeat,
-  Shield,
+  Settings,
   ShoppingCart,
   Ticket,
   Users,
@@ -40,7 +49,7 @@ import { CustomersScreen } from "./CustomersScreen";
 import { PartnersScreen } from "./PartnersScreen";
 import { StudioScreen } from "./StudioScreen";
 import { JournalScreen } from "./JournalScreen";
-import { TeamScreen } from "./TeamScreen";
+import { SettingsScreen } from "./SettingsScreen";
 import { EmailTemplatesScreen } from "./EmailTemplatesScreen";
 import { CatalogScreen } from "./CatalogScreen";
 import { canAccess, type Role } from "./roles";
@@ -282,6 +291,7 @@ export default function AdminPage() {
     name: string | null;
     role: Role;
     features: string[] | null;
+    avatarUrl: string | null;
   } | null>(null);
 
   useEffect(() => {
@@ -303,24 +313,22 @@ export default function AdminPage() {
   }, [session]);
 
   // The signed-in admin's role + feature grants, used to gate the menu.
+  // Settings re-runs this after a profile change so the top bar updates.
+  const loadMe = async () => {
+    try {
+      const r = await fetch("/api/admin/me", { headers: await authHeader() });
+      const j = await r.json();
+      if (r.ok) setMe(j);
+    } catch {
+      /* stays as-is; the nav shows Dashboard only until it loads */
+    }
+  };
   useEffect(() => {
     if (!isAdmin) {
       setMe(null);
       return;
     }
-    let active = true;
-    (async () => {
-      try {
-        const r = await fetch("/api/admin/me", { headers: await authHeader() });
-        const j = await r.json();
-        if (active && r.ok) setMe(j);
-      } catch {
-        /* stays null; the nav shows Dashboard only until it loads */
-      }
-    })();
-    return () => {
-      active = false;
-    };
+    loadMe();
   }, [isAdmin]);
 
   // Never sit on a view this user is not allowed to open.
@@ -415,10 +423,6 @@ export default function AdminPage() {
         { key: "code", label: "Header & Footer Code", icon: <Code /> },
       ],
     },
-    {
-      title: "Access",
-      items: [{ key: "team", label: "Team", icon: <Shield /> }],
-    },
   ];
 
   // Gate the menu to what this admin may see; while `me` loads, show only
@@ -432,22 +436,45 @@ export default function AdminPage() {
     }))
     .filter((g) => g.items.length > 0);
 
+  /* the bell's authed fetch: bearer header + JSON content type on writes */
+  const adminFetch = async (path: string, init?: RequestInit) => {
+    const r = await fetch(path, {
+      ...init,
+      headers: {
+        ...(init?.headers ?? {}),
+        ...(await authHeader()),
+        ...(init?.body ? { "Content-Type": "application/json" } : {}),
+      },
+      cache: "no-store",
+    });
+    return r.json();
+  };
+
   return (
     <div className="flex min-h-screen flex-col">
       <PortalTopbar
         area="Site Admin"
         right={
           <>
-            <span className="hidden max-w-[16rem] truncate font-mono text-label text-dim sm:inline">
-              {session.user.email}
-            </span>
-            <button
-              type="button"
-              onClick={() => supabase.auth.signOut()}
-              className="tap rounded-[8px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
-            >
-              Sign out
-            </button>
+            <TopIconButton label="Help & guide" mobileHidden onClick={() => setView("help")}>
+              <LifeBuoy size={16} />
+            </TopIconButton>
+            <NotificationsBell
+              endpoint="/api/admin/notifications"
+              fetcher={adminFetch}
+              onOpenHref={(href) => {
+                const target = href.split("/")[0] as View;
+                if (me && canAccess(target, me.role, me.features)) setView(target);
+              }}
+            />
+            <ProfileMenu
+              name={me?.name}
+              email={session.user.email ?? ""}
+              avatarUrl={me?.avatarUrl}
+              onSettings={() => setView("settings")}
+              onHelp={() => setView("help")}
+              onSignOut={() => supabase.auth.signOut()}
+            />
           </>
         }
       />
@@ -458,6 +485,7 @@ export default function AdminPage() {
           active={view}
           onSelect={(k) => setView(k as View)}
           storageKey="ghlv-admin-nav"
+          bottom={[{ key: "settings", label: "Settings", icon: <Settings /> }]}
         />
 
         {/* content: keyed on the view so each screen fades up as it opens */}
@@ -495,8 +523,14 @@ export default function AdminPage() {
             <CatalogScreen />
           ) : view === "emails" ? (
             <EmailTemplatesScreen />
-          ) : view === "team" ? (
-            <TeamScreen meEmail={me?.email ?? ""} />
+          ) : view === "settings" ? (
+            me ? (
+              <SettingsScreen me={me} onMeChanged={loadMe} />
+            ) : (
+              <p className="text-body text-muted">Loading your account...</p>
+            )
+          ) : view === "help" ? (
+            <PortalHelp audience="admin" />
           ) : (
             // every View has an explicit branch above; fall back to the
             // dashboard for safety rather than a blank screen
