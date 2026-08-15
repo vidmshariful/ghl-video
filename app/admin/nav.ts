@@ -1,5 +1,6 @@
 /* The admin's screens, shared between the shell and screens that navigate
- * (e.g. the dashboard's shortcuts into Orders). */
+ * (e.g. the dashboard's shortcuts into Orders). Every view is also a URL
+ * segment (/admin/<view>/); ALL_VIEWS is what the route validates against. */
 export type View =
   | "dashboard"
   | "journal"
@@ -19,3 +20,24 @@ export type View =
   | "emails"
   | "settings"
   | "help";
+
+export const ALL_VIEWS: View[] = [
+  "dashboard",
+  "journal",
+  "orders",
+  "messages",
+  "subscriptions",
+  "products",
+  "coupons",
+  "links",
+  "invoices",
+  "customers",
+  "partners",
+  "code",
+  "pages",
+  "catalog",
+  "studio",
+  "emails",
+  "settings",
+  "help",
+];

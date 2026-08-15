@@ -13,6 +13,8 @@ import {
 import { AvatarUploader, PasswordCard } from "@/components/portal/account";
 import { PortalHelp } from "@/components/portal/help";
 import { TeamCard } from "@/components/portal/team";
+import { AffiliateApplyView, BookACallView, WhiteLabelView } from "@/components/portal/booking";
+import { PORTAL_SECTIONS, type PortalSection } from "./sections";
 import {
   actForHeader,
   getActFor,
@@ -22,9 +24,12 @@ import {
 } from "@/components/portal/act-for";
 import { memberCan } from "@/lib/team-features";
 import {
+  Handshake,
+  Layers,
   LayoutDashboard,
   LifeBuoy,
   MessageSquare,
+  PhoneCall,
   Repeat,
   Settings,
   ShoppingCart,
@@ -895,7 +900,12 @@ function SettingsView({
 }
 
 /* ---- signed-in portal (app shell) ---- */
-type PortalSection = "dashboard" | "orders" | "messages" | "subscriptions" | "settings" | "help";
+const pathFor = (s: PortalSection, orderId?: string | null) =>
+  s === "dashboard"
+    ? "/portal/"
+    : s === "orders" && orderId
+      ? `/portal/orders/${orderId}/`
+      : `/portal/${s}/`;
 
 function PageHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
@@ -1063,12 +1073,39 @@ function PortalDashboard({
   );
 }
 
-function Portal({ session }: { session: Session }) {
-  const [section, setSection] = useState<PortalSection>("dashboard");
-  const [openOrder, setOpenOrder] = useState<string | null>(null);
+function Portal({
+  session,
+  initialView,
+  initialOrderId,
+}: {
+  session: Session;
+  initialView: PortalSection;
+  initialOrderId: string | null;
+}) {
+  const [section, setSection] = useState<PortalSection>(initialView);
+  const [openOrder, setOpenOrder] = useState<string | null>(initialOrderId);
   const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
   const [msgUnread, setMsgUnread] = useState(0);
   const [profile, setProfile] = useState<MyProfile | null>(null);
+
+  /* clicking around pushes real URLs; back/forward walk the sections */
+  const pushUrl = (s: PortalSection, orderId?: string | null) => {
+    const path = pathFor(s, orderId);
+    if (window.location.pathname !== path) window.history.pushState(null, "", path);
+  };
+  useEffect(() => {
+    const onPop = () => {
+      const segs = window.location.pathname.replace(/^\/portal\/?/, "").split("/").filter(Boolean);
+      const seg = segs[0] ?? "dashboard";
+      const next = (PORTAL_SECTIONS as readonly string[]).includes(seg)
+        ? (seg as PortalSection)
+        : "dashboard";
+      setSection(next);
+      setOpenOrder(next === "orders" && segs[1] ? segs[1] : null);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
 
   /* which account this person works in, and what they may use there */
   const can = (key: string) =>
@@ -1130,10 +1167,17 @@ function Portal({ session }: { session: Session }) {
   const go = (s: PortalSection) => {
     setSection(s);
     setOpenOrder(null);
+    pushUrl(s);
+  };
+  const openOrderById = (id: string) => {
+    setSection("orders");
+    setOpenOrder(id);
+    pushUrl("orders", id);
   };
   const messageStudio = (orderId: string) => {
     setPendingOrderId(orderId);
     setSection("messages");
+    pushUrl("messages");
   };
 
   const switchAccount = (ownerEmail: string | null) => {
@@ -1145,12 +1189,11 @@ function Portal({ session }: { session: Session }) {
   const openHref = (href: string) => {
     const [head, tail] = href.split("/");
     if (head === "orders" && tail && can("orders")) {
-      setSection("orders");
-      setOpenOrder(tail);
+      openOrderById(tail);
       return;
     }
     if (["orders", "messages", "subscriptions"].includes(head) && !can(head)) return;
-    if (["dashboard", "orders", "messages", "subscriptions", "settings", "help"].includes(head)) {
+    if ((PORTAL_SECTIONS as readonly string[]).includes(head)) {
       go(head as PortalSection);
     }
   };
@@ -1177,6 +1220,22 @@ function Portal({ session }: { session: Session }) {
       : []),
     ...(can("subscriptions")
       ? [{ key: "subscriptions", label: "Subscriptions", icon: <Repeat /> }]
+      : []),
+    { key: "book", label: "Book a Call", icon: <PhoneCall /> },
+  ];
+  /* growth offers are aimed at the account owner, not their team */
+  const groups = [
+    { title: "", items: nav },
+    ...(profile.isOwner
+      ? [
+          {
+            title: "Grow",
+            items: [
+              { key: "affiliate", label: "Affiliate program", icon: <Handshake /> },
+              { key: "whitelabel", label: "White-label", icon: <Layers /> },
+            ],
+          },
+        ]
       : []),
   ];
 
@@ -1248,7 +1307,7 @@ function Portal({ session }: { session: Session }) {
       />
       <div className="flex flex-1 flex-col md:flex-row">
         <PortalSidebar
-          groups={[{ title: "", items: nav }]}
+          groups={groups}
           active={section}
           onSelect={(k) => go(k as PortalSection)}
           storageKey="ghlv-portal-nav"
@@ -1264,17 +1323,17 @@ function Portal({ session }: { session: Session }) {
               actingForLabel={acting ? acting.name || acting.email : null}
               can={can}
               unread={msgUnread}
-              onOpenOrder={(id) => {
-                setSection("orders");
-                setOpenOrder(id);
-              }}
+              onOpenOrder={openOrderById}
               onGo={go}
             />
           ) : section === "orders" && can("orders") ? (
             openOrder ? (
               <OrderDetailView
                 id={openOrder}
-                onBack={() => setOpenOrder(null)}
+                onBack={() => {
+                  setOpenOrder(null);
+                  pushUrl("orders");
+                }}
                 onMessageStudio={messageStudio}
                 canMessage={can("messages")}
               />
@@ -1282,7 +1341,7 @@ function Portal({ session }: { session: Session }) {
               <div>
                 <PageHeader title="Orders" subtitle="Your projects, delivery, and invoices." />
                 <div className="mt-6">
-                  <OrdersList onOpen={setOpenOrder} />
+                  <OrdersList onOpen={openOrderById} />
                 </div>
               </div>
             )
@@ -1292,6 +1351,15 @@ function Portal({ session }: { session: Session }) {
               onConsumePending={() => setPendingOrderId(null)}
               onUnread={setMsgUnread}
             />
+          ) : section === "book" ? (
+            <BookACallView />
+          ) : section === "affiliate" && profile.isOwner ? (
+            <AffiliateApplyView
+              prefillName={profile.name ?? ""}
+              prefillEmail={profile.email}
+            />
+          ) : section === "whitelabel" && profile.isOwner ? (
+            <WhiteLabelView />
           ) : section === "settings" ? (
             <SettingsView profile={profile} onSaved={loadProfile} />
           ) : section === "help" ? (
@@ -1310,10 +1378,7 @@ function Portal({ session }: { session: Session }) {
               actingForLabel={acting ? acting.name || acting.email : null}
               can={can}
               unread={msgUnread}
-              onOpenOrder={(id) => {
-                setSection("orders");
-                setOpenOrder(id);
-              }}
+              onOpenOrder={openOrderById}
               onGo={go}
             />
           )}
@@ -1324,7 +1389,13 @@ function Portal({ session }: { session: Session }) {
   );
 }
 
-export function PortalClient() {
+export function PortalClient({
+  initialView,
+  initialOrderId,
+}: {
+  initialView: PortalSection;
+  initialOrderId: string | null;
+}) {
   const [session, setSession] = useState<Session | null>(null);
   const [ready, setReady] = useState(false);
 
@@ -1347,7 +1418,7 @@ export function PortalClient() {
           </Shell>
         </>
       ) : session ? (
-        <Portal session={session} />
+        <Portal session={session} initialView={initialView} initialOrderId={initialOrderId} />
       ) : (
         <>
           <PortalTopbar area="Portal" />

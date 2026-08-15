@@ -6,7 +6,7 @@ import { sitePages } from "@/lib/pages-list";
 import { site } from "@/lib/site";
 import { HEAD_SCRIPTS, BODY_END_SCRIPTS } from "@/lib/chrome";
 import { supabase, authHeader } from "./client";
-import type { View } from "./nav";
+import { ALL_VIEWS, type View } from "./nav";
 import {
   NotificationsBell,
   PortalSidebar,
@@ -60,6 +60,11 @@ import { canAccess, type Role } from "./roles";
  * the site tools (Header & Footer Code, Pages). Reads/writes run through the
  * shared client and are enforced by row-level security. Screens live in their
  * own files; this file is the shell + login + the Code and Pages screens.
+ *
+ * Every screen has a real URL (/admin/orders/, /admin/settings/, ...):
+ * the [[...view]] route passes the segment in as initialView, clicking the
+ * menu pushes history, and back/forward or a refresh land on the same
+ * screen. Links are shareable between teammates.
  */
 
 /* ---------------------------------------------------------------- */
@@ -279,12 +284,30 @@ function PagesScreen() {
 /* ---------------------------------------------------------------- */
 /* Shell                                                             */
 /* ---------------------------------------------------------------- */
-export default function AdminPage() {
+const pathFor = (v: View) => (v === "dashboard" ? "/admin/" : `/admin/${v}/`);
+
+export function AdminClient({ initialView }: { initialView: View }) {
   const [session, setSession] = useState<Session | null>(null);
   const [ready, setReady] = useState(false);
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-  const [view, setView] = useState<View>("dashboard");
+  const [view, setView] = useState<View>(initialView);
   const [loginError, setLoginError] = useState("");
+
+  /* the menu pushes a real URL; back/forward walk the screens */
+  const go = (v: View) => {
+    setView(v);
+    if (window.location.pathname !== pathFor(v)) {
+      window.history.pushState(null, "", pathFor(v));
+    }
+  };
+  useEffect(() => {
+    const onPop = () => {
+      const seg = window.location.pathname.replace(/^\/admin\/?/, "").replace(/\/$/, "");
+      setView(seg && (ALL_VIEWS as string[]).includes(seg) ? (seg as View) : "dashboard");
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
   const [msgUnread, setMsgUnread] = useState(0);
   const [me, setMe] = useState<{
     email: string;
@@ -335,6 +358,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (me && view !== "dashboard" && !canAccess(view, me.role, me.features)) {
       setView("dashboard");
+      window.history.replaceState(null, "", pathFor("dashboard"));
     }
   }, [me, view]);
 
@@ -456,7 +480,7 @@ export default function AdminPage() {
         area="Site Admin"
         right={
           <>
-            <TopIconButton label="Help & guide" mobileHidden onClick={() => setView("help")}>
+            <TopIconButton label="Help & guide" mobileHidden onClick={() => go("help")}>
               <LifeBuoy size={16} />
             </TopIconButton>
             <NotificationsBell
@@ -464,15 +488,15 @@ export default function AdminPage() {
               fetcher={adminFetch}
               onOpenHref={(href) => {
                 const target = href.split("/")[0] as View;
-                if (me && canAccess(target, me.role, me.features)) setView(target);
+                if (me && canAccess(target, me.role, me.features)) go(target);
               }}
             />
             <ProfileMenu
               name={me?.name}
               email={session.user.email ?? ""}
               avatarUrl={me?.avatarUrl}
-              onSettings={() => setView("settings")}
-              onHelp={() => setView("help")}
+              onSettings={() => go("settings")}
+              onHelp={() => go("help")}
               onSignOut={() => supabase.auth.signOut()}
             />
           </>
@@ -483,7 +507,7 @@ export default function AdminPage() {
         <PortalSidebar
           groups={visibleGroups}
           active={view}
-          onSelect={(k) => setView(k as View)}
+          onSelect={(k) => go(k as View)}
           storageKey="ghlv-admin-nav"
           bottom={[{ key: "settings", label: "Settings", icon: <Settings /> }]}
         />
@@ -492,7 +516,7 @@ export default function AdminPage() {
         <section className="min-w-0 flex-1 p-4 md:p-8">
           <div key={view} className="portal-view">
           {view === "dashboard" ? (
-            <DashboardScreen onNavigate={setView} />
+            <DashboardScreen onNavigate={go} />
           ) : view === "orders" ? (
             <OrdersScreen />
           ) : view === "messages" ? (
@@ -534,7 +558,7 @@ export default function AdminPage() {
           ) : (
             // every View has an explicit branch above; fall back to the
             // dashboard for safety rather than a blank screen
-            <DashboardScreen onNavigate={setView} />
+            <DashboardScreen onNavigate={go} />
           )}
           </div>
         </section>

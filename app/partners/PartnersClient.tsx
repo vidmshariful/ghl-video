@@ -21,12 +21,16 @@ import {
   setActFor,
 } from "@/components/portal/act-for";
 import { memberCan } from "@/lib/team-features";
+import { BookACallView, WhiteLabelView } from "@/components/portal/booking";
+import { PARTNER_VIEWS, type View } from "./views";
 import {
   BarChart3,
   BookOpen,
+  Layers,
   LayoutDashboard,
   LifeBuoy,
   Link2,
+  PhoneCall,
   Settings,
   Users,
   Wallet,
@@ -86,14 +90,7 @@ type Asset = {
   yours: boolean;
 };
 
-type View =
-  | "dashboard"
-  | "performance"
-  | "referrals"
-  | "earnings"
-  | "assets"
-  | "resources"
-  | "settings";
+const pathFor = (v: View) => (v === "dashboard" ? "/partners/" : `/partners/${v}/`);
 
 const NAV = [
   { key: "dashboard", label: "Dashboard", icon: <LayoutDashboard /> },
@@ -102,6 +99,7 @@ const NAV = [
   { key: "earnings", label: "Earnings & Payouts", icon: <Wallet /> },
   { key: "assets", label: "Links & Assets", icon: <Link2 /> },
   { key: "resources", label: "Resources", icon: <BookOpen /> },
+  { key: "book", label: "Book a Call", icon: <PhoneCall /> },
 ];
 
 /* ---- FirstPromoter-backed data payloads ---- */
@@ -1242,11 +1240,27 @@ function SettingsView({
 }
 
 /* ---- shell ---- */
-export function PartnersClient() {
+export function PartnersClient({ initialView }: { initialView: View }) {
   const [session, setSession] = useState<Session | null>(null);
   const [ready, setReady] = useState(false);
   const [me, setMe] = useState<Me | null>(null);
-  const [view, setView] = useState<View>("dashboard");
+  const [view, setView] = useState<View>(initialView);
+
+  /* clicking around pushes real URLs; back/forward walk the views */
+  const go = (v: View) => {
+    setView(v);
+    if (window.location.pathname !== pathFor(v)) {
+      window.history.pushState(null, "", pathFor(v));
+    }
+  };
+  useEffect(() => {
+    const onPop = () => {
+      const seg = window.location.pathname.replace(/^\/partners\/?/, "").replace(/\/$/, "");
+      setView(seg && (PARTNER_VIEWS as readonly string[]).includes(seg) ? (seg as View) : "dashboard");
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -1403,15 +1417,20 @@ export function PartnersClient() {
   const openHref = (href: string) => {
     const key = href.split("/")[0];
     if (["performance", "referrals", "earnings", "assets"].includes(key) && !can(key)) return;
-    if (["dashboard", "performance", "referrals", "earnings", "assets", "resources", "settings"].includes(key)) {
-      setView(key as View);
+    if ((PARTNER_VIEWS as readonly string[]).includes(key)) {
+      go(key as View);
     }
   };
 
-  const nav = NAV.filter(
-    (it) =>
-      ["dashboard", "resources"].includes(it.key) || can(it.key),
-  );
+  const nav = [
+    ...NAV.filter(
+      (it) => ["dashboard", "resources", "book"].includes(it.key) || can(it.key),
+    ),
+    /* the white-label pitch is aimed at the partner themselves */
+    ...(viewer?.isOwner !== false
+      ? [{ key: "whitelabel", label: "White-label", icon: <Layers /> }]
+      : []),
+  ];
 
   const switchAccount = (ownerEmail: string | null) => {
     setActFor(ACT_FOR_KEY, ownerEmail);
@@ -1459,7 +1478,7 @@ export function PartnersClient() {
         area="Partners"
         right={
           <>
-            <TopIconButton label="Program guide" onClick={() => setView("resources")}>
+            <TopIconButton label="Program guide" onClick={() => go("resources")}>
               <LifeBuoy size={16} />
             </TopIconButton>
             <NotificationsBell
@@ -1471,8 +1490,8 @@ export function PartnersClient() {
               name={viewer?.name ?? me.partner?.name}
               email={session.user.email ?? ""}
               avatarUrl={viewer?.avatarUrl ?? me.partner?.avatarUrl}
-              onSettings={() => setView("settings")}
-              onHelp={() => setView("resources")}
+              onSettings={() => go("settings")}
+              onHelp={() => go("resources")}
               onSignOut={() => supabase.auth.signOut()}
               extra={switcher}
             />
@@ -1483,14 +1502,14 @@ export function PartnersClient() {
         <PortalSidebar
           groups={[{ title: "", items: nav }]}
           active={view}
-          onSelect={(k) => setView(k as View)}
+          onSelect={(k) => go(k as View)}
           storageKey="ghlv-partners-nav"
           bottom={[{ key: "settings", label: "Settings", icon: <Settings /> }]}
         />
         <section className="min-w-0 flex-1 p-4 md:p-8">
           <div key={view} className="portal-view">
           {view === "dashboard" ? (
-            <DashboardView me={me} can={can} actingLabel={acting?.name ?? null} onNavigate={setView} />
+            <DashboardView me={me} can={can} actingLabel={acting?.name ?? null} onNavigate={go} />
           ) : view === "performance" && can("performance") ? (
             <PerformanceView />
           ) : view === "referrals" && can("referrals") ? (
@@ -1501,6 +1520,10 @@ export function PartnersClient() {
             <AssetsView me={me} />
           ) : view === "resources" ? (
             <ResourcesView me={me} />
+          ) : view === "book" ? (
+            <BookACallView />
+          ) : view === "whitelabel" && viewer?.isOwner !== false ? (
+            <WhiteLabelView />
           ) : view === "settings" ? (
             <SettingsView
               me={me}
@@ -1510,7 +1533,7 @@ export function PartnersClient() {
               selfEmail={session.user.email ?? ""}
             />
           ) : (
-            <DashboardView me={me} can={can} actingLabel={acting?.name ?? null} onNavigate={setView} />
+            <DashboardView me={me} can={can} actingLabel={acting?.name ?? null} onNavigate={go} />
           )}
           </div>
         </section>
