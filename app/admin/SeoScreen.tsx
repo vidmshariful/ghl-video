@@ -21,7 +21,7 @@ import {
  * deploy. Redirects forwards a retired URL so its ranking is not thrown away.
  */
 
-type Tab = "search" | "health" | "pages" | "redirects";
+type Tab = "search" | "traffic" | "health" | "pages" | "redirects";
 
 type SeoPageRow = {
   path: string;
@@ -84,15 +84,17 @@ export function SeoScreen() {
     <div className="w-full">
       <h1 className="font-display text-h2 text-ink">SEO</h1>
       <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
-        What Google sees, and what to fix. Search is the real traffic, Health
-        checks the live site, Pages edits the words in the search result,
-        Redirects keeps a retired URL working.
+        What Google sees, and what to fix. Search is how people find you,
+        Traffic is what they do once here, Health checks the live site, Pages
+        edits the words in the search result, Redirects keeps a retired URL
+        working.
       </p>
 
       <div className="mt-6 flex gap-1 border-b border-hair">
         {(
           [
             ["search", "Search"],
+            ["traffic", "Traffic"],
             ["health", "Health"],
             ["pages", "Pages"],
             ["redirects", "Redirects"],
@@ -116,6 +118,8 @@ export function SeoScreen() {
       <div className="mt-6">
         {tab === "search" ? (
           <SearchTab />
+        ) : tab === "traffic" ? (
+          <TrafficTab />
         ) : tab === "health" ? (
           <HealthTab />
         ) : tab === "pages" ? (
@@ -986,6 +990,172 @@ function SearchTab() {
         Google settles its numbers two to three days late, so this window ends
         on {s.range.end} rather than today. That is Google, not us.
       </p>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------- */
+/* Traffic: Analytics, the other half of the story                   */
+/* ---------------------------------------------------------------- */
+
+type GaTotals = { sessions: number; users: number; engagementRate: number; avgSeconds: number };
+type GaRow = { key: string; sessions: number; engagementRate: number };
+type TrafficPayload = {
+  state: "not-connected" | "no-property" | "ok" | "error";
+  error?: string;
+  days?: number;
+  summary?: {
+    property: string;
+    range: { start: string; end: string };
+    current: GaTotals;
+    previous: GaTotals;
+    channels: GaRow[];
+    landingPages: GaRow[];
+  };
+};
+
+const mmss = (sec: number) => {
+  const m = Math.floor(sec / 60);
+  const s = Math.round(sec % 60);
+  return `${m}m ${String(s).padStart(2, "0")}s`;
+};
+
+function GaBars({ rows, label }: { rows: GaRow[]; label: string }) {
+  if (rows.length === 0) return <p className="mt-3 text-body-sm text-muted">Nothing in this period.</p>;
+  const top = Math.max(...rows.map((r) => r.sessions)) || 1;
+  const strip = (u: string) => (u.startsWith("http") ? u.replace(/^https?:\/\/[^/]+/, "") : u) || "/";
+  return (
+    <ul className="mt-3 grid gap-2">
+      {rows.map((r) => (
+        <li key={r.key} className="rounded-[8px] border border-hair bg-surface px-4 py-3">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4">
+            <span className="min-w-0 flex-1 truncate text-body-sm text-ink">{strip(r.key)}</span>
+            <span className="font-mono text-body-sm text-ink">{num(r.sessions)}</span>
+            <span className="w-20 text-right font-mono text-label uppercase text-dim">
+              {pct(r.engagementRate)} engaged
+            </span>
+          </div>
+          <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-hair" aria-hidden="true">
+            <div className="h-full rounded-full bg-brand-gradient" style={{ width: `${(r.sessions / top) * 100}%` }} />
+          </div>
+          <span className="sr-only">{label}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function TrafficTab() {
+  const [data, setData] = useState<TrafficPayload | null>(null);
+  const [days, setDays] = useState(28);
+  const [err, setErr] = useState("");
+
+  const load = useCallback(async (d: number) => {
+    setData(null);
+    setErr("");
+    try {
+      setData(await api<TrafficPayload>(`/api/admin/seo/traffic?days=${d}`));
+    } catch (e) {
+      setErr((e as Error).message);
+    }
+  }, []);
+
+  useEffect(() => {
+    load(days);
+  }, [load, days]);
+
+  if (err) return <p className="text-body-sm text-error">{err}</p>;
+  if (!data) return <p className="text-body text-muted">Asking Analytics...</p>;
+
+  if (data.state === "not-connected" || data.state === "no-property") {
+    return (
+      <div className="rounded-[12px] border border-hair bg-surface p-6">
+        <p className="font-display text-h4 text-ink">
+          {data.state === "not-connected" ? "Google is not connected yet" : "Almost there"}
+        </p>
+        <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
+          {data.state === "not-connected"
+            ? "Once Google is connected this tab shows how many people arrive, where they come from, and which page they land on."
+            : "Google is connected. Pick which Analytics property to read in Settings, Integrations, and the numbers appear here."}
+        </p>
+        <p className="mt-4 text-body-sm text-dim">
+          Settings, then Integrations, then Google Search Console and Analytics.
+        </p>
+      </div>
+    );
+  }
+
+  if (data.state === "error" || !data.summary) {
+    return (
+      <div className="rounded-[12px] border border-error/30 bg-error/[0.06] p-6">
+        <p className="font-display text-h4 text-ink">Analytics could not answer</p>
+        <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">{data.error}</p>
+      </div>
+    );
+  }
+
+  const s = data.summary;
+  return (
+    <div>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <p className="text-body-sm text-muted">
+          {s.range.start} to {s.range.end}
+        </p>
+        <div className="flex gap-2">
+          {[7, 28, 90].map((d) => (
+            <button
+              key={d}
+              type="button"
+              onClick={() => setDays(d)}
+              className={`tap rounded-full border px-3.5 py-1.5 font-mono text-label uppercase transition-colors ${
+                days === d
+                  ? "border-gold/60 bg-gold/10 text-gold"
+                  : "border-hair text-muted hover:border-gold/40 hover:text-ink"
+              }`}
+            >
+              {d} days
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {(
+          [
+            ["Visits", num(s.current.sessions), s.current.sessions, s.previous.sessions, "Sessions on the site"],
+            ["People", num(s.current.users), s.current.users, s.previous.users, "Individual visitors"],
+            ["Engaged", pct(s.current.engagementRate), s.current.engagementRate, s.previous.engagementRate, "Stayed, scrolled, or clicked"],
+            ["Time on site", mmss(s.current.avgSeconds), s.current.avgSeconds, s.previous.avgSeconds, "Average per visit"],
+          ] as const
+        ).map(([label, value, now, before, hint]) => (
+          <div key={label} className="rounded-[12px] border border-hair bg-surface p-5">
+            <p className="font-mono text-label uppercase text-muted">{label}</p>
+            <p className="mt-1 font-display text-h2 text-ink">{value}</p>
+            <p className="mt-1">
+              <Delta now={now} before={before} />
+            </p>
+            <p className="mt-1 text-body-sm text-dim">{hint}</p>
+          </div>
+        ))}
+      </div>
+
+      <section className="mt-8">
+        <h2 className="font-display text-h4 text-ink">Where they come from</h2>
+        <p className="mt-1 max-w-[var(--measure-body)] text-body-sm text-muted">
+          Organic Search is Google finding you. Direct is people typing the
+          address or arriving from something Analytics cannot see.
+        </p>
+        <GaBars rows={s.channels} label="sessions by channel" />
+      </section>
+
+      <section className="mt-8">
+        <h2 className="font-display text-h4 text-ink">Where they land</h2>
+        <p className="mt-1 max-w-[var(--measure-body)] text-body-sm text-muted">
+          The first page of the visit. A landing page with plenty of visits and
+          low engagement is the one to fix first.
+        </p>
+        <GaBars rows={s.landingPages} label="sessions by landing page" />
+      </section>
     </div>
   );
 }

@@ -8,6 +8,7 @@ import {
   setGoogleTargets,
 } from "@/lib/google/auth";
 import { listProperties } from "@/lib/google/search-console";
+import { listGaProperties } from "@/lib/google/analytics";
 
 export const runtime = "nodejs";
 
@@ -43,16 +44,27 @@ export async function GET(req: Request) {
   if (!connection.connected) return NextResponse.json({ connection, properties: [] });
 
   /* Listing properties is also the live proof the key works, so the screen
-   * can say "connected and reading" rather than "saved". */
-  try {
-    const properties = await listProperties();
-    return NextResponse.json({ connection, properties });
-  } catch (e) {
-    return NextResponse.json({
-      connection: { ...connection, lastError: (e as Error).message },
-      properties: [],
-    });
-  }
+   * can say "connected and reading" rather than "saved". Search Console and
+   * Analytics are asked separately and reported separately: one can be live
+   * while the other is still waiting on an API or a permission. */
+  const [search, analytics] = await Promise.all([
+    listProperties().then(
+      (properties) => ({ properties, error: null as string | null }),
+      (e: Error) => ({ properties: [], error: e.message }),
+    ),
+    listGaProperties().then(
+      (gaProperties) => ({ gaProperties, error: null as string | null }),
+      (e: Error) => ({ gaProperties: [], error: e.message }),
+    ),
+  ]);
+
+  return NextResponse.json({
+    connection,
+    properties: search.properties,
+    searchError: search.error,
+    gaProperties: analytics.gaProperties,
+    gaError: analytics.error,
+  });
 }
 
 export async function POST(req: Request) {

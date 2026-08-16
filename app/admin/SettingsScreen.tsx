@@ -392,13 +392,14 @@ type GoogleConn = {
   clientEmail?: string;
   projectId?: string;
   property?: string | null;
+  gaPropertyId?: string | null;
   connectedAt?: string;
   lastOkAt?: string | null;
   lastError?: string | null;
 };
 
 const STEPS = [
-  "In console.cloud.google.com create a project, then under APIs and Services, Library, enable the Search Console API and the Google Analytics Data API.",
+  "In console.cloud.google.com create a project, then under APIs and Services, Library, enable three APIs: Search Console API, Google Analytics Data API, and Google Analytics Admin API.",
   "Under IAM and Admin, Service Accounts, create a service account. Open it, go to Keys, Add key, Create new key, JSON. A file downloads.",
   "In Search Console open Settings, Users and permissions, Add user. Paste the address shown below once you connect, and give it Full access.",
   "Open the downloaded file in any text editor, copy everything, and paste it in the box here.",
@@ -407,6 +408,8 @@ const STEPS = [
 function GoogleCard() {
   const [conn, setConn] = useState<GoogleConn | null>(null);
   const [properties, setProperties] = useState<{ siteUrl: string; permissionLevel: string }[]>([]);
+  const [gaProperties, setGaProperties] = useState<{ property: string; displayName: string; account: string }[]>([]);
+  const [gaError, setGaError] = useState("");
   const [key, setKey] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -420,6 +423,8 @@ function GoogleCard() {
       if (r.ok) {
         setConn(j.connection);
         setProperties(j.properties ?? []);
+        setGaProperties(j.gaProperties ?? []);
+        setGaError(j.gaError ?? "");
       } else setErr(j.error ?? "Could not read the Google connection.");
     } catch {
       setErr("Could not read the Google connection.");
@@ -445,6 +450,7 @@ function GoogleCard() {
       setKey("");
       setConn(j.connection);
       setProperties(j.properties ?? []);
+      setGaProperties(j.gaProperties ?? []);
       if (j.notice) setNotice(j.notice);
     } catch (e) {
       setErr((e as Error).message);
@@ -453,14 +459,14 @@ function GoogleCard() {
     }
   }
 
-  async function choose(property: string) {
+  async function choose(patch: { property?: string; gaPropertyId?: string }) {
     setBusy(true);
     setErr("");
     try {
       const r = await fetch("/api/admin/integrations/google", {
         method: "PATCH",
         headers: { "Content-Type": "application/json", ...(await authHeader()) },
-        body: JSON.stringify({ property }),
+        body: JSON.stringify(patch),
       });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error ?? "Could not save.");
@@ -587,7 +593,7 @@ function GoogleCard() {
                     key={p.siteUrl}
                     type="button"
                     disabled={busy}
-                    onClick={() => choose(p.siteUrl)}
+                    onClick={() => choose({ property: p.siteUrl })}
                     className={`tap rounded-[8px] border px-4 py-2 text-body-sm transition-colors ${
                       conn.property === p.siteUrl
                         ? "border-gold/60 bg-gold/10 font-semibold text-gold"
@@ -599,6 +605,43 @@ function GoogleCard() {
                 ))}
               </div>
             )}
+          </div>
+
+          <div className="mt-5">
+            <p className={labelCls}>Which Analytics property to read</p>
+            {gaProperties.length === 0 ? (
+              <p className="mt-2 max-w-[var(--measure-body)] text-body-sm text-muted">
+                {gaError ||
+                  "No Analytics property visible yet. In Analytics open Admin, Property access management, and add the address above as a Viewer."}
+              </p>
+            ) : (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {gaProperties.map((p) => (
+                  <button
+                    key={p.property}
+                    type="button"
+                    disabled={busy}
+                    onClick={() => choose({ gaPropertyId: p.property })}
+                    className={`tap rounded-[8px] border px-4 py-2 text-left text-body-sm transition-colors ${
+                      conn.gaPropertyId === p.property
+                        ? "border-gold/60 bg-gold/10 font-semibold text-gold"
+                        : "border-hair text-muted hover:border-gold/40 hover:text-ink"
+                    }`}
+                  >
+                    {p.displayName}
+                    <span className="ml-2 font-mono text-label uppercase text-dim">
+                      {p.property.replace("properties/", "")}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {gaProperties.length > 1 ? (
+              <p className="mt-2 max-w-[var(--measure-body)] text-body-sm text-dim">
+                More than one property is recording this site. Pick the one you
+                trust; the others are usually older containers still firing.
+              </p>
+            ) : null}
           </div>
 
           {err ? <p className="mt-4 text-body-sm text-error">{err}</p> : null}
