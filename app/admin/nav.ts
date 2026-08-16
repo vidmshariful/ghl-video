@@ -15,6 +15,7 @@ export type View =
   | "partners"
   | "code"
   | "pages"
+  | "blog"
   | "catalog"
   | "studio"
   | "emails"
@@ -36,6 +37,7 @@ export const ALL_VIEWS: View[] = [
   "partners",
   "code",
   "pages",
+  "blog",
   "catalog",
   "studio",
   "emails",

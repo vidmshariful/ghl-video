@@ -39,6 +39,7 @@ export const TOGGLEABLE_VIEWS: { key: View; label: string; group: string }[] = [
   { key: "products", label: "Products & Pricing", group: "Products & Packs" },
   { key: "journal", label: "Journal", group: "CMS" },
   { key: "pages", label: "Pages", group: "CMS" },
+  { key: "blog", label: "Blog", group: "CMS" },
   { key: "studio", label: "Studio Insights", group: "CMS" },
   { key: "emails", label: "Emails (in Settings)", group: "Settings" },
   { key: "code", label: "Site code (in Settings)", group: "Settings" },

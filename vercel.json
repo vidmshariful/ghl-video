@@ -129,6 +129,66 @@
       "source": "/refund/",
       "destination": "/legal/refund/",
       "permanent": true
+    },
+    {
+      "source": "/highlevel-saas-video-funnel",
+      "destination": "/blog/highlevel-saas-video-funnel/",
+      "permanent": true
+    },
+    {
+      "source": "/highlevel-saas-video-funnel/",
+      "destination": "/blog/highlevel-saas-video-funnel/",
+      "permanent": true
+    },
+    {
+      "source": "/highlevel-saas-video-mistakes",
+      "destination": "/blog/highlevel-saas-video-mistakes/",
+      "permanent": true
+    },
+    {
+      "source": "/highlevel-saas-video-mistakes/",
+      "destination": "/blog/highlevel-saas-video-mistakes/",
+      "permanent": true
+    },
+    {
+      "source": "/highlevel-saas-growth-system-video",
+      "destination": "/blog/highlevel-saas-growth-system-video/",
+      "permanent": true
+    },
+    {
+      "source": "/highlevel-saas-growth-system-video/",
+      "destination": "/blog/highlevel-saas-growth-system-video/",
+      "permanent": true
+    },
+    {
+      "source": "/who-ghl-video-is-not-for-and-why-that-matters",
+      "destination": "/blog/who-ghl-video-is-not-for-and-why-that-matters/",
+      "permanent": true
+    },
+    {
+      "source": "/who-ghl-video-is-not-for-and-why-that-matters/",
+      "destination": "/blog/who-ghl-video-is-not-for-and-why-that-matters/",
+      "permanent": true
+    },
+    {
+      "source": "/the-only-video-editing-service-built-for-highlevel-creators-and-agencies",
+      "destination": "/blog/the-only-video-editing-service-built-for-highlevel-creators-and-agencies/",
+      "permanent": true
+    },
+    {
+      "source": "/the-only-video-editing-service-built-for-highlevel-creators-and-agencies/",
+      "destination": "/blog/the-only-video-editing-service-built-for-highlevel-creators-and-agencies/",
+      "permanent": true
+    },
+    {
+      "source": "/what-is-ghl-video-a-complete-guide-for-highlevel-saas-and-agencies",
+      "destination": "/blog/what-is-ghl-video-a-complete-guide-for-highlevel-saas-and-agencies/",
+      "permanent": true
+    },
+    {
+      "source": "/what-is-ghl-video-a-complete-guide-for-highlevel-saas-and-agencies/",
+      "destination": "/blog/what-is-ghl-video-a-complete-guide-for-highlevel-saas-and-agencies/",
+      "permanent": true
     }
   ]
 }

@@ -18,6 +18,7 @@ import { PortalHelp } from "@/components/portal/help";
 import {
   BarChart3,
   BookOpen,
+  Newspaper,
   Clapperboard,
   FileText,
   Film,
@@ -50,6 +51,7 @@ import { JournalScreen } from "./JournalScreen";
 import { SettingsScreen } from "./SettingsScreen";
 import { ProductionScreen } from "./ProductionScreen";
 import { CatalogScreen } from "./CatalogScreen";
+import { BlogScreen } from "./BlogScreen";
 import { canAccess, type Role } from "./roles";
 
 /*
@@ -396,6 +398,7 @@ export function AdminClient({ initialView }: { initialView: View }) {
       title: "CMS",
       items: [
         { key: "pages", label: "Pages", icon: <Globe /> },
+        { key: "blog", label: "Blog", icon: <Newspaper /> },
         { key: "studio", label: "Studio Insights", icon: <BarChart3 /> },
       ],
     },
@@ -493,6 +496,8 @@ export function AdminClient({ initialView }: { initialView: View }) {
             <JournalScreen meEmail={me?.email ?? ""} />
           ) : view === "pages" ? (
             <PagesScreen />
+          ) : view === "blog" ? (
+            <BlogScreen />
           ) : view === "catalog" ? (
             <CatalogScreen />
           ) : view === "production" ? (
