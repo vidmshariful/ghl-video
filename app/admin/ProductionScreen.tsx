@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase, money, when } from "./client";
 import { authHeader } from "./client";
+import { DeliverablesPanel } from "./DeliverablesPanel";
 import type { View } from "./nav";
 
 /*
@@ -60,6 +61,9 @@ export function ProductionScreen({ onNavigate }: { onNavigate: (v: View) => void
   const [rows, setRows] = useState<Row[] | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [err, setErr] = useState("");
+  const [open, setOpen] = useState<{ id: string; title: string; customer: string } | null>(null);
+  // videos done / owed per order, for the chip on each card
+  const [videos, setVideos] = useState<Record<string, { done: number; total: number }>>({});
 
   const load = useCallback(async () => {
     // active work plus the last two weeks of deliveries for a done column
@@ -73,8 +77,25 @@ export function ProductionScreen({ onNavigate }: { onNavigate: (v: View) => void
       .or(`fulfillment_stage.neq.delivered,stage_changed_at.gte.${since}`)
       .neq("archived", true)
       .order("created_at", { ascending: true });
-    if (error) setErr(error.message);
-    else setRows((data ?? []) as unknown as Row[]);
+    if (error) {
+      setErr(error.message);
+      return;
+    }
+    const list = (data ?? []) as unknown as Row[];
+    setRows(list);
+
+    // One query for every card's video counts rather than one per card.
+    const { data: ds } = await supabase
+      .from("order_deliverables")
+      .select("order_id, status")
+      .in("order_id", list.map((r) => r.id));
+    const tally: Record<string, { done: number; total: number }> = {};
+    for (const d of ds ?? []) {
+      const t = (tally[d.order_id as string] ??= { done: 0, total: 0 });
+      t.total++;
+      if (d.status === "ready" || d.status === "approved") t.done++;
+    }
+    setVideos(tally);
   }, []);
 
   useEffect(() => {
@@ -186,6 +207,25 @@ export function ProductionScreen({ onNavigate }: { onNavigate: (v: View) => void
                             {r.intake_completed ? "Brief in" : "Waiting on brief"}
                           </p>
                         ) : null}
+                        {videos[r.id]?.total ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setOpen({
+                                id: r.id,
+                                title: label(r.products),
+                                customer: r.customers?.name || r.customer_email,
+                              })
+                            }
+                            className={`tap mt-1.5 inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 font-mono text-label uppercase transition-colors ${
+                              videos[r.id].done === videos[r.id].total
+                                ? "border-green/40 text-green hover:border-green"
+                                : "border-hair text-muted hover:border-gold/60 hover:text-gold"
+                            }`}
+                          >
+                            {videos[r.id].done}/{videos[r.id].total} videos ready
+                          </button>
+                        ) : null}
                         <div className="mt-2.5 flex items-center gap-1.5">
                           <button
                             type="button"
@@ -221,6 +261,16 @@ export function ProductionScreen({ onNavigate }: { onNavigate: (v: View) => void
             );
           })}
         </div>
+      )}
+
+      {open && (
+        <DeliverablesPanel
+          orderId={open.id}
+          title={open.title}
+          customer={open.customer}
+          onClose={() => setOpen(null)}
+          onChanged={load}
+        />
       )}
     </div>
   );

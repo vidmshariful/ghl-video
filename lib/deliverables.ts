@@ -23,15 +23,19 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { bundlePickPools, PICK_LABEL, type BundlePickKey, type BundleSelections } from "@/lib/bundles";
 import { skuFor } from "@/lib/content/codes";
+import type { DeliverableStatus } from "@/lib/deliverable-status";
 
 type DB = SupabaseClient;
 
-export type DeliverableStatus =
-  | "queued"
-  | "in_production"
-  | "ready"
-  | "revisions"
-  | "approved";
+/* The status vocabulary lives in its own import-free file so the browser
+ * bundles can use it without dragging the catalog along. Re-exported here so
+ * server code has one place to import from. */
+export {
+  DELIVERABLE_STATUSES,
+  STATUS_LABEL,
+  isWatchable,
+  type DeliverableStatus,
+} from "@/lib/deliverable-status";
 
 export type Deliverable = {
   id: string;
@@ -59,16 +63,6 @@ export type DeliverablePlan = {
   category: string | null;
   group_label: string | null;
   position: number;
-};
-
-/* Human labels for the five states, used by admin and the portal so the two
- * can never drift into describing the same row differently. */
-export const STATUS_LABEL: Record<DeliverableStatus, string> = {
-  queued: "Queued",
-  in_production: "In production",
-  ready: "Ready to review",
-  revisions: "Revisions requested",
-  approved: "Approved",
 };
 
 /**
