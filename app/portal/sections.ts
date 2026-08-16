@@ -5,6 +5,7 @@
 export const PORTAL_SECTIONS = [
   "dashboard",
   "orders",
+  "videos",
   "messages",
   "subscriptions",
   "book",

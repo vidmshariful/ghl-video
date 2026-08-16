@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
+import { isWatchable, type DeliverableStatus } from "@/lib/deliverable-status";
 import { contextCan, resolvePortalContext } from "@/lib/account-team";
 
 export const runtime = "nodejs";
@@ -35,6 +36,16 @@ export async function GET(
     .eq("order_id", id)
     .order("created_at", { ascending: false });
 
+  /* The videos this order owes, so the order page answers "where is each one"
+   * rather than only "what stage is the whole thing at". Same rule as the My
+   * Videos tab: the link is withheld until the video is ready to watch, and a
+   * refunded order surfaces no links at all. */
+  const { data: deliverables } = await db
+    .from("order_deliverables")
+    .select("id, title, catalog_code, group_label, status, video_url, position")
+    .eq("order_id", id)
+    .order("position");
+
   const product = o.product as unknown as {
     name: string;
     sku: string;
@@ -58,5 +69,16 @@ export async function GET(
       paidAt: o.paid_at,
     },
     updates: (updates ?? []).map((u) => ({ body: u.body, createdAt: u.created_at })),
+    videos: (deliverables ?? []).map((d) => ({
+      id: d.id,
+      title: d.title,
+      code: d.catalog_code,
+      groupLabel: d.group_label,
+      status: d.status as DeliverableStatus,
+      videoUrl:
+        o.status !== "refunded" && isWatchable(d.status as DeliverableStatus)
+          ? (d.video_url ?? null)
+          : null,
+    })),
   });
 }

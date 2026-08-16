@@ -29,6 +29,7 @@ import {
 } from "@/components/portal/act-for";
 import { memberCan } from "@/lib/team-features";
 import {
+  Clapperboard,
   Handshake,
   Layers,
   LayoutDashboard,
@@ -41,6 +42,8 @@ import {
   ShoppingCart,
 } from "lucide-react";
 import { MessagesView } from "./MessagesView";
+import { MyVideosView } from "./MyVideosView";
+import { STATUS_LABEL, type DeliverableStatus } from "@/lib/deliverable-status";
 import { chatGet } from "@/components/chat/api";
 
 /*
@@ -309,7 +312,24 @@ type OrderDetail = {
   intakeCompleted: boolean;
   createdAt: string;
 };
+/* same accents the My Videos tab uses, so one video never reads two ways */
+const DELIVERABLE_TONE: Record<DeliverableStatus, string> = {
+  queued: "border-hair text-dim",
+  in_production: "border-gold/50 text-gold",
+  ready: "border-blue/50 text-blue",
+  revisions: "border-error/50 text-error",
+  approved: "border-green/50 text-green",
+};
+
 type Update = { body: string; createdAt: string };
+type OrderVideo = {
+  id: string;
+  title: string;
+  code: string | null;
+  groupLabel: string | null;
+  status: DeliverableStatus;
+  videoUrl: string | null;
+};
 
 function ProgressTracker({ stage }: { stage: string }) {
   const current = Math.max(0, STAGES.findIndex((s) => s.key === stage));
@@ -343,6 +363,7 @@ function OrderDetailView({
 }) {
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [updates, setUpdates] = useState<Update[]>([]);
+  const [videos, setVideos] = useState<OrderVideo[]>([]);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -350,6 +371,7 @@ function OrderDetailView({
       if (j.order) {
         setOrder(j.order);
         setUpdates(j.updates ?? []);
+        setVideos(j.videos ?? []);
       }
       setLoaded(true);
     });
@@ -480,6 +502,45 @@ function OrderDetailView({
           </a>
         </div>
       </div>
+
+      {/* the videos this order owes, one line each. The full players live in
+          My Videos; here it is the checklist view of the same truth. */}
+      {videos.length > 0 && (
+        <div className="rounded-[12px] border border-hair bg-surface p-6 md:p-8">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+            <p className="font-mono text-label uppercase text-muted">
+              {videos.length === 1 ? "Your video" : `Your videos (${videos.length})`}
+            </p>
+            <p className="font-mono text-label uppercase text-dim">
+              {videos.filter((v) => v.status === "ready" || v.status === "approved").length} ready
+            </p>
+          </div>
+          <ul className="mt-4 grid gap-2.5">
+            {videos.map((v) => (
+              <li
+                key={v.id}
+                className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1.5 border-b border-hair pb-2.5 last:border-0 last:pb-0"
+              >
+                <div className="min-w-[10rem] flex-1">
+                  <p className="text-body-sm text-ink">{v.title}</p>
+                  {(v.code || v.groupLabel) && (
+                    <p className="mt-0.5 font-mono text-label uppercase tracking-[0.1em] text-dim">
+                      {v.code ? v.code.toUpperCase() : ""}
+                      {v.code && v.groupLabel ? " / " : ""}
+                      {v.groupLabel ?? ""}
+                    </p>
+                  )}
+                </div>
+                <span
+                  className={`shrink-0 rounded-full border px-2.5 py-0.5 font-mono text-label uppercase ${DELIVERABLE_TONE[v.status]}`}
+                >
+                  {STATUS_LABEL[v.status]}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* updates */}
       <div className="rounded-[12px] border border-hair bg-surface p-6 md:p-8">
@@ -1221,6 +1282,7 @@ function Portal({
   const nav = [
     { key: "dashboard", label: "Dashboard", icon: <LayoutDashboard /> },
     ...(can("orders") ? [{ key: "orders", label: "Orders", icon: <ShoppingCart /> }] : []),
+    ...(can("orders") ? [{ key: "videos", label: "My Videos", icon: <Clapperboard /> }] : []),
     ...(can("messages")
       ? [{ key: "messages", label: "Messages", icon: <MessageSquare />, badge: msgUnread || undefined }]
       : []),
@@ -1352,6 +1414,16 @@ function Portal({
                 </div>
               </div>
             )
+          ) : section === "videos" && can("orders") ? (
+            <div>
+              <PageHeader
+                title="My Videos"
+                subtitle="Every video you have ordered, and where each one is."
+              />
+              <div className="mt-6">
+                <MyVideosView authedFetch={authedFetch} />
+              </div>
+            </div>
           ) : section === "messages" && can("messages") ? (
             <MessagesView
               pendingOrderId={pendingOrderId}
