@@ -471,7 +471,7 @@ export function AdminClient({ initialView }: { initialView: View }) {
           {view === "dashboard" ? (
             <DashboardScreen onNavigate={go} />
           ) : view === "orders" ? (
-            <OrdersScreen />
+            <OrdersScreen onNavigate={go} />
           ) : view === "messages" ? (
             <MessagesScreen />
           ) : view === "subscriptions" ? (

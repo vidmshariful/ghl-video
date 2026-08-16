@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase, money, when } from "./client";
 import { authHeader } from "./client";
-import { DeliverablesPanel } from "./DeliverablesPanel";
+import { ProductionJob } from "./ProductionJob";
 import type { View } from "./nav";
 
 /*
@@ -61,7 +61,7 @@ export function ProductionScreen({ onNavigate }: { onNavigate: (v: View) => void
   const [rows, setRows] = useState<Row[] | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [err, setErr] = useState("");
-  const [open, setOpen] = useState<{ id: string; title: string; customer: string } | null>(null);
+  const [openJob, setOpenJob] = useState<string | null>(null);
   // videos done / owed per order, for the chip on each card
   const [videos, setVideos] = useState<Record<string, { done: number; total: number }>>({});
 
@@ -133,14 +133,30 @@ export function ProductionScreen({ onNavigate }: { onNavigate: (v: View) => void
 
   const byStage = (key: string) => (rows ?? []).filter((r) => r.fulfillment_stage === key);
 
+  // A job takes over the screen rather than opening in a drawer: it carries
+  // the brief, every video, and the client timeline, and phase 6 adds feedback
+  // threads on top of that.
+  if (openJob) {
+    return (
+      <ProductionJob
+        id={openJob}
+        onBack={() => {
+          setOpenJob(null);
+          load();
+        }}
+      />
+    );
+  }
+
   return (
     <div className="w-full">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-h2 text-ink">Production</h1>
           <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
-            Every paid order that needs work, stage by stage. Move a card when
-            the work moves; Delivered sends the client their files email.
+            Every paid order that needs work. Open a job to set each video and
+            post updates. Stages follow the videos on their own; delivering is
+            the one step somebody presses.
           </p>
         </div>
         <button
@@ -184,9 +200,13 @@ export function ProductionScreen({ onNavigate }: { onNavigate: (v: View) => void
                         <p className="font-mono text-label uppercase tracking-[0.1em] text-gold/80">
                           {(r.products?.metadata?.code as string) ?? r.products?.sku?.toUpperCase()}
                         </p>
-                        <p className="mt-0.5 text-body-sm font-semibold leading-snug text-ink">
+                        <button
+                          type="button"
+                          onClick={() => setOpenJob(r.id)}
+                          className="tap mt-0.5 block w-full text-left text-body-sm font-semibold leading-snug text-ink transition-colors hover:text-gold"
+                        >
                           {label(r.products)}
-                        </p>
+                        </button>
                         <p className="mt-1 truncate text-body-sm text-muted">
                           {r.customers?.name || r.customer_email}
                         </p>
@@ -210,13 +230,7 @@ export function ProductionScreen({ onNavigate }: { onNavigate: (v: View) => void
                         {videos[r.id]?.total ? (
                           <button
                             type="button"
-                            onClick={() =>
-                              setOpen({
-                                id: r.id,
-                                title: label(r.products),
-                                customer: r.customers?.name || r.customer_email,
-                              })
-                            }
+                            onClick={() => setOpenJob(r.id)}
                             className={`tap mt-1.5 inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 font-mono text-label uppercase transition-colors ${
                               videos[r.id].done === videos[r.id].total
                                 ? "border-green/40 text-green hover:border-green"
@@ -232,7 +246,7 @@ export function ProductionScreen({ onNavigate }: { onNavigate: (v: View) => void
                             disabled={busyId === r.id || s.key === "paid"}
                             onClick={() => move(r, -1)}
                             aria-label="Move back a stage"
-                            className="tap rounded-[6px] border border-hair px-2 py-1 font-mono text-label text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-40"
+                            className="tap rounded-[8px] border border-hair px-2 py-1 font-mono text-label text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-40"
                           >
                             &#8592;
                           </button>
@@ -241,14 +255,14 @@ export function ProductionScreen({ onNavigate }: { onNavigate: (v: View) => void
                             disabled={busyId === r.id || s.key === "delivered"}
                             onClick={() => move(r, 1)}
                             aria-label="Move forward a stage"
-                            className="tap rounded-[6px] border border-hair px-2 py-1 font-mono text-label text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-40"
+                            className="tap rounded-[8px] border border-hair px-2 py-1 font-mono text-label text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-40"
                           >
                             &#8594;
                           </button>
                           <button
                             type="button"
                             onClick={() => onNavigate("messages")}
-                            className="tap ml-auto rounded-[6px] border border-hair px-2.5 py-1 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
+                            className="tap ml-auto rounded-[8px] border border-hair px-2.5 py-1 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
                           >
                             Chat
                           </button>
@@ -263,15 +277,6 @@ export function ProductionScreen({ onNavigate }: { onNavigate: (v: View) => void
         </div>
       )}
 
-      {open && (
-        <DeliverablesPanel
-          orderId={open.id}
-          title={open.title}
-          customer={open.customer}
-          onClose={() => setOpen(null)}
-          onChanged={load}
-        />
-      )}
     </div>
   );
 }

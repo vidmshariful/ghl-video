@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { authHeader, money, supabase, when } from "./client";
 import { AdminModal } from "./Modal";
 import { describeFirstTouch } from "@/lib/first-touch";
-import { bundlePickTitles } from "@/lib/bundles";
+import { BrandingBrief } from "./BrandingBrief";
+import type { View } from "./nav";
 
 export type OrderRow = {
   id: string;
@@ -151,234 +152,115 @@ function OrderActions({ order, onChanged }: { order: OrderRow; onChanged: () => 
   );
 }
 
-const STAGES = ["paid", "intake", "production", "review", "delivered"];
-const fField =
-  "mt-1.5 w-full rounded-[8px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none";
+const STAGE_LABEL: Record<string, string> = {
+  paid: "Paid",
+  intake: "Intake",
+  production: "In production",
+  review: "Review",
+  delivered: "Delivered",
+};
 const fLab = "font-mono text-label uppercase text-dim";
+const fField =
+  "mt-1 w-full rounded-[8px] border border-hair bg-canvas px-3 py-2 text-body text-ink placeholder:text-dim";
 
-function FulfillmentEditor({ order, onChanged }: { order: OrderRow; onChanged: () => void }) {
-  const [stage, setStage] = useState(order.fulfillment_stage);
-  const [manager, setManager] = useState(order.assigned_manager);
-  const [deliveryUrl, setDeliveryUrl] = useState(order.delivery_url ?? "");
-  const [intake, setIntake] = useState(order.intake_completed);
-  const [update, setUpdate] = useState("");
-  const [busy, setBusy] = useState<null | "save" | "post">(null);
-  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
-
-  async function send(kind: "save" | "post") {
-    setBusy(kind);
-    setMsg(null);
-    try {
-      const r = await fetch(`/api/admin/orders/${order.id}/fulfillment`, {
-        method: "POST",
-        headers: { ...(await authHeader()), "Content-Type": "application/json" },
-        body: JSON.stringify({
-          stage,
-          manager,
-          deliveryUrl,
-          intakeCompleted: intake,
-          update: kind === "post" ? update : undefined,
-        }),
-      });
-      const j = await r.json();
-      if (j.ok) {
-        setMsg({ ok: true, text: kind === "post" ? "Update posted." : "Saved." });
-        if (kind === "post") setUpdate("");
-        onChanged();
-      } else setMsg({ ok: false, text: j.error ?? "Failed." });
-    } catch (e) {
-      setMsg({ ok: false, text: (e as Error).message });
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  const btn =
-    "tap rounded-[8px] px-5 py-2 text-body-sm font-semibold transition-all disabled:opacity-50";
-
-  return (
-    <>
-    <FoundUsLine order={order} />
-    <div className="mt-6 rounded-[8px] border border-gold/30 bg-gold/[0.04] p-5">
-      <p className="font-mono text-label uppercase text-gold">Fulfillment (what the customer sees)</p>
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        <label>
-          <span className={fLab}>Stage</span>
-          <select value={stage} onChange={(e) => setStage(e.target.value)} className={fField}>
-            {STAGES.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span className={fLab}>Assigned producer</span>
-          <input value={manager} onChange={(e) => setManager(e.target.value)} className={fField} />
-        </label>
-        <label className="sm:col-span-2">
-          <span className={fLab}>PlayBook delivery link</span>
-          <input
-            value={deliveryUrl}
-            onChange={(e) => setDeliveryUrl(e.target.value)}
-            className={fField}
-            placeholder="https://playbook..."
-          />
-        </label>
-        <label className="flex items-center gap-3 sm:col-span-2">
-          <input
-            type="checkbox"
-            checked={intake}
-            onChange={(e) => setIntake(e.target.checked)}
-            className="h-4 w-4 accent-[#00CC00]"
-          />
-          <span className="text-body text-ink">Intake completed</span>
-        </label>
-      </div>
-      <div className="mt-4">
-        <button
-          type="button"
-          onClick={() => send("save")}
-          disabled={busy !== null}
-          className={`${btn} bg-brand-gradient text-canvas hover:brightness-110`}
-        >
-          {busy === "save" ? "Saving..." : "Save fulfillment"}
-        </button>
-      </div>
-
-      <div className="mt-5 border-t border-hair pt-4">
-        <span className={fLab}>Post an update the customer sees</span>
-        <textarea
-          value={update}
-          onChange={(e) => setUpdate(e.target.value)}
-          rows={2}
-          className={`${fField} resize-y`}
-          placeholder="First cut is in review."
-        />
-        <button
-          type="button"
-          onClick={() => send("post")}
-          disabled={busy !== null || !update.trim()}
-          className={`${btn} mt-3 border border-hair text-muted hover:border-gold/60 hover:text-gold`}
-        >
-          {busy === "post" ? "Posting..." : "Post update"}
-        </button>
-      </div>
-      {msg && <p className={`mt-3 text-body-sm ${msg.ok ? "text-green" : "text-error"}`}>{msg.text}</p>}
-    </div>
-    </>
-  );
-}
-
-type Brief = {
-  brandName: string;
-  primaryColor: string;
-  accentColor: string;
-  brandPronunciation: string;
-  notes: string;
-  logoUrl: string | null;
-  screenshotUrls: string[];
-  videoSelections?: {
-    master?: string[];
-    demo?: string[];
-    feature?: string[];
-  } | null;
+const VIDEO_TONE: Record<string, string> = {
+  queued: "border-hair text-dim",
+  in_production: "border-gold/50 text-gold",
+  ready: "border-blue/50 text-blue",
+  revisions: "border-error/50 text-error",
+  approved: "border-green/50 text-green",
 };
 
-/* The client's submitted branding brief, read from the intake route (which
- * returns the files as short-lived signed URLs). */
-function BrandingBrief({ orderId }: { orderId: string }) {
-  const [brief, setBrief] = useState<Brief | null | "loading">("loading");
-  useEffect(() => {
-    fetch(`/api/intake/${orderId}/`, { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j) => setBrief((j?.intake as Brief) ?? null))
-      .catch(() => setBrief(null));
-  }, [orderId]);
+/*
+ * Where the work is, read only.
+ *
+ * Orders is the commercial record: paid, invoiced, refunded. Production is the
+ * work. This used to be an editor here as well as a board there as well as a
+ * per-video panel, three places setting one truth and nothing keeping them
+ * honest. Anyone answering a client can still see the state at a glance; to
+ * change it they go to the job in Production, where the change belongs.
+ */
+function ProductionSummary({
+  order,
+  onOpenProduction,
+}: {
+  order: OrderRow;
+  onOpenProduction: () => void;
+}) {
+  const [videos, setVideos] = useState<
+    { id: string; title: string; status: string; catalog_code: string | null }[] | null
+  >(null);
 
-  const lab = "shrink-0 font-mono text-label uppercase text-dim";
-  const chip =
-    "rounded-[8px] border border-hair px-3 py-1 font-mono text-label uppercase text-ink hover:border-gold/60";
-  // map a picked video slug to its title, for the fulfillment team
-  const slugTitle = useMemo(() => bundlePickTitles(), []);
-  const pickCats: { key: "master" | "demo" | "feature"; label: string }[] = [
-    { key: "master", label: "Master" },
-    { key: "demo", label: "Demo" },
-    { key: "feature", label: "Feature" },
-  ];
+  useEffect(() => {
+    supabase
+      .from("order_deliverables")
+      .select("id, title, status, catalog_code")
+      .eq("order_id", order.id)
+      .order("position")
+      .then(({ data }) => setVideos(data ?? []));
+  }, [order.id]);
+
+  const ready = (videos ?? []).filter(
+    (v) => v.status === "ready" || v.status === "approved",
+  ).length;
 
   return (
-    <div className="mt-6">
-      <p className="font-mono text-label uppercase text-gold">Branding brief</p>
-      {brief === "loading" ? (
-        <p className="mt-2 text-body-sm text-muted">Loading...</p>
-      ) : !brief ? (
-        <p className="mt-2 text-body-sm text-dim">
-          Not submitted yet. Client link:{" "}
-          <span className="break-all font-mono text-muted">/checkout/intake/{orderId}</span>
-        </p>
+    <div>
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <p className="font-mono text-label uppercase text-gold">Where the work is</p>
+        <button type="button" onClick={onOpenProduction} className={actionBtn}>
+          Open in Production
+        </button>
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2 text-body-sm">
+        <span className="inline-flex items-center gap-2">
+          <span className={fLab}>Stage</span>
+          <span className="text-ink">
+            {STAGE_LABEL[order.fulfillment_stage] ?? order.fulfillment_stage}
+          </span>
+        </span>
+        <span className="inline-flex items-center gap-2">
+          <span className={fLab}>Owner</span>
+          <span className="text-ink">{order.assigned_manager || "Nobody yet"}</span>
+        </span>
+        <span className="inline-flex items-center gap-2">
+          <span className={fLab}>Brief</span>
+          <span className={order.intake_completed ? "text-green" : "text-gold"}>
+            {order.intake_completed ? "In" : "Waiting"}
+          </span>
+        </span>
+      </div>
+
+      {videos === null ? null : videos.length === 0 ? (
+        <p className="mt-3 text-body-sm text-dim">No videos listed on this order.</p>
       ) : (
-        <div className="mt-2 grid gap-2 text-body-sm">
-          <div className="flex gap-2">
-            <span className={lab}>Brand:</span>
-            <span className="text-muted">{brief.brandName}</span>
-          </div>
-          <div className="flex flex-wrap items-center gap-5">
-            <span className="inline-flex items-center gap-2">
-              <span className={lab}>Primary</span>
-              <span className="h-4 w-4 rounded border border-hair" style={{ background: brief.primaryColor }} />
-              <span className="font-mono text-muted">{brief.primaryColor}</span>
-            </span>
-            <span className="inline-flex items-center gap-2">
-              <span className={lab}>Accent</span>
-              <span className="h-4 w-4 rounded border border-hair" style={{ background: brief.accentColor }} />
-              <span className="font-mono text-muted">{brief.accentColor}</span>
-            </span>
-          </div>
-          {brief.videoSelections &&
-          pickCats.some((c) => (brief.videoSelections?.[c.key] ?? []).length) ? (
-            <div className="grid gap-1 rounded-[8px] border border-hair/60 bg-canvas/40 p-3">
-              <span className="font-mono text-label uppercase text-gold/80">Chosen videos</span>
-              {pickCats.map((c) => {
-                const slugs = brief.videoSelections?.[c.key] ?? [];
-                if (!slugs.length) return null;
-                return (
-                  <div key={c.key} className="flex gap-2">
-                    <span className={lab}>{c.label}:</span>
-                    <span className="text-muted">
-                      {slugs.map((slug) => slugTitle[slug] ?? slug).join(", ")}
+        <div className="mt-4">
+          <p className={fLab}>
+            {ready} of {videos.length} with the client
+          </p>
+          <ul className="mt-2 grid gap-2">
+            {videos.map((v) => (
+              <li
+                key={v.id}
+                className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-hair pb-2 last:border-0 last:pb-0"
+              >
+                <span className="min-w-[10rem] flex-1 text-body-sm text-ink">
+                  {v.title}
+                  {v.catalog_code ? (
+                    <span className="ml-2 font-mono text-label uppercase text-dim">
+                      {v.catalog_code.toUpperCase()}
                     </span>
-                  </div>
-                );
-              })}
-            </div>
-          ) : null}
-          {brief.brandPronunciation ? (
-            <div className="flex gap-2">
-              <span className={lab}>Say it:</span>
-              <span className="text-muted">{brief.brandPronunciation}</span>
-            </div>
-          ) : null}
-          {brief.notes ? (
-            <div className="flex gap-2">
-              <span className={lab}>Notes:</span>
-              <span className="whitespace-pre-wrap text-muted">{brief.notes}</span>
-            </div>
-          ) : null}
-          {brief.logoUrl || brief.screenshotUrls.length ? (
-            <div className="mt-1 flex flex-wrap gap-2">
-              {brief.logoUrl ? (
-                <a href={brief.logoUrl} target="_blank" rel="noopener" className={chip}>
-                  Logo
-                </a>
-              ) : null}
-              {brief.screenshotUrls.map((u, i) => (
-                <a key={i} href={u} target="_blank" rel="noopener" className={chip}>
-                  Shot {i + 1}
-                </a>
-              ))}
-            </div>
-          ) : null}
+                  ) : null}
+                </span>
+                <span
+                  className={`shrink-0 rounded-full border px-2.5 py-0.5 font-mono text-label uppercase ${VIDEO_TONE[v.status] ?? "border-hair text-dim"}`}
+                >
+                  {v.status.replace(/_/g, " ")}
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </div>
@@ -389,10 +271,12 @@ function OrderDetail({
   order,
   attachedInvoices,
   onChanged,
+  onOpenProduction,
 }: {
   order: OrderRow;
   attachedInvoices: InvoiceLink[];
   onChanged: () => void;
+  onOpenProduction: () => void;
 }) {
   const [events, setEvents] = useState<OrderEvent[] | null>(null);
   const [updates, setUpdates] = useState<OrderUpdate[] | null>(null);
@@ -427,13 +311,11 @@ function OrderDetail({
     <div className="grid gap-8 lg:grid-cols-[1.1fr_1fr]">
       {/* left: post updates + the update history the client sees */}
       <div>
-        <FulfillmentEditor
-          order={order}
-          onChanged={() => {
-            onChanged();
-            loadUpdates();
-          }}
-        />
+        {/* where the lead came from: commercial, so it stays in Orders */}
+        <FoundUsLine order={order} />
+        <div className="mt-6">
+          <ProductionSummary order={order} onOpenProduction={onOpenProduction} />
+        </div>
         <p className="mt-8 font-mono text-label uppercase text-dim">
           Updates the client sees
         </p>
@@ -715,7 +597,7 @@ function exportOrdersCsv(rows: OrderRow[]) {
   URL.revokeObjectURL(url);
 }
 
-export function OrdersScreen() {
+export function OrdersScreen({ onNavigate }: { onNavigate?: (v: View) => void } = {}) {
   const [rows, setRows] = useState<OrderRow[]>([]);
   const [invoices, setInvoices] = useState<InvoiceLink[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -827,7 +709,12 @@ export function OrdersScreen() {
           </div>
         </div>
         <div className="mt-6">
-          <OrderDetail order={openOrder} attachedInvoices={attached} onChanged={load} />
+          <OrderDetail
+            order={openOrder}
+            attachedInvoices={attached}
+            onChanged={load}
+            onOpenProduction={() => onNavigate?.("production")}
+          />
         </div>
       </div>
     );
