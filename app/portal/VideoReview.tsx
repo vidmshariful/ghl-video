@@ -15,6 +15,9 @@ import { ConfirmDialog } from "./ConfirmDialog";
  *
  * One round of changes is included, and the client is told so before they use
  * it. That is the difference between a policy and a nasty surprise.
+ *
+ * Notes point at a moment, not at a spot on the frame. Pointing at a place was
+ * built and then removed by the owner: see the idea box if it comes back.
  */
 
 type Comment = {
@@ -23,8 +26,6 @@ type Comment = {
   name: string;
   body: string;
   atSeconds: number | null;
-  atX: number | null;
-  atY: number | null;
   stamp: string | null;
   version: number | null;
   parentId: string | null;
@@ -79,8 +80,6 @@ export function VideoReview({
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
   const [currentVersion, setCurrentVersion] = useState<number | null>(null);
-  const [pinAt, setPinAt] = useState<{ x: number; y: number } | null>(null);
-  const [pinMode, setPinMode] = useState(false);
   const [ask, setAsk] = useState<null | "approve" | "changes">(null);
 
   const load = useCallback(async () => {
@@ -113,8 +112,6 @@ export function VideoReview({
               action,
               body: message,
               atSeconds: opts?.parentId ? null : pin ? at : null,
-              atX: opts?.parentId ? null : (pinAt?.x ?? null),
-              atY: opts?.parentId ? null : (pinAt?.y ?? null),
               parentId: opts?.parentId ?? null,
             }
           : { action },
@@ -127,8 +124,6 @@ export function VideoReview({
       setReplyText("");
     } else {
       setText("");
-      setPinAt(null);
-      setPinMode(false);
     }
     await load();
     onChanged();
@@ -141,21 +136,6 @@ export function VideoReview({
     ref.current?.pause();
   }
 
-  /* A click on the frame in pin mode records where, as percentages so it
-     survives any player size, and pauses on the exact frame. */
-  function placePin(e: React.MouseEvent<HTMLVideoElement>) {
-    if (!pinMode) return;
-    const r = e.currentTarget.getBoundingClientRect();
-    // Before the video reports its size the box can still be zero high, and
-    // dividing by that produced a pin with an across but no down: it saved as
-    // half a pin and drew at the top of the frame. Ignore the click instead.
-    if (r.width <= 0 || r.height <= 0) return;
-    const x = ((e.clientX - r.left) / r.width) * 100;
-    const y = ((e.clientY - r.top) / r.height) * 100;
-    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
-    setPinAt({ x, y });
-    pause();
-  }
 
   function seek(s: number) {
     const v = ref.current;
@@ -297,58 +277,17 @@ export function VideoReview({
         />
       )}
       <div>
-        <div className="relative">
-          <video
-            ref={ref}
-            controls
-            autoPlay
-            preload="metadata"
-            playsInline
-            src={videoUrl}
-            onClick={placePin}
-            onTimeUpdate={(e) => setAt(e.currentTarget.currentTime)}
-            onLoadedMetadata={(e) => setDuration(e.currentTarget.duration || 0)}
-            className={`max-h-[65vh] w-full rounded-[8px] bg-canvas ${pinMode ? "cursor-crosshair" : ""}`}
-          />
-
-          {/* Pins for notes about roughly this moment, so the frame shows what
-              the client was pointing at without them hunting the list. */}
-          {onCurrent
-            .filter(
-              (c) =>
-                c.atX != null &&
-                c.atY != null &&
-                c.atSeconds != null &&
-                Math.abs(c.atSeconds - at) < 2,
-            )
-            .map((c, i) => (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => c.atSeconds != null && seek(c.atSeconds)}
-                title={c.body.slice(0, 80)}
-                style={{ left: `${c.atX}%`, top: `${c.atY}%` }}
-                className="tap absolute z-10 flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-canvas bg-gold font-mono text-label font-bold text-canvas shadow-lg"
-              >
-                {i + 1}
-              </button>
-            ))}
-
-          {/* where the note being written is pointing */}
-          {pinAt && (
-            <span
-              style={{ left: `${pinAt.x}%`, top: `${pinAt.y}%` }}
-              className="pointer-events-none absolute z-10 h-7 w-7 -translate-x-1/2 -translate-y-1/2 animate-pulse rounded-full border-2 border-canvas bg-blue shadow-lg"
-              aria-hidden="true"
-            />
-          )}
-
-          {pinMode && !pinAt && (
-            <span className="pointer-events-none absolute inset-x-0 top-3 mx-auto w-fit rounded-full bg-canvas/90 px-3 py-1 font-mono text-label uppercase tracking-[0.1em] text-gold">
-              Click the spot you mean
-            </span>
-          )}
-        </div>
+        <video
+          ref={ref}
+          controls
+          autoPlay
+          preload="metadata"
+          playsInline
+          src={videoUrl}
+          onTimeUpdate={(e) => setAt(e.currentTarget.currentTime)}
+          onLoadedMetadata={(e) => setDuration(e.currentTarget.duration || 0)}
+          className="max-h-[65vh] w-full rounded-[8px] bg-canvas"
+        />
 
         {duration > 0 && (
           <div className="relative mt-2 h-6" aria-hidden="true">
@@ -415,8 +354,7 @@ export function VideoReview({
         </p>
 
         <p className="mt-2 text-body-sm text-dim">
-          Writing pauses the video. Stop on the exact frame you mean, and pin
-          the spot if it helps.
+          Writing pauses the video. Stop on the exact frame you mean.
         </p>
 
         <div className="mt-2 grid gap-2">
@@ -429,32 +367,15 @@ export function VideoReview({
             placeholder="What would you like changed? Enter to send."
             className={fieldCls}
           />
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            <label className="flex items-center gap-2 text-body-sm text-muted">
-              <input
-                type="checkbox"
-                checked={pin}
-                onChange={(e) => setPin(e.target.checked)}
-                className="h-4 w-4 accent-[#FCC000]"
-              />
-              Pin this to {mmss(at)}
-            </label>
-            <button
-              type="button"
-              onClick={() => {
-                if (pinAt) return setPinAt(null);
-                setPinMode((m) => !m);
-                pause();
-              }}
-              className={`tap rounded-[8px] border px-2.5 py-1 font-mono text-label uppercase transition-colors ${
-                pinAt || pinMode
-                  ? "border-gold text-gold"
-                  : "border-hair text-muted hover:border-gold/60 hover:text-gold"
-              }`}
-            >
-              {pinAt ? "Spot pinned, clear" : pinMode ? "Pinning, cancel" : "Point at a spot"}
-            </button>
-          </div>
+          <label className="flex items-center gap-2 text-body-sm text-muted">
+            <input
+              type="checkbox"
+              checked={pin}
+              onChange={(e) => setPin(e.target.checked)}
+              className="h-4 w-4 accent-[#FCC000]"
+            />
+            Pin this to {mmss(at)}
+          </label>
           <button
             type="button"
             disabled={busy || !text.trim()}

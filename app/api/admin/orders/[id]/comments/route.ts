@@ -52,8 +52,6 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       name: c.author_name ?? (c.author_side === "studio" ? "GHL Video" : c.author_email),
       body: c.body,
       atSeconds: c.at_seconds,
-      atX: c.at_x,
-      atY: c.at_y,
       stamp: stamp(c.at_seconds),
       round: c.revision_round,
       version: c.version,
