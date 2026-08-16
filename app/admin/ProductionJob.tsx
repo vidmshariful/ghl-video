@@ -79,6 +79,8 @@ export function ProductionJob({ id, onBack }: { id: string; onBack: () => void }
   const [busy, setBusy] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [note, setNote] = useState("");
+  const [openNotes, setOpenNotes] = useState<Record<string, number>>({});
+  const [thread, setThread] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setErr("");
@@ -95,6 +97,11 @@ export function ProductionJob({ id, onBack }: { id: string; onBack: () => void }
         setLinks(
           Object.fromEntries((j.videos as Deliverable[]).map((d) => [d.id, d.video_url ?? ""])),
         );
+        // unanswered client notes per video, for the badge on each row
+        const c = await fetch(`/api/admin/orders/${id}/comments`, { headers: await authHeader() })
+          .then((r) => r.json())
+          .catch(() => null);
+        setOpenNotes((c?.open as Record<string, number>) ?? {});
       }
     } catch {
       setErr("Could not load this job.");
@@ -369,15 +376,36 @@ export function ProductionJob({ id, onBack }: { id: string; onBack: () => void }
                   </label>
                 </div>
 
-                {d.video_url && (
-                  <a
-                    href={d.video_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-2 inline-block font-mono text-label uppercase tracking-[0.1em] text-blue hover:underline"
+                <div className="mt-2 flex flex-wrap items-center gap-4">
+                  {d.video_url && (
+                    <a
+                      href={d.video_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono text-label uppercase tracking-[0.1em] text-blue hover:underline"
+                    >
+                      Open the video
+                    </a>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setThread(thread === d.id ? null : d.id)}
+                    className={`tap font-mono text-label uppercase tracking-[0.1em] transition-colors hover:text-gold ${
+                      openNotes[d.id] ? "text-gold" : "text-dim"
+                    }`}
                   >
-                    Open the video
-                  </a>
+                    {openNotes[d.id]
+                      ? `${openNotes[d.id]} note${openNotes[d.id] === 1 ? "" : "s"} to answer`
+                      : "Notes"}
+                  </button>
+                </div>
+
+                {thread === d.id && (
+                  <StudioThread
+                    orderId={id}
+                    deliverableId={d.id}
+                    onChanged={load}
+                  />
                 )}
               </li>
             ))}
@@ -424,6 +452,122 @@ export function ProductionJob({ id, onBack }: { id: string; onBack: () => void }
             ))}
           </ul>
         )}
+      </div>
+    </div>
+  );
+}
+
+/* One video's review thread, studio side. Same thread the client sees under
+   their player, so a reply here lands in their portal and their bell. */
+function StudioThread({
+  orderId,
+  deliverableId,
+  onChanged,
+}: {
+  orderId: string;
+  deliverableId: string;
+  onChanged: () => void;
+}) {
+  const [rows, setRows] = useState<
+    {
+      id: string;
+      side: "client" | "studio";
+      name: string;
+      body: string;
+      stamp: string | null;
+      resolved: boolean;
+      createdAt: string;
+      round: number;
+    }[] | null
+  >(null);
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    const r = await fetch(
+      `/api/admin/orders/${orderId}/comments?video=${deliverableId}`,
+      { headers: await authHeader() },
+    );
+    const j = await r.json().catch(() => null);
+    setRows(j?.comments ?? []);
+  }, [orderId, deliverableId]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  async function post(patch: Record<string, unknown>) {
+    setBusy(true);
+    await fetch(`/api/admin/orders/${orderId}/comments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(await authHeader()) },
+      body: JSON.stringify({ deliverableId, ...patch }),
+    }).catch(() => null);
+    setBusy(false);
+    setText("");
+    await load();
+    onChanged();
+  }
+
+  return (
+    <div className="mt-3 border-t border-hair pt-3">
+      {rows === null ? (
+        <p className="text-body-sm text-muted">Loading notes...</p>
+      ) : rows.length === 0 ? (
+        <p className="text-body-sm text-dim">No notes on this one yet.</p>
+      ) : (
+        <ul className="grid gap-2">
+          {rows.map((c) => (
+            <li
+              key={c.id}
+              className={`rounded-[8px] border p-3 ${
+                c.side === "client" ? "border-gold/30 bg-gold/5" : "border-hair bg-surface"
+              } ${c.resolved ? "opacity-60" : ""}`}
+            >
+              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                <span className="text-body-sm font-semibold text-ink">{c.name}</span>
+                {c.stamp && (
+                  <span className="rounded-full border border-gold/40 px-2 py-0.5 font-mono text-label text-gold">
+                    {c.stamp}
+                  </span>
+                )}
+                {c.side === "client" && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => post({ resolveId: c.id, resolved: !c.resolved })}
+                    className="tap ml-auto font-mono text-label uppercase text-dim transition-colors hover:text-green disabled:opacity-40"
+                  >
+                    {c.resolved ? "Reopen" : "Mark done"}
+                  </button>
+                )}
+              </div>
+              <p className="mt-1.5 whitespace-pre-wrap text-body-sm text-muted">{c.body}</p>
+              <p className={`mt-1 ${lab}`}>
+                {when(c.createdAt)}
+                {c.round > 0 ? ` / round ${c.round + 1}` : ""}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className="mt-3 grid gap-2">
+        <textarea
+          rows={2}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Reply to the client about this video."
+          className={field}
+        />
+        <button
+          type="button"
+          disabled={busy || !text.trim()}
+          onClick={() => post({ body: text })}
+          className={`${btn} justify-self-start`}
+        >
+          Reply
+        </button>
       </div>
     </div>
   );

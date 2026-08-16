@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { STATUS_LABEL, type DeliverableStatus } from "@/lib/deliverable-status";
+import { VideoReview } from "./VideoReview";
 
 /*
  * My Videos: what the client actually bought, video by video.
@@ -132,7 +133,7 @@ export function MyVideosView({
       ) : (
         <div className="mt-6 grid gap-8">
           {shown.map((g) => (
-            <GroupBlock key={g.orderId} group={g} />
+            <GroupBlock key={g.orderId} group={g} authedFetch={authedFetch} onChanged={load} />
           ))}
         </div>
       )}
@@ -140,7 +141,15 @@ export function MyVideosView({
   );
 }
 
-function GroupBlock({ group }: { group: Group }) {
+function GroupBlock({
+  group,
+  authedFetch,
+  onChanged,
+}: {
+  group: Group;
+  authedFetch: (path: string, init?: RequestInit) => Promise<unknown>;
+  onChanged: () => void;
+}) {
   const ready = group.videos.filter(
     (v) => v.status === "ready" || v.status === "approved",
   ).length;
@@ -164,14 +173,52 @@ function GroupBlock({ group }: { group: Group }) {
 
       <div className="grid gap-4 md:grid-cols-2">
         {group.videos.map((v) => (
-          <VideoCard key={v.id} video={v} />
+          <VideoCard key={v.id} video={v} authedFetch={authedFetch} onChanged={onChanged} />
         ))}
       </div>
     </section>
   );
 }
 
-function VideoCard({ video: v }: { video: Video }) {
+function VideoCard({
+  video: v,
+  authedFetch,
+  onChanged,
+}: {
+  video: Video;
+  authedFetch: (path: string, init?: RequestInit) => Promise<unknown>;
+  onChanged: () => void;
+}) {
+  const [reviewing, setReviewing] = useState(false);
+
+  /* Reviewing takes the full width of the grid: a player next to a thread does
+     not fit in half a row, and the notes are the point of the screen once the
+     client opens it. */
+  if (reviewing && v.videoUrl) {
+    return (
+      <article className="rounded-[12px] border border-hair bg-surface p-4 md:col-span-2">
+        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <h3 className="text-body font-semibold text-ink">{v.title}</h3>
+          <button
+            type="button"
+            onClick={() => setReviewing(false)}
+            className="tap rounded-[8px] border border-hair px-3 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
+          >
+            Close
+          </button>
+        </div>
+        <VideoReview
+          videoId={v.id}
+          title={v.title}
+          videoUrl={v.videoUrl}
+          status={v.status}
+          onChanged={onChanged}
+          authedFetch={authedFetch}
+        />
+      </article>
+    );
+  }
+
   return (
     <article className="overflow-hidden rounded-[12px] border border-hair bg-surface">
       {v.videoUrl ? (
@@ -212,13 +259,22 @@ function VideoCard({ video: v }: { video: Video }) {
           </p>
         )}
         {v.videoUrl && (
-          <a
-            href={v.videoUrl}
-            download
-            className="mt-3 inline-block font-mono text-label uppercase tracking-[0.1em] text-blue hover:underline"
-          >
-            Download
-          </a>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setReviewing(true)}
+              className="tap rounded-[8px] border border-gold/50 px-3 py-1.5 font-mono text-label uppercase text-gold transition-colors hover:bg-gold hover:text-canvas"
+            >
+              Review and comment
+            </button>
+            <a
+              href={v.videoUrl}
+              download
+              className="font-mono text-label uppercase tracking-[0.1em] text-blue hover:underline"
+            >
+              Download
+            </a>
+          </div>
         )}
       </div>
     </article>

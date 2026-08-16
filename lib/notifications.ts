@@ -143,3 +143,37 @@ export async function markNotificationsRead(
   const { error } = await q;
   if (error) console.error("[notify] mark read failed:", error.message);
 }
+
+/**
+ * Tell whoever owns this job, falling back to the whole team when nobody has
+ * claimed it. Client feedback landing in one person's bell is the reason
+ * orders carry an owner at all; fanning it out to everybody would put us back
+ * where a notification is somebody else's problem.
+ */
+export async function pushOrderOwnerNotification(
+  db: SupabaseClient,
+  orderId: string,
+  n: Omit<PushInput, "audience" | "email">,
+): Promise<void> {
+  try {
+    const { data: order } = await db
+      .from("orders")
+      .select("assigned_admin_email")
+      .eq("id", orderId)
+      .maybeSingle();
+    const owner = (order?.assigned_admin_email as string | null)?.toLowerCase();
+    if (!owner) return pushAdminNotifications(db, n);
+
+    const { error } = await db.from("notifications").insert({
+      audience: "admin",
+      recipient_email: owner,
+      kind: n.kind,
+      title: n.title,
+      body: n.body ?? null,
+      href: n.href ?? null,
+    });
+    if (error) console.error(`[notify] owner ${n.kind} not stored:`, error.message);
+  } catch (e) {
+    console.error(`[notify] owner ${n.kind} failed:`, e instanceof Error ? e.message : e);
+  }
+}
