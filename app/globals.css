@@ -96,6 +96,23 @@
   --dim: #7d8499;
 }
 
+/* The DEV UI KIT (/uikits). Never ships: the route 404s outside development.
+   Its own chrome deliberately uses --kit-* variables ONLY, never the four
+   product skins' tokens. That is the whole point: the kit has to render a
+   site button next to a portal button next to a checkout panel, so its own
+   furniture must sit outside every skin it displays. Specimens on a kit page
+   get wrapped in their real data-surface (or .sp) and pick up their real
+   skin from the blocks above, exactly as they do in production. */
+[data-surface="uikit"] {
+  --kit-bg: #0b0c11;
+  --kit-panel: #101219;
+  --kit-line: #23273a;
+  --kit-text: #e7eaf2;
+  --kit-dim: #8a91a6;
+  --kit-accent: #7cd4ff;
+  --kit-warn: #ffb02e;
+}
+
 /* The portals' LIGHT theme. The top-bar switch stamps data-theme on <html>
    (persisted in localStorage, applied pre-paint by the layouts' init
    script); only the portal surface responds, the other surfaces are

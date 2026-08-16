@@ -2,6 +2,14 @@ import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 
+/* Added to every part's restricted-import patterns. The kit 404s outside
+ * development, so anything that ships importing it would break in prod. */
+const KIT_IS_DEV_ONLY = {
+  group: ["@/components/uikits/*", "@/app/uikits/*"],
+  message:
+    "The UI kit is dev-only and 404s in production. Nothing that ships may import it.",
+};
+
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
@@ -55,6 +63,7 @@ const eslintConfig = defineConfig([
               message:
                 "Public site must not import checkout/sales/admin UI or money-path internals. Put shared code in lib/content or a shared component.",
             },
+            KIT_IS_DEV_ONLY,
           ],
         },
       ],
@@ -78,6 +87,7 @@ const eslintConfig = defineConfig([
               message:
                 "Checkout must not import marketing or sales UI. Put shared code in a shared component.",
             },
+            KIT_IS_DEV_ONLY,
           ],
         },
       ],
@@ -109,6 +119,7 @@ const eslintConfig = defineConfig([
               message:
                 "Portals must not import marketing, sales, or checkout UI. Shared brand pieces (Logo, GhlMark, chat) live at the top level of components/.",
             },
+            KIT_IS_DEV_ONLY,
           ],
         },
       ],
@@ -133,9 +144,42 @@ const eslintConfig = defineConfig([
               message:
                 "Sales pages must not import marketing/checkout/admin UI. Put shared code in a shared component or lib/content.",
             },
+            KIT_IS_DEV_ONLY,
           ],
         },
       ],
+    },
+  },
+  {
+    /* The dev UI kit is the ONE declared exception to the part boundaries
+     * above, and it has to be: a live gallery's whole job is rendering a
+     * marketing button beside a portal card beside a checkout panel on one
+     * page. Granting that exception anywhere else would defeat the rules;
+     * it is safe here for exactly one reason, so keep the reason true:
+     *
+     *   /uikits 404s outside development (app/uikits/layout.tsx).
+     *
+     * The kit may import any surface's UI. Nothing may import the kit back,
+     * which is what this second rule enforces from the other direction.
+     */
+    files: ["app/uikits/**/*.{ts,tsx}", "components/uikits/**/*.{ts,tsx}"],
+    rules: { "no-restricted-imports": "off" },
+  },
+  {
+    /* Production code must never depend on the dev-only kit. Scoped to the
+     * paths the four blocks above do NOT already cover, because this rule
+     * shares their name: in flat config a later block REPLACES an earlier
+     * one's `no-restricted-imports` rather than merging with it, so listing
+     * app/(site) or components/home here would silently delete their part
+     * boundary. The covered paths carry the kit pattern inline instead. */
+    files: [
+      "components/*.{ts,tsx}",
+      "components/portal/**/*.{ts,tsx}",
+      "components/chat/**/*.{ts,tsx}",
+      "lib/**/*.{ts,tsx}",
+    ],
+    rules: {
+      "no-restricted-imports": ["error", { patterns: [KIT_IS_DEV_ONLY] }],
     },
   },
 ]);
