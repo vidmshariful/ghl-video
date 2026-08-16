@@ -244,6 +244,44 @@ export const HANDBOOK: HandbookPage[] = [
   },
 
   {
+    slug: "getting-on-the-site",
+    title: "Getting on the site from a blocked country",
+    summary: "Why the site refuses some visitors, and how the team gets past it.",
+    who: "Everyone",
+    blocks: [
+      {
+        kind: "text",
+        body: "The public site turns away visitors from a short list of countries, and anyone on a VPN or proxy. That is deliberate and it is not about you: it exists because of the traffic those routes were bringing. If you are in one of those places, or working on a VPN, the site will simply say it is not available in your region.",
+      },
+      {
+        kind: "steps",
+        steps: [
+          {
+            title: "Get your key from Shariful",
+            body: "Each person can have their own. Do not share yours around: keys are handed out and taken back one at a time, so a key that leaks only costs the person holding it.",
+          },
+          {
+            title: "Open the unlock link once",
+            body: "Visit /unlock/?key=YOUR-KEY on the real site. It checks the key and sends you to the homepage.",
+          },
+          {
+            title: "That is it, for a year",
+            body: "Your browser is remembered for a year, and that pass also lets you work on a VPN. You only repeat this on a new browser, a new device, or after clearing your cookies.",
+          },
+        ],
+      },
+      {
+        kind: "text",
+        body: "If it refuses your key, it is nearly always the key itself rather than you: copied with a space on the end, or one that has since been taken back. Ask for a fresh one rather than retrying the same one.",
+      },
+      {
+        kind: "text",
+        body: "This is only the public site. The admin, the client portal and the partner portal are behind their own logins and are not affected by any of this.",
+      },
+    ],
+  },
+
+  {
     slug: "who-can-see-what",
     title: "Roles and who can see what",
     summary: "What each role gets, and how to change it per person.",
