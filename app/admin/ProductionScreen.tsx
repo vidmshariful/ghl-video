@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase, money, when } from "./client";
 import { authHeader } from "./client";
 import { ProductionJob } from "./ProductionJob";
+import { StudioQueue } from "./StudioQueue";
 import type { View } from "./nav";
 
 /*
@@ -23,6 +24,7 @@ type Row = {
   fulfillment_stage: string;
   intake_completed: boolean;
   assigned_manager: string | null;
+  assigned_admin_email: string | null;
   created_at: string;
   stage_changed_at: string;
   customers: { name: string | null } | null;
@@ -62,6 +64,10 @@ export function ProductionScreen({ onNavigate }: { onNavigate: (v: View) => void
   const [busyId, setBusyId] = useState<string | null>(null);
   const [err, setErr] = useState("");
   const [openJob, setOpenJob] = useState<string | null>(null);
+  const [view, setView] = useState<"queue" | "board">("queue");
+  const [q, setQ] = useState("");
+  const [mine, setMine] = useState(false);
+  const [me, setMe] = useState("");
   // videos done / owed per order, for the chip on each card
   const [videos, setVideos] = useState<Record<string, { done: number; total: number }>>({});
 
@@ -71,7 +77,7 @@ export function ProductionScreen({ onNavigate }: { onNavigate: (v: View) => void
     const { data, error } = await supabase
       .from("orders")
       .select(
-        "id, customer_email, amount_cents, currency, fulfillment_stage, intake_completed, assigned_manager, created_at, stage_changed_at, customers(name), products(name, sku, metadata)",
+        "id, customer_email, amount_cents, currency, fulfillment_stage, intake_completed, assigned_manager, assigned_admin_email, created_at, stage_changed_at, customers(name), products(name, sku, metadata)",
       )
       .eq("status", "paid")
       .or(`fulfillment_stage.neq.delivered,stage_changed_at.gte.${since}`)
@@ -100,6 +106,7 @@ export function ProductionScreen({ onNavigate }: { onNavigate: (v: View) => void
 
   useEffect(() => {
     load();
+    supabase.auth.getUser().then(({ data }) => setMe(data.user?.email ?? ""));
   }, [load]);
 
   async function move(row: Row, dir: 1 | -1) {
@@ -131,7 +138,23 @@ export function ProductionScreen({ onNavigate }: { onNavigate: (v: View) => void
     setBusyId(null);
   }
 
-  const byStage = (key: string) => (rows ?? []).filter((r) => r.fulfillment_stage === key);
+  /* Search covers the things somebody actually remembers: the client, the
+     invoice they were sent, and what they bought. */
+  const term = q.trim().toLowerCase();
+  const visible = (rows ?? []).filter((r) => {
+    if (mine && r.assigned_admin_email !== me) return false;
+    if (!term) return true;
+    return [
+      r.customers?.name,
+      r.customer_email,
+      r.products?.name,
+      r.products?.sku,
+      r.assigned_manager,
+    ]
+      .filter(Boolean)
+      .some((v) => String(v).toLowerCase().includes(term));
+  });
+  const byStage = (key: string) => visible.filter((r) => r.fulfillment_stage === key);
 
   // A job takes over the screen rather than opening in a drawer: it carries
   // the brief, every video, and the client timeline, and phase 6 adds feedback
@@ -166,6 +189,58 @@ export function ProductionScreen({ onNavigate }: { onNavigate: (v: View) => void
         >
           Full order records
         </button>
+      </div>
+
+      <div className="mt-6 flex gap-1 border-b border-hair">
+        {(
+          [
+            { key: "queue", label: "What needs us" },
+            { key: "board", label: "The board" },
+          ] as const
+        ).map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            onClick={() => setView(t.key)}
+            className={`tap rounded-t-[8px] px-4 py-2.5 text-body-sm transition-colors ${
+              view === t.key
+                ? "border border-b-0 border-hair bg-surface font-semibold text-gold"
+                : "text-muted hover:text-ink"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {view === "queue" ? (
+        <div className="mt-6">
+          <StudioQueue onOpenJob={setOpenJob} />
+        </div>
+      ) : (
+        <>
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        <input
+          type="search"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Find a client, invoice or product"
+          className="tap min-w-[16rem] flex-1 rounded-[8px] border border-hair bg-canvas px-3 py-2 text-body-sm text-ink placeholder:text-dim"
+        />
+        <button
+          type="button"
+          onClick={() => setMine((m) => !m)}
+          className={`tap rounded-[8px] border px-3.5 py-2 font-mono text-label uppercase transition-colors ${
+            mine ? "border-gold text-gold" : "border-hair text-muted hover:border-gold/60 hover:text-gold"
+          }`}
+        >
+          Only my jobs
+        </button>
+        {(term || mine) && (
+          <span className="font-mono text-label uppercase tracking-[0.1em] text-dim">
+            {visible.length} of {(rows ?? []).length}
+          </span>
+        )}
       </div>
 
       {err && <p className="mt-4 text-body-sm text-error">{err}</p>}
@@ -276,7 +351,8 @@ export function ProductionScreen({ onNavigate }: { onNavigate: (v: View) => void
           })}
         </div>
       )}
-
+        </>
+      )}
     </div>
   );
 }

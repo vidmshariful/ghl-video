@@ -132,6 +132,37 @@ export function ProductionJob({ id, onBack }: { id: string; onBack: () => void }
     setBusy(null);
   }
 
+  /* Starting a nine video pack was nine dropdowns. The common moves are
+     "we are on all of these now" and "all of these are back with the client",
+     so they get one press. Sequential on purpose: each save re-derives the
+     order stage, and firing nine at once races that. */
+  async function setAll(status: string) {
+    const targets = videos.filter((v) => v.status !== status);
+    if (!targets.length) return;
+    if (
+      !confirm(
+        `Set ${targets.length} ${targets.length === 1 ? "video" : "videos"} to ${STATUS_LABEL[status as DeliverableStatus]}?`,
+      )
+    )
+      return;
+    setBusy("job");
+    setErr("");
+    for (const v of targets) {
+      const r = await fetch(`/api/admin/orders/${id}/deliverables`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...(await authHeader()) },
+        body: JSON.stringify({ deliverableId: v.id, status }),
+      }).catch(() => null);
+      if (r && !r.ok) {
+        const j = await r.json().catch(() => ({}));
+        setErr(j.error ?? "Could not update them all.");
+        break;
+      }
+    }
+    setBusy(null);
+    await load();
+  }
+
   async function saveJob(patch: Record<string, unknown>) {
     setBusy("job");
     setErr("");
@@ -306,6 +337,23 @@ export function ProductionJob({ id, onBack }: { id: string; onBack: () => void }
             </p>
           )}
         </div>
+
+        {videos.length > 1 && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className={lab}>Set all to</span>
+            {(["in_production", "ready"] as DeliverableStatus[]).map((st) => (
+              <button
+                key={st}
+                type="button"
+                disabled={busy === "job" || videos.every((v) => v.status === st)}
+                onClick={() => setAll(st)}
+                className={`${btn} disabled:opacity-30`}
+              >
+                {STATUS_LABEL[st]}
+              </button>
+            ))}
+          </div>
+        )}
 
         {videos.length === 0 ? (
           <p className="mt-3 text-body-sm text-dim">
