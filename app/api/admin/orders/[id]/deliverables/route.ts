@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { verifyAdmin } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { createDeliverablesForOrder, listDeliverables } from "@/lib/deliverables";
+import { deriveStage } from "@/lib/order-stage";
 
 export const runtime = "nodejs";
 
@@ -99,5 +100,44 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   });
 
   const rows = await listDeliverables(db, id);
-  return NextResponse.json({ deliverables: rows });
+
+  /* The order's stage is a summary of its videos, so recalculate it here
+   * rather than making somebody set it a second time. Delivered is never
+   * derived: that move emails the client and stays a button. */
+  let stage: string | null = null;
+  if (patch.status) {
+    const { data: order } = await db
+      .from("orders")
+      .select("fulfillment_stage, intake_completed")
+      .eq("id", id)
+      .maybeSingle();
+    if (order) {
+      const next = deriveStage({
+        current: order.fulfillment_stage as string,
+        intakeCompleted: Boolean(order.intake_completed),
+        statuses: rows.map((r) => r.status),
+      });
+      if (next && next !== order.fulfillment_stage) {
+        await db
+          .from("orders")
+          .update({
+            fulfillment_stage: next,
+            stage_changed_at: new Date().toISOString(),
+            stage_is_derived: true,
+            stage_set_by: null,
+          })
+          .eq("id", id)
+          // never overwrite a delivered order from here
+          .neq("fulfillment_stage", "delivered");
+        await db.from("order_events").insert({
+          order_id: id,
+          event_type: "stage_derived",
+          payload: { from: order.fulfillment_stage, to: next },
+        });
+        stage = next;
+      }
+    }
+  }
+
+  return NextResponse.json({ deliverables: rows, stage });
 }
