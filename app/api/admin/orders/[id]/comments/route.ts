@@ -128,6 +128,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       href: "/portal/videos/",
       feature: "orders",
     });
+    const { sendVideoReplyEmail } = await import("@/lib/email/notify");
+    await sendVideoReplyEmail(db, deliverableId, text);
   }
 
   return NextResponse.json({ ok: true });

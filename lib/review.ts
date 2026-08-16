@@ -13,7 +13,7 @@
  *    being muddled into round two.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { DeliverableStatus } from "@/lib/deliverable-status";
+import { REVISIONS_INCLUDED, type DeliverableStatus } from "@/lib/deliverable-status";
 
 type DB = SupabaseClient;
 
@@ -182,6 +182,19 @@ export async function clientVerdict(
   const watchable = ["ready", "revisions", "approved"];
   if (!watchable.includes(d.status as string)) {
     return { ok: false, error: "That video is not ready to review yet." };
+  }
+  // Approving twice is harmless; asking for a second round is not, so the
+  // limit is enforced here as well as hidden in the UI.
+  if (verdict === "changes") {
+    if (d.status === "approved") {
+      return { ok: false, error: "You have already approved this video. Message us and we will re-open it." };
+    }
+    if ((d.revision_round as number) >= REVISIONS_INCLUDED) {
+      return {
+        ok: false,
+        error: "Your included revision round has been used. Message us about anything else and we will sort it out.",
+      };
+    }
   }
 
   const now = new Date().toISOString();

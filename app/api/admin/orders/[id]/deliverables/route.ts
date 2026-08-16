@@ -120,6 +120,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     payload: { deliverable_id: deliverableId, by: admin.email, ...patch },
   });
 
+  /* Ready is the moment the link is released to the client, so it is the
+   * moment worth emailing them about. Only on the way IN, so re-saving a
+   * ready video does not mail them twice. */
+  if (patch.status === "ready" && current.status !== "ready") {
+    const { sendVideoReadyEmail } = await import("@/lib/email/notify");
+    await sendVideoReadyEmail(db, deliverableId);
+  }
+
   const rows = await listDeliverables(db, id);
 
   /* The order's stage is a summary of its videos, so recalculate it here

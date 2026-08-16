@@ -6,14 +6,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
  * Reviewing one video: watch it, say what you want changed at the second it
  * happens, approve it when it is right.
  *
- * The timestamp is the point. "The logo at 0:12 is stretched" saves an email
- * thread and a guess. It is offered, never forced: a note about the whole
- * video is just as real, so the pin is a toggle and defaults to wherever the
- * player is paused.
+ * The client always sees the current cut. Older cuts stay in the system for
+ * the studio, but showing a client three versions of the same video invites
+ * them to review the wrong one (owner's decision). Their notes from an earlier
+ * cut are still readable, grouped under that cut, so the history is there
+ * without the confusion.
  *
- * Notes are labelled by which CUT they were written about, never by an
- * internal round number. "Round 2" told a client nothing; "on v1" points at
- * something they can actually go and watch.
+ * One round of changes is included, and the client is told so before they use
+ * it. That is the difference between a policy and a nasty surprise.
  */
 
 type Comment = {
@@ -23,18 +23,9 @@ type Comment = {
   body: string;
   atSeconds: number | null;
   stamp: string | null;
-  round: number;
   version: number | null;
   parentId: string | null;
   resolved: boolean;
-  createdAt: string;
-};
-
-type Version = {
-  id: string;
-  version: number;
-  videoUrl: string;
-  note: string | null;
   createdAt: string;
 };
 
@@ -56,20 +47,26 @@ export function VideoReview({
   title,
   videoUrl,
   status,
+  canRequestChanges,
+  revisionsIncluded,
+  revisionsUsed,
   onChanged,
+  onMessageStudio,
   authedFetch,
 }: {
   videoId: string;
   title: string;
   videoUrl: string;
   status: string;
+  canRequestChanges: boolean;
+  revisionsIncluded: number;
+  revisionsUsed: number;
   onChanged: () => void;
+  onMessageStudio?: () => void;
   authedFetch: (path: string, init?: RequestInit) => Promise<unknown>;
 }) {
   const ref = useRef<HTMLVideoElement>(null);
   const [comments, setComments] = useState<Comment[] | null>(null);
-  const [versions, setVersions] = useState<Version[]>([]);
-  const [showing, setShowing] = useState<number | null>(null);
   const [text, setText] = useState("");
   const [pin, setPin] = useState(true);
   const [at, setAt] = useState(0);
@@ -78,30 +75,37 @@ export function VideoReview({
   const [err, setErr] = useState("");
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
+  const [currentVersion, setCurrentVersion] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     const j = (await authedFetch(`/api/portal/videos/${videoId}/review`).catch(() => null)) as {
       comments?: Comment[];
-      versions?: Version[];
+      versions?: { version: number }[];
     } | null;
     setComments(j?.comments ?? []);
-    setVersions(j?.versions ?? []);
+    setCurrentVersion(j?.versions?.[0]?.version ?? null);
   }, [authedFetch, videoId]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  const latest = versions[0]?.version ?? null;
-  const viewing = showing ?? latest;
-  const src = versions.find((v) => v.version === viewing)?.videoUrl ?? videoUrl;
-  const onOldCut = latest != null && viewing != null && viewing !== latest;
-
-  async function send(action: "comment" | "approve" | "changes", opts?: { parentId?: string; body?: string }) {
+  async function send(
+    action: "comment" | "approve" | "changes",
+    opts?: { parentId?: string; body?: string },
+  ) {
     const message = opts?.body ?? text;
     if (action === "comment" && !message.trim()) return;
     if (action === "approve" && !confirm(`Approve ${title}? This tells the studio it is finished.`))
       return;
+    if (
+      action === "changes" &&
+      !confirm(
+        `Send your notes and ask for changes?\n\nThis uses your included revision round, so make sure every note is in first.`,
+      )
+    )
+      return;
+
     setBusy(true);
     setErr("");
     const j = (await authedFetch(`/api/portal/videos/${videoId}/review`, {
@@ -136,67 +140,131 @@ export function VideoReview({
     v.play().catch(() => {});
   }
 
-  /* Enter sends, shift and enter makes a new line. Typing a sentence and
-     pressing enter is what everyone expects from a comment box. */
-  const enterSends =
-    (fn: () => void) => (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        fn();
-      }
-    };
+  /* Enter sends, shift and enter makes a new line. */
+  const enterSends = (fn: () => void) => (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      fn();
+    }
+  };
 
-  const top = (comments ?? []).filter((c) => !c.parentId);
-  const repliesOf = (id: string) => (comments ?? []).filter((c) => c.parentId === id);
+  const all = comments ?? [];
+  const top = all.filter((c) => !c.parentId);
+  const repliesOf = (id: string) => all.filter((c) => c.parentId === id);
   const open = top.filter((c) => !c.resolved && c.side === "client").length;
+
+  /* Notes belong to the cut they were written about. Grouping them keeps an
+     earlier round readable as history instead of muddled into this one. */
+  const onCurrent = top.filter((c) => currentVersion == null || (c.version ?? currentVersion) === currentVersion);
+  const earlier = top.filter((c) => currentVersion != null && (c.version ?? currentVersion) !== currentVersion);
+  const byVersion = new Map<number, Comment[]>();
+  for (const c of earlier) {
+    const v = c.version ?? 0;
+    byVersion.set(v, [...(byVersion.get(v) ?? []), c]);
+  }
+
+  const note = (c: Comment) => (
+    <li
+      key={c.id}
+      className={`rounded-[8px] border p-3 ${
+        c.side === "studio" ? "border-blue/30 bg-blue/5" : "border-hair bg-card"
+      } ${c.resolved ? "opacity-60" : ""}`}
+    >
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        <span className="text-body-sm font-semibold text-ink">{c.name}</span>
+        {c.stamp && (
+          <button
+            type="button"
+            onClick={() => c.atSeconds != null && seek(c.atSeconds)}
+            className="tap rounded-full border border-gold/40 px-2 py-0.5 font-mono text-label text-gold transition-colors hover:bg-gold hover:text-canvas"
+          >
+            {c.stamp}
+          </button>
+        )}
+        {c.resolved && <span className="font-mono text-label uppercase text-green">Done</span>}
+      </div>
+      <p className="mt-1.5 whitespace-pre-wrap text-body-sm text-muted">{c.body}</p>
+      <p className="mt-1 font-mono text-label uppercase tracking-[0.1em] text-dim">
+        {when(c.createdAt)}
+      </p>
+
+      {repliesOf(c.id).map((r) => (
+        <div key={r.id} className="mt-2 border-l-2 border-blue/40 pl-3">
+          <span className="text-body-sm font-semibold text-ink">{r.name}</span>
+          <p className="mt-0.5 whitespace-pre-wrap text-body-sm text-muted">{r.body}</p>
+          <p className="mt-0.5 font-mono text-label uppercase tracking-[0.1em] text-dim">
+            {when(r.createdAt)}
+          </p>
+        </div>
+      ))}
+
+      {replyTo === c.id ? (
+        <div className="mt-2 grid gap-2">
+          <textarea
+            rows={2}
+            autoFocus
+            value={replyText}
+            onChange={(e) => setReplyText(e.target.value)}
+            onKeyDown={enterSends(() => send("comment", { parentId: c.id, body: replyText }))}
+            placeholder="Reply. Enter to send."
+            className={fieldCls}
+          />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={busy || !replyText.trim()}
+              onClick={() => send("comment", { parentId: c.id, body: replyText })}
+              className="tap rounded-[8px] border border-hair px-3 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-40"
+            >
+              Send
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setReplyTo(null);
+                setReplyText("");
+              }}
+              className="tap font-mono text-label uppercase text-dim transition-colors hover:text-muted"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => {
+            setReplyTo(c.id);
+            setReplyText("");
+          }}
+          className="tap mt-2 font-mono text-label uppercase tracking-[0.1em] text-dim transition-colors hover:text-gold"
+        >
+          Reply
+        </button>
+      )}
+    </li>
+  );
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
       <div>
-        {versions.length > 1 && (
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-            <span className="font-mono text-label uppercase tracking-[0.1em] text-dim">Cut</span>
-            {versions.map((v) => (
-              <button
-                key={v.id}
-                type="button"
-                onClick={() => setShowing(v.version)}
-                className={`tap rounded-full border px-2.5 py-0.5 font-mono text-label transition-colors ${
-                  viewing === v.version
-                    ? "border-gold bg-gold text-canvas"
-                    : "border-hair text-muted hover:border-gold/60 hover:text-gold"
-                }`}
-              >
-                v{v.version}
-                {v.version === latest ? " (latest)" : ""}
-              </button>
-            ))}
-          </div>
-        )}
-
         <video
           ref={ref}
-          key={src}
           controls
+          autoPlay
           preload="metadata"
           playsInline
-          src={src}
+          src={videoUrl}
           onTimeUpdate={(e) => setAt(e.currentTarget.currentTime)}
           onLoadedMetadata={(e) => setDuration(e.currentTarget.duration || 0)}
           className="aspect-video w-full rounded-[8px] bg-canvas"
         />
 
-        {onOldCut && (
-          <p className="mt-2 text-body-sm text-gold">
-            You are watching an older cut. Switch to v{latest} for the newest one.
-          </p>
-        )}
-
         {duration > 0 && (
           <div className="relative mt-2 h-6" aria-hidden="true">
             <div className="absolute inset-x-0 top-2.5 h-px bg-hair" />
-            {top
-              .filter((c) => c.atSeconds != null && (c.version ?? latest) === viewing)
+            {onCurrent
+              .filter((c) => c.atSeconds != null)
               .map((c) => (
                 <button
                   key={c.id}
@@ -215,26 +283,40 @@ export function VideoReview({
         <div className="mt-3 flex flex-wrap gap-2">
           <button
             type="button"
-            disabled={busy || status === "approved"}
+            disabled={busy}
             onClick={() => send("approve")}
             className="tap rounded-[8px] bg-brand-gradient px-4 py-2 font-mono text-label font-bold uppercase text-canvas transition-opacity hover:opacity-90 disabled:opacity-40"
           >
-            {status === "approved" ? "Approved" : "Approve this video"}
+            Approve this video
           </button>
-          <button
-            type="button"
-            disabled={busy || status === "revisions"}
-            onClick={() => send("changes")}
-            className="tap rounded-[8px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-40"
-          >
-            {status === "revisions" ? "Changes requested" : "Request changes"}
-          </button>
+          {canRequestChanges ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => send("changes")}
+              className="tap rounded-[8px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-40"
+            >
+              Request changes
+            </button>
+          ) : onMessageStudio ? (
+            <button
+              type="button"
+              onClick={onMessageStudio}
+              className="tap rounded-[8px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
+            >
+              Message the studio
+            </button>
+          ) : null}
         </div>
-        {status === "revisions" && (
-          <p className="mt-2 text-body-sm text-dim">
-            We are working on your changes. Add any more notes below.
-          </p>
-        )}
+
+        {/* the policy, said before they use it rather than after */}
+        <p className="mt-2 text-body-sm text-dim">
+          {status === "revisions"
+            ? "We are working on your changes. You can still add notes below, and we will pick them up."
+            : canRequestChanges
+              ? `${revisionsIncluded} round of revisions is included. Please add all of your notes first, then request changes in one go. Further rounds may be charged.`
+              : `You have used your ${revisionsUsed} included revision round. Send us a message about anything else and we will sort it out with you.`}
+        </p>
       </div>
 
       <div className="min-w-0">
@@ -272,105 +354,29 @@ export function VideoReview({
 
         {err && <p className="mt-2 text-body-sm text-error">{err}</p>}
 
-        <ul className="mt-4 grid max-h-[26rem] gap-3 overflow-y-auto pr-1">
+        <div className="mt-4 max-h-[26rem] overflow-y-auto pr-1">
           {comments === null ? (
-            <li className="text-body-sm text-muted">Loading notes...</li>
+            <p className="text-body-sm text-muted">Loading notes...</p>
           ) : top.length === 0 ? (
-            <li className="text-body-sm text-dim">
+            <p className="text-body-sm text-dim">
               No notes yet. Play the video and add one at the moment you mean.
-            </li>
+            </p>
           ) : (
-            top.map((c) => (
-              <li
-                key={c.id}
-                className={`rounded-[8px] border p-3 ${
-                  c.side === "studio" ? "border-blue/30 bg-blue/5" : "border-hair bg-card"
-                } ${c.resolved ? "opacity-60" : ""}`}
-              >
-                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                  <span className="text-body-sm font-semibold text-ink">{c.name}</span>
-                  {c.stamp && (
-                    <button
-                      type="button"
-                      onClick={() => c.atSeconds != null && seek(c.atSeconds)}
-                      className="tap rounded-full border border-gold/40 px-2 py-0.5 font-mono text-label text-gold transition-colors hover:bg-gold hover:text-canvas"
-                    >
-                      {c.stamp}
-                    </button>
-                  )}
-                  {c.resolved && (
-                    <span className="font-mono text-label uppercase text-green">Done</span>
-                  )}
-                </div>
-                <p className="mt-1.5 whitespace-pre-wrap text-body-sm text-muted">{c.body}</p>
-                <p className="mt-1 font-mono text-label uppercase tracking-[0.1em] text-dim">
-                  {when(c.createdAt)}
-                  {c.version && versions.length > 1 ? ` / on v${c.version}` : ""}
-                </p>
-
-                {repliesOf(c.id).map((r) => (
-                  <div
-                    key={r.id}
-                    className="mt-2 border-l-2 border-blue/40 pl-3"
-                  >
-                    <span className="text-body-sm font-semibold text-ink">{r.name}</span>
-                    <p className="mt-0.5 whitespace-pre-wrap text-body-sm text-muted">{r.body}</p>
-                    <p className="mt-0.5 font-mono text-label uppercase tracking-[0.1em] text-dim">
-                      {when(r.createdAt)}
+            <>
+              <ul className="grid gap-3">{onCurrent.map(note)}</ul>
+              {[...byVersion.entries()]
+                .sort((a, b) => b[0] - a[0])
+                .map(([v, list]) => (
+                  <div key={v} className="mt-5">
+                    <p className="font-mono text-label uppercase tracking-[0.1em] text-dim">
+                      Earlier cut{v ? ` (v${v})` : ""}
                     </p>
+                    <ul className="mt-2 grid gap-3 opacity-70">{list.map(note)}</ul>
                   </div>
                 ))}
-
-                {replyTo === c.id ? (
-                  <div className="mt-2 grid gap-2">
-                    <textarea
-                      rows={2}
-                      autoFocus
-                      value={replyText}
-                      onChange={(e) => setReplyText(e.target.value)}
-                      onKeyDown={enterSends(() =>
-                        send("comment", { parentId: c.id, body: replyText }),
-                      )}
-                      placeholder="Reply. Enter to send."
-                      className={fieldCls}
-                    />
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        disabled={busy || !replyText.trim()}
-                        onClick={() => send("comment", { parentId: c.id, body: replyText })}
-                        className="tap rounded-[8px] border border-hair px-3 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-40"
-                      >
-                        Send
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setReplyTo(null);
-                          setReplyText("");
-                        }}
-                        className="tap font-mono text-label uppercase text-dim transition-colors hover:text-muted"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setReplyTo(c.id);
-                      setReplyText("");
-                    }}
-                    className="tap mt-2 font-mono text-label uppercase tracking-[0.1em] text-dim transition-colors hover:text-gold"
-                  >
-                    Reply
-                  </button>
-                )}
-              </li>
-            ))
+            </>
           )}
-        </ul>
+        </div>
       </div>
     </div>
   );

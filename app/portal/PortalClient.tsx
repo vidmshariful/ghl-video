@@ -1421,7 +1421,10 @@ function Portal({
                 subtitle="Every video you have ordered, and where each one is."
               />
               <div className="mt-6">
-                <MyVideosView authedFetch={authedFetch} />
+                <MyVideosView
+                  authedFetch={authedFetch}
+                  onMessageStudio={can("messages") ? () => go("messages") : undefined}
+                />
               </div>
             </div>
           ) : section === "messages" && can("messages") ? (

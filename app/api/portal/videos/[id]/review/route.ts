@@ -133,6 +133,17 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       href: "/admin/production/",
     });
 
+    // The bell alone meant feedback could sit unseen for a day if nobody had
+    // the admin open. Fail-soft: a mail problem must not lose the note.
+    const { sendVideoFeedbackAlert } = await import("@/lib/email/notify");
+    await sendVideoFeedbackAlert(g.db, {
+      deliverableId: id,
+      kind: "comment",
+      customerName: name || who,
+      message: text,
+      where,
+    });
+
     return NextResponse.json({ ok: true });
   }
 
@@ -154,6 +165,17 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           : `Changes requested: ${g.deliverable.title}`,
       body: `${name || who} ${action === "approve" ? "approved this video." : "asked for changes."}`,
       href: "/admin/production/",
+    });
+
+    const { sendVideoFeedbackAlert } = await import("@/lib/email/notify");
+    await sendVideoFeedbackAlert(g.db, {
+      deliverableId: id,
+      kind: action === "approve" ? "approved" : "changes",
+      customerName: name || who,
+      message:
+        action === "approve"
+          ? "They approved this video."
+          : "They asked for changes. Their notes are on the job.",
     });
 
     return NextResponse.json({ ok: true, status: res.status });

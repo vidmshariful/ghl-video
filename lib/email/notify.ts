@@ -424,3 +424,123 @@ export async function sendDisputeAlertEmail(
     href: "orders",
   });
 }
+
+/* ---- review emails ---------------------------------------------------- */
+
+/** Where a client goes to watch and review their videos. */
+const videosUrl = () => `${SITE_URL}/portal/videos/`;
+
+/**
+ * Tell the client one of their videos is ready to watch. Fired when the studio
+ * moves a video to Ready, which is the moment the link is released to them.
+ */
+export async function sendVideoReadyEmail(
+  db: SupabaseClient,
+  deliverableId: string,
+): Promise<void> {
+  try {
+    const { data: d } = await db
+      .from("order_deliverables")
+      .select("title, order_id")
+      .eq("id", deliverableId)
+      .maybeSingle();
+    if (!d) return;
+    const { data: o } = await db
+      .from("orders")
+      .select("customer_email, customers(name)")
+      .eq("id", d.order_id)
+      .maybeSingle();
+    if (!o?.customer_email) return;
+    const name = (o.customers as any)?.name ?? "there";
+    await sendTemplate(db, "video_ready", o.customer_email as string, name, {
+      customer_name: escapeHtml(name),
+      video_title: escapeHtml(d.title as string),
+      portal_url: videosUrl(),
+    });
+  } catch (e) {
+    console.error("[email] video_ready failed:", e instanceof Error ? e.message : e);
+  }
+}
+
+/** Tell the client the studio answered their note. */
+export async function sendVideoReplyEmail(
+  db: SupabaseClient,
+  deliverableId: string,
+  message: string,
+): Promise<void> {
+  try {
+    const { data: d } = await db
+      .from("order_deliverables")
+      .select("title, order_id")
+      .eq("id", deliverableId)
+      .maybeSingle();
+    if (!d) return;
+    const { data: o } = await db
+      .from("orders")
+      .select("customer_email, customers(name)")
+      .eq("id", d.order_id)
+      .maybeSingle();
+    if (!o?.customer_email) return;
+    const name = (o.customers as any)?.name ?? "there";
+    await sendTemplate(db, "video_reply", o.customer_email as string, name, {
+      customer_name: escapeHtml(name),
+      video_title: escapeHtml(d.title as string),
+      message: escapeHtml(message.slice(0, 600)),
+      portal_url: videosUrl(),
+    });
+  } catch (e) {
+    console.error("[email] video_reply failed:", e instanceof Error ? e.message : e);
+  }
+}
+
+/**
+ * Tell the studio a client said something about a video.
+ *
+ * This is the one that matters operationally: feedback used to ring the bell
+ * only, so if nobody had the admin open it could sit for a day. Goes to the
+ * person who owns the job when there is one, and to the team alert address
+ * otherwise.
+ */
+export async function sendVideoFeedbackAlert(
+  db: SupabaseClient,
+  args: {
+    deliverableId: string;
+    kind: "comment" | "approved" | "changes";
+    customerName: string;
+    message: string;
+    where?: string | null;
+  },
+): Promise<void> {
+  try {
+    const { data: d } = await db
+      .from("order_deliverables")
+      .select("title, order_id")
+      .eq("id", args.deliverableId)
+      .maybeSingle();
+    if (!d) return;
+    const { data: o } = await db
+      .from("orders")
+      .select("assigned_admin_email")
+      .eq("id", d.order_id)
+      .maybeSingle();
+    const to = (o?.assigned_admin_email as string | null) || adminAlertEmail();
+
+    const headline =
+      args.kind === "approved"
+        ? `Approved: ${d.title}`
+        : args.kind === "changes"
+          ? `Changes requested: ${d.title}`
+          : `Feedback on ${d.title}`;
+
+    await sendTemplate(db, "admin_video_feedback", to, null, {
+      headline: escapeHtml(headline),
+      customer_name: escapeHtml(args.customerName),
+      video_title: escapeHtml(d.title as string),
+      where: args.where ? escapeHtml(` at ${args.where}`) : "",
+      message: escapeHtml(args.message.slice(0, 600)),
+      admin_url: `${SITE_URL}/admin/production/`,
+    });
+  } catch (e) {
+    console.error("[email] admin_video_feedback failed:", e instanceof Error ? e.message : e);
+  }
+}

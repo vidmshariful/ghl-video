@@ -208,6 +208,38 @@ ${btn("{{portal_url}}", "Open the portal")}
 <p style="${SMALL}margin-top:22px;">First time signing in? Use <strong style="color:#9096a8;">{{member_email}}</strong> and pick "Set it by email" on the sign-in page to create your password.</p>`,
   },
   {
+    key: "video_ready",
+    name: "A video is ready to review",
+    description:
+      "Sent to the client when the studio marks one of their videos ready to watch.",
+    subject: "Ready to review: {{video_title}}",
+    body: `<h1 style="${H}">Your video is ready.</h1>
+<p style="${P}">Hi {{customer_name}}, <strong style="${STRONG}">{{video_title}}</strong> is ready for you to watch.</p>
+${btn("{{portal_url}}", "Watch and review it")}
+<p style="${SMALL}margin-top:22px;">You can leave notes at the exact second you mean, then approve it or ask for changes. One round of revisions is included, so please add all your notes before requesting changes.</p>`,
+  },
+  {
+    key: "video_reply",
+    name: "The studio replied to a note",
+    description: "Sent to the client when the studio answers their feedback on a video.",
+    subject: "We replied about {{video_title}}",
+    body: `<h1 style="${H}">We answered your note.</h1>
+<p style="${P}">Hi {{customer_name}}, we replied to your feedback on <strong style="${STRONG}">{{video_title}}</strong>.</p>
+<p style="${P}">{{message}}</p>
+${btn("{{portal_url}}", "See the thread")}`,
+  },
+  {
+    key: "admin_video_feedback",
+    name: "Team alert: client left feedback",
+    description:
+      "Sent to the studio when a client comments on a video, approves it, or asks for changes.",
+    subject: "{{headline}}",
+    body: `<h1 style="${H}">{{headline}}</h1>
+<p style="${P}"><strong style="${STRONG}">{{customer_name}}</strong> on <strong style="${STRONG}">{{video_title}}</strong>{{where}}.</p>
+<p style="${P}">{{message}}</p>
+${btn("{{admin_url}}", "Open the job")}`,
+  },
+  {
     key: "admin_new_order",
     name: "Team alert: new order",
     description: "Internal alert to the team when an order is paid.",

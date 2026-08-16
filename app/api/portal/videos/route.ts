@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { contextCan, resolvePortalContext } from "@/lib/account-team";
-import { isWatchable, type DeliverableStatus } from "@/lib/deliverable-status";
+import {
+  canRequestChanges,
+  canReview,
+  isWatchable,
+  REVISIONS_INCLUDED,
+  type DeliverableStatus,
+} from "@/lib/deliverable-status";
 
 export const runtime = "nodejs";
 
@@ -79,6 +85,12 @@ export async function GET(req: Request) {
             groupLabel: d.group_label as string | null,
             status,
             revisionRound: d.revision_round as number,
+            // What this client may actually do, decided here rather than in
+            // the browser so the buttons and the API can never disagree.
+            canReview: canReview(status),
+            canRequestChanges: canRequestChanges(status, d.revision_round as number),
+            revisionsIncluded: REVISIONS_INCLUDED,
+            revisionsUsed: d.revision_round as number,
             // withheld on purpose until it is ready to watch
             videoUrl: isWatchable(status) ? ((d.video_url as string | null) ?? null) : null,
             readyAt: d.ready_at as string | null,
