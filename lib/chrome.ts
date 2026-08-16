@@ -38,7 +38,25 @@ export type SiteChrome = {
 
 /* Injected at body start: Google Tag Manager, Google Ads gtag, and
  * Hotjar. Kept verbatim from the previous backend config so analytics
- * and conversion tracking are unchanged. */
+ * and conversion tracking are unchanged.
+ *
+ * TWO containers on purpose, each loaded ONCE. GTM-NPHWVF2V used to be
+ * loaded twice (verified live: gtm.js?id=GTM-NPHWVF2V appeared twice in the
+ * page's script list), which fires every tag inside it a second time. The
+ * duplicate is removed.
+ *
+ * What these containers actually fire, measured on the live homepage rather
+ * than assumed, so nobody removes one blind:
+ *   G-NW101GQZX3  GA4 "2026 - www.ghlvideo.com", server-side tagged via
+ *                 server.ghlvideo.com. This is the property the platform
+ *                 reads in admin -> CMS -> SEO -> Traffic.
+ *   G-XDLWFZE93L  GA4 "www.ghlvideo.com", older
+ *   G-4PV3DEZ6YF  GA4 "GHL Video Analytics", older
+ *   AW-16454943179  Google Ads conversions
+ *   n.clarity.ms    Microsoft Clarity session recording
+ * The two older GA4 properties are retired inside GTM, not here: which
+ * container holds which tag is configured in tagmanager.google.com, and
+ * deleting a container from this file would take Ads and Clarity with it. */
 export const HEAD_SCRIPTS = `<!-- GTM loader -->
 <script data-cfasync="false" data-pagespeed-no-defer type="text/javascript">
 (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
@@ -56,13 +74,6 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 '//www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
 })(window,document,'script','dataLayer','GTM-NPHWVF2V');
 </script>
-
-<!-- GTM loader -->
-<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-})(window,document,'script','dataLayer','GTM-NPHWVF2V');</script>
 
 <!-- gtag config -->
 <script>
