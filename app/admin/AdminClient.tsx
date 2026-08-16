@@ -15,6 +15,7 @@ import {
   type NavGroup,
 } from "@/components/portal/Shell";
 import { HandbookScreen } from "./HandbookScreen";
+import { handbookFor } from "./handbook-map";
 import {
   BarChart3,
   BookOpen,
@@ -245,11 +246,19 @@ export function AdminClient({ initialView }: { initialView: View }) {
   const [ready, setReady] = useState(false);
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [view, setView] = useState<View>(initialView);
+  /* which handbook topic to open when the help view is reached from a
+     screen's own link, rather than from the menu */
+  const [helpSlug, setHelpSlug] = useState<string | null>(null);
+
   const [loginError, setLoginError] = useState("");
 
   /* the menu pushes a real URL; back/forward walk the screens */
-  const go = (v: View) => {
+  /* The optional slug is how a screen's own handbook link says "open help, on
+     THIS topic". Reaching help any other way, such as the menu, passes nothing
+     and clears it, so the menu always lands on the index. */
+  const go = (v: View, slug: string | null = null) => {
     setView(v);
+    setHelpSlug(v === "help" ? slug : null);
     if (window.location.pathname !== pathFor(v)) {
       window.history.pushState(null, "", pathFor(v));
     }
@@ -467,6 +476,19 @@ export function AdminClient({ initialView }: { initialView: View }) {
 
         {/* content: keyed on the view so each screen fades up as it opens */}
         <section className="min-w-0 flex-1 p-4 md:p-8">
+          {/* The handbook link for whatever screen this is. Rendered by the
+              shell rather than inside each screen: one place to maintain, and
+              a new screen cannot forget to add it. Deliberately quiet, since
+              most days most people do not need it. */}
+          {handbookFor(view) && (
+            <button
+              type="button"
+              onClick={() => go("help", handbookFor(view)!.slug)}
+              className="tap mb-4 inline-flex items-center gap-1.5 font-mono text-label uppercase tracking-[0.1em] text-dim transition-colors hover:text-gold"
+            >
+              <span aria-hidden="true">?</span> {handbookFor(view)!.label}
+            </button>
+          )}
           <div key={view} className="portal-view">
           {view === "dashboard" ? (
             <DashboardScreen onNavigate={go} />
@@ -515,7 +537,7 @@ export function AdminClient({ initialView }: { initialView: View }) {
               <p className="text-body text-muted">Loading your account...</p>
             )
           ) : view === "help" ? (
-            <HandbookScreen />
+            <HandbookScreen initialSlug={helpSlug} />
           ) : (
             // every View has an explicit branch above; fall back to the
             // dashboard for safety rather than a blank screen

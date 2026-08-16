@@ -27,9 +27,11 @@ const WHO_TONE: Record<string, string> = {
   Owner: "border-green/50 text-green",
 };
 
-export function HandbookScreen() {
+export function HandbookScreen({ initialSlug }: { initialSlug?: string | null }) {
   const [data, setData] = useState<Payload | null>(null);
-  const [open, setOpen] = useState<string | null>(null);
+  /* Arriving from a screen's "how this works" link opens that topic straight
+     away, because the person already knows what they wanted to read. */
+  const [open, setOpen] = useState<string | null>(initialSlug ?? null);
   const [q, setQ] = useState("");
   const [err, setErr] = useState("");
 

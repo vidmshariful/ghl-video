@@ -20,6 +20,7 @@ import {
 } from "@/lib/deliverable-status";
 import { ROLES, ROLE_BLURB, ROLE_LABELS } from "@/app/admin/roles";
 import { ALL_VIEWS } from "@/app/admin/nav";
+import { HANDBOOK_FOR } from "@/app/admin/handbook-map";
 
 const problems: string[] = [];
 
@@ -101,6 +102,22 @@ for (const r of restated) {
 for (const r of ROLES) {
   if (!ROLE_LABELS[r] || !ROLE_BLURB[r]) {
     problems.push(`role "${r}" is missing a label or description, so the roles table would be blank`);
+  }
+}
+
+/* Screens carry a link straight to their topic. A renamed or deleted topic
+ * would leave that link pointing at nothing, on a screen, in front of somebody
+ * who is already confused enough to have clicked it. */
+const slugs = new Set(HANDBOOK.map((p) => p.slug));
+for (const [view, entry] of Object.entries(HANDBOOK_FOR)) {
+  if (!entry) continue;
+  if (!slugs.has(entry.slug)) {
+    problems.push(
+      `the ${view} screen links to handbook topic "${entry.slug}", which does not exist`,
+    );
+  }
+  if (!ALL_VIEWS.includes(view as never)) {
+    problems.push(`handbook-map points at a screen called "${view}", which no longer exists`);
   }
 }
 
