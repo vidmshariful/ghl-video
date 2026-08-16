@@ -6,7 +6,10 @@ import { computeFindings, type LinkStatus, type PageFacts } from "@/lib/seo-audi
 import { sitePages } from "@/lib/pages-list";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+
+/* No maxDuration override on purpose: it must never exceed the hosting
+ * plan's ceiling or the DEPLOY fails. The batching above is what keeps this
+ * fast, not a longer timeout. */
 
 /*
  * The site health check. The admin screen drives it in small steps so it can

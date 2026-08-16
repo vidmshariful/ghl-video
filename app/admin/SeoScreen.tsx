@@ -21,7 +21,7 @@ import {
  * deploy. Redirects forwards a retired URL so its ranking is not thrown away.
  */
 
-type Tab = "health" | "pages" | "redirects";
+type Tab = "search" | "health" | "pages" | "redirects";
 
 type SeoPageRow = {
   path: string;
@@ -78,20 +78,21 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export function SeoScreen() {
-  const [tab, setTab] = useState<Tab>("health");
+  const [tab, setTab] = useState<Tab>("search");
 
   return (
     <div className="w-full">
       <h1 className="font-display text-h2 text-ink">SEO</h1>
       <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
-        What Google sees, and what to fix. Health checks the live site, Pages
-        edits the words in the search result, Redirects keeps a retired URL
-        working.
+        What Google sees, and what to fix. Search is the real traffic, Health
+        checks the live site, Pages edits the words in the search result,
+        Redirects keeps a retired URL working.
       </p>
 
       <div className="mt-6 flex gap-1 border-b border-hair">
         {(
           [
+            ["search", "Search"],
             ["health", "Health"],
             ["pages", "Pages"],
             ["redirects", "Redirects"],
@@ -113,7 +114,15 @@ export function SeoScreen() {
       </div>
 
       <div className="mt-6">
-        {tab === "health" ? <HealthTab /> : tab === "pages" ? <PagesTab /> : <RedirectsTab />}
+        {tab === "search" ? (
+          <SearchTab />
+        ) : tab === "health" ? (
+          <HealthTab />
+        ) : tab === "pages" ? (
+          <PagesTab />
+        ) : (
+          <RedirectsTab />
+        )}
       </div>
     </div>
   );
@@ -751,6 +760,232 @@ function RedirectsTab() {
           {used} visit{used === 1 ? "" : "s"} rescued by these rules so far.
         </p>
       ) : null}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------- */
+/* Search: the real numbers, from Search Console                     */
+/* ---------------------------------------------------------------- */
+
+type SearchRow = { keys: string[]; clicks: number; impressions: number; ctr: number; position: number };
+type Totals = { clicks: number; impressions: number; ctr: number; position: number };
+type SearchPayload = {
+  state: "not-connected" | "no-property" | "ok" | "error";
+  error?: string;
+  connection?: { clientEmail?: string; property?: string | null };
+  days?: number;
+  summary?: {
+    property: string;
+    range: { start: string; end: string };
+    current: Totals;
+    previous: Totals;
+    queries: SearchRow[];
+    pages: SearchRow[];
+    opportunities: SearchRow[];
+  };
+};
+
+const num = (n: number) => n.toLocaleString("en-US");
+const pct = (n: number) => `${(n * 100).toFixed(1)}%`;
+const pos = (n: number) => n.toFixed(1);
+
+/* Change against the period before. Position is inverted on purpose: moving
+ * from 12 to 8 is an improvement even though the number went down. */
+function Delta({ now, before, lowerIsBetter = false }: { now: number; before: number; lowerIsBetter?: boolean }) {
+  if (!before) return <span className="font-mono text-label uppercase text-dim">no earlier data</span>;
+  const change = ((now - before) / before) * 100;
+  if (Math.abs(change) < 0.5) return <span className="font-mono text-label uppercase text-dim">flat</span>;
+  const better = lowerIsBetter ? change < 0 : change > 0;
+  return (
+    <span className={`font-mono text-label uppercase ${better ? "text-green" : "text-error"}`}>
+      {change > 0 ? "+" : ""}
+      {change.toFixed(0)}% vs previous
+    </span>
+  );
+}
+
+function RowTable({
+  rows,
+  label,
+  linkPages = false,
+}: {
+  rows: SearchRow[];
+  label: string;
+  linkPages?: boolean;
+}) {
+  if (rows.length === 0) {
+    return <p className="mt-3 text-body-sm text-muted">Nothing yet in this period.</p>;
+  }
+  const strip = (u: string) => u.replace(/^https?:\/\/[^/]+/, "") || "/";
+  return (
+    <div className="mt-3 overflow-x-auto rounded-[12px] border border-hair">
+      <table className="w-full min-w-[34rem] border-collapse">
+        <thead>
+          <tr className="bg-surface">
+            <th className="px-4 py-2.5 text-left font-mono text-label uppercase text-muted">{label}</th>
+            <th className="px-4 py-2.5 text-right font-mono text-label uppercase text-muted">Clicks</th>
+            <th className="px-4 py-2.5 text-right font-mono text-label uppercase text-muted">Shown</th>
+            <th className="px-4 py-2.5 text-right font-mono text-label uppercase text-muted">Clicked</th>
+            <th className="px-4 py-2.5 text-right font-mono text-label uppercase text-muted">Rank</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.keys[0]} className="border-t border-hair bg-surface/40">
+              <td className="max-w-[22rem] truncate px-4 py-2.5 text-body-sm text-ink">
+                {linkPages ? (
+                  <a href={strip(r.keys[0])} target="_blank" rel="noreferrer" className="hover:text-gold">
+                    {strip(r.keys[0])}
+                  </a>
+                ) : (
+                  r.keys[0]
+                )}
+              </td>
+              <td className="px-4 py-2.5 text-right font-mono text-body-sm text-ink">{num(r.clicks)}</td>
+              <td className="px-4 py-2.5 text-right font-mono text-body-sm text-muted">{num(r.impressions)}</td>
+              <td className="px-4 py-2.5 text-right font-mono text-body-sm text-muted">{pct(r.ctr)}</td>
+              <td className="px-4 py-2.5 text-right font-mono text-body-sm text-muted">{pos(r.position)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function SearchTab() {
+  const [data, setData] = useState<SearchPayload | null>(null);
+  const [days, setDays] = useState(28);
+  const [err, setErr] = useState("");
+
+  const load = useCallback(async (d: number) => {
+    setData(null);
+    setErr("");
+    try {
+      setData(await api<SearchPayload>(`/api/admin/seo/search?days=${d}`));
+    } catch (e) {
+      setErr((e as Error).message);
+    }
+  }, []);
+
+  useEffect(() => {
+    load(days);
+  }, [load, days]);
+
+  if (err) return <p className="text-body-sm text-error">{err}</p>;
+  if (!data) return <p className="text-body text-muted">Asking Google...</p>;
+
+  if (data.state === "not-connected") {
+    return (
+      <div className="rounded-[12px] border border-hair bg-surface p-6">
+        <p className="font-display text-h4 text-ink">Google is not connected yet</p>
+        <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
+          Once it is, this tab shows what people actually search to find you,
+          which pages earn the clicks, where you rank, and the searches where you
+          sit just off page one. Setup takes about ten minutes and needs no
+          credit card.
+        </p>
+        <p className="mt-4 text-body-sm text-dim">
+          Settings, then Integrations, then Google Search Console and Analytics.
+        </p>
+      </div>
+    );
+  }
+
+  if (data.state === "no-property") {
+    return (
+      <div className="rounded-[12px] border border-gold/30 bg-gold/[0.06] p-6">
+        <p className="font-display text-h4 text-ink">Almost there</p>
+        <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
+          Google is connected. Pick which Search Console property to read in
+          Settings, Integrations, and the numbers appear here.
+        </p>
+      </div>
+    );
+  }
+
+  if (data.state === "error" || !data.summary) {
+    return (
+      <div className="rounded-[12px] border border-error/30 bg-error/[0.06] p-6">
+        <p className="font-display text-h4 text-ink">Google could not answer</p>
+        <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">{data.error}</p>
+      </div>
+    );
+  }
+
+  const s = data.summary;
+  return (
+    <div>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <p className="text-body-sm text-muted">
+          {s.property} / {s.range.start} to {s.range.end}
+        </p>
+        <div className="flex gap-2">
+          {[7, 28, 90].map((d) => (
+            <button
+              key={d}
+              type="button"
+              onClick={() => setDays(d)}
+              className={`tap rounded-full border px-3.5 py-1.5 font-mono text-label uppercase transition-colors ${
+                days === d
+                  ? "border-gold/60 bg-gold/10 text-gold"
+                  : "border-hair text-muted hover:border-gold/40 hover:text-ink"
+              }`}
+            >
+              {d} days
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {(
+          [
+            ["Clicks", num(s.current.clicks), s.current.clicks, s.previous.clicks, false, "Visits from Google"],
+            ["Impressions", num(s.current.impressions), s.current.impressions, s.previous.impressions, false, "Times you appeared"],
+            ["Click rate", pct(s.current.ctr), s.current.ctr, s.previous.ctr, false, "How often they clicked"],
+            ["Average rank", pos(s.current.position), s.current.position, s.previous.position, true, "Lower is better"],
+          ] as const
+        ).map(([label, value, now, before, lower, hint]) => (
+          <div key={label} className="rounded-[12px] border border-hair bg-surface p-5">
+            <p className="font-mono text-label uppercase text-muted">{label}</p>
+            <p className="mt-1 font-display text-h2 text-ink">{value}</p>
+            <p className="mt-1">
+              <Delta now={now} before={before} lowerIsBetter={lower} />
+            </p>
+            <p className="mt-1 text-body-sm text-dim">{hint}</p>
+          </div>
+        ))}
+      </div>
+
+      {s.opportunities.length > 0 ? (
+        <section className="mt-8">
+          <h2 className="font-display text-h4 text-ink">Almost on page one</h2>
+          <p className="mt-1 max-w-[var(--measure-body)] text-body-sm text-muted">
+            Searches where you already rank between 6 and 20 with real volume
+            behind them. Google trusts you for these already, so improving the
+            page that ranks, or writing a post aimed straight at the phrase, is
+            the cheapest traffic on the site. This is the blog plan.
+          </p>
+          <RowTable rows={s.opportunities} label="Search" />
+        </section>
+      ) : null}
+
+      <section className="mt-8">
+        <h2 className="font-display text-h4 text-ink">What people search</h2>
+        <RowTable rows={s.queries} label="Search" />
+      </section>
+
+      <section className="mt-8">
+        <h2 className="font-display text-h4 text-ink">Which pages earn the clicks</h2>
+        <RowTable rows={s.pages} label="Page" linkPages />
+      </section>
+
+      <p className="mt-6 text-body-sm text-dim">
+        Google settles its numbers two to three days late, so this window ends
+        on {s.range.end} rather than today. That is Google, not us.
+      </p>
     </div>
   );
 }
