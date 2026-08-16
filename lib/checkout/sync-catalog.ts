@@ -34,6 +34,12 @@ type CatalogSrc = {
  * Only touches catalog-coded video/pack rows (exp-/fexp-/demo-/mkt-/fa-*); the
  * hand-seeded packs, bundles, and subscriptions carry other skus and are never
  * matched, so they are left alone.
+ *
+ * That last promise used to hold for free, because the catalog held nothing but
+ * videos. Since packs and bundles moved in they must be filtered out explicitly:
+ * a pack row has no video category, so syncing it would rewrite its description
+ * to "null." and, worse, stamp metadata.kind as "video", which is the field that
+ * decides which order bumps a checkout offers.
  */
 export async function syncProductsFromCatalogTable(
   db: SupabaseClient,
@@ -43,7 +49,10 @@ export async function syncProductsFromCatalogTable(
     .select("code,title,subject,category,price_cents,on_site,coming_soon");
   if (error) throw new Error(`catalog read failed: ${error.message}`);
 
-  const src = (data ?? []) as CatalogSrc[];
+  // Filtering on the code namespace rather than on kind, because feature
+  // animations are kind 'pack' yet carry a video code and a real category, and
+  // their price has always published through here.
+  const src = ((data ?? []) as CatalogSrc[]).filter((c) => VIDEO_CODE.test(c.code));
   const rows = src.map((c) => ({
     sku: c.code,
     name: c.title,
