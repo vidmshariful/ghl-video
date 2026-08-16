@@ -83,9 +83,17 @@ Schema lives in `supabase/migrations/*.sql` (ordered, idempotent).
 `npm run migrate` applies pending files and records them in
 `schema_migrations` (`--dry-run` to preview; needs `SUPABASE_DB_URL`).
 Tables: products, customers, orders, order_events (audit log), stripe_events
-(webhook idempotency), admins, order_bumps, order_updates, subscriptions,
-plus the private `intake` storage bucket. Money is integer cents everywhere.
-RLS is default-deny; do not add anon policies to money tables.
+(webhook idempotency), admins, order_bumps, order_updates, order_deliverables,
+subscriptions, plus the private `intake` storage bucket. Money is integer cents
+everywhere. RLS is default-deny; do not add anon policies to money tables.
+
+`order_deliverables` is one row per VIDEO owed on an order, created at
+settlement by `lib/deliverables.ts` (a video expands to one row, a pack to its
+catalog members, a bundle to empty slots the customer names at intake). It is
+what the studio board and the customer's video list read. `npm run
+check:deliverables` proves every product still expands to the count its offer
+advertises; `npm run backfill:deliverables` is the idempotent catch-up for
+orders that predate it.
 
 ## 4. Env and scripts
 

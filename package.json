@@ -17,6 +17,8 @@
     "test:e2e": "playwright test",
     "seed:composition": "tsx scripts/seed-composition.ts",
     "check:composition": "tsx scripts/check-composition.ts",
+    "check:deliverables": "tsx scripts/check-deliverables.ts",
+    "backfill:deliverables": "tsx scripts/backfill-deliverables.ts",
     "seed:pack-rows": "tsx scripts/seed-pack-rows.ts"
   },
   "dependencies": {

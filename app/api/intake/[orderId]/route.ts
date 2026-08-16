@@ -229,5 +229,26 @@ export async function POST(
     body: "Branding brief submitted by the client.",
   });
 
+  // A bundle is sold as "three videos of your choosing", so its deliverable
+  // rows are created empty at payment and named here. Fail-soft: the brief is
+  // already saved, and losing the naming must never cost the client their
+  // upload. Only fills blanks, so resubmitting a brief cannot reassign a video
+  // the studio has already started.
+  if (videoSelections) {
+    try {
+      const { fillBundlePicks } = await import("@/lib/deliverables");
+      const { filled } = await fillBundlePicks(db, orderId, videoSelections);
+      if (filled) {
+        await db.from("order_events").insert({
+          order_id: orderId,
+          event_type: "deliverables_named",
+          payload: { count: filled },
+        });
+      }
+    } catch (e) {
+      console.error(`[intake] naming deliverables failed for order ${orderId}:`, e);
+    }
+  }
+
   return NextResponse.json({ ok: true });
 }

@@ -93,6 +93,27 @@ export async function settlePaidIntent(
       // confirmation + team alert. Fail-soft inside; never blocks settlement.
       const { sendOrderPaidEmails } = await import("@/lib/email/notify");
       await sendOrderPaidEmails(db, order.id as string);
+
+      // Expand what they bought into one row per video, so the studio has a
+      // work list and the customer has a My Videos list. Deliberately never
+      // throws: a paid order must settle even if the expansion has a bad day,
+      // and the backfill script can always rebuild a missing list afterwards.
+      try {
+        const { createDeliverablesForOrder } = await import("@/lib/deliverables");
+        const { created, reason } = await createDeliverablesForOrder(db, order.id as string);
+        await db.from("order_events").insert({
+          order_id: order.id,
+          event_type: created ? "deliverables_created" : "deliverables_skipped",
+          payload: { count: created, ...(reason ? { reason } : {}) },
+        });
+      } catch (e) {
+        console.error(`[settle] deliverables failed for order ${order.id}:`, e);
+        await db.from("order_events").insert({
+          order_id: order.id,
+          event_type: "deliverables_failed",
+          payload: { error: e instanceof Error ? e.message : String(e) },
+        });
+      }
       // (coupon redemption is now reserved atomically at finalize, before the
       // charge, via reserve_coupon_redemption; nothing to count here.)
       if (mismatch) {
