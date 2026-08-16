@@ -190,8 +190,10 @@ export async function sendOrderDeliveredEmail(db: SupabaseClient, orderId: strin
       : "";
 
     /* Only ask when there is somewhere to send them. An empty review button
-     * is worse than no ask at all. */
-    const reviewUrl = process.env.GOOGLE_REVIEW_URL ?? "";
+     * is worse than no ask at all. The env var stays supported so the ask can
+     * be pointed elsewhere or switched off without a deploy. */
+    const { googleReviewUrl } = await import("@/lib/content/core");
+    const reviewUrl = (process.env.GOOGLE_REVIEW_URL ?? googleReviewUrl ?? "").trim();
     const reviewAsk = reviewUrl
       ? `<p style="${P}margin-top:22px;">If we did right by you, a review helps us more than anything else. It takes a minute.</p>${emailButton(reviewUrl, "Leave a review")}`
       : "";

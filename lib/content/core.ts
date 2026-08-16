@@ -82,6 +82,15 @@ export const otherBrands = [
   { name: "socialX", url: "https://socialx.studio", domain: "socialx.studio" },
 ] as const;
 
+/* Where a happy client goes to leave a review.
+ *
+ * Content, not a secret, so it lives here with the rest of the content rather
+ * than in the hosting settings: one less thing to set up, and it is visible in
+ * the repo like every other public URL we publish. The wrap-up email omits the
+ * ask entirely if this is ever emptied, so it can never render a dead button.
+ */
+export const googleReviewUrl = "https://g.page/r/CYSgGtPLCzEfEAE/review";
+
 /* Soft-launch notice bar across the top of every marketing page. Set
    siteNotice to null to remove the bar (the header and page offset
    collapse back automatically). `short` shows on mobile, `long` on
