@@ -1,21 +1,23 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { STATUS_LABEL, type DeliverableStatus } from "@/lib/deliverable-status";
 import { VideoReview } from "./VideoReview";
 
 /*
  * My Videos: what the client actually bought, video by video.
  *
- * Orders answer "what did I pay for". This answers "where is my video", which
- * is the question clients were asking in chat. Single video purchases sit under
- * Videos, multi video purchases under Packs, because a client thinks of a nine
- * video pack as one thing they bought, not nine line items.
+ * Videos lists everything they own, whether it came on its own or inside a
+ * pack, because "where is my video" is a question about a video and not about
+ * how it was sold. A video that came from a pack says so on its card.
  *
- * A card shows a still from the video with a play button over it, not a live
- * embed. Nine embedded players on one screen is nine media pipelines running
- * for a page nobody is watching yet. Pressing play opens the video large, with
- * everything that can be done to it in one place.
+ * Packs only appears when they own one. A client who bought a single video was
+ * being shown an empty Packs tab, which reads as something missing.
+ *
+ * Anything waiting on the client is pulled to the front and counted at the top,
+ * because the whole point of this screen is that they never have to hunt for
+ * the thing we need from them.
  */
 
 type Video = {
@@ -45,6 +47,9 @@ type Group = {
   videos: Video[];
 };
 
+/** a video plus where it came from, which is what a flat list needs */
+type Owned = Video & { packName: string | null; packId: string | null };
+
 const TONE: Record<DeliverableStatus, string> = {
   queued: "border-hair text-dim",
   in_production: "border-gold/50 text-gold",
@@ -53,13 +58,21 @@ const TONE: Record<DeliverableStatus, string> = {
   approved: "border-green/50 text-green",
 };
 
-/* What the client should understand is happening, in their language. */
 const EXPLAINER: Record<DeliverableStatus, string> = {
   queued: "In the queue. We start this once your brief is in.",
   in_production: "Our editors are building this one now.",
   ready: "Ready for you to watch.",
   revisions: "We are making the changes you asked for.",
   approved: "You approved this one. It is yours to use.",
+};
+
+/* Anything needing the client comes first, finished work last. */
+const SORT: Record<DeliverableStatus, number> = {
+  ready: 0,
+  revisions: 1,
+  in_production: 2,
+  queued: 3,
+  approved: 4,
 };
 
 const day = (iso: string) =>
@@ -73,8 +86,9 @@ export function MyVideosView({
   onMessageStudio?: () => void;
 }) {
   const [groups, setGroups] = useState<Group[] | null>(null);
-  const [tab, setTab] = useState<"video" | "pack">("video");
-  const [playing, setPlaying] = useState<Video | null>(null);
+  const [tab, setTab] = useState<"videos" | "packs">("videos");
+  const [openPack, setOpenPack] = useState<string | null>(null);
+  const [playing, setPlaying] = useState<Owned | null>(null);
 
   const load = useCallback(async () => {
     const j = (await authedFetch("/api/portal/videos").catch(() => null)) as {
@@ -82,10 +96,11 @@ export function MyVideosView({
     } | null;
     const g = j?.groups ?? [];
     setGroups(g);
-    // keep an open popup in step with what the server now says
-    setPlaying((p) =>
-      p ? (g.flatMap((x) => x.videos).find((v) => v.id === p.id) ?? null) : null,
-    );
+    setPlaying((p) => {
+      if (!p) return null;
+      const fresh = g.flatMap((x) => x.videos).find((v) => v.id === p.id);
+      return fresh ? { ...fresh, packName: p.packName, packId: p.packId } : null;
+    });
   }, [authedFetch]);
 
   useEffect(() => {
@@ -94,15 +109,20 @@ export function MyVideosView({
 
   if (groups === null) return <p className="text-body text-muted">Loading your videos...</p>;
 
-  const singles = groups.filter((g) => g.kind === "video");
   const packs = groups.filter((g) => g.kind === "pack");
-  const shown = tab === "video" ? singles : packs;
-  const tabs: { key: "video" | "pack"; label: string; n: number }[] = [
-    { key: "video", label: "Videos", n: singles.length },
-    { key: "pack", label: "Packs", n: packs.length },
-  ];
+  const all: Owned[] = groups
+    .flatMap((g) =>
+      g.videos.map((v) => ({
+        ...v,
+        packName: g.kind === "pack" ? g.productName : null,
+        packId: g.kind === "pack" ? g.orderId : null,
+      })),
+    )
+    .sort((a, b) => SORT[a.status] - SORT[b.status]);
 
-  if (!groups.length) {
+  const waiting = all.filter((v) => v.status === "ready").length;
+
+  if (!all.length) {
     return (
       <div className="rounded-[12px] border border-hair bg-surface p-8 text-center">
         <p className="text-body text-muted">
@@ -112,36 +132,97 @@ export function MyVideosView({
     );
   }
 
+  const pack = openPack ? packs.find((p) => p.orderId === openPack) : null;
+
   return (
     <div>
-      <div className="flex gap-1 border-b border-hair">
-        {tabs.map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            onClick={() => setTab(t.key)}
-            className={`tap rounded-t-[8px] px-4 py-2.5 text-body-sm transition-colors ${
-              tab === t.key
-                ? "border border-b-0 border-hair bg-surface font-semibold text-gold"
-                : "text-muted hover:text-ink"
-            }`}
-          >
-            {t.label}
-            {t.n > 0 ? ` (${t.n})` : ""}
-          </button>
-        ))}
-      </div>
+      {waiting > 0 && (
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-[12px] border border-blue/40 bg-blue/5 px-5 py-4">
+          <p className="text-body text-ink">
+            {waiting === 1
+              ? "1 video is ready for you to review."
+              : `${waiting} videos are ready for you to review.`}
+          </p>
+          <p className="font-mono text-label uppercase tracking-[0.1em] text-blue">
+            Watch, leave notes, then approve
+          </p>
+        </div>
+      )}
 
-      {shown.length === 0 ? (
-        <p className="mt-6 text-body text-muted">
-          {tab === "video"
-            ? "You have not bought a single video on its own yet."
-            : "You have not bought a pack yet."}
-        </p>
+      {/* Packs only exists for people who own one. */}
+      {packs.length > 0 && (
+        <div className="flex gap-1 border-b border-hair">
+          {(
+            [
+              { key: "videos", label: "Videos", n: all.length },
+              { key: "packs", label: "Packs", n: packs.length },
+            ] as const
+          ).map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => {
+                setTab(t.key);
+                setOpenPack(null);
+              }}
+              className={`tap rounded-t-[8px] px-4 py-2.5 text-body-sm transition-colors ${
+                tab === t.key
+                  ? "border border-b-0 border-hair bg-surface font-semibold text-gold"
+                  : "text-muted hover:text-ink"
+              }`}
+            >
+              {t.label} ({t.n})
+            </button>
+          ))}
+        </div>
+      )}
+
+      {tab === "videos" || packs.length === 0 ? (
+        <div className={packs.length > 0 ? "mt-6" : ""}>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {all.map((v) => (
+              <VideoCard key={v.id} video={v} onPlay={setPlaying} showPack />
+            ))}
+          </div>
+        </div>
+      ) : pack ? (
+        <div className="mt-6">
+          <button
+            type="button"
+            onClick={() => setOpenPack(null)}
+            className="tap font-mono text-label uppercase text-muted transition-colors hover:text-gold"
+          >
+            &larr; All packs
+          </button>
+          <div className="mt-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+            <div>
+              <h2 className="font-display text-h3 text-ink">{pack.productName}</h2>
+              <p className="mt-1 font-mono text-label uppercase tracking-[0.1em] text-dim">
+                {pack.productCode ? `${pack.productCode} / ` : ""}
+                Ordered {day(pack.orderedAt)}
+              </p>
+            </div>
+            <p className="font-mono text-label uppercase tracking-[0.1em] text-muted">
+              {pack.videos.filter((v) => v.status === "ready" || v.status === "approved").length} of{" "}
+              {pack.videos.length} ready
+            </p>
+          </div>
+          <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {[...pack.videos]
+              .sort((a, b) => SORT[a.status] - SORT[b.status])
+              .map((v) => (
+                <VideoCard
+                  key={v.id}
+                  video={{ ...v, packName: pack.productName, packId: pack.orderId }}
+                  onPlay={setPlaying}
+                />
+              ))}
+          </div>
+        </div>
       ) : (
-        <div className="mt-6 grid gap-8">
-          {shown.map((g) => (
-            <GroupBlock key={g.orderId} group={g} onPlay={setPlaying} />
+        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {packs.map((p) => (
+            <PackCard key={p.orderId} pack={p} onOpen={() => setOpenPack(p.orderId)} />
           ))}
         </div>
       )}
@@ -159,38 +240,62 @@ export function MyVideosView({
   );
 }
 
-function GroupBlock({ group, onPlay }: { group: Group; onPlay: (v: Video) => void }) {
-  const ready = group.videos.filter(
-    (v) => v.status === "ready" || v.status === "approved",
-  ).length;
+/** A pack as one thing the client bought, with a peek at what is inside. */
+function PackCard({ pack, onOpen }: { pack: Group; onOpen: () => void }) {
+  const ready = pack.videos.filter((v) => v.status === "ready" || v.status === "approved").length;
+  const cover = pack.videos.find((v) => v.videoUrl)?.videoUrl ?? null;
+  const pct = Math.round((ready / Math.max(1, pack.videos.length)) * 100);
 
   return (
-    <section>
-      {group.kind === "pack" && (
-        <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-          <div>
-            <h2 className="font-display text-h4 text-ink">{group.productName}</h2>
-            <p className="mt-1 font-mono text-label uppercase tracking-[0.1em] text-dim">
-              {group.productCode ? `${group.productCode} / ` : ""}
-              Ordered {day(group.orderedAt)}
-            </p>
-          </div>
-          <p className="font-mono text-label uppercase tracking-[0.1em] text-muted">
-            {ready} of {group.videos.length} ready
-          </p>
-        </div>
-      )}
-
-      <div className="grid gap-4 md:grid-cols-2">
-        {group.videos.map((v) => (
-          <VideoCard key={v.id} video={v} onPlay={onPlay} />
-        ))}
+    <button
+      type="button"
+      onClick={onOpen}
+      className="tap group overflow-hidden rounded-[12px] border border-hair bg-surface text-left transition-colors hover:border-gold/50"
+    >
+      <div className="relative">
+        {cover ? (
+          <video
+            src={`${cover}#t=1`}
+            preload="metadata"
+            muted
+            playsInline
+            tabIndex={-1}
+            aria-hidden="true"
+            className="pointer-events-none aspect-video w-full bg-canvas object-cover"
+          />
+        ) : (
+          <div className="aspect-video w-full bg-canvas" />
+        )}
+        <span className="absolute inset-0 flex items-center justify-center bg-canvas/55 font-mono text-label uppercase tracking-[0.1em] text-ink transition-colors group-hover:bg-canvas/35">
+          {pack.videos.length} videos
+        </span>
       </div>
-    </section>
+      <div className="p-4">
+        <h3 className="text-body font-semibold leading-snug text-ink">{pack.productName}</h3>
+        <p className="mt-1 font-mono text-label uppercase tracking-[0.1em] text-dim">
+          {pack.productCode ? `${pack.productCode} / ` : ""}
+          Ordered {day(pack.orderedAt)}
+        </p>
+        <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-hair">
+          <div className="h-full rounded-full bg-brand-gradient" style={{ width: `${pct}%` }} />
+        </div>
+        <p className="mt-1.5 font-mono text-label uppercase tracking-[0.1em] text-muted">
+          {ready} of {pack.videos.length} ready
+        </p>
+      </div>
+    </button>
   );
 }
 
-function VideoCard({ video: v, onPlay }: { video: Video; onPlay: (v: Video) => void }) {
+function VideoCard({
+  video: v,
+  onPlay,
+  showPack = false,
+}: {
+  video: Owned;
+  onPlay: (v: Owned) => void;
+  showPack?: boolean;
+}) {
   return (
     <article className="overflow-hidden rounded-[12px] border border-hair bg-surface">
       {v.videoUrl ? (
@@ -236,6 +341,13 @@ function VideoCard({ video: v, onPlay }: { video: Video; onPlay: (v: Video) => v
             {STATUS_LABEL[v.status]}
           </span>
         </div>
+
+        {/* where it came from, so a pack video is never a mystery */}
+        {showPack && v.packName && (
+          <p className="mt-1.5 inline-flex rounded-full border border-hair px-2 py-0.5 font-mono text-label uppercase tracking-[0.1em] text-muted">
+            {v.packName}
+          </p>
+        )}
         {(v.code || v.groupLabel) && (
           <p className="mt-1.5 font-mono text-label uppercase tracking-[0.1em] text-dim">
             {v.code ? v.code.toUpperCase() : ""}
@@ -243,14 +355,23 @@ function VideoCard({ video: v, onPlay }: { video: Video; onPlay: (v: Video) => v
             {v.groupLabel ?? ""}
           </p>
         )}
+
         {v.videoUrl && (
-          <button
-            type="button"
-            onClick={() => onPlay(v)}
-            className="tap mt-3 rounded-[8px] border border-gold/50 px-3 py-1.5 font-mono text-label uppercase text-gold transition-colors hover:bg-gold hover:text-canvas"
-          >
-            {v.canReview ? "Watch and review" : "Watch"}
-          </button>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => onPlay(v)}
+              className="tap rounded-[8px] border border-gold/50 px-3 py-1.5 font-mono text-label uppercase text-gold transition-colors hover:bg-gold hover:text-canvas"
+            >
+              {v.canReview ? "Watch and review" : "Watch"}
+            </button>
+            <a
+              href={`/api/portal/videos/${v.id}/download`}
+              className="font-mono text-label uppercase tracking-[0.1em] text-blue hover:underline"
+            >
+              Download
+            </a>
+          </div>
         )}
       </div>
     </article>
@@ -271,31 +392,41 @@ function VideoPopup({
   onMessageStudio,
   authedFetch,
 }: {
-  video: Video;
+  video: Owned;
   onClose: () => void;
   onChanged: () => void;
   onMessageStudio?: () => void;
   authedFetch: (path: string, init?: RequestInit) => Promise<unknown>;
 }) {
   useEffect(() => {
+    /* Escape always closes, even from the notes box. Trapping it there meant
+       clicking into the textarea quietly disabled the escape hatch. */
     const onKey = (e: KeyboardEvent) => {
-      // not while typing a note
-      const t = e.target as HTMLElement | null;
-      if (e.key === "Escape" && t?.tagName !== "TEXTAREA") onClose();
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        onClose();
+      }
     };
-    window.addEventListener("keydown", onKey);
+    window.addEventListener("keydown", onKey, true);
     document.body.style.overflow = "hidden";
     return () => {
-      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keydown", onKey, true);
       document.body.style.overflow = "";
     };
   }, [onClose]);
 
   if (!v.videoUrl) return null;
 
-  return (
+  /* Rendered into <body> rather than in place.
+   *
+   * The portal's view wrapper animates, and an ancestor with a transform
+   * becomes the containing block for position:fixed. The popup was therefore
+   * being trapped inside the content column instead of covering the window,
+   * which is why it looked small and why clicking beside it sometimes missed
+   * the backdrop. Going through the body escapes that entirely. */
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 overflow-y-auto bg-canvas/85 p-3 backdrop-blur-sm sm:p-6"
+      className="fixed inset-0 z-50 overflow-y-auto bg-canvas/85 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-label={v.title}
@@ -303,74 +434,85 @@ function VideoPopup({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="mx-auto w-full max-w-[1100px] rounded-[12px] border border-hair bg-surface p-4 sm:p-6">
-        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className="font-display text-h4 leading-tight text-ink">{v.title}</h2>
-            <p className="mt-1 font-mono text-label uppercase tracking-[0.1em] text-dim">
-              {v.code ? `${v.code.toUpperCase()} / ` : ""}
-              {STATUS_LABEL[v.status]}
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            {/* Through our own route, because the download attribute is
-                ignored across origins and the file just opened in a tab. */}
-            <a
-              href={`/api/portal/videos/${v.id}/download`}
-              className="tap rounded-[8px] border border-hair px-3 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-blue/60 hover:text-blue"
-            >
-              Download
-            </a>
-            <button
-              type="button"
-              onClick={onClose}
-              className="tap rounded-[8px] border border-hair px-3 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-
-        {v.canReview ? (
-          <VideoReview
-            videoId={v.id}
-            title={v.title}
-            videoUrl={v.videoUrl}
-            status={v.status}
-            canRequestChanges={v.canRequestChanges}
-            revisionsIncluded={v.revisionsIncluded}
-            revisionsUsed={v.revisionsUsed}
-            onChanged={onChanged}
-            onMessageStudio={onMessageStudio}
-            authedFetch={authedFetch}
-          />
-        ) : (
-          <div>
-            <video
-              controls
-              autoPlay
-              preload="metadata"
-              playsInline
-              src={v.videoUrl}
-              className="aspect-video w-full rounded-[8px] bg-canvas"
-            />
-            <p className="mt-3 text-body-sm text-dim">
-              {v.status === "approved"
-                ? "You approved this video, so it is finished and yours to use. If you need anything changed after this, send us a message and we will re-open it for you."
-                : EXPLAINER[v.status]}
-            </p>
-            {v.status === "approved" && onMessageStudio && (
+      {/* the padding lives on an inner shell so a click beside the panel still
+          lands on the backdrop rather than on the padding of the panel itself */}
+      <div
+        className="flex min-h-full items-start justify-center p-3 sm:p-6"
+        onMouseDown={(e) => {
+          if (e.target === e.currentTarget) onClose();
+        }}
+      >
+        <div className="w-full max-w-[1600px] rounded-[12px] border border-hair bg-surface p-4 sm:p-6">
+          <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="font-display text-h3 leading-tight text-ink">{v.title}</h2>
+              <p className="mt-1 font-mono text-label uppercase tracking-[0.1em] text-dim">
+                {v.code ? `${v.code.toUpperCase()} / ` : ""}
+                {STATUS_LABEL[v.status]}
+                {v.packName ? ` / ${v.packName}` : ""}
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              {/* Through our own route, because the download attribute is
+                  ignored across origins and the file just opened in a tab. */}
+              <a
+                href={`/api/portal/videos/${v.id}/download`}
+                className="tap rounded-[8px] border border-hair px-3 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-blue/60 hover:text-blue"
+              >
+                Download
+              </a>
               <button
                 type="button"
-                onClick={onMessageStudio}
-                className="tap mt-3 rounded-[8px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
+                onClick={onClose}
+                className="tap rounded-[8px] border border-hair px-3 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
               >
-                Message the studio
+                Close
               </button>
-            )}
+            </div>
           </div>
-        )}
+
+          {v.canReview ? (
+            <VideoReview
+              videoId={v.id}
+              title={v.title}
+              videoUrl={v.videoUrl}
+              status={v.status}
+              canRequestChanges={v.canRequestChanges}
+              revisionsIncluded={v.revisionsIncluded}
+              revisionsUsed={v.revisionsUsed}
+              onChanged={onChanged}
+              onMessageStudio={onMessageStudio}
+              authedFetch={authedFetch}
+            />
+          ) : (
+            <div>
+              <video
+                controls
+                autoPlay
+                preload="metadata"
+                playsInline
+                src={v.videoUrl}
+                className="max-h-[70vh] w-full rounded-[8px] bg-canvas"
+              />
+              <p className="mt-3 text-body-sm text-dim">
+                {v.status === "approved"
+                  ? "You approved this video, so it is finished and yours to use. If you need anything changed after this, send us a message and we will re-open it for you."
+                  : EXPLAINER[v.status]}
+              </p>
+              {v.status === "approved" && onMessageStudio && (
+                <button
+                  type="button"
+                  onClick={onMessageStudio}
+                  className="tap mt-3 rounded-[8px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
+                >
+                  Message the studio
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

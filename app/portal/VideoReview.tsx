@@ -246,7 +246,7 @@ export function VideoReview({
   );
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
       <div>
         <video
           ref={ref}
@@ -257,7 +257,7 @@ export function VideoReview({
           src={videoUrl}
           onTimeUpdate={(e) => setAt(e.currentTarget.currentTime)}
           onLoadedMetadata={(e) => setDuration(e.currentTarget.duration || 0)}
-          className="aspect-video w-full rounded-[8px] bg-canvas"
+          className="max-h-[65vh] w-full rounded-[8px] bg-canvas"
         />
 
         {duration > 0 && (
@@ -354,7 +354,7 @@ export function VideoReview({
 
         {err && <p className="mt-2 text-body-sm text-error">{err}</p>}
 
-        <div className="mt-4 max-h-[26rem] overflow-y-auto pr-1">
+        <div className="mt-4 max-h-[52vh] overflow-y-auto pr-1">
           {comments === null ? (
             <p className="text-body-sm text-muted">Loading notes...</p>
           ) : top.length === 0 ? (
