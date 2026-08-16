@@ -9,7 +9,11 @@ export const studioSince = "2020"; // founding year, phrased "since 2020"
 
 export const site = {
   name: "GHL Video",
-  url: "https://ghlvideo.com",
+  /* www is the canonical host: the server 308s the bare domain to www, and
+     Search Console confirms Google selects www as the canonical too. This
+     string feeds every canonical tag, the sitemap, robots.txt, OG urls, and
+     the structured data, so it must match where visitors actually land. */
+  url: "https://www.ghlvideo.com",
   email: "hi@ghlvideo.com",
   tagline: "Video built for HighLevel SaaS. Fast, custom, done.",
   description: `The video studio built only for the HighLevel ecosystem. White-label premade videos, custom production, and video editing service. ${clients}+ clients served, rated ${rating} on Google.`,

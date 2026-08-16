@@ -189,6 +189,91 @@
       "source": "/what-is-ghl-video-a-complete-guide-for-highlevel-saas-and-agencies/",
       "destination": "/blog/what-is-ghl-video-a-complete-guide-for-highlevel-saas-and-agencies/",
       "permanent": true
+    },
+    {
+      "source": "/sitemap_index.xml",
+      "destination": "/sitemap.xml",
+      "permanent": true
+    },
+    {
+      "source": "/feed",
+      "destination": "/blog/",
+      "permanent": true
+    },
+    {
+      "source": "/feed/",
+      "destination": "/blog/",
+      "permanent": true
+    },
+    {
+      "source": "/highlevel-full-platform-pitch-video",
+      "destination": "/premade/",
+      "permanent": true
+    },
+    {
+      "source": "/highlevel-full-platform-pitch-video/",
+      "destination": "/premade/",
+      "permanent": true
+    },
+    {
+      "source": "/halloween-2025",
+      "destination": "/premade/",
+      "permanent": true
+    },
+    {
+      "source": "/halloween-2025/",
+      "destination": "/premade/",
+      "permanent": true
+    },
+    {
+      "source": "/black-friday-vip-access",
+      "destination": "/premade/",
+      "permanent": true
+    },
+    {
+      "source": "/black-friday-vip-access/",
+      "destination": "/premade/",
+      "permanent": true
+    },
+    {
+      "source": "/2026/06/15/highlevel-saas-video-funnel",
+      "destination": "/blog/highlevel-saas-video-funnel/",
+      "permanent": true
+    },
+    {
+      "source": "/2026/06/15/highlevel-saas-video-funnel/",
+      "destination": "/blog/highlevel-saas-video-funnel/",
+      "permanent": true
+    },
+    {
+      "source": "/2026/03/15/who-ghl-video-is-not-for-and-why-that-matters",
+      "destination": "/blog/who-ghl-video-is-not-for-and-why-that-matters/",
+      "permanent": true
+    },
+    {
+      "source": "/2026/03/15/who-ghl-video-is-not-for-and-why-that-matters/",
+      "destination": "/blog/who-ghl-video-is-not-for-and-why-that-matters/",
+      "permanent": true
+    },
+    {
+      "source": "/2026/03/06/the-only-video-editing-service-built-for-highlevel-creators-and-agencies",
+      "destination": "/blog/the-only-video-editing-service-built-for-highlevel-creators-and-agencies/",
+      "permanent": true
+    },
+    {
+      "source": "/2026/03/06/the-only-video-editing-service-built-for-highlevel-creators-and-agencies/",
+      "destination": "/blog/the-only-video-editing-service-built-for-highlevel-creators-and-agencies/",
+      "permanent": true
+    },
+    {
+      "source": "/2026/03/04/what-is-ghl-video-a-complete-guide-for-highlevel-saas-and-agencies",
+      "destination": "/blog/what-is-ghl-video-a-complete-guide-for-highlevel-saas-and-agencies/",
+      "permanent": true
+    },
+    {
+      "source": "/2026/03/04/what-is-ghl-video-a-complete-guide-for-highlevel-saas-and-agencies/",
+      "destination": "/blog/what-is-ghl-video-a-complete-guide-for-highlevel-saas-and-agencies/",
+      "permanent": true
     }
   ]
 }
