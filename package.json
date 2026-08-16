@@ -14,7 +14,9 @@
     "seed:affiliates": "node scripts/seed-affiliate-coupons.mjs",
     "migrate": "node scripts/apply-migrations.mjs",
     "check:drift": "tsx scripts/check-drift.ts",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "seed:composition": "tsx scripts/seed-composition.ts",
+    "check:composition": "tsx scripts/check-composition.ts"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
