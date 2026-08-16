@@ -69,7 +69,7 @@ export function ProductionScreen({ onNavigate }: { onNavigate: (v: View) => void
   const [mine, setMine] = useState(false);
   const [me, setMe] = useState("");
   // videos done / owed per order, for the chip on each card
-  const [videos, setVideos] = useState<Record<string, { done: number; total: number }>>({});
+  const [videos, setVideos] = useState<Record<string, { done: number; total: number; signed: number }>>({});
 
   const load = useCallback(async () => {
     // active work plus the last two weeks of deliveries for a done column
@@ -95,11 +95,12 @@ export function ProductionScreen({ onNavigate }: { onNavigate: (v: View) => void
       .from("order_deliverables")
       .select("order_id, status")
       .in("order_id", list.map((r) => r.id));
-    const tally: Record<string, { done: number; total: number }> = {};
+    const tally: Record<string, { done: number; total: number; signed: number }> = {};
     for (const d of ds ?? []) {
-      const t = (tally[d.order_id as string] ??= { done: 0, total: 0 });
+      const t = (tally[d.order_id as string] ??= { done: 0, total: 0, signed: 0 });
       t.total++;
       if (d.status === "ready" || d.status === "approved") t.done++;
+      if (d.status === "approved") t.signed++;
     }
     setVideos(tally);
   }, []);
@@ -307,12 +308,18 @@ export function ProductionScreen({ onNavigate }: { onNavigate: (v: View) => void
                             type="button"
                             onClick={() => setOpenJob(r.id)}
                             className={`tap mt-1.5 inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 font-mono text-label uppercase transition-colors ${
-                              videos[r.id].done === videos[r.id].total
+                              videos[r.id].signed === videos[r.id].total
                                 ? "border-green/40 text-green hover:border-green"
                                 : "border-hair text-muted hover:border-gold/60 hover:text-gold"
                             }`}
                           >
-                            {videos[r.id].done}/{videos[r.id].total} videos ready
+                            {/* Sent and signed off are opposite situations:
+                                one is waiting on them, the other is done. */}
+                            {videos[r.id].signed === videos[r.id].total
+                              ? `all ${videos[r.id].total} approved`
+                              : videos[r.id].signed > 0
+                                ? `${videos[r.id].signed} approved, ${videos[r.id].done}/${videos[r.id].total} sent`
+                                : `${videos[r.id].done}/${videos[r.id].total} sent`}
                           </button>
                         ) : null}
                         <div className="mt-2.5 flex items-center gap-1.5">

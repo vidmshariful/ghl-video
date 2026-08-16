@@ -165,6 +165,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         });
         stage = next;
       }
+
+      /* Tanvir approving the last one himself, to close out a client who
+       * never came back, finishes the order exactly like the client doing
+       * it. Same path, so there is only one way an order completes. */
+      const { completeIfAllApproved } = await import("@/lib/review");
+      await completeIfAllApproved(db, id).catch(() => false);
     }
   }
 

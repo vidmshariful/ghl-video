@@ -209,7 +209,6 @@ export function ProductionJob({ id, onBack }: { id: string; onBack: () => void }
   if (!job) return <p className="text-body text-error">{err || "We could not find that job."}</p>;
 
   const ready = videos.filter((v) => v.status === "ready" || v.status === "approved").length;
-  const allApproved = videos.length > 0 && videos.every((v) => v.status === "approved");
   const delivered = job.stage === "delivered";
   const stale = job.stageShouldBe && job.stageShouldBe !== job.stage;
 
@@ -299,30 +298,25 @@ export function ProductionJob({ id, onBack }: { id: string; onBack: () => void }
           </button>
         )}
 
-        {!delivered && (
-          <div className="mt-4 border-t border-hair pt-4">
-            <button
-              type="button"
-              disabled={busy === "job" || !videos.length || !allApproved}
-              onClick={() =>
-                fulfillment(
-                  { stage: "delivered" },
-                  `Deliver ${job.productName} to ${job.customerName || job.customerEmail}? This sends the client their delivery email.`,
-                )
-              }
-              className="tap rounded-[8px] bg-brand-gradient px-4 py-2.5 font-mono text-label font-bold uppercase text-canvas transition-opacity hover:opacity-90 disabled:opacity-40"
-            >
-              Deliver to the client
-            </button>
-            <p className="mt-2 text-body-sm text-dim">
-              {!videos.length
-                ? "No videos listed on this job."
-                : allApproved
-                  ? "Sends the delivery email. This is the one step that is never automatic."
-                  : `Available once the client has approved all ${videos.length} videos. ${videos.filter((v) => v.status === "approved").length} approved so far.`}
+        {/* No deliver button any more. An order finishes when the client has
+            approved every video, and it closes itself at that moment: pressing
+            a button to record what the system already knows was busywork, and
+            the old delivery email pointed at a link the client already had. */}
+        <div className="mt-4 border-t border-hair pt-4">
+          {delivered ? (
+            <p className="text-body-sm text-green">
+              Finished. Every video approved and the client has their wrap-up.
             </p>
-          </div>
-        )}
+          ) : videos.length === 0 ? (
+            <p className="text-body-sm text-dim">No videos listed on this job.</p>
+          ) : (
+            <p className="text-body-sm text-dim">
+              {videos.filter((v) => v.status === "approved").length} of {videos.length}{" "}
+              approved by the client. The order closes itself when the last one is.
+              If they have gone quiet, nudge them or approve it here yourself.
+            </p>
+          )}
+        </div>
       </div>
 
       {/* the videos */}

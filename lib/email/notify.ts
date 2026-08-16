@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendEmail } from "./send";
-import { DEFAULT_TEMPLATES, SITE_URL, escapeHtml, renderTemplate, wrapEmail } from "./templates";
+import { DEFAULT_TEMPLATES, P, SITE_URL, emailButton, escapeHtml, renderTemplate, wrapEmail } from "./templates";
 import { pushNotification, pushAdminNotifications } from "@/lib/notifications";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -150,39 +150,66 @@ export async function sendOrderPaidEmails(db: SupabaseClient, orderId: string): 
 /** Delivery email, sent when the stage first moves to Delivered. Project
  *  progress also goes to the customer's team members who can see orders;
  *  money emails (confirmation, refunds) stay with the owner alone. */
+/**
+ * Every video on an order is approved: send the wrap-up.
+ *
+ * This used to be a delivery email pointing at one order level link, which
+ * made sense when we handed over a folder. It does not now: the client has
+ * already watched, approved and downloaded each video one at a time. So it is
+ * a wrap-up instead, listing everything in one place and asking for a review
+ * at the moment they are happiest.
+ *
+ * Exactly once is the caller's job, not this function's.
+ */
 export async function sendOrderDeliveredEmail(db: SupabaseClient, orderId: string): Promise<void> {
-  const o = await orderFor(db, orderId);
-  if (!o) return;
-  const vars = {
-    customer_name: escapeHtml(o.name || "there"),
-    product_name: escapeHtml(o.productName),
-    order_code: escapeHtml(o.code),
-    delivery_url: escapeHtml(o.deliveryUrl || `${SITE_URL}/portal`),
-    portal_url: `${SITE_URL}/portal`,
-  };
-  await sendTemplate(db, "order_delivered", o.email, o.name, vars);
-  const { teamRecipients } = await import("@/lib/account-team");
-  const team = (await teamRecipients(db, "customer", o.email, "orders")).filter(
-    (e) => e !== o.email.toLowerCase(),
-  );
-  for (const memberEmail of team) {
-    await sendTemplate(db, "order_delivered", memberEmail, null, {
-      ...vars,
-      customer_name: escapeHtml("there"),
+  try {
+    const { data: o } = await db
+      .from("orders")
+      .select("id, invoice_number, customer_email, customers(name), products(name, sku, metadata)")
+      .eq("id", orderId)
+      .maybeSingle();
+    if (!o?.customer_email) return;
+
+    const { data: videos } = await db
+      .from("order_deliverables")
+      .select("title, video_url, position")
+      .eq("order_id", orderId)
+      .order("position");
+
+    const rows = (videos ?? [])
+      .map((v) => {
+        const title = escapeHtml((v.title as string) ?? "Video");
+        const url = v.video_url as string | null;
+        return url
+          ? `<li style="margin:0 0 8px;"><a href="${escapeHtml(url)}" style="color:#FCC000;">${title}</a></li>`
+          : `<li style="margin:0 0 8px;">${title}</li>`;
+      })
+      .join("");
+    const videoList = rows
+      ? `<ul style="${P}padding-left:20px;margin:18px 0;">${rows}</ul>`
+      : "";
+
+    /* Only ask when there is somewhere to send them. An empty review button
+     * is worse than no ask at all. */
+    const reviewUrl = process.env.GOOGLE_REVIEW_URL ?? "";
+    const reviewAsk = reviewUrl
+      ? `<p style="${P}margin-top:22px;">If we did right by you, a review helps us more than anything else. It takes a minute.</p>${emailButton(reviewUrl, "Leave a review")}`
+      : "";
+
+    const name = (o.customers as any)?.name ?? "there";
+    await sendTemplate(db, "order_delivered", o.customer_email as string, name, {
+      customer_name: escapeHtml(name),
+      product_name: escapeHtml(productLabel((o.products as any) ?? null)),
+      order_code: escapeHtml((o.invoice_number as string) ?? ""),
+      video_list: videoList,
+      review_ask: reviewAsk,
+      portal_url: `${SITE_URL}/portal/videos/`,
     });
+  } catch (e) {
+    console.error("[email] order_complete failed:", e instanceof Error ? e.message : e);
   }
-  await pushNotification(db, {
-    audience: "customer",
-    email: o.email,
-    kind: "order_delivered",
-    title: "Your videos are delivered",
-    body: `${o.productName} is ready. Grab your files.`,
-    href: `orders/${orderId}`,
-    feature: "orders",
-  });
 }
 
-/** Refund confirmation, from the exactly-once refund flip. */
 export async function sendOrderRefundedEmail(
   db: SupabaseClient,
   orderId: string,

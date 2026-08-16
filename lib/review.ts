@@ -209,6 +209,7 @@ export async function clientVerdict(
       .eq("deliverable_id", d.id)
       .is("resolved_at", null);
     await resyncOrderStage(db, d.order_id as string);
+    await completeIfAllApproved(db, d.order_id as string);
     return { ok: true, status: "approved" };
   }
 
@@ -222,6 +223,84 @@ export async function clientVerdict(
     .eq("id", d.id);
   await resyncOrderStage(db, d.order_id as string);
   return { ok: true, status: "revisions" };
+}
+
+/**
+ * The client approving the last video IS the order finishing, so the order
+ * closes itself rather than waiting for somebody to press a button recording
+ * what the system already knows (owner's decision, August 2026).
+ *
+ * The wrap-up email goes out exactly once. The conditional update is what
+ * guarantees it: only the call that actually moves the order off its previous
+ * stage sends anything, so two approvals landing together cannot double up.
+ */
+export async function completeIfAllApproved(db: DB, orderId: string): Promise<boolean> {
+  const { data: rows } = await db
+    .from("order_deliverables")
+    .select("status")
+    .eq("order_id", orderId);
+  const list = rows ?? [];
+  if (!list.length) return false;
+  if (!list.every((r) => r.status === "approved")) return false;
+
+  const { data: moved } = await db
+    .from("orders")
+    .update({
+      fulfillment_stage: "delivered",
+      stage_changed_at: new Date().toISOString(),
+      stage_is_derived: true,
+    })
+    .eq("id", orderId)
+    .neq("fulfillment_stage", "delivered")
+    .select("id")
+    .maybeSingle();
+  if (!moved) return false;
+
+  await db.from("order_events").insert({
+    order_id: orderId,
+    event_type: "order_completed",
+    payload: { reason: "every video approved by the client" },
+  });
+
+  /* Telling people is fail-soft. The order IS complete once the update above
+   * lands, and a mail or notification problem must never turn a client's
+   * approval into an error on their screen. */
+  try {
+    const { sendOrderDeliveredEmail } = await import("@/lib/email/notify");
+    await sendOrderDeliveredEmail(db, orderId);
+  } catch (e) {
+    console.error("[complete] wrap-up email failed:", e instanceof Error ? e.message : e);
+  }
+
+  try {
+    const { pushNotification, pushOrderOwnerNotification } = await import("@/lib/notifications");
+    const { data: o } = await db
+      .from("orders")
+      .select("customer_email, products(name)")
+      .eq("id", orderId)
+      .maybeSingle();
+    const product = (o?.products as unknown as { name?: string } | null)?.name ?? "their order";
+    await pushOrderOwnerNotification(db, orderId, {
+      kind: "order_completed",
+      title: `Finished: ${product}`,
+      body: "Every video approved. The client has their wrap-up.",
+      href: "/admin/production/",
+    });
+    if (o?.customer_email) {
+      await pushNotification(db, {
+        audience: "customer",
+        email: o.customer_email as string,
+        kind: "order_completed",
+        title: "Your order is complete",
+        body: "Every video is approved and yours to use.",
+        href: "/portal/videos/",
+        feature: "orders",
+      });
+    }
+  } catch (e) {
+    console.error("[complete] notifications failed:", e instanceof Error ? e.message : e);
+  }
+  return true;
 }
 
 /**

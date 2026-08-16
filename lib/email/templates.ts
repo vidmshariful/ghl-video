@@ -41,7 +41,7 @@ export const TEMPLATE_VARIABLES: Record<string, string[]> = {
     "intake_url",
     "portal_url",
   ],
-  order_delivered: ["customer_name", "product_name", "order_code", "delivery_url", "portal_url"],
+  order_delivered: ["customer_name", "product_name", "order_code", "video_list", "review_ask", "portal_url"],
   order_refunded: ["customer_name", "product_name", "order_code", "amount", "portal_url"],
   subscription_started: ["customer_name", "plan_name", "amount", "portal_url"],
   subscription_canceled: ["customer_name", "plan_name", "portal_url"],
@@ -56,14 +56,17 @@ export const TEMPLATE_VARIABLES: Record<string, string[]> = {
 
 /* shared inline-style shorthands for the default bodies below */
 const H = `margin:0 0 14px;font-size:22px;line-height:1.25;color:#eef0f6;font-weight:bold;`;
-const P = `margin:0 0 20px;font-size:15px;line-height:1.6;color:#9096a8;`;
+export const P = `margin:0 0 20px;font-size:15px;line-height:1.6;color:#9096a8;`;
 const STRONG = `color:#eef0f6;`;
 const SMALL = `margin:0 0 26px;font-size:13px;line-height:1.5;color:#5a6076;`;
 const BOX = `border-left:3px solid #fcc000;background-color:#0d0f16;padding:14px 18px;border-radius:4px;font-size:15px;line-height:1.6;color:#eef0f6;`;
 const BTN_TD = `background-color:#fcc000;background-image:linear-gradient(100deg,#fcc000,#00cc00);border-radius:6px;`;
 const BTN_A = `display:inline-block;padding:13px 28px;font-size:15px;font-weight:bold;color:#08090d;text-decoration:none;font-family:'Helvetica Neue',Arial,sans-serif;`;
-const btn = (href: string, label: string) =>
+/* Exported so code that builds a button outside a template (the wrap-up
+ * email's review ask) uses the same markup as every template does. */
+export const emailButton = (href: string, label: string) =>
   `<table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="${BTN_TD}"><a href="${href}" style="${BTN_A}">${label} &rarr;</a></td></tr></table>`;
+const btn = emailButton;
 
 /*
  * Wrap message content in the shared GHL Video branded frame, as a COMPLETE
@@ -129,13 +132,16 @@ ${btn("{{intake_url}}", "Complete your intake")}
   },
   {
     key: "order_delivered",
-    name: "Order delivered",
-    description: "Sent when the team moves an order to Delivered, with the delivery link.",
-    subject: "Your video is ready: {{product_name}}",
-    body: `<h1 style="${H}">Delivered.</h1>
-<p style="${P}">Hi {{customer_name}}, your <strong style="${STRONG}">{{product_name}}</strong> ({{order_code}}) is ready.</p>
-${btn("{{delivery_url}}", "Get your video")}
-<p style="${SMALL}margin-top:22px;">The link also lives in <a href="{{portal_url}}" style="color:#9096a8;">your portal</a>. Want tweaks? Reply to this email and we will jump on it.</p>`,
+    name: "Order complete",
+    description:
+      "Sent once every video on an order is approved. Lists them all and asks for a review. Replaces the old delivery email, which pointed at a single link the client already had.",
+    subject: "All done: {{product_name}}",
+    body: `<h1 style="${H}">That is everything.</h1>
+<p style="${P}">Hi {{customer_name}}, you have approved every video on your <strong style="${STRONG}">{{product_name}}</strong> ({{order_code}}). They are yours to use.</p>
+{{video_list}}
+${btn("{{portal_url}}", "Open your videos")}
+{{review_ask}}
+<p style="${SMALL}margin-top:22px;">Need anything changed later, or want more made? Just reply to this email.</p>`,
   },
   {
     key: "order_refunded",
