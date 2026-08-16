@@ -15,10 +15,12 @@ import {
   type NavGroup,
 } from "@/components/portal/Shell";
 import { HandbookScreen } from "./HandbookScreen";
+import { ReferenceScreen } from "./ReferenceScreen";
 import { handbookFor } from "./handbook-map";
 import {
   BarChart3,
   BookOpen,
+  KeyRound,
   Newspaper,
   Clapperboard,
   FileText,
@@ -372,6 +374,7 @@ export function AdminClient({ initialView }: { initialView: View }) {
       items: [
         { key: "dashboard", label: "Dashboard", icon: <LayoutDashboard /> },
         { key: "journal", label: "Journal", icon: <BookOpen /> },
+        { key: "reference", label: "Reference", icon: <KeyRound /> },
       ],
     },
     {
@@ -512,6 +515,8 @@ export function AdminClient({ initialView }: { initialView: View }) {
             <PartnersScreen />
           ) : view === "studio" ? (
             <StudioScreen />
+          ) : view === "reference" ? (
+            <ReferenceScreen />
           ) : view === "journal" ? (
             <JournalScreen meEmail={me?.email ?? ""} />
           ) : view === "pages" ? (
