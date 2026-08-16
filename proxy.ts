@@ -1,6 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { REF_COOKIE, normalizeRef } from "@/lib/affiliates";
 import { countRedirectHit, resolveRedirect } from "@/lib/redirects";
+import {
+  FIRST_TOUCH_COOKIE,
+  FIRST_TOUCH_TTL,
+  buildFirstTouch,
+  encodeFirstTouch,
+  isRecordableLanding,
+} from "@/lib/first-touch";
 
 /*
  * Region gate + VPN/proxy gate + team bypass. Next's request interceptor (the
@@ -159,6 +166,15 @@ export async function proxy(req: NextRequest) {
   // dormant), and only ever ADDS a Set-Cookie: it never changes a gate verdict.
   const ref = normalizeRef(req.nextUrl.searchParams.get("ref"));
   const hasRef = Boolean(req.cookies.get(REF_COOKIE));
+
+  /* First touch: the page this visitor first landed on. Written once and
+     never overwritten, so a reader who returns weeks later still credits the
+     post that brought them. Skipped for checkout and the portals, which are
+     destinations rather than discoveries. */
+  const hasFirstTouch = Boolean(req.cookies.get(FIRST_TOUCH_COOKIE));
+  const recordFirstTouch =
+    !hasFirstTouch && isRecordableLanding(req.nextUrl.pathname);
+
   const withRef = (res: NextResponse) => {
     if (ref && !hasRef) {
       res.cookies.set(REF_COOKIE, ref, {
@@ -168,6 +184,24 @@ export async function proxy(req: NextRequest) {
         path: "/",
         maxAge: REF_TTL,
       });
+    }
+    if (recordFirstTouch) {
+      try {
+        const ft = buildFirstTouch(
+          req.nextUrl.pathname,
+          req.headers.get("referer"),
+          req.nextUrl.searchParams,
+        );
+        res.cookies.set(FIRST_TOUCH_COOKIE, encodeFirstTouch(ft), {
+          httpOnly: true,
+          secure: true,
+          sameSite: "lax",
+          path: "/",
+          maxAge: FIRST_TOUCH_TTL,
+        });
+      } catch {
+        /* attribution is a nicety; it must never affect the response */
+      }
     }
     return res;
   };

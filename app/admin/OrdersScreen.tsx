@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { authHeader, money, supabase, when } from "./client";
 import { AdminModal } from "./Modal";
+import { describeFirstTouch } from "@/lib/first-touch";
 import { bundlePickTitles } from "@/lib/bundles";
 
 export type OrderRow = {
@@ -23,6 +24,10 @@ export type OrderRow = {
   intake_completed: boolean;
   invoice_number: string | null;
   archived: boolean;
+  first_landing_path: string | null;
+  first_referrer: string | null;
+  first_campaign: string | null;
+  first_seen_at: string | null;
   product: { name: string; sku: string; metadata: { code?: string } | null } | null;
   customer: { name: string | null; company: string | null; phone: string | null } | null;
 };
@@ -192,6 +197,8 @@ function FulfillmentEditor({ order, onChanged }: { order: OrderRow; onChanged: (
     "tap rounded-[8px] px-5 py-2 text-body-sm font-semibold transition-all disabled:opacity-50";
 
   return (
+    <>
+    <FoundUsLine order={order} />
     <div className="mt-6 rounded-[8px] border border-gold/30 bg-gold/[0.04] p-5">
       <p className="font-mono text-label uppercase text-gold">Fulfillment (what the customer sees)</p>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -259,6 +266,7 @@ function FulfillmentEditor({ order, onChanged }: { order: OrderRow; onChanged: (
       </div>
       {msg && <p className={`mt-3 text-body-sm ${msg.ok ? "text-green" : "text-error"}`}>{msg.text}</p>}
     </div>
+    </>
   );
 }
 
@@ -1027,6 +1035,28 @@ export function OrdersScreen() {
           />
         </AdminModal>
       )}
+    </div>
+  );
+}
+
+/* How this buyer found us, in one line. Deliberately a sentence rather than a
+ * table: at this order volume the value is reading them one by one, not
+ * aggregating. The revenue-per-page report waits for enough orders to make a
+ * pattern (Journal idea board). Null for anything ordered before this shipped. */
+function FoundUsLine({ order }: { order: OrderRow }) {
+  if (!order.first_landing_path) return null;
+  const ft = {
+    path: order.first_landing_path,
+    referrer: order.first_referrer,
+    campaign: order.first_campaign,
+    at: order.first_seen_at ? Math.floor(new Date(order.first_seen_at).getTime() / 1000) : 0,
+  };
+  return (
+    <div className="mt-6 rounded-[8px] border border-blue/30 bg-blue/[0.05] p-5">
+      <p className="font-mono text-label uppercase text-blue">How they found us</p>
+      <p className="mt-2 text-body text-ink">
+        {describeFirstTouch(ft, order.paid_at)}
+      </p>
     </div>
   );
 }

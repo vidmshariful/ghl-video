@@ -3,6 +3,7 @@ import { getActiveProductBySku } from "@/lib/checkout/products";
 import { resolveSelectedBumps } from "@/lib/checkout/bumps";
 import { checkCoupon } from "@/lib/checkout/coupons";
 import { fpTidFromCookieHeader, refFromCookieHeader } from "@/lib/affiliates";
+import { firstTouchFromCookieHeader } from "@/lib/first-touch";
 import { ensureAuthAccount } from "@/lib/checkout/account";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { stripe } from "@/lib/checkout/stripe";
@@ -48,6 +49,17 @@ export async function POST(req: Request) {
   // First-touch affiliate ref (set as a cookie by the middleware from a ?ref=
   // link). Recorded on the order for attribution; it never affects the price.
   let ref = refFromCookieHeader(req.headers.get("cookie"));
+  /* the page this buyer first landed on, weeks ago or minutes ago. Null for
+     anyone whose first visit predates this feature, which is expected. */
+  const firstTouch = firstTouchFromCookieHeader(req.headers.get("cookie"));
+  const firstTouchColumns = firstTouch
+    ? {
+        first_landing_path: firstTouch.path,
+        first_referrer: firstTouch.referrer,
+        first_campaign: firstTouch.campaign,
+        first_seen_at: new Date(firstTouch.at * 1000).toISOString(),
+      }
+    : {};
   // FirstPromoter's visitor id: stamped on Stripe so FP attributes the sale
   // to the clicked link (fp_ref rides along as the fallback match).
   let fpTid = fpTidFromCookieHeader(req.headers.get("cookie"));
@@ -149,6 +161,7 @@ export async function POST(req: Request) {
             ...(couponMeta ? { coupon: couponMeta } : {}),
             ...(ref ? { ref } : {}),
           },
+          ...firstTouchColumns,
         })
         .eq("id", existing.id)
         .in("status", ["pending", "failed"]);
@@ -287,6 +300,7 @@ export async function POST(req: Request) {
         ...(couponMeta ? { coupon: couponMeta } : {}),
         ...(ref ? { ref } : {}),
       },
+      ...firstTouchColumns,
     })
     .select()
     .single();

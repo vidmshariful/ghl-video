@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { firstTouchFromCookieHeader } from "@/lib/first-touch";
 import { getActiveProductBySku } from "@/lib/checkout/products";
 import { ensureAuthAccount } from "@/lib/checkout/account";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
@@ -48,6 +49,9 @@ export async function POST(req: Request) {
   let ref =
     normalizeRef(asStr(payload.ref)) ??
     normalizeRef(refFromCookieHeader(req.headers.get("cookie")));
+  /* the page this buyer first landed on, kept in the subscription's metadata
+     so recurring revenue can be traced back to what brought them */
+  const firstTouch = firstTouchFromCookieHeader(req.headers.get("cookie"));
   // FirstPromoter's visitor id, stamped on Stripe for sale attribution
   let fpTid = fpTidFromCookieHeader(req.headers.get("cookie"));
 
@@ -278,7 +282,12 @@ export async function POST(req: Request) {
     amount_cents: product.price_cents,
     currency: product.currency,
     interval: "month",
-    metadata: { sku, ...(ref ? { ref } : {}), ...(couponCode ? { coupon_code: couponCode } : {}) },
+    metadata: {
+      sku,
+      ...(ref ? { ref } : {}),
+      ...(couponCode ? { coupon_code: couponCode } : {}),
+      ...(firstTouch ? { first_touch: firstTouch } : {}),
+    },
   });
   if (rowErr && rowErr.code !== "23505") {
     // Not fatal to the buyer (the webhook reconstructs missing rows from the
