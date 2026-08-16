@@ -16,7 +16,8 @@
     "check:drift": "tsx scripts/check-drift.ts",
     "test:e2e": "playwright test",
     "seed:composition": "tsx scripts/seed-composition.ts",
-    "check:composition": "tsx scripts/check-composition.ts"
+    "check:composition": "tsx scripts/check-composition.ts",
+    "seed:pack-rows": "tsx scripts/seed-pack-rows.ts"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",

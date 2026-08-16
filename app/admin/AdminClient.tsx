@@ -21,7 +21,6 @@ import {
   Newspaper,
   Clapperboard,
   FileText,
-  Film,
   Globe,
   Handshake,
   LayoutDashboard,
@@ -41,7 +40,6 @@ import { OrdersScreen } from "./OrdersScreen";
 import { MessagesScreen } from "./MessagesScreen";
 import { SubscriptionsScreen } from "./SubscriptionsScreen";
 import { chatGet } from "@/components/chat/api";
-import { ProductsScreen } from "./ProductsScreen";
 import { CouponsScreen } from "./CouponsScreen";
 import { LinksScreen } from "./LinksScreen";
 import { InvoicesScreen } from "./InvoicesScreen";
@@ -51,7 +49,7 @@ import { StudioScreen } from "./StudioScreen";
 import { JournalScreen } from "./JournalScreen";
 import { SettingsScreen } from "./SettingsScreen";
 import { ProductionScreen } from "./ProductionScreen";
-import { CatalogScreen } from "./CatalogScreen";
+import { ProductsHub } from "./ProductsHub";
 import { BlogScreen } from "./BlogScreen";
 import { SeoScreen } from "./SeoScreen";
 import { canAccess, type Role } from "./roles";
@@ -391,10 +389,7 @@ export function AdminClient({ initialView }: { initialView: View }) {
     },
     {
       title: "Products & Packs",
-      items: [
-        { key: "catalog", label: "Videos", icon: <Film /> },
-        { key: "products", label: "Products & Pricing", icon: <Package /> },
-      ],
+      items: [{ key: "catalog", label: "Products", icon: <Package /> }],
     },
     {
       title: "CMS",
@@ -482,7 +477,7 @@ export function AdminClient({ initialView }: { initialView: View }) {
           ) : view === "subscriptions" ? (
             <SubscriptionsScreen />
           ) : view === "products" ? (
-            <ProductsScreen />
+            <ProductsHub />
           ) : view === "coupons" ? (
             <CouponsScreen />
           ) : view === "links" ? (
@@ -504,7 +499,7 @@ export function AdminClient({ initialView }: { initialView: View }) {
           ) : view === "seo" ? (
             <SeoScreen />
           ) : view === "catalog" ? (
-            <CatalogScreen />
+            <ProductsHub />
           ) : view === "production" ? (
             <ProductionScreen onNavigate={go} />
           ) : view === "emails" || view === "code" ? (

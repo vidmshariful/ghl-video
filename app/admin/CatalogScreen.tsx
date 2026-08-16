@@ -36,6 +36,11 @@ type CatalogRow = {
   coming_soon: boolean;
   sort: number;
   notes: string | null;
+  kind: "video" | "pack" | "bundle";
+  sellable_alone: boolean;
+  tagline: string | null;
+  anchor_price_cents: number | null;
+  delivery_days: number | null;
 };
 
 const CATEGORIES = [
@@ -52,7 +57,14 @@ const field =
   "mt-1.5 w-full rounded-[8px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none";
 const lab = "font-mono text-label uppercase text-muted";
 
-export function CatalogScreen() {
+export function CatalogScreen({
+  kind = "video",
+  /* true when rendered inside the Products hub: the tab bar already names it */
+  embedded = false,
+}: {
+  kind?: "video" | "pack" | "bundle";
+  embedded?: boolean;
+}) {
   const [rows, setRows] = useState<CatalogRow[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [err, setErr] = useState("");
@@ -91,6 +103,7 @@ export function CatalogScreen() {
       supabase
         .from("catalog")
         .select("*")
+        .eq("kind", kind)
         .order("category", { ascending: true })
         .order("code", { ascending: true }),
       supabase
@@ -103,7 +116,7 @@ export function CatalogScreen() {
     else setRows((cat.data as CatalogRow[]) ?? []);
     if (!ob.error) setBumps((ob.data as OrderBump[]) ?? []);
     setLoaded(true);
-  }, []);
+  }, [kind]);
 
   useEffect(() => {
     load();
@@ -155,8 +168,8 @@ export function CatalogScreen() {
     <div>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="font-display text-h2 text-ink">Catalog</h1>
-          <p className="mt-1 max-w-xl text-body-sm text-muted">
+          {!embedded && <h1 className="font-display text-h2 text-ink">Catalog</h1>}
+          <p className={`${embedded ? "" : "mt-1 "}max-w-xl text-body-sm text-muted`}>
             Every video in one place: link, code, price, category, featured, release date, and buy link.
             {" "}
             {loaded ? `${rows.length} videos.` : ""}
@@ -187,7 +200,7 @@ export function CatalogScreen() {
 
       {/* category filter */}
       <div className="mt-5 flex flex-wrap gap-2">
-        {["all", ...CATEGORIES].map((c) => (
+        {["all", ...CATEGORIES.filter((c) => (counts[c] ?? 0) > 0)].map((c) => (
           <button
             key={c}
             type="button"
@@ -235,6 +248,11 @@ export function CatalogScreen() {
                     {!row.on_site ? (
                       <span className="rounded-full border border-error/40 bg-error/10 px-2 py-0.5 font-mono text-label uppercase text-error">
                         Hidden
+                      </span>
+                    ) : null}
+                    {!row.sellable_alone ? (
+                      <span className="rounded-full border border-blue/40 bg-blue/10 px-2 py-0.5 font-mono text-label uppercase text-blue">
+                        In packs only
                       </span>
                     ) : null}
                   </p>
@@ -406,6 +424,7 @@ function CatalogForm({
     featured: row?.featured ?? false,
     on_site: row?.on_site ?? true,
     coming_soon: row?.coming_soon ?? false,
+    sellable_alone: row?.sellable_alone ?? true,
     notes: row?.notes ?? "",
   });
   const [busy, setBusy] = useState(false);
@@ -430,6 +449,7 @@ function CatalogForm({
       featured: v.featured,
       on_site: v.on_site,
       coming_soon: v.coming_soon,
+      sellable_alone: v.sellable_alone,
       notes: v.notes.trim() || null,
     };
     const { error } = isEdit
@@ -505,6 +525,11 @@ function CatalogForm({
           <label className="flex items-center gap-2 text-body-sm text-ink">
             <input type="checkbox" checked={v.coming_soon} onChange={(e) => set("coming_soon", e.target.checked)} className="h-4 w-4 accent-[#FCC000]" />
             Coming soon
+          </label>
+          <label className="flex items-center gap-2 text-body-sm text-ink">
+            <input type="checkbox" checked={v.sellable_alone} onChange={(e) => set("sellable_alone", e.target.checked)} className="h-4 w-4 accent-[#FCC000]" />
+            Sold on its own
+            <span className="font-mono text-label uppercase text-dim">untick for pack only</span>
           </label>
         </div>
         {err ? <p className="text-body-sm text-error sm:col-span-2">{err}</p> : null}
