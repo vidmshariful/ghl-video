@@ -26,6 +26,8 @@ export type ReviewComment = {
   author_name: string | null;
   body: string;
   at_seconds: number | null;
+  at_x: number | null;
+  at_y: number | null;
   revision_round: number;
   version: number | null;
   parent_id: string | null;
@@ -33,6 +35,12 @@ export type ReviewComment = {
   resolved_by: string | null;
   created_at: string;
 };
+
+/** a frame position, clamped, or null. Percentages so it survives any player size. */
+function pct(n: number | null | undefined): number | null {
+  if (n == null || !Number.isFinite(n)) return null;
+  return Math.round(Math.min(100, Math.max(0, n)) * 100) / 100;
+}
 
 /** mm:ss for a moment in a video, the way a client would say it */
 export function stamp(seconds: number | null): string | null {
@@ -83,6 +91,9 @@ export type NewComment = {
   name?: string | null;
   body: string;
   atSeconds?: number | null;
+  /** where on the frame, as percentages, when the note points at something */
+  atX?: number | null;
+  atY?: number | null;
   /** set when this note answers another note */
   parentId?: string | null;
 };
@@ -127,6 +138,11 @@ export async function addComment(
       author_name: c.name ?? null,
       body,
       at_seconds: at,
+      // both or neither: half a pin points at the wrong place, which is worse
+      // than a note with no pin at all
+      ...(pct(c.atX) != null && pct(c.atY) != null
+        ? { at_x: pct(c.atX), at_y: pct(c.atY) }
+        : { at_x: null, at_y: null }),
       revision_round: d.revision_round as number,
       version,
       parent_id: c.parentId ?? null,

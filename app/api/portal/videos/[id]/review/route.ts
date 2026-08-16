@@ -55,6 +55,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       name: c.author_name ?? (c.author_side === "studio" ? "GHL Video" : "You"),
       body: c.body,
       atSeconds: c.at_seconds,
+      atX: c.at_x,
+      atY: c.at_y,
       stamp: stamp(c.at_seconds),
       round: c.revision_round,
       version: c.version,
@@ -121,6 +123,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       name,
       body: text,
       atSeconds: at,
+      atX: typeof body.atX === "number" ? body.atX : null,
+      atY: typeof body.atY === "number" ? body.atY : null,
       parentId: typeof body.parentId === "string" ? body.parentId : null,
     });
     if (!res) return NextResponse.json({ error: "Could not post that." }, { status: 400 });
