@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import { PageHero } from "@/components/pages/PageHero";
 import { CtaBand } from "@/components/CtaBand";
 import { CategoryChips, PostCard } from "@/components/blog-parts";
@@ -13,12 +14,14 @@ import { cta } from "@/lib/site";
  */
 export const revalidate = 300;
 
-export const metadata: Metadata = {
-  title: "Blog",
-  description:
-    "Practical playbooks for HighLevel SaaS founders: video strategy, funnels, objection handling, and what actually moves signups. From the studio creating HighLevel videos since 2020.",
-  alternates: { canonical: "/blog/" },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMetadata("/blog/", {
+    title: "Blog",
+    description:
+      "Practical playbooks for HighLevel SaaS founders: video strategy, funnels, objection handling, and what actually moves signups. From the studio creating HighLevel videos since 2020.",
+    alternates: { canonical: "/blog/" },
+  });
+}
 
 export default async function Page() {
   const [posts, cats] = await Promise.all([getBlogPosts(), getBlogCategories()]);

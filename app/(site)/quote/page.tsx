@@ -1,16 +1,19 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import { Button } from "@/components/Button";
 import { QuoteForm } from "@/components/QuoteForm";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { PageHero } from "@/components/pages/PageHero";
 import { cta, pages } from "@/lib/site";
 
-export const metadata: Metadata = {
-  title: "Request a Quote",
-  description:
-    "Tell us about your custom video project. Five fields, a human reads it, and you get a fixed quote within 24 hours.",
-  alternates: { canonical: "/quote/" },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMetadata("/quote/", {
+    title: "Request a Quote",
+    description:
+      "Tell us about your custom video project. Five fields, a human reads it, and you get a fixed quote within 24 hours.",
+    alternates: { canonical: "/quote/" },
+  });
+}
 
 export default function QuotePage() {
   const q = pages.quote;

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import Link from "next/link";
 import { Button } from "@/components/Button";
 import { CapacityChip } from "@/components/CapacityChip";
@@ -33,11 +34,13 @@ import { MediaFrame } from "@/components/MediaFrame";
 import { faqSchema, productCatalogSchema, serviceSchema } from "@/lib/schema";
 import { cta, deliveryWindow, pages, recentDeliveries, sellableProducts, site } from "@/lib/site";
 
-export const metadata: Metadata = {
-  title: "GoHighLevel White-Label Videos and Video Packs",
-  description: `The premade GoHighLevel video library: explainers, demos, ads, and animated GIFs, plus complete packs. White-labeled to your SaaS and delivered in ${deliveryWindow}.`,
-  alternates: { canonical: "/premade/" },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMetadata("/premade/", {
+    title: "GoHighLevel White-Label Videos and Video Packs",
+    description: `The premade GoHighLevel video library: explainers, demos, ads, and animated GIFs, plus complete packs. White-labeled to your SaaS and delivered in ${deliveryWindow}.`,
+    alternates: { canonical: "/premade/" },
+  });
+}
 
 const howIcons: IconName[] = ["mouse-click", "palette", "package-check"];
 

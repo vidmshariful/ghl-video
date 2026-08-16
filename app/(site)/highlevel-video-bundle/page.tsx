@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import { Button } from "@/components/Button";
 import { FaqList } from "@/components/FaqList";
 import { CtaBand } from "@/components/CtaBand";
@@ -17,12 +18,14 @@ import { bundleCategories, cta, pages } from "@/lib/site";
  * on the old site, so the new site serves a real page at the exact URL
  * with the exact ranking title. Do not rename, do not redirect.
  */
-export const metadata: Metadata = {
-  title: "GoHighLevel Video Bundle | White-Label Packages",
-  description:
-    "White-label GoHighLevel video bundles covering the full funnel: new releases, the Classic Library, or a mix, branded to your SaaS and delivered in days.",
-  alternates: { canonical: "/highlevel-video-bundle/" },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMetadata("/highlevel-video-bundle/", {
+    title: "GoHighLevel Video Bundle | White-Label Packages",
+    description:
+      "White-label GoHighLevel video bundles covering the full funnel: new releases, the Classic Library, or a mix, branded to your SaaS and delivered in days.",
+    alternates: { canonical: "/highlevel-video-bundle/" },
+  });
+}
 
 export default function VideoBundlePage() {
   const p = pages.bundles;

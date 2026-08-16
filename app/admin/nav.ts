@@ -16,6 +16,7 @@ export type View =
   | "code"
   | "pages"
   | "blog"
+  | "seo"
   | "catalog"
   | "studio"
   | "emails"
@@ -38,6 +39,7 @@ export const ALL_VIEWS: View[] = [
   "code",
   "pages",
   "blog",
+  "seo",
   "catalog",
   "studio",
   "emails",

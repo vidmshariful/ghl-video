@@ -1,15 +1,18 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import { BookingCalendars } from "@/components/BookingCalendars";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { PageHero } from "@/components/pages/PageHero";
 import { cta, pages, site } from "@/lib/site";
 
-export const metadata: Metadata = {
-  title: "Book a HighLevel Video Call",
-  description:
-    "Book a 30-minute call with the HighLevel-only video studio. You leave with the right format and the real price. Or email hi@ghlvideo.com.",
-  alternates: { canonical: "/contact/" },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMetadata("/contact/", {
+    title: "Book a HighLevel Video Call",
+    description:
+      "Book a 30-minute call with the HighLevel-only video studio. You leave with the right format and the real price. Or email hi@ghlvideo.com.",
+    alternates: { canonical: "/contact/" },
+  });
+}
 
 export default function ContactPage() {
   const p = pages.contact;

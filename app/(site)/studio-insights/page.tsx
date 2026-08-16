@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import Link from "next/link";
 import { Button } from "@/components/Button";
 import { CtaBand } from "@/components/CtaBand";
@@ -24,12 +25,14 @@ import { checkoutHref, cta, pages } from "@/lib/site";
  */
 export const revalidate = 300;
 
-export const metadata: Metadata = {
-  title: "Studio Insights",
-  description:
-    "Inside the GHL Video studio: the premade pipeline from request to published, plus open capacity for premade, custom, and editing work. Request the next library video.",
-  alternates: { canonical: "/studio-insights/" },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMetadata("/studio-insights/", {
+    title: "Studio Insights",
+    description:
+      "Inside the GHL Video studio: the premade pipeline from request to published, plus open capacity for premade, custom, and editing work. Request the next library video.",
+    alternates: { canonical: "/studio-insights/" },
+  });
+}
 
 const SERVICE_ORDER: StudioSlot["service"][] = ["premade", "custom", "editing"];
 

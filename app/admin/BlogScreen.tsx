@@ -321,7 +321,6 @@ function PostEditor({
   cats: Category[];
   onBack: () => void;
 }) {
-  const isNew = !post;
   const [title, setTitle] = useState(post?.title ?? "");
   const [slug, setSlug] = useState(post?.slug ?? "");
   const [slugTouched, setSlugTouched] = useState(!!post);

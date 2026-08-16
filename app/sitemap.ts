@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { sitePages } from "@/lib/pages-list";
 import { getBlogCategories, getBlogPosts } from "@/lib/blog";
+import { getSeoOverrides } from "@/lib/seo";
 import { site } from "@/lib/site";
 
 /* Static pages from the canonical page list, plus the live blog (posts and
@@ -8,13 +9,15 @@ import { site } from "@/lib/site";
  * admin also revalidates it directly. */
 export const revalidate = 3600;
 
-/* stubs stay out until they carry real content (they are noindex), and
- * the unlisted campaign page never goes in */
-const EXCLUDE = ["/resources/", "/ai-first-launch/"];
-
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  // A noindex page must never be listed here. Two sources say so: the page
+  // list (stubs and the unlisted campaign page) and the admin SEO screen,
+  // so flipping noindex in admin also removes the page from the sitemap.
+  const overrides = await getSeoOverrides();
+  const hidden = (path: string) => overrides[path]?.noindex === true;
+
   const fixed = sitePages
-    .filter((p) => !EXCLUDE.includes(p.path))
+    .filter((p) => !p.noindex && !hidden(p.path))
     .map((p) => ({
       url: `${site.url}${p.path}`,
       changeFrequency:

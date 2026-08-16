@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import Link from "next/link";
 import { Button } from "@/components/Button";
 import { FaqList } from "@/components/FaqList";
@@ -18,12 +19,14 @@ import { codeFor, cta, oldVideos, pages, skuFor } from "@/lib/site";
  * on the old site, so the new site serves a real page at the exact URL
  * with the exact ranking title. Do not rename, do not redirect.
  */
-export const metadata: Metadata = {
-  title: "GoHighLevel White-Label Demo Video | Branded Walkthrough",
-  description:
-    "A white-label GoHighLevel demo video branded with your logo, dashboard theme, and voiceover, so prospects watch your platform win before the call.",
-  alternates: { canonical: "/highlevel-demo-video/" },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMetadata("/highlevel-demo-video/", {
+    title: "GoHighLevel White-Label Demo Video | Branded Walkthrough",
+    description:
+      "A white-label GoHighLevel demo video branded with your logo, dashboard theme, and voiceover, so prospects watch your platform win before the call.",
+    alternates: { canonical: "/highlevel-demo-video/" },
+  });
+}
 
 export default function DemoVideoPage() {
   const p = pages.demo;

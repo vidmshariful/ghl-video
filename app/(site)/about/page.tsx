@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import { Button } from "@/components/Button";
 import { DrawnBorder } from "@/components/DrawnBorder";
 import { Panel } from "@/components/Panel";
@@ -25,11 +26,13 @@ import {
   studioSince,
 } from "@/lib/site";
 
-export const metadata: Metadata = {
-  title: "About the HighLevel-Only Video Studio",
-  description: `The original HighLevel-only video studio. One niche, an in-house team, and ${clients}+ HighLevel SaaS clients served since ${studioSince}. A brand of Vidiosa LLC.`,
-  alternates: { canonical: "/about/" },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMetadata("/about/", {
+    title: "About the HighLevel-Only Video Studio",
+    description: `The original HighLevel-only video studio. One niche, an in-house team, and ${clients}+ HighLevel SaaS clients served since ${studioSince}. A brand of Vidiosa LLC.`,
+    alternates: { canonical: "/about/" },
+  });
+}
 
 export default function AboutPage() {
   const p = pages.about;

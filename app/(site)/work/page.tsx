@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import { CtaBand } from "@/components/CtaBand";
 import { Button } from "@/components/Button";
 import { DrawnBorder } from "@/components/DrawnBorder";
@@ -9,12 +10,14 @@ import { CrossSell } from "@/components/pages/CrossSell";
 import { PageHero } from "@/components/pages/PageHero";
 import { cta, home, newSamples, pages } from "@/lib/site";
 
-export const metadata: Metadata = {
-  title: "HighLevel Video Examples and Portfolio",
-  description:
-    "Recent video work for HighLevel SaaS founders across premade, custom production, and editing. Every piece plays.",
-  alternates: { canonical: "/work/" },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMetadata("/work/", {
+    title: "HighLevel Video Examples and Portfolio",
+    description:
+      "Recent video work for HighLevel SaaS founders across premade, custom production, and editing. Every piece plays.",
+    alternates: { canonical: "/work/" },
+  });
+}
 
 /* Our newest real videos as the portfolio. Expands as more ship. */
 const pieces = newSamples;

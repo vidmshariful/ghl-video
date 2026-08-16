@@ -30,6 +30,7 @@ import {
   MessageSquare,
   Package,
   Repeat,
+  Search,
   Settings,
   ShoppingCart,
   Ticket,
@@ -52,6 +53,7 @@ import { SettingsScreen } from "./SettingsScreen";
 import { ProductionScreen } from "./ProductionScreen";
 import { CatalogScreen } from "./CatalogScreen";
 import { BlogScreen } from "./BlogScreen";
+import { SeoScreen } from "./SeoScreen";
 import { canAccess, type Role } from "./roles";
 
 /*
@@ -399,6 +401,7 @@ export function AdminClient({ initialView }: { initialView: View }) {
       items: [
         { key: "pages", label: "Pages", icon: <Globe /> },
         { key: "blog", label: "Blog", icon: <Newspaper /> },
+        { key: "seo", label: "SEO", icon: <Search /> },
         { key: "studio", label: "Studio Insights", icon: <BarChart3 /> },
       ],
     },
@@ -498,6 +501,8 @@ export function AdminClient({ initialView }: { initialView: View }) {
             <PagesScreen />
           ) : view === "blog" ? (
             <BlogScreen />
+          ) : view === "seo" ? (
+            <SeoScreen />
           ) : view === "catalog" ? (
             <CatalogScreen />
           ) : view === "production" ? (

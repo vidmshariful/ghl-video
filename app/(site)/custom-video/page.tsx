@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import { Button } from "@/components/Button";
 import { CapacityChip } from "@/components/CapacityChip";
 import { CellGrid } from "@/components/CellGrid";
@@ -29,14 +30,16 @@ const craftArt = ["hook", "story", "conversion"] as const;
 const processIcons = ["crosshair", "pen-line", "mic", "clapperboard", "message", "package-check"] as const;
 const differenceIcons = ["globe", "building", "zap"] as const;
 
-export const metadata: Metadata = {
-  /* the old site's title for this page ranks #1 for "gohighlevel
-     custom video production"; keep it verbatim (template adds | GHL Video) */
-  title: "GoHighLevel Custom Video Production | Built From Scratch",
-  description:
-    "Custom video built from scratch for your platform and your ICP: ads, explainers, demos, and onboarding series with published starting prices and a fixed quote before production.",
-  alternates: { canonical: "/custom-video/" },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMetadata("/custom-video/", {
+    /* the old site's title for this page ranks #1 for "gohighlevel
+       custom video production"; keep it verbatim (template adds | GHL Video) */
+    title: "GoHighLevel Custom Video Production | Built From Scratch",
+    description:
+      "Custom video built from scratch for your platform and your ICP: ads, explainers, demos, and onboarding series with published starting prices and a fixed quote before production.",
+    alternates: { canonical: "/custom-video/" },
+  });
+}
 
 export default function CustomPage() {
   const p = pages.custom;

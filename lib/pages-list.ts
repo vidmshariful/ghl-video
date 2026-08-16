@@ -8,6 +8,11 @@ export type SitePage = {
   name: string;
   path: string;
   inNav: boolean;
+  /* kept out of search results by the page itself. The sitemap reads this
+     (a noindex page must never be listed), and the admin SEO screen shows
+     it so nobody wonders why a page is missing from Google. Admin can also
+     mark a page noindex at runtime; both sources are honored. */
+  noindex?: boolean;
   note?: string;
 };
 
@@ -24,8 +29,8 @@ export const sitePages: readonly SitePage[] = [
   { name: "Request a Quote", path: "/quote/", inNav: false, note: "linked from CTAs only" },
   { name: "Blog", path: "/blog/", inNav: true, note: "posts managed in admin, CMS, Blog" },
   { name: "Studio Insights", path: "/studio-insights/", inNav: true },
-  { name: "Free Resources", path: "/resources/", inNav: true, note: "stub, noindex" },
-  { name: "AI First SaaS Pack Launch", path: "/ai-first-launch/", inNav: false, note: "unlisted campaign, noindex, email only" },
+  { name: "Free Resources", path: "/resources/", inNav: true, noindex: true, note: "stub" },
+  { name: "AI First SaaS Pack Launch", path: "/ai-first-launch/", inNav: false, noindex: true, note: "unlisted campaign, email only" },
   { name: "Privacy Policy", path: "/legal/privacy/", inNav: false, note: "footer" },
   { name: "Terms", path: "/legal/terms/", inNav: false, note: "footer" },
   { name: "Refund Policy", path: "/legal/refund/", inNav: false, note: "footer" },

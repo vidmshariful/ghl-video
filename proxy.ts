@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { REF_COOKIE, normalizeRef } from "@/lib/affiliates";
+import { countRedirectHit, resolveRedirect } from "@/lib/redirects";
 
 /*
  * Region gate + VPN/proxy gate + team bypass. Next's request interceptor (the
@@ -170,6 +171,28 @@ export async function proxy(req: NextRequest) {
     }
     return res;
   };
+
+  // Admin-managed redirects (CMS -> SEO -> Redirects). Deliberately BEFORE the
+  // gate's key check so retired URLs keep forwarding even while the gate is
+  // dormant, and before the country/VPN checks so a 301 is issued on URL
+  // correctness alone; the destination request is gated normally like any
+  // other. Fails open, never touches protected prefixes.
+  try {
+    const rule = await resolveRedirect(req.nextUrl.pathname);
+    if (rule) {
+      const target = new URL(rule.destination, req.url);
+      // carry the query string through, so ?ref= and campaign tags survive
+      if (req.nextUrl.search && !target.search) target.search = req.nextUrl.search;
+      countRedirectHit(rule.source);
+      // 301/302 rather than Next's default 308/307: these rules only ever
+      // cover page URLs (the API and portals are protected prefixes), and
+      // 301 is the status every SEO tool and Google doc expects to read
+      // back when the team checks a retired URL.
+      return withRef(NextResponse.redirect(target, rule.permanent ? 301 : 302));
+    }
+  } catch {
+    /* fail open: a redirect lookup can never break a request */
+  }
 
   try {
     const key = process.env.ACCESS_BYPASS_KEY;

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import { Button } from "@/components/Button";
 import { CapacityChip } from "@/components/CapacityChip";
 import { CellGrid } from "@/components/CellGrid";
@@ -34,12 +35,14 @@ import {
 const bottleneckIcons = ["clock", "message", "zap"] as const;
 const howIcons = ["upload", "scissors", "send"] as const;
 
-export const metadata: Metadata = {
-  title: "HighLevel Video Editing Subscription",
-  description:
-    "Your in-house HighLevel editor on a monthly plan. Send raw footage, get back publish-ready edits from a HighLevel-fluent team. No contracts, unlimited revisions.",
-  alternates: { canonical: "/editing/" },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMetadata("/editing/", {
+    title: "HighLevel Video Editing Subscription",
+    description:
+      "Your in-house HighLevel editor on a monthly plan. Send raw footage, get back publish-ready edits from a HighLevel-fluent team. No contracts, unlimited revisions.",
+    alternates: { canonical: "/editing/" },
+  });
+}
 
 export default function EditingPage() {
   const p = pages.editing;

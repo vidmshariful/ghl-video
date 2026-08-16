@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import { notFound } from "next/navigation";
 import { SectionChip } from "@/components/SectionChip";
 import { legalDocs } from "@/lib/legal";
@@ -13,11 +14,11 @@ export async function generateMetadata({
   params: Promise<{ doc: string }>;
 }): Promise<Metadata> {
   const { doc } = await params;
-  return {
+  return pageMetadata(`/legal/${doc}/`, {
     title: legalDocs[doc]?.title ?? "Legal",
     alternates: { canonical: `/legal/${doc}/` },
     description: `GHL Video ${legalDocs[doc]?.title ?? "legal document"}.`,
-  };
+  });
 }
 
 /*

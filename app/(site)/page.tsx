@@ -17,10 +17,13 @@ import { JsonLd } from "@/components/JsonLd";
 import { faqSchema } from "@/lib/schema";
 import { cta, home } from "@/lib/site";
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  alternates: { canonical: "/" },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMetadata("/", {
+    alternates: { canonical: "/" },
+  });
+}
 
 export default function Home() {
   return (

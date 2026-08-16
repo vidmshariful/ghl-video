@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import { Button } from "@/components/Button";
 import { CtaBand } from "@/components/CtaBand";
 import { DrawnBorder } from "@/components/DrawnBorder";
@@ -26,13 +27,15 @@ import {
  * AIFIRST30 coupon row: when it expires or is switched off, checkout
  * stops honoring it no matter who still has the link.
  */
-export const metadata: Metadata = {
-  title: "AI First SaaS Pack, Client Launch",
-  description:
-    "The 72-hour early window on the AI First SaaS Pack for existing GHL Video clients.",
-  alternates: { canonical: "/ai-first-launch/" },
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMetadata("/ai-first-launch/", {
+    title: "AI First SaaS Pack, Client Launch",
+    description:
+      "The 72-hour early window on the AI First SaaS Pack for existing GHL Video clients.",
+    alternates: { canonical: "/ai-first-launch/" },
+    robots: { index: false, follow: false },
+  });
+}
 
 type LaunchState = {
   kind: "ready" | "draft" | "scheduled";
