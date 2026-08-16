@@ -93,6 +93,27 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const { error } = await db.from("order_deliverables").update(patch).eq("id", deliverableId);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  /* A new link is a new cut, not a correction. Record it so the old one stays
+   * watchable and the client's notes keep pointing at the cut they were about.
+   * Re-saving the same link records nothing. */
+  if (typeof patch.video_url === "string" && patch.video_url) {
+    const { addVersion } = await import("@/lib/versions");
+    const v = await addVersion(
+      db,
+      deliverableId,
+      patch.video_url as string,
+      admin.email,
+      typeof body.versionNote === "string" ? body.versionNote : null,
+    );
+    if (v) {
+      await db.from("order_events").insert({
+        order_id: id,
+        event_type: "video_version_added",
+        payload: { deliverable_id: deliverableId, version: v.version, by: admin.email },
+      });
+    }
+  }
+
   await db.from("order_events").insert({
     order_id: id,
     event_type: "deliverable_updated",

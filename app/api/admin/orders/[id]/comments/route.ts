@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { verifyAdmin } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { addComment, listComments, resolveComment, stamp } from "@/lib/review";
+import { listVersions, removeVersion } from "@/lib/versions";
 import { pushNotification } from "@/lib/notifications";
 
 export const runtime = "nodejs";
@@ -53,9 +54,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       atSeconds: c.at_seconds,
       stamp: stamp(c.at_seconds),
       round: c.revision_round,
+      version: c.version,
+      parentId: c.parent_id,
       resolved: Boolean(c.resolved_at),
       createdAt: c.created_at,
     })),
+    versions: await listVersions(db, deliverableId),
   });
 }
 
@@ -68,6 +72,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const deliverableId = typeof body.deliverableId === "string" ? body.deliverableId : "";
   const { db, video } = await ownedVideo(id, deliverableId);
   if (!video) return NextResponse.json({ error: "Not found." }, { status: 404 });
+
+  // removing an old cut, once the team is done with it
+  if (typeof body.removeVersionId === "string") {
+    const r = await removeVersion(db, deliverableId, body.removeVersionId);
+    if (!r.ok) return NextResponse.json({ error: r.error }, { status: 400 });
+    return NextResponse.json({ ok: true });
+  }
 
   // resolving an existing note
   if (typeof body.resolveId === "string") {
@@ -96,6 +107,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     name: (me?.name as string | null) ?? null,
     body: text,
     atSeconds: at,
+    parentId: typeof body.parentId === "string" ? body.parentId : null,
   });
   if (!res) return NextResponse.json({ error: "Could not post that." }, { status: 400 });
 

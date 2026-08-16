@@ -27,6 +27,8 @@ export type ReviewComment = {
   body: string;
   at_seconds: number | null;
   revision_round: number;
+  version: number | null;
+  parent_id: string | null;
   resolved_at: string | null;
   resolved_by: string | null;
   created_at: string;
@@ -65,6 +67,7 @@ export async function openCommentCounts(
     .select("deliverable_id")
     .eq("order_id", orderId)
     .eq("author_side", "client")
+    .is("parent_id", null)
     .is("resolved_at", null);
   const out: Record<string, number> = {};
   for (const c of data ?? []) {
@@ -80,6 +83,8 @@ export type NewComment = {
   name?: string | null;
   body: string;
   atSeconds?: number | null;
+  /** set when this note answers another note */
+  parentId?: string | null;
 };
 
 /**
@@ -108,6 +113,10 @@ export async function addComment(
       ? null
       : Math.round(c.atSeconds * 100) / 100;
 
+  // which cut this note is about, so it keeps its meaning after the next one
+  const { currentVersion } = await import("@/lib/versions");
+  const version = await currentVersion(db, d.id as string);
+
   const { data, error } = await db
     .from("deliverable_comments")
     .insert({
@@ -119,6 +128,8 @@ export async function addComment(
       body,
       at_seconds: at,
       revision_round: d.revision_round as number,
+      version,
+      parent_id: c.parentId ?? null,
     })
     .select()
     .single();

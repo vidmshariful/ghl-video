@@ -10,6 +10,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
  * thread and a guess. It is offered, never forced: a note about the whole
  * video is just as real, so the pin is a toggle and defaults to wherever the
  * player is paused.
+ *
+ * Notes are labelled by which CUT they were written about, never by an
+ * internal round number. "Round 2" told a client nothing; "on v1" points at
+ * something they can actually go and watch.
  */
 
 type Comment = {
@@ -20,7 +24,17 @@ type Comment = {
   atSeconds: number | null;
   stamp: string | null;
   round: number;
+  version: number | null;
+  parentId: string | null;
   resolved: boolean;
+  createdAt: string;
+};
+
+type Version = {
+  id: string;
+  version: number;
+  videoUrl: string;
+  note: string | null;
   createdAt: string;
 };
 
@@ -33,6 +47,9 @@ const when = (iso: string) =>
     hour: "numeric",
     minute: "2-digit",
   });
+
+const fieldCls =
+  "tap w-full rounded-[8px] border border-hair bg-canvas px-3 py-2 text-body-sm text-ink placeholder:text-dim";
 
 export function VideoReview({
   videoId,
@@ -51,26 +68,38 @@ export function VideoReview({
 }) {
   const ref = useRef<HTMLVideoElement>(null);
   const [comments, setComments] = useState<Comment[] | null>(null);
+  const [versions, setVersions] = useState<Version[]>([]);
+  const [showing, setShowing] = useState<number | null>(null);
   const [text, setText] = useState("");
   const [pin, setPin] = useState(true);
   const [at, setAt] = useState(0);
   const [duration, setDuration] = useState(0);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [replyTo, setReplyTo] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState("");
 
   const load = useCallback(async () => {
-    const j = (await authedFetch(`/api/portal/videos/${videoId}/review`).catch(
-      () => null,
-    )) as { comments?: Comment[] } | null;
+    const j = (await authedFetch(`/api/portal/videos/${videoId}/review`).catch(() => null)) as {
+      comments?: Comment[];
+      versions?: Version[];
+    } | null;
     setComments(j?.comments ?? []);
+    setVersions(j?.versions ?? []);
   }, [authedFetch, videoId]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  async function send(action: "comment" | "approve" | "changes") {
-    if (action === "comment" && !text.trim()) return;
+  const latest = versions[0]?.version ?? null;
+  const viewing = showing ?? latest;
+  const src = versions.find((v) => v.version === viewing)?.videoUrl ?? videoUrl;
+  const onOldCut = latest != null && viewing != null && viewing !== latest;
+
+  async function send(action: "comment" | "approve" | "changes", opts?: { parentId?: string; body?: string }) {
+    const message = opts?.body ?? text;
+    if (action === "comment" && !message.trim()) return;
     if (action === "approve" && !confirm(`Approve ${title}? This tells the studio it is finished.`))
       return;
     setBusy(true);
@@ -79,13 +108,23 @@ export function VideoReview({
       method: "POST",
       body: JSON.stringify(
         action === "comment"
-          ? { action, body: text, atSeconds: pin ? at : null }
+          ? {
+              action,
+              body: message,
+              atSeconds: opts?.parentId ? null : pin ? at : null,
+              parentId: opts?.parentId ?? null,
+            }
           : { action },
       ),
     }).catch(() => null)) as { ok?: boolean; error?: string } | null;
     setBusy(false);
     if (!j?.ok) return setErr(j?.error ?? "Could not send that.");
-    setText("");
+    if (opts?.parentId) {
+      setReplyTo(null);
+      setReplyText("");
+    } else {
+      setText("");
+    }
     await load();
     onChanged();
   }
@@ -97,28 +136,67 @@ export function VideoReview({
     v.play().catch(() => {});
   }
 
-  const open = (comments ?? []).filter((c) => !c.resolved).length;
+  /* Enter sends, shift and enter makes a new line. Typing a sentence and
+     pressing enter is what everyone expects from a comment box. */
+  const enterSends =
+    (fn: () => void) => (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        fn();
+      }
+    };
+
+  const top = (comments ?? []).filter((c) => !c.parentId);
+  const repliesOf = (id: string) => (comments ?? []).filter((c) => c.parentId === id);
+  const open = top.filter((c) => !c.resolved && c.side === "client").length;
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
-      {/* the player, with a marker for every pinned note */}
       <div>
+        {versions.length > 1 && (
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <span className="font-mono text-label uppercase tracking-[0.1em] text-dim">Cut</span>
+            {versions.map((v) => (
+              <button
+                key={v.id}
+                type="button"
+                onClick={() => setShowing(v.version)}
+                className={`tap rounded-full border px-2.5 py-0.5 font-mono text-label transition-colors ${
+                  viewing === v.version
+                    ? "border-gold bg-gold text-canvas"
+                    : "border-hair text-muted hover:border-gold/60 hover:text-gold"
+                }`}
+              >
+                v{v.version}
+                {v.version === latest ? " (latest)" : ""}
+              </button>
+            ))}
+          </div>
+        )}
+
         <video
           ref={ref}
+          key={src}
           controls
           preload="metadata"
           playsInline
-          src={videoUrl}
+          src={src}
           onTimeUpdate={(e) => setAt(e.currentTarget.currentTime)}
           onLoadedMetadata={(e) => setDuration(e.currentTarget.duration || 0)}
           className="aspect-video w-full rounded-[8px] bg-canvas"
         />
 
+        {onOldCut && (
+          <p className="mt-2 text-body-sm text-gold">
+            You are watching an older cut. Switch to v{latest} for the newest one.
+          </p>
+        )}
+
         {duration > 0 && (
           <div className="relative mt-2 h-6" aria-hidden="true">
             <div className="absolute inset-x-0 top-2.5 h-px bg-hair" />
-            {(comments ?? [])
-              .filter((c) => c.atSeconds != null)
+            {top
+              .filter((c) => c.atSeconds != null && (c.version ?? latest) === viewing)
               .map((c) => (
                 <button
                   key={c.id}
@@ -159,7 +237,6 @@ export function VideoReview({
         )}
       </div>
 
-      {/* the thread */}
       <div className="min-w-0">
         <p className="font-mono text-label uppercase tracking-[0.1em] text-dim">
           Notes{open > 0 ? ` (${open} open)` : ""}
@@ -170,8 +247,9 @@ export function VideoReview({
             rows={3}
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="What would you like changed?"
-            className="tap w-full rounded-[8px] border border-hair bg-canvas px-3 py-2 text-body-sm text-ink placeholder:text-dim"
+            onKeyDown={enterSends(() => send("comment"))}
+            placeholder="What would you like changed? Enter to send."
+            className={fieldCls}
           />
           <label className="flex items-center gap-2 text-body-sm text-muted">
             <input
@@ -197,12 +275,12 @@ export function VideoReview({
         <ul className="mt-4 grid max-h-[26rem] gap-3 overflow-y-auto pr-1">
           {comments === null ? (
             <li className="text-body-sm text-muted">Loading notes...</li>
-          ) : comments.length === 0 ? (
+          ) : top.length === 0 ? (
             <li className="text-body-sm text-dim">
               No notes yet. Play the video and add one at the moment you mean.
             </li>
           ) : (
-            comments.map((c) => (
+            top.map((c) => (
               <li
                 key={c.id}
                 className={`rounded-[8px] border p-3 ${
@@ -227,8 +305,68 @@ export function VideoReview({
                 <p className="mt-1.5 whitespace-pre-wrap text-body-sm text-muted">{c.body}</p>
                 <p className="mt-1 font-mono text-label uppercase tracking-[0.1em] text-dim">
                   {when(c.createdAt)}
-                  {c.round > 0 ? ` / round ${c.round + 1}` : ""}
+                  {c.version && versions.length > 1 ? ` / on v${c.version}` : ""}
                 </p>
+
+                {repliesOf(c.id).map((r) => (
+                  <div
+                    key={r.id}
+                    className="mt-2 border-l-2 border-blue/40 pl-3"
+                  >
+                    <span className="text-body-sm font-semibold text-ink">{r.name}</span>
+                    <p className="mt-0.5 whitespace-pre-wrap text-body-sm text-muted">{r.body}</p>
+                    <p className="mt-0.5 font-mono text-label uppercase tracking-[0.1em] text-dim">
+                      {when(r.createdAt)}
+                    </p>
+                  </div>
+                ))}
+
+                {replyTo === c.id ? (
+                  <div className="mt-2 grid gap-2">
+                    <textarea
+                      rows={2}
+                      autoFocus
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      onKeyDown={enterSends(() =>
+                        send("comment", { parentId: c.id, body: replyText }),
+                      )}
+                      placeholder="Reply. Enter to send."
+                      className={fieldCls}
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        disabled={busy || !replyText.trim()}
+                        onClick={() => send("comment", { parentId: c.id, body: replyText })}
+                        className="tap rounded-[8px] border border-hair px-3 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-40"
+                      >
+                        Send
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setReplyTo(null);
+                          setReplyText("");
+                        }}
+                        className="tap font-mono text-label uppercase text-dim transition-colors hover:text-muted"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReplyTo(c.id);
+                      setReplyText("");
+                    }}
+                    className="tap mt-2 font-mono text-label uppercase tracking-[0.1em] text-dim transition-colors hover:text-gold"
+                  >
+                    Reply
+                  </button>
+                )}
               </li>
             ))
           )}

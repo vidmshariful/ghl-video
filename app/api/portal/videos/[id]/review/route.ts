@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { contextCan, resolvePortalContext } from "@/lib/account-team";
 import { isWatchable, type DeliverableStatus } from "@/lib/deliverable-status";
 import { addComment, clientVerdict, listComments, stamp } from "@/lib/review";
+import { listVersions } from "@/lib/versions";
 import { pushOrderOwnerNotification } from "@/lib/notifications";
 
 export const runtime = "nodejs";
@@ -56,8 +57,17 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       atSeconds: c.at_seconds,
       stamp: stamp(c.at_seconds),
       round: c.revision_round,
+      version: c.version,
+      parentId: c.parent_id,
       resolved: Boolean(c.resolved_at),
       createdAt: c.created_at,
+    })),
+    versions: (await listVersions(g.db, id)).map((v) => ({
+      id: v.id,
+      version: v.version,
+      videoUrl: v.video_url,
+      note: v.note,
+      createdAt: v.created_at,
     })),
     status: g.deliverable.status,
     round: g.deliverable.revision_round,
@@ -111,6 +121,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       name,
       body: text,
       atSeconds: at,
+      parentId: typeof body.parentId === "string" ? body.parentId : null,
     });
     if (!res) return NextResponse.json({ error: "Could not post that." }, { status: 400 });
 

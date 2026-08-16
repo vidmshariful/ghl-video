@@ -325,7 +325,11 @@ export function ProductionJob({ id, onBack }: { id: string; onBack: () => void }
                     <p className={`mt-1 ${lab}`}>
                       {d.catalog_code ? d.catalog_code.toUpperCase() : "Not chosen yet"}
                       {d.group_label ? ` / ${d.group_label}` : ""}
-                      {d.revision_round > 0 ? ` / round ${d.revision_round + 1}` : ""}
+                      {/* How many times the client has sent it back. "Round 2"
+                          was accurate and meaningless; this says the thing. */}
+                      {d.revision_round > 0
+                        ? ` / ${d.revision_round} change${d.revision_round === 1 ? "" : "s"} requested`
+                        : ""}
                     </p>
                   </div>
                   <span
@@ -457,8 +461,26 @@ export function ProductionJob({ id, onBack }: { id: string; onBack: () => void }
   );
 }
 
-/* One video's review thread, studio side. Same thread the client sees under
-   their player, so a reply here lands in their portal and their bell. */
+/* One video's review thread, studio side. Same thread the client sees, so a
+   reply here lands in their portal and their bell.
+
+   Replies attach to the note they answer. A general remark on the video and an
+   answer to "the logo at 0:12" are different things, and before this they read
+   identically. Notes are labelled by the cut they were written about, never by
+   an internal round number. */
+type Note = {
+  id: string;
+  side: "client" | "studio";
+  name: string;
+  body: string;
+  stamp: string | null;
+  version: number | null;
+  parentId: string | null;
+  resolved: boolean;
+  createdAt: string;
+};
+type Cut = { id: string; version: number; video_url: string; created_at: string };
+
 function StudioThread({
   orderId,
   deliverableId,
@@ -468,28 +490,21 @@ function StudioThread({
   deliverableId: string;
   onChanged: () => void;
 }) {
-  const [rows, setRows] = useState<
-    {
-      id: string;
-      side: "client" | "studio";
-      name: string;
-      body: string;
-      stamp: string | null;
-      resolved: boolean;
-      createdAt: string;
-      round: number;
-    }[] | null
-  >(null);
+  const [rows, setRows] = useState<Note[] | null>(null);
+  const [cuts, setCuts] = useState<Cut[]>([]);
   const [text, setText] = useState("");
+  const [replyTo, setReplyTo] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState("");
   const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
 
   const load = useCallback(async () => {
-    const r = await fetch(
-      `/api/admin/orders/${orderId}/comments?video=${deliverableId}`,
-      { headers: await authHeader() },
-    );
+    const r = await fetch(`/api/admin/orders/${orderId}/comments?video=${deliverableId}`, {
+      headers: await authHeader(),
+    });
     const j = await r.json().catch(() => null);
     setRows(j?.comments ?? []);
+    setCuts(j?.versions ?? []);
   }, [orderId, deliverableId]);
 
   useEffect(() => {
@@ -498,26 +513,73 @@ function StudioThread({
 
   async function post(patch: Record<string, unknown>) {
     setBusy(true);
-    await fetch(`/api/admin/orders/${orderId}/comments`, {
+    setErr("");
+    const r = await fetch(`/api/admin/orders/${orderId}/comments`, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...(await authHeader()) },
       body: JSON.stringify({ deliverableId, ...patch }),
     }).catch(() => null);
+    const j = await r?.json().catch(() => null);
     setBusy(false);
+    if (r && !r.ok) return setErr(j?.error ?? "Could not save.");
     setText("");
+    setReplyTo(null);
+    setReplyText("");
     await load();
     onChanged();
   }
 
+  /* Enter sends, shift and enter makes a new line. */
+  const enterSends = (fn: () => void) => (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      fn();
+    }
+  };
+
+  const top = (rows ?? []).filter((c) => !c.parentId);
+  const repliesOf = (id: string) => (rows ?? []).filter((c) => c.parentId === id);
+
   return (
     <div className="mt-3 border-t border-hair pt-3">
+      {cuts.length > 1 && (
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <span className={lab}>Cuts</span>
+          {cuts.map((v, i) => (
+            <span
+              key={v.id}
+              className="inline-flex items-center gap-1.5 rounded-full border border-hair px-2.5 py-0.5 font-mono text-label text-muted"
+            >
+              v{v.version}
+              {i === 0 ? " (current)" : ""}
+              {i !== 0 && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    if (confirm(`Remove cut v${v.version}? The client will no longer be able to watch it.`))
+                      post({ removeVersionId: v.id });
+                  }}
+                  className="tap text-dim transition-colors hover:text-error disabled:opacity-40"
+                  aria-label={`Remove cut v${v.version}`}
+                >
+                  &times;
+                </button>
+              )}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {err && <p className="mb-2 text-body-sm text-error">{err}</p>}
+
       {rows === null ? (
         <p className="text-body-sm text-muted">Loading notes...</p>
-      ) : rows.length === 0 ? (
+      ) : top.length === 0 ? (
         <p className="text-body-sm text-dim">No notes on this one yet.</p>
       ) : (
         <ul className="grid gap-2">
-          {rows.map((c) => (
+          {top.map((c) => (
             <li
               key={c.id}
               className={`rounded-[8px] border p-3 ${
@@ -545,8 +607,61 @@ function StudioThread({
               <p className="mt-1.5 whitespace-pre-wrap text-body-sm text-muted">{c.body}</p>
               <p className={`mt-1 ${lab}`}>
                 {when(c.createdAt)}
-                {c.round > 0 ? ` / round ${c.round + 1}` : ""}
+                {c.version && cuts.length > 1 ? ` / on v${c.version}` : ""}
               </p>
+
+              {repliesOf(c.id).map((r) => (
+                <div key={r.id} className="mt-2 border-l-2 border-blue/40 pl-3">
+                  <span className="text-body-sm font-semibold text-ink">{r.name}</span>
+                  <p className="mt-0.5 whitespace-pre-wrap text-body-sm text-muted">{r.body}</p>
+                  <p className={`mt-0.5 ${lab}`}>{when(r.createdAt)}</p>
+                </div>
+              ))}
+
+              {replyTo === c.id ? (
+                <div className="mt-2 grid gap-2">
+                  <textarea
+                    rows={2}
+                    autoFocus
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    onKeyDown={enterSends(() => post({ body: replyText, parentId: c.id }))}
+                    placeholder="Answer this note. Enter to send."
+                    className={field}
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      disabled={busy || !replyText.trim()}
+                      onClick={() => post({ body: replyText, parentId: c.id })}
+                      className={btn}
+                    >
+                      Send
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setReplyTo(null);
+                        setReplyText("");
+                      }}
+                      className="tap font-mono text-label uppercase text-dim transition-colors hover:text-muted"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReplyTo(c.id);
+                    setReplyText("");
+                  }}
+                  className={`tap mt-2 ${lab} transition-colors hover:text-gold`}
+                >
+                  Reply to this note
+                </button>
+              )}
             </li>
           ))}
         </ul>
@@ -557,7 +672,8 @@ function StudioThread({
           rows={2}
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Reply to the client about this video."
+          onKeyDown={enterSends(() => post({ body: text }))}
+          placeholder="A general note on this video. Enter to send."
           className={field}
         />
         <button
@@ -566,7 +682,7 @@ function StudioThread({
           onClick={() => post({ body: text })}
           className={`${btn} justify-self-start`}
         >
-          Reply
+          Post
         </button>
       </div>
     </div>
