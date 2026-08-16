@@ -3,6 +3,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AdminModal } from "./Modal";
 import { authHeader, supabase } from "./client";
+import { packsContaining, packsPickable } from "@/lib/content/pack-map";
+import {
+  bumpAppliesTo,
+  bumpEffectivePrice,
+  type OrderBump,
+} from "@/lib/checkout/bump-match";
 
 /*
  * The unified video Catalog (Phase 2 of the code->DB catalog move). One card
@@ -53,6 +59,8 @@ export function CatalogScreen() {
   const [editing, setEditing] = useState<CatalogRow | "new" | null>(null);
   const [filter, setFilter] = useState<string>("all");
   const [copied, setCopied] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [bumps, setBumps] = useState<OrderBump[]>([]);
   const [publishing, setPublishing] = useState(false);
   const [published, setPublished] = useState("");
 
@@ -79,13 +87,21 @@ export function CatalogScreen() {
 
   const load = useCallback(async () => {
     setErr("");
-    const { data, error } = await supabase
-      .from("catalog")
-      .select("*")
-      .order("category", { ascending: true })
-      .order("code", { ascending: true });
-    if (error) setErr(error.message);
-    else setRows((data as CatalogRow[]) ?? []);
+    const [cat, ob] = await Promise.all([
+      supabase
+        .from("catalog")
+        .select("*")
+        .order("category", { ascending: true })
+        .order("code", { ascending: true }),
+      supabase
+        .from("order_bumps")
+        .select("*")
+        .eq("active", true)
+        .order("sort", { ascending: true }),
+    ]);
+    if (cat.error) setErr(cat.error.message);
+    else setRows((cat.data as CatalogRow[]) ?? []);
+    if (!ob.error) setBumps((ob.data as OrderBump[]) ?? []);
     setLoaded(true);
   }, []);
 
@@ -195,7 +211,11 @@ export function CatalogScreen() {
         ) : (
           <ul className="divide-y divide-hair">
             {shown.map((row) => (
-              <li key={row.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 bg-surface/40 p-4">
+              <li key={row.id} className="bg-surface/40">
+                <div
+                  className="flex cursor-pointer flex-wrap items-center gap-x-4 gap-y-2 p-4"
+                  onClick={() => setExpanded((e) => (e === row.id ? null : row.id))}
+                >
                 <span className="w-24 shrink-0 font-mono text-label uppercase tracking-[0.08em] text-gold/80">
                   {row.code.toUpperCase()}
                 </span>
@@ -224,7 +244,7 @@ export function CatalogScreen() {
                   </p>
                 </div>
                 <span className="w-16 shrink-0 font-mono text-body-sm text-ink">{money(row.price_cents)}</span>
-                <div className="flex shrink-0 items-center gap-2">
+                <div className="flex shrink-0 items-center gap-2" onClick={(e) => e.stopPropagation()}>
                   <button type="button" onClick={() => copyLink(row)} className={btnGhost}>
                     {copied === row.id ? "Copied" : "Buy link"}
                   </button>
@@ -242,6 +262,8 @@ export function CatalogScreen() {
                     Delete
                   </button>
                 </div>
+                </div>
+                {expanded === row.id ? <RowDetails row={row} bumps={bumps} /> : null}
               </li>
             ))}
           </ul>
@@ -265,6 +287,100 @@ export function CatalogScreen() {
 
 const btnGhost =
   "tap rounded-[8px] border border-hair px-3 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold";
+
+/* The relations a row cannot show inline: which packs carry this video,
+ * which order bumps checkout will offer with it, and its links. Read-only;
+ * membership and bump rules live where they are enforced (pack-map and
+ * bump-match mirror the site and checkout exactly). */
+function RowDetails({ row, bumps }: { row: CatalogRow; bumps: OrderBump[] }) {
+  const isFaPack = row.category === "Feature Animation";
+  const target = {
+    sku: row.code,
+    metadata: {
+      kind: isFaPack ? "pack" : "video",
+      code: row.code.toUpperCase(),
+      video_count: row.pack_count ?? undefined,
+    },
+  };
+  const applicable = bumps.filter((b) => bumpAppliesTo(b, target));
+  const memberOf = packsContaining(row.code);
+  const pickable = packsPickable(row.code);
+  const chip =
+    "rounded-full border border-hair bg-canvas px-2.5 py-0.5 font-mono text-label uppercase text-muted";
+
+  return (
+    <div className="grid gap-4 border-t border-hair bg-canvas/40 px-4 py-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div>
+        <p className={lab}>In packs</p>
+        {memberOf.length === 0 && pickable.length === 0 ? (
+          <p className="mt-1.5 text-body-sm text-dim">
+            {isFaPack ? "This is itself a pack of animations." : "Not part of any pack."}
+          </p>
+        ) : (
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {memberOf.map((r) => (
+              <span key={r.sku} className={`${chip} border-gold/40 text-gold`}>
+                {r.name}
+              </span>
+            ))}
+            {pickable.map((r) => (
+              <span key={r.sku} className={chip} title="The buyer can pick this video at intake">
+                Pickable: {r.name}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+      <div>
+        <p className={lab}>Order bumps at checkout</p>
+        {applicable.length === 0 ? (
+          <p className="mt-1.5 text-body-sm text-dim">No bumps apply.</p>
+        ) : (
+          <ul className="mt-1.5 grid gap-1">
+            {applicable.map((b) => (
+              <li key={b.id} className="text-body-sm text-ink">
+                {b.name}{" "}
+                <span className="font-mono text-body-sm text-muted">
+                  {money(bumpEffectivePrice(b, target))}
+                  {b.unit === "per_video" ? " (per video)" : ""}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="mt-1.5 text-body-sm text-dim">
+          Managed in Products &amp; Pricing, Order bumps tab.
+        </p>
+      </div>
+      <div>
+        <p className={lab}>Links</p>
+        <ul className="mt-1.5 grid gap-1 text-body-sm">
+          <li className="truncate text-muted">
+            Buy: <span className="text-ink">/checkout/{row.code}</span>
+          </li>
+          {row.video_url ? (
+            <li className="truncate">
+              <a href={row.video_url} target="_blank" rel="noreferrer" className="text-gold hover:underline">
+                Video file
+              </a>
+            </li>
+          ) : (
+            <li className="text-dim">No video file yet.</li>
+          )}
+          {row.poster_url ? (
+            <li className="truncate">
+              <a href={row.poster_url} target="_blank" rel="noreferrer" className="text-gold hover:underline">
+                Poster image
+              </a>
+            </li>
+          ) : null}
+          {row.wistia_id ? <li className="text-muted">Wistia: {row.wistia_id}</li> : null}
+          {row.release_date ? <li className="text-muted">Released: {row.release_date}</li> : null}
+        </ul>
+      </div>
+    </div>
+  );
+}
 
 function CatalogForm({
   row,

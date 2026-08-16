@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { authHeader, money, supabase } from "./client";
 import { AdminModal } from "./Modal";
 import { BumpsScreen } from "./BumpsScreen";
+import { packContentsFor } from "@/lib/content/pack-map";
 
 type ProductRow = {
   id: string;
@@ -178,7 +179,7 @@ function ProductForm({
 }
 
 export function ProductsScreen() {
-  const [tab, setTab] = useState<"products" | "bumps">("products");
+  const [tab, setTab] = useState<"products" | "packs" | "bumps">("products");
   const [rows, setRows] = useState<ProductRow[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [editing, setEditing] = useState<ProductRow | "new" | null>(null);
@@ -262,6 +263,7 @@ export function ProductsScreen() {
         {(
           [
             ["products", "Products"],
+            ["packs", "Packs & bundles"],
             ["bumps", "Order bumps"],
           ] as const
         ).map(([k, label]) => (
@@ -284,6 +286,8 @@ export function ProductsScreen() {
         <div className="mt-6">
           <BumpsScreen embedded />
         </div>
+      ) : tab === "packs" ? (
+        <PacksTab rows={rows} onEdit={(r) => setEditing(r)} />
       ) : (
         <>
       <p className="mt-4 max-w-[var(--measure-body)] text-body text-muted">
@@ -358,6 +362,123 @@ export function ProductsScreen() {
         ))}
       </ul>
         </>
+      )}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------- */
+/* Packs & bundles: every multi-video product with its composition    */
+/* ---------------------------------------------------------------- */
+function PacksTab({
+  rows,
+  onEdit,
+}: {
+  rows: ProductRow[];
+  onEdit: (r: ProductRow) => void;
+}) {
+  const [copied, setCopied] = useState<string | null>(null);
+  const packs = rows.filter((r) => {
+    const kind = (r.metadata ?? {}).kind;
+    return kind === "pack" || kind === "bundle";
+  });
+
+  async function copyLink(r: ProductRow) {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/checkout/${r.sku}`);
+      setCopied(r.id);
+      window.setTimeout(() => setCopied((c) => (c === r.id ? null : c)), 1500);
+    } catch {
+      /* clipboard blocked */
+    }
+  }
+
+  return (
+    <div className="mt-6">
+      <p className="max-w-[var(--measure-body)] text-body text-muted">
+        Every pack and bundle we sell, with what is inside it. Composition
+        follows the site catalog; prices and the active switch are edited on
+        the product itself.
+      </p>
+      {packs.length === 0 ? (
+        <p className="mt-6 text-body-sm text-muted">No packs or bundles yet.</p>
+      ) : (
+        <div className="mt-6 grid gap-4 lg:grid-cols-2">
+          {packs.map((r) => {
+            const c = packContentsFor(r.sku);
+            const code = ((r.metadata ?? {}).code as string) ?? r.sku.toUpperCase();
+            return (
+              <div key={r.id} className="rounded-[12px] border border-hair bg-surface p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-mono text-label uppercase tracking-[0.08em] text-gold/80">{code}</p>
+                    <p className="mt-0.5 text-body font-semibold text-ink">{r.name}</p>
+                    <p className="mt-0.5 font-mono text-body-sm text-muted">
+                      {money(r.price_cents, r.currency)}
+                      {!r.active ? " / inactive" : ""}
+                      {c?.videoCount ? ` / ${c.videoCount} videos` : ""}
+                      {c?.deliveryDays ? ` / ${c.deliveryDays} day delivery` : ""}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => copyLink(r)}
+                      className="tap rounded-[8px] border border-hair px-3 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
+                    >
+                      {copied === r.id ? "Copied" : "Buy link"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onEdit(r)}
+                      className="tap rounded-[8px] border border-hair px-3 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
+                    >
+                      Edit
+                    </button>
+                  </div>
+                </div>
+                {c ? (
+                  <div className="mt-4 border-t border-hair pt-4">
+                    {c.lines.length > 0 ? (
+                      <ul className="flex flex-wrap gap-1.5">
+                        {c.lines.map((l) => (
+                          <li
+                            key={l}
+                            className="rounded-full border border-hair bg-canvas px-2.5 py-0.5 font-mono text-label uppercase text-muted"
+                          >
+                            {l}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                    {c.videos.length > 0 ? (
+                      <ul className="mt-3 grid gap-1 sm:grid-cols-2">
+                        {c.videos.map((v) => (
+                          <li key={v.title} className="text-body-sm text-ink">
+                            {v.title}
+                            {v.sku ? (
+                              <span className="ml-1.5 font-mono text-label uppercase text-dim">
+                                {v.sku.toUpperCase()}
+                              </span>
+                            ) : null}
+                            {v.comingSoon ? (
+                              <span className="ml-1.5 font-mono text-label uppercase text-gold/70">soon</span>
+                            ) : null}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                    {c.note ? <p className="mt-3 text-body-sm text-dim">{c.note}</p> : null}
+                  </div>
+                ) : (
+                  <p className="mt-4 border-t border-hair pt-4 text-body-sm text-dim">
+                    Composition is not mapped for this product.
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
       )}
     </div>
   );
