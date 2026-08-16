@@ -14,7 +14,7 @@ import {
   TopIconButton,
   type NavGroup,
 } from "@/components/portal/Shell";
-import { PortalHelp } from "@/components/portal/help";
+import { HandbookScreen } from "./HandbookScreen";
 import {
   BarChart3,
   BookOpen,
@@ -515,7 +515,7 @@ export function AdminClient({ initialView }: { initialView: View }) {
               <p className="text-body text-muted">Loading your account...</p>
             )
           ) : view === "help" ? (
-            <PortalHelp audience="admin" />
+            <HandbookScreen />
           ) : (
             // every View has an explicit branch above; fall back to the
             // dashboard for safety rather than a blank screen

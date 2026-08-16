@@ -1447,7 +1447,7 @@ function Portal({
           ) : section === "settings" ? (
             <SettingsView profile={profile} onSaved={loadProfile} />
           ) : section === "help" ? (
-            <PortalHelp audience="customer" />
+            <PortalHelp />
           ) : section === "subscriptions" && can("subscriptions") ? (
             <div>
               <PageHeader title="Subscriptions" subtitle="Manage your editing plan and billing." />

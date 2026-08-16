@@ -18,6 +18,7 @@
     "seed:composition": "tsx scripts/seed-composition.ts",
     "check:composition": "tsx scripts/check-composition.ts",
     "check:deliverables": "tsx scripts/check-deliverables.ts",
+    "check:handbook": "tsx scripts/check-handbook.ts",
     "backfill:deliverables": "tsx scripts/backfill-deliverables.ts",
     "seed:pack-rows": "tsx scripts/seed-pack-rows.ts"
   },
