@@ -29,7 +29,11 @@ import {
  *     the API, so it always holds.
  *
  * Environment (set in Vercel + .env.local):
- *  - ACCESS_BYPASS_KEY    secret for /unlock?key=... AND the cookie signing key
+ *  - ACCESS_BYPASS_KEY    the OWNER key. Also the HMAC secret for the VPN
+ *                         verdict cookie, so it must never be rotated casually.
+ *  - ACCESS_BYPASS_KEYS   optional extra keys, comma separated, for the team.
+ *                         Any of them unlocks. Revoke one by deleting it from
+ *                         this list; the owner key is unaffected.
  *  - BLOCKED_COUNTRIES    comma-separated ISO codes (default "BD,PK")
  *  - PROXYCHECK_API_KEY   proxycheck.io key; omit to disable the VPN check
  */
@@ -75,6 +79,15 @@ const VPN_PAGE = page(
   "Please turn off your VPN or proxy.",
   'This site can\'t be accessed over a VPN or proxy. Disable it and reload. Still stuck? Contact <a href="mailto:hi@ghlvideo.com">hi@ghlvideo.com</a>.',
 );
+
+/* Every key that may unlock, owner first. The owner key doubles as the HMAC
+ * secret below, which is why it stays a separate variable: rotating a team key
+ * must not invalidate everyone's VPN verdict cookies. */
+function bypassKeys(): string[] {
+  return [process.env.ACCESS_BYPASS_KEY, ...(process.env.ACCESS_BYPASS_KEYS ?? "").split(",")]
+    .map((k) => (k ?? "").trim())
+    .filter(Boolean);
+}
 
 function blockedCountries(): Set<string> {
   return new Set(
@@ -238,9 +251,11 @@ export async function proxy(req: NextRequest) {
 
     // Unlock link: set the bypass cookie and send them home. Before every check
     // so the team can unlock from inside a blocked region.
-    if (path === "/unlock" && searchParams.get("key") === key) {
+    const keys = bypassKeys();
+    const offered = searchParams.get("key");
+    if (path === "/unlock" && offered && keys.includes(offered)) {
       const res = NextResponse.redirect(new URL("/", req.url));
-      res.cookies.set(BYPASS_COOKIE, key, {
+      res.cookies.set(BYPASS_COOKIE, offered, {
         httpOnly: true,
         secure: true,
         sameSite: "lax",
@@ -250,8 +265,10 @@ export async function proxy(req: NextRequest) {
       return withRef(res);
     }
 
-    // The team bypass exempts the country block AND the VPN check.
-    if (req.cookies.get(BYPASS_COOKIE)?.value === key) return withRef(NextResponse.next());
+    // The team bypass exempts the country block AND the VPN check. Any key in
+    // the list counts, so a teammate's key works exactly like the owner's.
+    const held = req.cookies.get(BYPASS_COOKIE)?.value;
+    if (held && keys.includes(held)) return withRef(NextResponse.next());
 
     // 1) Country block (never needs the API, so it always holds).
     const country = (req.headers.get("x-vercel-ip-country") ?? "").toUpperCase();
