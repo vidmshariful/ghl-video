@@ -14,6 +14,12 @@ import {
   Td,
   Th,
 } from "@/components/portal/ui";
+import {
+  gettingStartedSteps,
+  onboardingUnfinished,
+  type OnboardingStep,
+  type StepKey,
+} from "@/lib/onboarding";
 
 /*
  * The customer dashboard.
@@ -53,6 +59,65 @@ type Video = {
 
 type Group = { orderId: string; productName: string; videos: Video[] };
 
+/*
+ * Getting started, for somebody whose first order is still finding its feet.
+ *
+ * Three steps, and it disappears for good once they are done rather than
+ * turning into a permanent badge saying well done. A checklist that survives
+ * completion is decoration.
+ *
+ * Every step is real work with a real consequence, which is the whole
+ * discipline here. Nothing rewards them for logging in, and the third step is
+ * honest about being ours rather than pretending they can tick it while we
+ * are still animating: a step somebody cannot finish is worse than no list.
+ */
+type Step = OnboardingStep & { action?: { label: string; run: () => void } };
+
+function GettingStarted({ steps }: { steps: Step[] }) {
+  const done = steps.filter((s) => s.state === "done").length;
+  return (
+    <Card
+      tone="dark"
+      title="Getting started"
+      description={`${done} of ${steps.length} done. This disappears once you finish.`}
+    >
+      <ol className="grid gap-3">
+        {steps.map((s, i) => (
+          <li key={s.key} className="flex items-start gap-3">
+            <span
+              aria-hidden="true"
+              className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full border font-mono text-[10px] ${
+                s.state === "done"
+                  ? "border-green bg-green/15 text-green"
+                  : s.state === "now"
+                    ? "border-gold text-gold"
+                    : "border-chrome-line text-chrome-dim"
+              }`}
+            >
+              {s.state === "done" ? <CheckCircle2 size={12} /> : i + 1}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p
+                className={`text-body-sm font-semibold ${
+                  s.state === "done" ? "text-chrome-muted line-through" : "text-chrome-text"
+                }`}
+              >
+                {s.title}
+              </p>
+              <p className="mt-0.5 text-body-sm text-chrome-muted">{s.hint}</p>
+            </div>
+            {s.action && s.state === "now" && (
+              <Button variant="brand" size="sm" onClick={s.action.run}>
+                {s.action.label}
+              </Button>
+            )}
+          </li>
+        ))}
+      </ol>
+    </Card>
+  );
+}
+
 /** The one thing worth doing next, and where it goes. */
 type NextAction =
   | { kind: "brief"; order: OrderSummary }
@@ -78,12 +143,15 @@ export function DashboardView({
 }) {
   const [orders, setOrders] = useState<OrderSummary[] | null>(null);
   const [groups, setGroups] = useState<Group[] | null>(null);
+  /* null while unknown, so the checklist never flashes a step as undone */
+  const [brandReady, setBrandReady] = useState<boolean | null>(null);
   const canOrders = can("orders");
 
   useEffect(() => {
     if (!canOrders) {
       setOrders([]);
       setGroups([]);
+      setBrandReady(true);
       return;
     }
     authedFetch("/api/portal/orders")
@@ -92,6 +160,11 @@ export function DashboardView({
     authedFetch("/api/portal/videos")
       .then((j) => setGroups((j.groups as Group[]) ?? []))
       .catch(() => setGroups([]));
+    authedFetch("/api/portal/brand-kit")
+      .then((j) => setBrandReady(Boolean((j.completeness as { ready?: boolean } | null)?.ready)))
+      /* on failure assume it is fine: nagging over a network blip is worse
+       * than missing one prompt */
+      .catch(() => setBrandReady(true));
   }, [canOrders, authedFetch]);
 
   const loading = orders === null || groups === null;
@@ -122,12 +195,45 @@ export function DashboardView({
 
   const count = (n: number) => (loading ? "-" : String(n));
 
+  /*
+   * The getting started list, and whether it is shown at all.
+   *
+   * Only for somebody with an order: with nothing bought there is nothing to
+   * get started with, and the empty state below already points them at the
+   * library. Once all three are done it never appears again.
+   */
+  const ACTIONS: Record<StepKey, { label: string; run: () => void } | undefined> = {
+    brand: { label: "Add it", run: () => onGo("brand") },
+    brief: needsBrief.length
+      ? { label: "Send it", run: () => onOpenOrder(needsBrief[0].id) }
+      : undefined,
+    approve: ready.length ? { label: "Watch it", run: () => onGo("videos") } : undefined,
+  };
+  const steps: Step[] = gettingStartedSteps({
+    brandReady: !!brandReady,
+    needsBrief: needsBrief.length,
+    readyToWatch: ready.length,
+    approvedAny: allVideos.some((v) => v.status === "approved"),
+  }).map((s) => ({ ...s, action: ACTIONS[s.key] }));
+  const onboarding =
+    !loading &&
+    canOrders &&
+    brandReady !== null &&
+    list.length > 0 &&
+    onboardingUnfinished(steps);
+
   return (
     <div>
       <PageHeader
         title={firstName ? `Welcome back, ${firstName}.` : "Welcome back."}
         description={subtitle}
       />
+
+      {onboarding && (
+        <div className="mb-3">
+          <GettingStarted steps={steps} />
+        </div>
+      )}
 
       {canOrders && (
         <CardGrid min="15rem">
@@ -149,8 +255,11 @@ export function DashboardView({
         </CardGrid>
       )}
 
-      {/* The single most useful next thing. One card, one action. */}
-      {!loading && canOrders && (
+      {/* The single most useful next thing. One card, one action. Stood down
+          while the getting started list is up, because that list already
+          carries the same action and two cards asking for one thing reads as
+          two things. */}
+      {!loading && canOrders && !onboarding && (
         <div className="mt-3">
           {next.kind === "brief" ? (
             <Card
