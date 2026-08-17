@@ -21,7 +21,7 @@ import {
 } from "@/components/portal/booking";
 import { PORTAL_SECTIONS, type PortalSection } from "./sections";
 import { DashboardView } from "./DashboardView";
-import { Card, Chip, EmptyState, Table, Td, Th } from "@/components/portal/ui";
+import { Button, Card, Chip, EmptyState, Table, Td, Th } from "@/components/portal/ui";
 import {
   actForHeader,
   getActFor,
@@ -293,15 +293,6 @@ function LoginView() {
 }
 
 /* ---- placeholder for not-yet-built sections ---- */
-function ComingSoon({ title, line }: { title: string; line: string }) {
-  return (
-    <div className="rounded-[12px] border border-hair bg-surface px-6 py-12 text-center">
-      <p className="font-mono text-label uppercase text-gold">[ Coming soon ]</p>
-      <p className="mt-4 font-display text-h3 text-ink">{title}</p>
-      <p className="mx-auto mt-2 max-w-md text-body text-muted">{line}</p>
-    </div>
-  );
-}
 
 /* ---- order detail ---- */
 type OrderDetail = {
@@ -734,34 +725,36 @@ function SubscriptionsView({ canBilling = true }: { canBilling?: boolean }) {
   if (!loaded) return <p className="text-body text-muted">Loading...</p>;
   if (subs.length === 0)
     return (
-      <ComingSoon
-        title="No active plan."
-        line="When you start a monthly editing plan it will show up here to manage."
+      <EmptyState
+        title="No active plan"
+        description="When you start a monthly editing plan it appears here, with everything you need to change or stop it."
       />
     );
 
   return (
     <div className="grid gap-4">
       {subs.map((s) => (
-        <div key={s.id} className="rounded-[12px] border border-hair bg-surface p-6 md:p-8">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="font-display text-h4 text-ink">{s.planName}</p>
-              <p className="mt-1 font-mono text-label uppercase text-dim">
-                {money(s.amountCents, s.currency)}/mo
-                {s.currentPeriodEnd
-                  ? ` / ${s.cancelAtPeriodEnd ? "ends" : "renews"} ${day(s.currentPeriodEnd)}`
-                  : ""}
-              </p>
-            </div>
-            <span
-              className={`rounded-full border px-2.5 py-0.5 font-mono text-label uppercase ${
-                s.status === "active" ? "border-green/40 text-green" : "border-gold/40 text-gold"
-              }`}
-            >
-              {s.status}
-            </span>
-          </div>
+        <Card
+          key={s.id}
+          title={s.planName ?? "Your plan"}
+          description={`${money(s.amountCents, s.currency)} a month${
+            s.currentPeriodEnd
+              ? `, ${s.cancelAtPeriodEnd ? "ends" : "renews"} ${day(s.currentPeriodEnd)}`
+              : ""
+          }`}
+          actions={
+            /* A plan set to stop says so plainly. "Active" on something the
+               client already cancelled is the kind of half truth that turns
+               into a billing complaint. */
+            s.cancelAtPeriodEnd ? (
+              <Chip tone="warn">
+                {s.currentPeriodEnd ? `Ends ${day(s.currentPeriodEnd)}` : "Ending"}
+              </Chip>
+            ) : (
+              <Chip tone={s.status === "active" ? "good" : "warn"}>{s.status}</Chip>
+            )
+          }
+        >
           {!canBilling ? (
             <p className="mt-4 text-body-sm text-dim">
               Billing changes are limited on your access. The account owner
@@ -770,8 +763,9 @@ function SubscriptionsView({ canBilling = true }: { canBilling?: boolean }) {
           ) : null}
           <div className="mt-5 flex flex-wrap gap-3">
             {canBilling && (s.status === "active" || s.status === "trialing") && !s.cancelAtPeriodEnd ? (
-              <button
-                type="button"
+              <Button
+                variant="danger"
+                disabled={busy}
                 onClick={() => {
                   if (
                     window.confirm(
@@ -780,35 +774,23 @@ function SubscriptionsView({ canBilling = true }: { canBilling?: boolean }) {
                   )
                     setCancel(s.id, true);
                 }}
-                disabled={busy}
-                className="tap rounded-[8px] border border-hair px-5 py-2.5 font-mono text-label uppercase text-muted transition-colors hover:border-error/60 hover:text-error disabled:opacity-50"
               >
                 Cancel plan
-              </button>
+              </Button>
             ) : null}
             {canBilling && s.cancelAtPeriodEnd ? (
-              <button
-                type="button"
-                onClick={() => setCancel(s.id, false)}
-                disabled={busy}
-                className="tap rounded-[8px] border border-gold/40 px-5 py-2.5 font-mono text-label uppercase text-gold transition-colors hover:border-gold disabled:opacity-50"
-              >
+              <Button variant="primary" disabled={busy} onClick={() => setCancel(s.id, false)}>
                 Resume plan
-              </button>
+              </Button>
             ) : null}
             {canBilling ? (
-              <button
-                type="button"
-                onClick={manage}
-                disabled={busy}
-                className="tap rounded-[8px] border border-hair px-5 py-2.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-50"
-              >
-                {busy ? "..." : "Manage billing"}
-              </button>
+              <Button variant="secondary" disabled={busy} onClick={manage}>
+                {busy ? "Opening..." : "Manage billing"}
+              </Button>
             ) : null}
           </div>
           {err && <p className="mt-3 text-body-sm text-error">{err}</p>}
-        </div>
+        </Card>
       ))}
     </div>
   );
