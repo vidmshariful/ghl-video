@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getActiveProductBySku } from "@/lib/checkout/products";
 import { resolveSelectedBumps } from "@/lib/checkout/bumps";
 import { checkCoupon } from "@/lib/checkout/coupons";
+import { orderTotalCents } from "@/lib/checkout/money-rules";
 import { fpTidFromCookieHeader, refFromCookieHeader } from "@/lib/affiliates";
 import { firstTouchFromCookieHeader } from "@/lib/first-touch";
 import { ensureAuthAccount } from "@/lib/checkout/account";
@@ -130,7 +131,11 @@ export async function POST(req: Request) {
     couponMeta = { code: chk.code, label: chk.label, discount_cents: discountCents };
   }
 
-  const amountCents = product.price_cents + bumpsCents - discountCents;
+  const amountCents = orderTotalCents({
+    basePriceCents: product.price_cents,
+    bumpsCents,
+    discountCents,
+  });
   if (amountCents < 50) {
     // Stripe's charge minimum; unreachable with the DB's discount bounds,
     // kept as a hard floor anyway.

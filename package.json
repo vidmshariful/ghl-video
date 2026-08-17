@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "prebuild": "npm run check:tokens && npm run check:leaks",
+    "prebuild": "npm test && npm run check:tokens && npm run check:leaks",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -15,6 +15,7 @@
     "seed:affiliates": "node scripts/seed-affiliate-coupons.mjs",
     "migrate": "node scripts/apply-migrations.mjs",
     "check:drift": "tsx scripts/check-drift.ts",
+    "test": "tsx --test tests/unit/*.test.ts",
     "test:e2e": "playwright test",
     "seed:composition": "tsx scripts/seed-composition.ts",
     "check:composition": "tsx scripts/check-composition.ts",

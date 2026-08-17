@@ -1,6 +1,7 @@
 import "server-only";
 import { supabaseAdmin } from "./supabase-admin";
 import { stripe } from "./stripe";
+import { couponProblem, discountFor, isPlausibleCouponCode } from "./money-rules";
 
 /*
  * Coupon validation and discount math, the only place either happens.
@@ -52,7 +53,7 @@ export function couponLabel(c: CouponRow): string {
  * validity window, sku-scoped, and under its redemption cap. Returns the row. */
 export async function validateCoupon(rawCode: string, sku: string): Promise<ValidCoupon> {
   const code = normalizeCouponCode(rawCode);
-  if (code.length < 3) return { ok: false, reason: "That code is not valid." };
+  if (!isPlausibleCouponCode(code)) return { ok: false, reason: "That code is not valid." };
 
   const { data, error } = await supabaseAdmin()
     .from("coupons")
@@ -62,20 +63,14 @@ export async function validateCoupon(rawCode: string, sku: string): Promise<Vali
   if (error) throw new Error(`coupon lookup failed: ${error.message}`);
   const c = data as CouponRow | null;
 
-  if (!c || !c.active) return { ok: false, reason: "That code is not valid." };
-  const now = Date.now();
-  if (c.valid_from && now < Date.parse(c.valid_from)) {
-    return { ok: false, reason: "That code is not active yet." };
-  }
-  if (c.valid_until && now > Date.parse(c.valid_until)) {
-    return { ok: false, reason: "That code has expired." };
-  }
-  if (c.sku && c.sku !== sku) {
-    return { ok: false, reason: "That code does not apply to this product." };
-  }
-  if (c.max_redemptions != null && c.redemption_count >= c.max_redemptions) {
-    return { ok: false, reason: "That code has been fully redeemed." };
-  }
+  /* Fetch here, decide in money-rules.ts. The rules are pure and tested; this
+   * function's only job is getting the row and handing it over. */
+  const problem = couponProblem(c, sku, Date.now());
+  if (problem) return { ok: false, reason: problem };
+  /* couponProblem already refuses a missing row, so this cannot fire today.
+   * It is here so that if that ever stops being true, the discount path
+   * refuses rather than dereferencing null at pay time. */
+  if (!c) return { ok: false, reason: "That code is not valid." };
   return { ok: true, coupon: c };
 }
 
@@ -84,11 +79,12 @@ export async function checkCoupon(rawCode: string, sku: string): Promise<CouponC
   const v = await validateCoupon(rawCode, sku);
   if (!v.ok) return v;
   const c = v.coupon;
-  const discountFor = (baseCents: number) =>
-    c.percent_off != null
-      ? Math.round((baseCents * c.percent_off) / 100)
-      : Math.min(c.amount_off_cents!, baseCents);
-  return { ok: true, code: c.code, label: couponLabel(c), discountFor };
+  return {
+    ok: true,
+    code: c.code,
+    label: couponLabel(c),
+    discountFor: (baseCents: number) => discountFor(c, baseCents),
+  };
 }
 
 /* Subscription path: same validation, plus the coupon must be opted in for

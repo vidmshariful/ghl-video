@@ -2,6 +2,7 @@ import "server-only";
 import type Stripe from "stripe";
 import type { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { syncPaidOrderToHighLevel } from "@/lib/checkout/fulfill";
+import { isAmountMismatch } from "@/lib/checkout/money-rules";
 
 type DB = ReturnType<typeof supabaseAdmin>;
 
@@ -49,10 +50,12 @@ export async function settlePaidIntent(
 
   if (order.status !== "paid") {
     const chargedCents = pi.amount_received || pi.amount;
-    const mismatch =
-      chargedCents !== order.amount_cents ||
-      (pi.currency ?? "usd").toLowerCase() !==
-        ((order.currency as string | null) ?? "usd").toLowerCase();
+    const mismatch = isAmountMismatch({
+      chargedCents,
+      expectedCents: order.amount_cents as number,
+      chargedCurrency: pi.currency,
+      expectedCurrency: order.currency as string | null,
+    });
     const meta = (order.metadata as Record<string, unknown> | null) ?? {};
 
     const { data: flipped } = await db
