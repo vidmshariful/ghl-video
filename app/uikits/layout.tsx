@@ -36,6 +36,7 @@ const NAV = [
   { href: "/uikits/surfaces", label: "Surfaces" },
   { href: "/uikits/sales", label: "Sales system" },
   { href: "/uikits/leaks", label: "Leaks" },
+  { href: "/uikits/boards", label: "Boards" },
 ] as const;
 
 export default function UikitsLayout({
