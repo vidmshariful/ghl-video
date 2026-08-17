@@ -84,36 +84,31 @@
   /* shared semantic (all surfaces) */
   --error: #ff6b6b;
 
-  /* ---- grounds that were literals at a dozen call sites ---- */
+  /* ---- the ground ramp: everything darker than canvas ----
+     Three steps, consolidated from the five near-blacks that used to be
+     scattered as literals (#030303, #050505, #0a0a0a, #121212 and a stray
+     #3a4157 grey). Five values a pixel or two apart is not a palette, it is
+     drift with names on, so the footer joined --ground-deep and the hero's
+     sketch stroke joined --hair.
 
-  /* The black behind video. Deliberately NOT --canvas: canvas is #08090d and
-     this is #030303, and the gap is intentional so a dark frame edge
-     disappears into the player instead of showing a seam. It was written out
-     as bg-[#030303] in MediaFrame, the premade cards and the hero, which made
-     it the single biggest reason a reskin left the hero block black. */
-  --media-ground: #030303;
-  /* triplet form, for the poster scrims that fade this ground to transparent.
-     A Tailwind opacity modifier (from-media/90) would route through
-     color-mix and shift the computed value, so those stops compose rgba
-     from this instead. Keep it in step with --media-ground above. */
-  --media-ground-rgb: 3, 3, 3;
+     Neutral grey on purpose, where the skin ramp above (canvas/surface/card)
+     is cool-tinted: a video well and a card crown should read as true black
+     rather than as a darker blue. That tint difference is the reason these
+     are their own family instead of more steps on the skin.
 
-  /* The footer sits one step below canvas. Fourth of four near-blacks in the
-     system (#030303, #050505, #0a0a0a, #121212); they are all distinct on
-     purpose today, but they are close enough that a deliberate ground ramp
-     would probably serve better than four separate names. Worth deciding
-     before the first reskin, not during. */
-  --footer-ground: #050505;
+       --ground-deep   video wells, the footer, the base of card-glass
+       --ground-mid    a flat dark card that is not glass, and card-glass mid
+       --ground-top    the lit crown of card-glass
 
-  /* The drawn sketch stroke in the hero. One step lighter than --hair
-     (#2b2f40) so the animated outline reads against the hairline mesh it
-     crosses. Another candidate for merging, for the same reason. */
-  --sketch-line: #3a4157;
-
-  /* The card-glass gradient: a lighter crown falling to true black. */
-  --card-glass-top: #121212;
-  --card-glass-mid: #0a0a0a;
-  --card-glass-base: var(--media-ground);
+     --ground-deep is deliberately NOT --canvas (#08090d): the gap is what
+     lets a dark video edge disappear into its well instead of showing a seam. */
+  --ground-deep: #030303;
+  /* triplet form, for the poster scrims that fade the well to transparent.
+     A Tailwind opacity modifier routes through color-mix and would shift the
+     computed value, so those stops compose rgba from this. Keep in step. */
+  --ground-deep-rgb: 3, 3, 3;
+  --ground-mid: #0a0a0a;
+  --ground-top: #121212;
 
   /* The whisper of light along a raised top edge. */
   --edge-light: rgba(255, 255, 255, 0.04);
@@ -239,8 +234,9 @@
   --color-muted: var(--muted);
   --color-dim: var(--dim);
   --color-error: var(--error);
-  /* bg-media: the ground behind video. Replaces bg-[#030303]. */
-  --color-media: var(--media-ground);
+  /* bg-ground-deep / bg-ground-mid: the ground ramp, as utilities. */
+  --color-ground-deep: var(--ground-deep);
+  --color-ground-mid: var(--ground-mid);
   --color-on-brand: var(--on-brand);
 
   --font-display: var(--font-heading);
@@ -486,9 +482,9 @@ html[data-notice="off"] #main {
 @utility card-glass {
   background: linear-gradient(
     180deg,
-    var(--card-glass-top) 0%,
-    var(--card-glass-mid) 45%,
-    var(--card-glass-base) 100%
+    var(--ground-top) 0%,
+    var(--ground-mid) 45%,
+    var(--ground-deep) 100%
   );
   box-shadow: inset 0 1px 0 var(--edge-light);
 }

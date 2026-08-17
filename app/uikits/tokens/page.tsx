@@ -47,6 +47,12 @@ const SKIN = [
   ["--dim", "Dim"],
 ] as const;
 
+const GROUNDS = [
+  ["--ground-deep", "Video wells, the footer, the base of card-glass"],
+  ["--ground-mid", "Flat dark cards, and the card-glass midpoint"],
+  ["--ground-top", "The lit crown of card-glass"],
+] as const;
+
 const UTILITIES = [
   ["shell", "width: min(100% - 3rem, 77.5rem), centred. The page container."],
   ["section-pad", "padding-block: clamp(5rem, 8vw, 7.5rem). The standard section rhythm."],
@@ -105,6 +111,21 @@ export default function TokensPage() {
 
       <KitSection title="Checkout skin" count="7">
         <SwatchRow vars={SKIN} surface="checkout" />
+      </KitSection>
+
+      <KitSection
+        title="Ground ramp"
+        count="3"
+        note="Everything darker than canvas. Neutral grey, where the skin ramp above is cool-tinted: a video well and a card crown should read as true black rather than as a darker blue. Consolidated from five near-blacks that sat a pixel or two apart, which is drift with names on rather than a palette."
+      >
+        <SwatchRow vars={GROUNDS} />
+        <div className="mt-4">
+          <Note>
+            --ground-deep is deliberately not --canvas. The gap between #030303
+            and #08090d is what lets a dark video edge disappear into its well
+            instead of showing a seam.
+          </Note>
+        </div>
       </KitSection>
 
       <KitSection

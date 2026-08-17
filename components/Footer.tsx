@@ -63,7 +63,7 @@ export function Footer({ chrome }: { chrome?: SiteChrome }) {
   const brands = chrome?.brands ?? otherBrands;
   const legal = chrome?.legal ?? legalLinks;
   return (
-    <footer className="border-t border-hair bg-[var(--footer-ground)]">
+    <footer className="border-t border-hair bg-ground-deep">
       <div className="shell grid grid-cols-2 gap-x-8 gap-y-12 py-16 md:grid-cols-[1.4fr_1fr_1fr_1fr_1fr]">
         <div className="col-span-2 md:col-span-1">
           <Logo className="h-6" />

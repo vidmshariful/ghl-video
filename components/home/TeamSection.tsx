@@ -15,7 +15,7 @@ function PhotoSlot({
   photo: string | null;
 }) {
   return (
-    <div className="group relative flex aspect-[4/5] items-end overflow-hidden rounded-media border border-hair bg-[var(--card-glass-mid)]">
+    <div className="group relative flex aspect-[4/5] items-end overflow-hidden rounded-media border border-hair bg-ground-mid">
       {photo ? (
         // eslint-disable-next-line @next/next/no-img-element -- static export
         <img

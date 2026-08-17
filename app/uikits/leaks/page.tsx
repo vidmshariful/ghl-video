@@ -86,20 +86,30 @@ const STILL_LITERAL = [
 
 const OPEN = [
   [
-    "Four near-blacks",
-    "#030303, #050505, #0a0a0a, #121212",
-    "All named now, so all reskinnable, but they are close enough that a deliberate ground ramp would probably serve better than four separate names. A design call, worth making before the first reskin rather than during.",
+    "Near-blacks",
+    "RESOLVED: consolidated",
+    "Five values a pixel or two apart became a three-step ground ramp. The footer joined --ground-deep (#050505 to #030303) and card-glass keeps its three stops. Two pixels of change on one element, on purpose.",
   ],
   [
-    "Two hairline greys",
-    "--hair #2b2f40, --sketch-line #3a4157",
-    "One step apart. Same question.",
+    "Hairline greys",
+    "RESOLVED: merged",
+    "--sketch-line #3a4157 folded into --hair #2b2f40. The hero's animated outline is now one step darker, which is the whole visible cost of the merge.",
   ],
   [
     "Paired hue tokens",
-    "--gold and --gold-rgb",
-    "The same colour declared twice, because CSS cannot take an alpha of a hex custom property without changing colour space. They have to be kept in step by hand.",
+    "Still open, and probably permanent",
+    "--gold and --gold-rgb are the same colour declared twice, because CSS cannot take an alpha of a hex custom property without changing colour space. They have to be kept in step by hand. Living with it is cheaper than the alternatives.",
   ],
+];
+
+/* The consolidation was a deliberate visual change, unlike the tokenisation
+ * before it, so the same diff was used to prove the change was CONFINED. */
+const CONSOLIDATION = [
+  ["Pages checked", "17", "The same before/after computed-style sweep."],
+  ["Distinct changes found", "2", "Across every page, only two values moved anywhere."],
+  ["Footer background", "12 elements", "rgb(5,5,5) to rgb(3,3,3). Every page that has a footer."],
+  ["Hero sketch outline", "1 element", "rgb(58,65,87) to rgb(43,47,64). The animated panel border on the homepage."],
+  ["Everything else", "0", "Media wells, card grounds and team cards were repointed at renamed tokens holding identical values, so they did not move."],
 ];
 
 const METHOD = [
@@ -173,11 +183,18 @@ export default function LeaksPage() {
       </KitSection>
 
       <KitSection
-        title="Open questions for the reskin"
+        title="Naming decisions"
         count={OPEN.length}
-        note="Naming decisions the refactor deliberately did not make on its own, because they change the design vocabulary rather than just the plumbing."
+        note="These change the design vocabulary rather than the plumbing, so the tokenisation left them alone and they were decided separately. Two are now settled."
       >
-        <KitTable head={["Question", "Today", "The call to make"]} rows={OPEN} />
+        <KitTable head={["Question", "Status", "Outcome"]} rows={OPEN} />
+      </KitSection>
+
+      <KitSection
+        title="What the consolidation actually changed"
+        note="Merging tokens moves pixels, unlike the tokenisation before it. The same sweep was used the other way round: not to prove nothing changed, but to prove only the intended things did."
+      >
+        <KitTable head={["Measure", "Count", "Detail"]} rows={CONSOLIDATION} />
       </KitSection>
 
       <KitSection title="How this was measured">

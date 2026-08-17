@@ -88,7 +88,7 @@ export function PosterPlay({
         loading="lazy"
         className="h-full w-full object-cover opacity-90 transition duration-300 group-hover/pp:scale-[1.03] group-hover/pp:opacity-100"
       />
-      <span className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-media/90 via-media/40 to-transparent" />
+      <span className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-ground-deep/90 via-ground-deep/40 to-transparent" />
       <span className="pointer-events-none absolute bottom-3.5 left-4 z-10 font-mono text-label uppercase">
         <span className="text-ink">{video.typeTag}</span>
         {video.subTag && video.subTag !== "Pre-2026" && (
@@ -297,7 +297,7 @@ export function LibraryCard({
       ) : video.packCount ? (
         <PackTile count={video.packCount} bordered={false} />
       ) : (
-        <div className="flex aspect-video items-center justify-center bg-media">
+        <div className="flex aspect-video items-center justify-center bg-ground-deep">
           <span className="font-mono text-label uppercase text-dim">
             [ Preview coming ]
           </span>
