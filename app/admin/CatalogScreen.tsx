@@ -515,19 +515,19 @@ function CatalogForm({
         </label>
         <div className="flex flex-wrap gap-5 sm:col-span-2">
           <label className="flex items-center gap-2 text-body-sm text-ink">
-            <input type="checkbox" checked={v.featured} onChange={(e) => set("featured", e.target.checked)} className="h-4 w-4 accent-[#FCC000]" />
+            <input type="checkbox" checked={v.featured} onChange={(e) => set("featured", e.target.checked)} className="h-4 w-4 accent-[var(--gold)]" />
             Featured
           </label>
           <label className="flex items-center gap-2 text-body-sm text-ink">
-            <input type="checkbox" checked={v.on_site} onChange={(e) => set("on_site", e.target.checked)} className="h-4 w-4 accent-[#FCC000]" />
+            <input type="checkbox" checked={v.on_site} onChange={(e) => set("on_site", e.target.checked)} className="h-4 w-4 accent-[var(--gold)]" />
             On site
           </label>
           <label className="flex items-center gap-2 text-body-sm text-ink">
-            <input type="checkbox" checked={v.coming_soon} onChange={(e) => set("coming_soon", e.target.checked)} className="h-4 w-4 accent-[#FCC000]" />
+            <input type="checkbox" checked={v.coming_soon} onChange={(e) => set("coming_soon", e.target.checked)} className="h-4 w-4 accent-[var(--gold)]" />
             Coming soon
           </label>
           <label className="flex items-center gap-2 text-body-sm text-ink">
-            <input type="checkbox" checked={v.sellable_alone} onChange={(e) => set("sellable_alone", e.target.checked)} className="h-4 w-4 accent-[#FCC000]" />
+            <input type="checkbox" checked={v.sellable_alone} onChange={(e) => set("sellable_alone", e.target.checked)} className="h-4 w-4 accent-[var(--gold)]" />
             Sold on its own
             <span className="font-mono text-label uppercase text-dim">untick for pack only</span>
           </label>

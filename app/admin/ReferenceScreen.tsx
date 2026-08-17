@@ -226,7 +226,7 @@ export function ReferenceScreen() {
               type="checkbox"
               checked={draft.secret}
               onChange={(e) => setDraft({ ...draft, secret: e.target.checked })}
-              className="mt-0.5 h-4 w-4 accent-[#FCC000]"
+              className="mt-0.5 h-4 w-4 accent-[var(--gold)]"
             />
             <span>
               Keep this hidden until asked for. Use it for anything you would not

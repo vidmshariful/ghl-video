@@ -372,7 +372,7 @@ export function VideoReview({
               type="checkbox"
               checked={pin}
               onChange={(e) => setPin(e.target.checked)}
-              className="h-4 w-4 accent-[#FCC000]"
+              className="h-4 w-4 accent-[var(--gold)]"
             />
             Pin this to {mmss(at)}
           </label>

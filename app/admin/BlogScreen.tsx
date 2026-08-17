@@ -649,7 +649,7 @@ function PostEditor({
                 type="checkbox"
                 checked={schedule}
                 onChange={(e) => setSchedule(e.target.checked)}
-                className="h-4 w-4 accent-[#FCC000]"
+                className="h-4 w-4 accent-[var(--gold)]"
               />
               Schedule for later
             </label>

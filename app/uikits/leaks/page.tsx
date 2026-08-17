@@ -26,8 +26,8 @@ const VERDICT = [
 const FIXED = [
   [
     "Media grounds",
-    "--media-ground",
-    "bg-[#030303] in MediaFrame, the premade cards and the hero. The single biggest offender: it kept the hero block black through any reskin. The poster scrims that fade it out use --media-ground-rgb.",
+    "--ground-deep",
+    "bg-[#030303] in MediaFrame, the premade cards and the hero. The single biggest offender: it kept the hero block black through any reskin. The poster scrims that fade it out use --ground-deep-rgb.",
   ],
   [
     "Primary button",
@@ -36,7 +36,7 @@ const FIXED = [
   ],
   [
     "Card ground",
-    "--card-glass-top / -mid / -base",
+    "--ground-top / -mid / -deep",
     "card-glass, behind every Panel. Plus --edge-light for the top-edge highlight.",
   ],
   [
@@ -56,8 +56,18 @@ const FIXED = [
   ],
   [
     "Footer, team cards, hero sketch",
-    "--footer-ground / --card-glass-mid / --sketch-line",
-    "Three more one-off near-blacks and greys.",
+    "--ground-deep / --ground-mid / --hair",
+    "Three more one-off near-blacks and greys. The names above are the ones that survived the consolidation in the next section; each of these three was first given its own token and then folded in.",
+  ],
+  [
+    "Checkbox tints",
+    "--gold / --green",
+    "accent-[#FCC000] restated across nine admin, portal and partner screens. Small, but it is the control a person actually clicks.",
+  ],
+  [
+    "The Stripe card fields",
+    "read at runtime",
+    "Stripe paints them in a cross-origin iframe our properties never reach, so the appearance object has to hand over concrete colours. It now resolves them from the tokens on the checkout surface instead of holding copies. This was the one leak a reskin could not close.",
   ],
 ];
 
@@ -201,13 +211,23 @@ export default function LeaksPage() {
         <KitTable head={["Property", "Result", "Detail"]} rows={METHOD} />
       </KitSection>
 
-      <KitSection title="Re-run the audit">
-        <p className="mb-3 text-[0.8125rem] leading-relaxed text-[var(--kit-dim)]">
-          Finds any new hex literal that has crept into a component:
-        </p>
+      <KitSection
+        title="What keeps this page honest"
+        note="This used to be a grep somebody had to remember to run. Both checks are part of npm run build now, so the audit happens whether anyone thinks of it or not."
+      >
         <pre className="overflow-x-auto rounded-[4px] border border-[var(--kit-line)] bg-[var(--kit-panel)] px-4 py-3 text-[0.75rem] leading-relaxed text-[var(--kit-text)]">
-          <code>{`grep -rnE '#[0-9a-fA-F]{6}' components/ app/globals.css`}</code>
+          <code>{`npm run check:leaks    # a colour literal outside the token system
+npm run check:tokens   # a var(), board or doc pointing at a token that is gone`}</code>
         </pre>
+        <div className="mt-4">
+          <Note>
+            check:tokens exists because this page needed it. It advertised six
+            token names for one commit after they were consolidated away, so it
+            was teaching names that resolve to nothing. Retiring a token now
+            means recording what replaced it in lib/design-tokens.ts, and the
+            build refuses the rename until somebody does.
+          </Note>
+        </div>
       </KitSection>
     </KitPage>
   );

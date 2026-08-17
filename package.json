@@ -7,6 +7,7 @@
   },
   "scripts": {
     "dev": "next dev",
+    "prebuild": "npm run check:tokens && npm run check:leaks",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -19,6 +20,8 @@
     "check:composition": "tsx scripts/check-composition.ts",
     "check:deliverables": "tsx scripts/check-deliverables.ts",
     "check:handbook": "tsx scripts/check-handbook.ts",
+    "check:tokens": "tsx scripts/check-tokens.ts",
+    "check:leaks": "tsx scripts/check-leaks.ts",
     "backfill:deliverables": "tsx scripts/backfill-deliverables.ts",
     "seed:pack-rows": "tsx scripts/seed-pack-rows.ts"
   },

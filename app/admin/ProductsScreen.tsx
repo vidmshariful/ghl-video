@@ -152,7 +152,7 @@ function ProductForm({
             type="checkbox"
             checked={p.active}
             onChange={(e) => set("active", e.target.checked)}
-            className="h-4 w-4 accent-[#00CC00]"
+            className="h-4 w-4 accent-[var(--green)]"
           />
           <span className="text-body text-ink">Active (sellable at checkout)</span>
         </label>

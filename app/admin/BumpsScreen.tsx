@@ -171,7 +171,7 @@ function BumpForm({
             type="checkbox"
             checked={b.active}
             onChange={(e) => set("active", e.target.checked)}
-            className="h-4 w-4 accent-[#00CC00]"
+            className="h-4 w-4 accent-[var(--green)]"
           />
           <span className="text-body text-ink">Active (offered at checkout)</span>
         </label>

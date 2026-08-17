@@ -24,28 +24,67 @@ const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "",
 );
 
-const appearance = {
-  theme: "night" as const,
-  variables: {
-    colorPrimary: "#FCC000",
-    colorBackground: "#111219",
-    colorText: "#EEF0F6",
-    colorTextSecondary: "#9096A8",
-    colorDanger: "#FF6B6B",
-    fontFamily: "system-ui, sans-serif",
-    borderRadius: "4px",
-    spacingUnit: "3px",
-  },
-  rules: {
-    /* match the native name/email fields beside these: hair border, canvas fill, 4px */
-    ".Input": { border: "1px solid #2b2f40", backgroundColor: "#08090D" },
-    ".Input:focus": { border: "1px solid #FCC000", boxShadow: "none" },
-    ".Label": { color: "#9096A8" },
-    ".Tab": { border: "1px solid #2b2f40", backgroundColor: "#08090D" },
-    ".Tab:hover": { borderColor: "#FCC000" },
-    ".Tab--selected": { borderColor: "#FCC000", backgroundColor: "#161821" },
-  },
-};
+/*
+ * How the card fields are painted.
+ *
+ * Stripe renders them in a cross-origin iframe, so our custom properties do
+ * not reach it and this object has to hand over concrete colours. That used
+ * to mean eight hex literals copied from globals.css, which is the one leak
+ * a reskin could not close: change the skin and the checkout page restyles
+ * while the card fields sit there on the old palette, which reads as broken
+ * on the one screen where trust matters most.
+ *
+ * So the values are resolved from the tokens at runtime instead of copied.
+ * Same trick the scroll animation uses, for the same reason.
+ *
+ * Read from the checkout surface, NOT from documentElement: checkout has its
+ * own skin, so the root would hand back the main site's values and the card
+ * fields would quietly match the wrong surface.
+ */
+function appearance() {
+  const el =
+    (typeof document !== "undefined" &&
+      document.querySelector("[data-surface='checkout']")) ||
+    (typeof document !== "undefined" ? document.documentElement : null);
+
+  /* Server render and the first paint before the surface exists both land
+   * here. The fallbacks are the shipping skin, so the worst case is what
+   * this file used to do unconditionally. */
+  const s = el ? getComputedStyle(el) : null;
+  const t = (name: string, fallback: string) =>
+    s?.getPropertyValue(name).trim() || fallback;
+
+  const gold = t("--gold", "#FCC000");
+  const hair = t("--hair", "#2b2f40");
+  const canvas = t("--canvas", "#08090D");
+  const muted = t("--muted", "#9096A8");
+
+  return {
+    theme: "night" as const,
+    variables: {
+      colorPrimary: gold,
+      colorBackground: t("--surface", "#111219"),
+      colorText: t("--text", "#EEF0F6"),
+      colorTextSecondary: muted,
+      colorDanger: t("--error", "#FF6B6B"),
+      fontFamily: "system-ui, sans-serif",
+      borderRadius: "4px",
+      spacingUnit: "3px",
+    },
+    rules: {
+      /* match the native name/email fields beside these: hair border, canvas fill, 4px */
+      ".Input": { border: `1px solid ${hair}`, backgroundColor: canvas },
+      ".Input:focus": { border: `1px solid ${gold}`, boxShadow: "none" },
+      ".Label": { color: muted },
+      ".Tab": { border: `1px solid ${hair}`, backgroundColor: canvas },
+      ".Tab:hover": { borderColor: gold },
+      ".Tab--selected": {
+        borderColor: gold,
+        backgroundColor: t("--card", "#161821"),
+      },
+    },
+  };
+}
 
 export type CheckoutBump = {
   id: string;
@@ -256,7 +295,7 @@ function OneTimeCheckout({
         <PaymentBlock open={step === "payment"}>
           {step === "payment" ? (
             clientSecret && paymentIntentId ? (
-              <Elements stripe={stripePromise} options={{ clientSecret, appearance }}>
+              <Elements stripe={stripePromise} options={{ clientSecret, appearance: appearance() }}>
                 <PayBox
                   paymentIntentId={paymentIntentId}
                   details={details}
@@ -674,7 +713,7 @@ function SubscriptionCheckout({
         />
         <PaymentBlock open={step === "payment"}>
           {step === "payment" && clientSecret && successPath ? (
-            <Elements stripe={stripePromise} options={{ clientSecret, appearance }}>
+            <Elements stripe={stripePromise} options={{ clientSecret, appearance: appearance() }}>
               <SubPayStep successUrl={successPath} totalLabel={payLabel} />
             </Elements>
           ) : null}

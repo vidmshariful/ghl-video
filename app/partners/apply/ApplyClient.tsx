@@ -232,7 +232,7 @@ export function ApplyClient() {
                       required
                       checked={agreed}
                       onChange={(e) => setAgreed(e.target.checked)}
-                      className="mt-1 h-4 w-4 accent-[#FCC000]"
+                      className="mt-1 h-4 w-4 accent-[var(--gold)]"
                     />
                     <span>
                       I agree to the{" "}

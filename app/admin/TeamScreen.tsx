@@ -329,7 +329,7 @@ function TeamForm({
                             type="checkbox"
                             checked={features.has(it.key)}
                             onChange={() => toggle(it.key)}
-                            className="h-4 w-4 accent-[#FCC000]"
+                            className="h-4 w-4 accent-[var(--gold)]"
                           />
                           <span>{it.label}</span>
                         </label>

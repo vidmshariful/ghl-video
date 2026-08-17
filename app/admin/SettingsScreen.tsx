@@ -134,7 +134,7 @@ function CodeTab() {
         <div key={b.label} className="mt-8">
           <span className="font-mono text-label uppercase text-muted">{b.label}</span>
           <p className="mt-1 text-body-sm text-dim">{b.where}</p>
-          <pre className="mt-2 max-h-80 w-full overflow-auto rounded-[8px] border border-hair bg-[#05060a] p-4 font-mono text-body-sm leading-relaxed text-ink">
+          <pre className="mt-2 max-h-80 w-full overflow-auto rounded-[8px] border border-hair bg-canvas p-4 font-mono text-body-sm leading-relaxed text-ink">
             {b.code}
           </pre>
         </div>

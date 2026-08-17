@@ -530,7 +530,7 @@ function PageEditor({
             checked={noindex || codeNoindex}
             disabled={codeNoindex}
             onChange={(e) => setNoindex(e.target.checked)}
-            className="h-4 w-4 accent-[#FCC000]"
+            className="h-4 w-4 accent-[var(--gold)]"
           />
           Hide this page from Google
           {codeNoindex ? (
@@ -683,7 +683,7 @@ function RedirectsTab() {
           </label>
         </div>
         <label className="mt-4 flex items-center gap-2.5 text-body-sm text-ink">
-          <input type="checkbox" checked={permanent} onChange={(e) => setPermanent(e.target.checked)} className="h-4 w-4 accent-[#FCC000]" />
+          <input type="checkbox" checked={permanent} onChange={(e) => setPermanent(e.target.checked)} className="h-4 w-4 accent-[var(--gold)]" />
           Permanent (301). Uncheck only if the old URL is coming back.
         </label>
 
