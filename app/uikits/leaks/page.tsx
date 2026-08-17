@@ -66,6 +66,33 @@ const BREAKS_A_RESTYLE = [
   ],
 ];
 
+/* Measured on the live homepage, not estimated: override every skin and brand
+ * property at once (what a concept board does) and count the painted fills
+ * that refuse to move. 224 painted fills, 87 unchanged. */
+const MEASURED = [
+  ["Painted fills on the homepage", "224", "Elements larger than 8px with a background colour or image."],
+  ["Unchanged after a full token swap", "87", "39 percent. Roughly two in five painted surfaces ignore the skin."],
+  ["Still showing original brand literals", "65", "Matched against the current gold, green and the five near-black greys."],
+];
+
+const WIDER_CLASSES = [
+  [
+    "Media grounds",
+    "bg-[#030303]",
+    "MediaFrame, premade cards and the hero block. This is the single biggest contributor: the hero stays pure black through any reskin.",
+  ],
+  [
+    "Ambient glows",
+    "radial-gradient(..., rgba(252,192,0,.08), rgba(0,204,0,.04))",
+    "Section and hero glows write the brand hues inline as rgba instead of using --glow-gold and --glow-green, which exist for exactly this.",
+  ],
+  [
+    "Card tints",
+    "linear-gradient(135deg, rgba(252,192,0,.06), transparent 55%)",
+    "The hover wash on library and service cards. Same two hues, restated per call site at several different alphas.",
+  ],
+];
+
 const CORRECT_AS_IS = [
   [
     "PaymentMarks.tsx",
@@ -114,9 +141,33 @@ export default function LeaksPage() {
       </KitSection>
 
       <KitSection
+        title="How much actually moves"
+        note="Measured, not estimated. Override every skin and brand property on the live homepage at once, which is what a concept board does, and count the painted fills that stay put."
+      >
+        <KitTable head={["Measure", "Count", "Detail"]} rows={MEASURED} />
+        <div className="mt-4">
+          <Note tone="warn">
+            Two in five painted surfaces ignore the skin. The visible result
+            is a page that reskins around its edges while the hero block
+            stays black, because the largest single offender is the media
+            ground below. Fix these before building concept boards, or every
+            board will show the same black hero.
+          </Note>
+        </div>
+      </KitSection>
+
+      <KitSection
+        title="Whole classes of leak, beyond the named rows"
+        count={WIDER_CLASSES.length}
+        note="Found by the measurement above rather than by reading files, which is why they are not in the itemised list: they repeat across many call sites instead of sitting in one place."
+      >
+        <KitTable head={["Class", "Shape", "Where and why it matters"]} rows={WIDER_CLASSES} />
+      </KitSection>
+
+      <KitSection
         title="Will break a restyle"
         count={BREAKS_A_RESTYLE.length}
-        note="Each of these should read a variable and does not. The first row matters most: it is the primary button."
+        note="Named, single-site offenders. Each should read a variable and does not, and the first row matters most because it is the primary button. This list is not the whole picture on its own: see the measurement above."
       >
         <KitTable head={["Where", "Literal", "Why it matters"]} rows={BREAKS_A_RESTYLE} />
         <div className="mt-4">
