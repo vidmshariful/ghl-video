@@ -33,6 +33,9 @@ export function DashboardScreen({ onNavigate }: { onNavigate: (v: View) => void 
     { days: [], monthCents: 0, monthOrders: 0 },
   );
   const [loaded, setLoaded] = useState(false);
+  const [feedback, setFeedback] = useState<
+    { id: string; video_title: string; verdict: string; note: string | null; customer_email: string; created_at: string }[]
+  >([]);
 
   useEffect(() => {
     (async () => {
@@ -45,6 +48,14 @@ export function DashboardScreen({ onNavigate }: { onNavigate: (v: View) => void 
       const { count } = await supabase
         .from("customers")
         .select("id", { count: "exact", head: true });
+      /* the one-question ask's answers; skips are silence and stay out */
+      const { data: fb } = await supabase
+        .from("video_feedback")
+        .select("id, video_title, verdict, note, customer_email, created_at")
+        .neq("verdict", "skipped")
+        .order("created_at", { ascending: false })
+        .limit(5);
+      setFeedback((fb as typeof feedback) ?? []);
       // supabase types a to-one join as an array; at runtime it is a single
       // object, so cast through unknown.
       const rows = (data as unknown as DashOrder[]) ?? [];
@@ -200,6 +211,51 @@ export function DashboardScreen({ onNavigate }: { onNavigate: (v: View) => void 
           </div>
         )}
       </div>
+
+      {/* what clients said when we asked whether the video performed */}
+      {feedback.length > 0 && (
+        <div className="mt-6 rounded-[12px] border border-hair bg-surface">
+          <div className="border-b border-hair px-5 py-4">
+            <h2 className="font-display text-h4 font-semibold text-ink">What clients say</h2>
+            <p className="mt-0.5 text-body-sm text-muted">
+              Answers to the after-delivery question. The good ones are
+              testimonials waiting for permission.
+            </p>
+          </div>
+          <ul>
+            {feedback.map((f) => (
+              <li
+                key={f.id}
+                className="border-t border-hair px-5 py-3.5 first:border-t-0"
+              >
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <span
+                    className={`inline-flex rounded-full border px-2.5 py-0.5 font-mono text-label uppercase ${
+                      f.verdict === "working"
+                        ? "border-green/50 text-green"
+                        : f.verdict === "not_really"
+                          ? "border-error/50 text-error"
+                          : "border-hair text-dim"
+                    }`}
+                  >
+                    {f.verdict === "working"
+                      ? "It's working"
+                      : f.verdict === "not_really"
+                        ? "Not really"
+                        : "Too early"}
+                  </span>
+                  <span className="text-body-sm font-semibold text-ink">{f.video_title}</span>
+                  <span className="font-mono text-label text-dim">{f.customer_email}</span>
+                  <span className="ml-auto font-mono text-label uppercase text-dim">
+                    {when(f.created_at)}
+                  </span>
+                </div>
+                {f.note && <p className="mt-1.5 text-body-sm text-muted">{f.note}</p>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* recent orders */}
       <div className="mt-6 rounded-[12px] border border-hair bg-surface">

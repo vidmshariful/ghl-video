@@ -119,6 +119,149 @@ function GettingStarted({ steps }: { steps: Step[] }) {
 }
 
 /*
+ * The one-question ask: did an approved video actually do anything.
+ *
+ * Shows only when the dashboard would otherwise be quiet, because a person
+ * with a video waiting to watch or a brief to send has a more important card
+ * on screen, and two cards asking for attention are none. One video per
+ * visit, chosen on the server. Skipping is honoured forever; "too early"
+ * comes back a month later on purpose.
+ */
+type FeedbackAskData = { deliverableId: string; title: string };
+
+function FeedbackAsk({
+  ask,
+  authedFetch,
+  onDone,
+}: {
+  ask: FeedbackAskData;
+  authedFetch: (path: string, init?: RequestInit) => Promise<Record<string, unknown>>;
+  onDone: () => void;
+}) {
+  const [phase, setPhase] = useState<"ask" | "note" | "thanks">("ask");
+  const [verdict, setVerdict] = useState<"working" | "not_really" | null>(null);
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const send = (v: string, n?: string) =>
+    authedFetch("/api/portal/feedback/", {
+      method: "POST",
+      body: JSON.stringify({ deliverableId: ask.deliverableId, verdict: v, ...(n ? { note: n } : {}) }),
+    }).catch(() => ({}));
+
+  if (phase === "thanks") {
+    return (
+      <Card title="Thank you.">
+        <p className="text-body-sm text-muted">
+          This is how we find out what actually works, and it changes what we
+          make next.
+        </p>
+        <div className="mt-3">
+          <Button variant="ghost" size="sm" onClick={onDone}>
+            Close
+          </Button>
+        </div>
+      </Card>
+    );
+  }
+
+  if (phase === "note" && verdict) {
+    return (
+      <Card
+        title={verdict === "working" ? "Good to hear. What happened?" : "What fell short?"}
+      >
+        <p className="text-body-sm text-muted">
+          {verdict === "working"
+            ? "A line from you helps the next founder decide, and we may ask to quote it."
+            : "We read every word, and it changes what we make next."}
+        </p>
+        <textarea
+          rows={3}
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder={
+            verdict === "working"
+              ? "Demo calls doubled the week we put it on the homepage."
+              : "Tell us straight."
+          }
+          className="mt-3 w-full rounded-[8px] border border-hair bg-canvas px-3.5 py-2.5 text-body-sm text-ink placeholder:text-dim/70 focus:border-gold focus:outline-none"
+        />
+        <div className="mt-3 flex gap-2">
+          <Button
+            variant="brand"
+            size="sm"
+            disabled={busy || !note.trim()}
+            onClick={async () => {
+              setBusy(true);
+              await send(verdict, note.trim());
+              setPhase("thanks");
+              setBusy(false);
+            }}
+          >
+            Send
+          </Button>
+          <Button variant="ghost" size="sm" onClick={onDone}>
+            Done
+          </Button>
+        </div>
+      </Card>
+    );
+  }
+
+  return (
+    <Card title={`Did "${ask.title}" do anything for you?`}>
+      <p className="text-body-sm text-muted">
+        One click. It tells us whether the work works.
+      </p>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <Button
+          variant="brand"
+          size="sm"
+          onClick={() => {
+            setVerdict("working");
+            void send("working");
+            setPhase("note");
+          }}
+        >
+          It&apos;s working
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => {
+            void send("too_early");
+            setPhase("thanks");
+          }}
+        >
+          Too early to tell
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => {
+            setVerdict("not_really");
+            void send("not_really");
+            setPhase("note");
+          }}
+        >
+          Not really
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            void send("skipped");
+            onDone();
+          }}
+        >
+          Skip
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
+/*
  * The offer slot. One offer, chosen on the server, or nothing at all.
  *
  * It sits below the work, never above it, and it never shows while somebody
@@ -184,7 +327,7 @@ export function DashboardView({
   /** who they are, or whose portal they are working in */
   subtitle: string;
   can: (key: string) => boolean;
-  authedFetch: (path: string) => Promise<Record<string, unknown>>;
+  authedFetch: (path: string, init?: RequestInit) => Promise<Record<string, unknown>>;
   onOpenOrder: (id: string) => void;
   onGo: (section: string) => void;
 }) {
@@ -193,6 +336,7 @@ export function DashboardView({
   /* null while unknown, so the checklist never flashes a step as undone */
   const [brandReady, setBrandReady] = useState<boolean | null>(null);
   const [offer, setOffer] = useState<Offer | null>(null);
+  const [feedbackAsk, setFeedbackAsk] = useState<FeedbackAskData | null>(null);
   const canOrders = can("orders");
 
   useEffect(() => {
@@ -216,6 +360,9 @@ export function DashboardView({
     authedFetch("/api/portal/campaign")
       .then((j) => setOffer((j.campaign as Offer | null) ?? null))
       .catch(() => setOffer(null));
+    authedFetch("/api/portal/feedback")
+      .then((j) => setFeedbackAsk((j.ask as FeedbackAskData | null) ?? null))
+      .catch(() => setFeedbackAsk(null));
   }, [canOrders, authedFetch]);
 
   const loading = orders === null || groups === null;
@@ -358,6 +505,21 @@ export function DashboardView({
           ) : null}
         </div>
       )}
+
+      {/* The ask, only on an otherwise quiet dashboard: somebody with a video
+          to watch or a brief to send has a more important card up already. */}
+      {!loading &&
+        !onboarding &&
+        feedbackAsk &&
+        (next.kind === "waiting" || next.kind === "nothing") && (
+          <div className="mt-3">
+            <FeedbackAsk
+              ask={feedbackAsk}
+              authedFetch={authedFetch}
+              onDone={() => setFeedbackAsk(null)}
+            />
+          </div>
+        )}
 
       {/* The offer, if there is one for this person. Never while they are
           still getting started: selling to somebody whose paid order is stuck
