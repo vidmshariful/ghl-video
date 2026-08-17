@@ -22,12 +22,31 @@
   --gold: #fcc000;
   --blue: #0090fc;
   --green: #00cc00;
-  --brand-gradient: linear-gradient(100deg, #fcc000, #00cc00);
+  --brand-gradient: linear-gradient(100deg, var(--gold), var(--green));
+
+  /* The same three hues as bare RGB triplets. Dozens of call sites want a
+     brand hue at their own alpha (ambient glows at 0.04 to 0.16, card washes,
+     focus rings), and each one used to write the channel numbers out by hand,
+     so changing gold meant finding all of them. rgba(var(--gold-rgb), .08)
+     fixes that.
+     color-mix() would be the tidier modern answer and was tried first: it
+     serialises to color(srgb 0.988235 ...) in a different colour space, so
+     every glow would have shifted its computed value. These triplets keep the
+     computed output byte-identical to the literals they replace.
+     KEEP EACH PAIR IN STEP: --gold and --gold-rgb are the same colour twice. */
+  --gold-rgb: 252, 192, 0;
+  --blue-rgb: 0, 144, 252;
+  --green-rgb: 0, 204, 0;
+
+  /* Near-black text for bright brand fills. Deliberately NOT --canvas: it must
+     stay dark when a surface goes light, which is the whole reason the portal
+     light theme overrides .text-canvas back to this value. */
+  --on-brand: #08090d;
 
   /* ambient section + page glow: a gold shoulder easing into green.
      Green is atmosphere only; gold still leads every accent. */
-  --glow-gold: rgba(252, 192, 0, 0.1);
-  --glow-green: rgba(0, 204, 0, 0.06);
+  --glow-gold: rgba(var(--gold-rgb), 0.1);
+  --glow-green: rgba(var(--green-rgb), 0.06);
 
   /* Two reading measures, and only two. Prose caps had drifted to nine
      values between 26ch and 72ch: at the narrow end they squeezed body
@@ -64,6 +83,47 @@
 
   /* shared semantic (all surfaces) */
   --error: #ff6b6b;
+
+  /* ---- grounds that were literals at a dozen call sites ---- */
+
+  /* The black behind video. Deliberately NOT --canvas: canvas is #08090d and
+     this is #030303, and the gap is intentional so a dark frame edge
+     disappears into the player instead of showing a seam. It was written out
+     as bg-[#030303] in MediaFrame, the premade cards and the hero, which made
+     it the single biggest reason a reskin left the hero block black. */
+  --media-ground: #030303;
+  /* triplet form, for the poster scrims that fade this ground to transparent.
+     A Tailwind opacity modifier (from-media/90) would route through
+     color-mix and shift the computed value, so those stops compose rgba
+     from this instead. Keep it in step with --media-ground above. */
+  --media-ground-rgb: 3, 3, 3;
+
+  /* The footer sits one step below canvas. Fourth of four near-blacks in the
+     system (#030303, #050505, #0a0a0a, #121212); they are all distinct on
+     purpose today, but they are close enough that a deliberate ground ramp
+     would probably serve better than four separate names. Worth deciding
+     before the first reskin, not during. */
+  --footer-ground: #050505;
+
+  /* The drawn sketch stroke in the hero. One step lighter than --hair
+     (#2b2f40) so the animated outline reads against the hairline mesh it
+     crosses. Another candidate for merging, for the same reason. */
+  --sketch-line: #3a4157;
+
+  /* The card-glass gradient: a lighter crown falling to true black. */
+  --card-glass-top: #121212;
+  --card-glass-mid: #0a0a0a;
+  --card-glass-base: var(--media-ground);
+
+  /* The whisper of light along a raised top edge. */
+  --edge-light: rgba(255, 255, 255, 0.04);
+
+  /* The deep body button (Button.tsx primary and hero). Four values because
+     the fill is a two-stop gradient with a two-stop hover. */
+  --btn-deep-top: #181b23;
+  --btn-deep-bottom: #0f1116;
+  --btn-deep-top-hover: #1c2029;
+  --btn-deep-bottom-hover: #12141a;
 }
 
 /* ------------------------------------------------------------------ */
@@ -130,7 +190,7 @@
 /* Buttons on bright brand fills keep near-black text in BOTH themes (the
    design rule); .text-canvas would flip to near-white in light mode. */
 [data-theme="light"] [data-surface="portal"] .text-canvas {
-  color: #08090d;
+  color: var(--on-brand);
 }
 
 /* ---- portal motion: content fades up on view change; groups slide ---- */
@@ -179,6 +239,9 @@
   --color-muted: var(--muted);
   --color-dim: var(--dim);
   --color-error: var(--error);
+  /* bg-media: the ground behind video. Replaces bg-[#030303]. */
+  --color-media: var(--media-ground);
+  --color-on-brand: var(--on-brand);
 
   --font-display: var(--font-heading);
   --font-sans: var(--font-body);
@@ -353,8 +416,8 @@ html[data-notice="off"] #main {
 }
 
 ::selection {
-  background: rgba(252, 192, 0, 0.3);
-  color: #08090d;
+  background: rgba(var(--gold-rgb), 0.3);
+  color: var(--on-brand);
 }
 
 :focus-visible {
@@ -421,8 +484,13 @@ html[data-notice="off"] #main {
 /* card ground: pure black gradient, lighter crown falling to true
    black, with a whisper of top-edge light */
 @utility card-glass {
-  background: linear-gradient(180deg, #121212 0%, #0a0a0a 45%, #030303 100%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  background: linear-gradient(
+    180deg,
+    var(--card-glass-top) 0%,
+    var(--card-glass-mid) 45%,
+    var(--card-glass-base) 100%
+  );
+  box-shadow: inset 0 1px 0 var(--edge-light);
 }
 
 /* the animated gradient line: the signature, moving */
@@ -436,8 +504,8 @@ html[data-notice="off"] #main {
   background: linear-gradient(
     90deg,
     transparent 0%,
-    #fcc000 30%,
-    #00cc00 55%,
+    var(--gold) 30%,
+    var(--green) 55%,
     transparent 85%
   );
   background-size: 200% 100%;
@@ -455,7 +523,7 @@ html[data-notice="off"] #main {
   background: linear-gradient(
     110deg,
     transparent 25%,
-    rgba(255, 255, 255, 0.35) 50%,
+    rgba(255, 255, 255, 0.35) 50%, /* sheen highlight: white, not a brand hue */
     transparent 75%
   );
   background-size: 200% 100%;
@@ -506,8 +574,8 @@ html[data-notice="off"] #main {
   background:
     linear-gradient(
       152deg,
-      rgba(252, 192, 0, 0.16) 0%,
-      rgba(0, 204, 0, 0.09) 48%,
+      rgba(var(--gold-rgb), 0.16) 0%,
+      rgba(var(--green-rgb), 0.09) 48%,
       transparent 80%
     ),
     var(--canvas);

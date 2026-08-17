@@ -71,7 +71,7 @@ function FeaturePicker({
             type="checkbox"
             checked={checked.has(f.key)}
             onChange={() => onToggle(f.key)}
-            className="mt-1 h-4 w-4 accent-[#FCC000]"
+            className="mt-1 h-4 w-4 accent-[var(--gold)]"
           />
           <span>
             <span className="block text-body-sm font-semibold text-ink">{f.label}</span>

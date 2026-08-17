@@ -13,14 +13,17 @@ import type { ReactNode } from "react";
 type Variant = "primary" | "hero" | "gradient" | "ghost";
 type Size = "md" | "lg";
 
+/* The deep fill reads its four stops from tokens (globals.css) rather than
+ * writing hex here. This is the most-used control on the site, so while it
+ * held its own literals a skin change left every body button behind. */
 const deep =
-  "border border-hair text-ink bg-[linear-gradient(180deg,#181b23,#0f1116)] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] hover:border-gold/50 hover:text-gold hover:bg-[linear-gradient(180deg,#1c2029,#12141a)]";
+  "border border-hair text-ink bg-[linear-gradient(180deg,var(--btn-deep-top),var(--btn-deep-bottom))] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] hover:border-gold/50 hover:text-gold hover:bg-[linear-gradient(180deg,var(--btn-deep-top-hover),var(--btn-deep-bottom-hover))]";
 
 const variants: Record<Variant, string> = {
   primary: deep,
   hero: deep,
   gradient:
-    "bg-brand-gradient text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.25)] hover:brightness-[1.07]",
+    "bg-brand-gradient text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(var(--green-rgb),0.25)] hover:brightness-[1.07]",
   ghost:
     "border border-hair text-ink hover:border-gold/60 hover:text-gold bg-transparent",
 };

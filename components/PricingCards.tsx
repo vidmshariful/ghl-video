@@ -51,7 +51,7 @@ function Card({ card }: { card: PricingCardData }) {
     <div
       className={`relative flex h-full flex-col p-7 md:p-8 ${
         card.featured
-          ? "bg-[linear-gradient(180deg,rgba(252,192,0,0.13),rgba(252,192,0,0.01)_70%)]"
+          ? "bg-[linear-gradient(180deg,rgba(var(--gold-rgb),0.13),rgba(var(--gold-rgb),0.01)_70%)]"
           : ""
       }`}
     >

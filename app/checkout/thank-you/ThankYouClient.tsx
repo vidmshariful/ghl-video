@@ -117,7 +117,7 @@ function Paid({ detail, orderId }: { detail: Detail | null; orderId: string | nu
   return (
     <div className="mx-auto max-w-[42rem]">
       <div className="text-center">
-        <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-brand-gradient shadow-[0_0_36px_rgba(0,204,0,0.3)]">
+        <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-brand-gradient shadow-[0_0_36px_rgba(var(--green-rgb),0.3)]">
           <svg viewBox="0 0 24 24" className="h-8 w-8" aria-hidden="true" fill="none">
             <path
               d="M5 12.5l4.5 4.5L19 7"
@@ -213,7 +213,7 @@ function PlanConfirmation({ plan }: { plan: string }) {
     <section className="relative section-pad">
       <div className="shell">
         <div className="mx-auto max-w-[42rem] text-center">
-          <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-brand-gradient shadow-[0_0_36px_rgba(0,204,0,0.3)]">
+          <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-brand-gradient shadow-[0_0_36px_rgba(var(--green-rgb),0.3)]">
             <svg viewBox="0 0 24 24" className="h-8 w-8" aria-hidden="true" fill="none">
               <path
                 d="M5 12.5l4.5 4.5L19 7"

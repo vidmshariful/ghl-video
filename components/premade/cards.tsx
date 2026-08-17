@@ -88,7 +88,7 @@ export function PosterPlay({
         loading="lazy"
         className="h-full w-full object-cover opacity-90 transition duration-300 group-hover/pp:scale-[1.03] group-hover/pp:opacity-100"
       />
-      <span className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-[#030303]/90 via-[#030303]/40 to-transparent" />
+      <span className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-media/90 via-media/40 to-transparent" />
       <span className="pointer-events-none absolute bottom-3.5 left-4 z-10 font-mono text-label uppercase">
         <span className="text-ink">{video.typeTag}</span>
         {video.subTag && video.subTag !== "Pre-2026" && (
@@ -96,7 +96,7 @@ export function PosterPlay({
         )}
       </span>
       <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
-        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-gradient shadow-[0_0_28px_rgba(0,204,0,0.3)] transition-transform duration-300 group-hover/pp:scale-110">
+        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-gradient shadow-[0_0_28px_rgba(var(--green-rgb),0.3)] transition-transform duration-300 group-hover/pp:scale-110">
           <svg viewBox="0 0 24 24" className="ml-0.5 h-5 w-5" aria-hidden="true">
             <path d="M8 5v14l11-7z" fill="var(--canvas)" />
           </svg>
@@ -297,7 +297,7 @@ export function LibraryCard({
       ) : video.packCount ? (
         <PackTile count={video.packCount} bordered={false} />
       ) : (
-        <div className="flex aspect-video items-center justify-center bg-[#030303]">
+        <div className="flex aspect-video items-center justify-center bg-media">
           <span className="font-mono text-label uppercase text-dim">
             [ Preview coming ]
           </span>

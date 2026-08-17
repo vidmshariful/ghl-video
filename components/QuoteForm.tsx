@@ -112,7 +112,7 @@ export function QuoteForm() {
         <button
           type="submit"
           disabled={status === "sending"}
-          className="group inline-flex items-center gap-2.5 rounded-[3px] bg-brand-gradient px-10 py-[18px] text-body font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.28)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 max-sm:w-full"
+          className="group inline-flex items-center gap-2.5 rounded-[3px] bg-brand-gradient px-10 py-[18px] text-body font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(var(--green-rgb),0.28)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 max-sm:w-full"
         >
           {status === "sending" ? "Sending..." : "Send request"}
           {status !== "sending" ? (

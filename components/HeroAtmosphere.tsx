@@ -13,7 +13,7 @@ export function HeroAtmosphere() {
         className="pointer-events-none absolute inset-x-0 -top-16 mx-auto h-[26rem] w-[44rem] max-w-[92%]"
         style={{
           background:
-            "radial-gradient(closest-side, rgba(252,192,0,0.08), rgba(0,204,0,0.04) 55%, transparent 76%)",
+            "radial-gradient(closest-side, rgba(var(--gold-rgb),0.08), rgba(var(--green-rgb),0.04) 55%, transparent 76%)",
         }}
       />
       <span

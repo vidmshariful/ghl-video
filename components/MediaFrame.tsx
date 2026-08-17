@@ -185,7 +185,7 @@ export function MediaFrame({
   return (
     <figure
       ref={figureRef}
-      className={`group/mf relative aspect-video overflow-hidden bg-[#030303] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] ${bordered ? "border border-hair" : ""} ${rounded} ${className}`}
+      className={`group/mf relative aspect-video overflow-hidden bg-media shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] ${bordered ? "border border-hair" : ""} ${rounded} ${className}`}
     >
       {mounted ? (
         <video
@@ -224,7 +224,7 @@ export function MediaFrame({
           className="absolute inset-0 h-full w-full object-cover brightness-[0.85] saturate-[0.8]"
         />
       ) : (
-        <div aria-hidden="true" className="absolute inset-0 bg-[#030303]" />
+        <div aria-hidden="true" className="absolute inset-0 bg-media" />
       )}
 
       {/* unified grade, always on for ambient playback; eases as a
@@ -241,8 +241,8 @@ export function MediaFrame({
           style={{
             background:
               tint
-                ? "linear-gradient(135deg, rgba(252,192,0,0.08), transparent 55%)"
-                : "linear-gradient(135deg, rgba(252,192,0,0.06), transparent 55%)",
+                ? "linear-gradient(135deg, rgba(var(--gold-rgb),0.08), transparent 55%)"
+                : "linear-gradient(135deg, rgba(var(--gold-rgb),0.06), transparent 55%)",
           }}
         />
       </div>
@@ -250,7 +250,7 @@ export function MediaFrame({
       {/* bottom scrim: the frame's caption owns this zone, clip text recedes */}
       <div
         aria-hidden="true"
-        className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-[#030303]/90 via-[#030303]/40 to-transparent"
+        className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-media/90 via-media/40 to-transparent"
       />
 
       {caption && (

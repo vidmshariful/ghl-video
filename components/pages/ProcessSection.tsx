@@ -64,11 +64,11 @@ export function ProcessSection({
           node.style.borderColor = on ? "var(--gold)" : "var(--hair)";
           node.style.color = on ? "var(--gold)" : "var(--dim)";
           node.style.boxShadow = on
-            ? "0 0 18px -2px rgba(252,192,0,0.55)"
+            ? "0 0 18px -2px rgba(var(--gold-rgb),0.55)"
             : "none";
         }
         if (card) {
-          card.style.borderColor = on ? "rgba(252,192,0,0.35)" : "var(--hair)";
+          card.style.borderColor = on ? "rgba(var(--gold-rgb),0.35)" : "var(--hair)";
           card.style.opacity = on ? "1" : "0.72";
         }
         if (label) label.style.color = on ? "var(--gold)" : "var(--dim)";

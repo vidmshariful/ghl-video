@@ -120,7 +120,7 @@ export function BundleView({
               ) : (
                 <Link
                   href={withPromo(`/checkout/${skuFor(sku ?? "")}`)}
-                  className="group inline-flex items-center gap-2 whitespace-nowrap rounded-[3px] bg-brand-gradient px-6 py-3 text-body font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(0,204,0,0.28)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98]"
+                  className="group inline-flex items-center gap-2 whitespace-nowrap rounded-[3px] bg-brand-gradient px-6 py-3 text-body font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(var(--green-rgb),0.28)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98]"
                 >
                   {ctaLabel}
                   <span

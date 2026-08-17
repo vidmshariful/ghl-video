@@ -42,7 +42,7 @@ export function Avatar({
       className={`flex shrink-0 items-center justify-center rounded-full border border-hair bg-card font-display font-semibold text-muted ${sizes[size]}`}
       style={{
         backgroundImage:
-          "linear-gradient(135deg, rgba(252,192,0,0.12), rgba(0,204,0,0.12))",
+          "linear-gradient(135deg, rgba(var(--gold-rgb),0.12), rgba(var(--green-rgb),0.12))",
       }}
     >
       {initialsOf(name)}

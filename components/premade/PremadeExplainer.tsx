@@ -62,7 +62,7 @@ export function PremadeExplainer() {
             className="relative flex flex-col overflow-hidden rounded-card border border-hair p-6"
             style={{
               background:
-                "linear-gradient(135deg, rgba(0,144,252,0.13) 0%, rgba(0,144,252,0.035) 34%, rgba(0,0,0,0) 60%), #000",
+                "linear-gradient(135deg, rgba(var(--blue-rgb),0.13) 0%, rgba(var(--blue-rgb),0.035) 34%, rgba(0,0,0,0) 60%), #000",
             }}
           >
             <span

@@ -176,7 +176,7 @@ export default function AiFirstLaunchPage() {
           </div>
         ) : (
           /* in production: the date panel stands in for the preview */
-          <div className="flex aspect-video flex-col items-center justify-center border border-hair bg-[linear-gradient(135deg,rgba(0,144,252,0.16)_0%,rgba(0,144,252,0.05)_38%,rgba(0,0,0,0)_68%),#000]">
+          <div className="flex aspect-video flex-col items-center justify-center border border-hair bg-[linear-gradient(135deg,rgba(var(--blue-rgb),0.16)_0%,rgba(var(--blue-rgb),0.05)_38%,rgba(0,0,0,0)_68%),#000]">
             {state?.date && (
               <p className="font-mono text-stat-lg font-bold leading-none text-gold [font-variant-numeric:tabular-nums]">
                 {fmtDate(state.date)}
@@ -306,7 +306,7 @@ export default function AiFirstLaunchPage() {
 
           <Reveal className="mx-auto mt-12 max-w-4xl">
             <RevealItem>
-              <div className="relative border border-dashed border-hair bg-[linear-gradient(180deg,rgba(252,192,0,0.13),rgba(252,192,0,0.01)_70%)]">
+              <div className="relative border border-dashed border-hair bg-[linear-gradient(180deg,rgba(var(--gold-rgb),0.13),rgba(var(--gold-rgb),0.01)_70%)]">
                 <span className="absolute -top-[13px] left-1/2 -translate-x-1/2 whitespace-nowrap border border-dashed border-gold/60 bg-canvas px-3 py-1 font-mono text-label uppercase text-gold">
                   {ended ? p.ended.priceTag : p.price.tag}
                 </span>

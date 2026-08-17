@@ -2,128 +2,127 @@ import { KitPage, KitSection, KitTable, Note } from "@/components/uikits/kit";
 import { assertDevOnly } from "@/components/uikits/dev-only";
 
 /*
- * The audit page, and the reason the kit is worth having.
- *
- * The system is variable-driven, but not completely. Every row below is a
- * value written as a literal where a token was available. They are what
- * makes "change the look and feel" partially fail: you edit a skin block,
- * reload, and some of the screen has not moved.
- *
- * Line numbers are accurate as of the commit that added this page. Verify
- * with the grep at the bottom rather than trusting them after a refactor.
+ * The audit page. It used to be a warning list; the leaks it named have now
+ * been tokenised, so it is a record of what was wrong, what is deliberately
+ * still literal, and how to re-check. The numbers below were measured, not
+ * estimated: see "How this was measured" at the bottom.
  */
 
-const BREAKS_A_RESTYLE = [
-  [
-    "Button.tsx:17",
-    "#181b23, #0f1116, #1c2029, #12141a",
-    "The deep fill behind the primary and hero variants, plus its inset highlight. This is the most-used control on the site and it does not read a single skin token, so a restyle leaves every body button behind.",
-  ],
-  [
-    "globals.css:424",
-    "#121212, #0a0a0a, #030303",
-    "card-glass, the default Panel ground. Every card in the system sits on these three literals.",
-  ],
-  [
-    "globals.css:439",
-    "#fcc000, #00cc00",
-    "grad-line restates the brand hues instead of using var(--gold) and var(--green). Change the brand colours and the animated rule keeps the old ones.",
-  ],
-  [
-    "globals.css:509",
-    "rgba(252,192,0,.16), rgba(0,204,0,.09)",
-    "checkout-panel, the one elevated surface on the money path. Same two hues, restated as alpha literals.",
-  ],
-  [
-    "globals.css:356",
-    "rgba(252,192,0,.3), #08090d",
-    "::selection. Gold and canvas, restated.",
-  ],
-  [
-    "sales.css",
-    "--sp-grad",
-    "Restates the gold-to-green gradient rather than referencing --brand-gradient.",
-  ],
-  [
-    "Manifesto.tsx:13-15",
-    "#7d8499, #EEF0F6, #FCC000",
-    "Duplicates --dim, --text and --gold as literals inside the component.",
-  ],
-  [
-    "MediaFrame, premade/cards, TeamSection, Footer",
-    "#030303, #0a0a0a, #050505",
-    "The card-glass family again, hand-written at four more call sites. If card-glass were tokenised these would follow it.",
-  ],
-  [
-    "Hero.tsx:82",
-    "#3A4157",
-    "A one-off grey that sits between --hair and --dim without being either.",
-  ],
-  [
-    "portal/team.tsx:74",
-    "#FCC000",
-    "Gold, restated inside the portal surface.",
-  ],
+const SCORE = [
+  ["Before", "224", "87", "39%", "Two in five painted surfaces ignored the skin."],
+  ["After", "226", "2", "1%", "Both remaining are the grunge noise texture, which has no colour to follow."],
 ];
 
-/* Measured on the live homepage, not estimated: override every skin and brand
- * property at once (what a concept board does) and count the painted fills
- * that refuse to move. 224 painted fills, 87 unchanged. */
-const MEASURED = [
-  ["Painted fills on the homepage", "224", "Elements larger than 8px with a background colour or image."],
-  ["Unchanged after a full token swap", "87", "39 percent. Roughly two in five painted surfaces ignore the skin."],
-  ["Still showing original brand literals", "65", "Matched against the current gold, green and the five near-black greys."],
+const VERDICT = [
+  ["Colour", "Yes", "20 global properties plus 10 in the sales namespace."],
+  ["Type scale", "Yes", "11 steps, each carrying its own line-height, tracking and weight."],
+  ["Radius", "Yes", "--radius-card and --radius-media, plus a 3px control radius set inline."],
+  ["Rhythm", "Yes", "section-pad, section-pad-sm, hero-pad, shell, and the two measures."],
+  ["Motion", "Partly", "Durations and easings are written per animation. No timing tokens exist."],
+  ["Spacing", "No", "Tailwind's default scale is used directly. There is no custom ramp, which is fine."],
+  ["Shadow", "N/A", "The system uses glows, not shadows. There is nothing to tokenise."],
 ];
 
-const WIDER_CLASSES = [
+const FIXED = [
   [
     "Media grounds",
-    "bg-[#030303]",
-    "MediaFrame, premade cards and the hero block. This is the single biggest contributor: the hero stays pure black through any reskin.",
+    "--media-ground",
+    "bg-[#030303] in MediaFrame, the premade cards and the hero. The single biggest offender: it kept the hero block black through any reskin. The poster scrims that fade it out use --media-ground-rgb.",
   ],
   [
-    "Ambient glows",
-    "radial-gradient(..., rgba(252,192,0,.08), rgba(0,204,0,.04))",
-    "Section and hero glows write the brand hues inline as rgba instead of using --glow-gold and --glow-green, which exist for exactly this.",
+    "Primary button",
+    "--btn-deep-top / -bottom / -hover",
+    "Button.tsx wrote four hex values inline, so the most-used control on the site ignored the skin entirely.",
   ],
   [
-    "Card tints",
-    "linear-gradient(135deg, rgba(252,192,0,.06), transparent 55%)",
-    "The hover wash on library and service cards. Same two hues, restated per call site at several different alphas.",
+    "Card ground",
+    "--card-glass-top / -mid / -base",
+    "card-glass, behind every Panel. Plus --edge-light for the top-edge highlight.",
+  ],
+  [
+    "Ambient glows and tints",
+    "--gold-rgb / --green-rgb / --blue-rgb",
+    "35 call sites wrote the brand channels out by hand at their own alpha. They now compose rgba() from a shared triplet.",
+  ],
+  [
+    "Animated rule, checkout panel, selection",
+    "--gold / --green / --on-brand",
+    "grad-line, checkout-panel and ::selection all restated the brand hues as literals.",
+  ],
+  [
+    "Manifesto scroll animation",
+    "read at runtime",
+    "GSAP cannot tween var(), so three token colours were copied as hex. It now reads the resolved values from the DOM instead of holding copies.",
+  ],
+  [
+    "Footer, team cards, hero sketch",
+    "--footer-ground / --card-glass-mid / --sketch-line",
+    "Three more one-off near-blacks and greys.",
   ],
 ];
 
-const CORRECT_AS_IS = [
+const STILL_LITERAL = [
   [
     "PaymentMarks.tsx",
     "Visa, Mastercard, Amex, Google Pay",
     "Third-party brand marks. These must NOT follow a restyle: the card networks specify their colours and a recoloured Visa mark is a trademark problem, not a design choice.",
   ],
   [
-    "GhlMark.tsx:17-25",
+    "GhlMark.tsx and ghl-glow",
     "#0098FD, #FFC503, #00D001",
-    "The logo's own artwork. Close to the brand tokens but deliberately not identical, and the logo should not shift when a surface is reskinned. Worth documenting rather than tokenising, because the near-match invites somebody to 'fix' it.",
+    "The logo's own artwork, close to the brand tokens but deliberately not identical. The mark should not shift when a surface is reskinned.",
   ],
   [
-    "globals.css:630-636",
-    "The ghl-glow keyframes",
-    "The mark's breathing glow, matched to the logo artwork above rather than to the brand tokens. Consistent with the mark, which is the right reference here.",
+    "grunge",
+    "an SVG noise data URI",
+    "Monochrome film grain. There is no colour in it to tokenise, which is why it is the only thing left standing in the measurement above.",
   ],
   [
-    "sales.css",
-    "The whole --sp-* namespace",
-    "A deliberate second system, not a leak. It is separate so the landing pages can look different from the site.",
+    "The sales system",
+    "the --sp-* namespace",
+    "A deliberate second system with its own palette and radius, not a leak. Its --sp-grad still restates the gradient rather than referencing --brand-gradient, which is the one real item left there.",
   ],
 ];
 
-const VERDICT = [
-  ["Colour", "Yes, with the leaks above", "17 global properties plus 10 in the sales namespace."],
-  ["Type scale", "Yes, fully", "11 steps, each carrying its own line-height, tracking and weight."],
-  ["Radius", "Yes", "--radius-card and --radius-media, plus a 3px control radius set inline."],
-  ["Rhythm", "Yes", "section-pad, section-pad-sm, hero-pad, shell, and the two measures."],
-  ["Motion", "Partly", "Durations and easings are written per animation. No timing tokens exist."],
-  ["Spacing", "No", "Tailwind's default scale is used directly. There is no custom spacing ramp, which is fine."],
-  ["Shadow", "N/A", "The system uses glows, not shadows. There is nothing to tokenise."],
+const OPEN = [
+  [
+    "Four near-blacks",
+    "#030303, #050505, #0a0a0a, #121212",
+    "All named now, so all reskinnable, but they are close enough that a deliberate ground ramp would probably serve better than four separate names. A design call, worth making before the first reskin rather than during.",
+  ],
+  [
+    "Two hairline greys",
+    "--hair #2b2f40, --sketch-line #3a4157",
+    "One step apart. Same question.",
+  ],
+  [
+    "Paired hue tokens",
+    "--gold and --gold-rgb",
+    "The same colour declared twice, because CSS cannot take an alpha of a hex custom property without changing colour space. They have to be kept in step by hand.",
+  ],
+];
+
+const METHOD = [
+  [
+    "Zero visual change",
+    "17 pages, 0 differences",
+    "Snapshotted 12 colour-bearing computed properties of every element on 17 pages, before and after, and diffed. The before pass ran against a verified pre-refactor stylesheet and the after pass against a verified post-refactor one.",
+  ],
+  [
+    "Colour notation is normalised",
+    "painted to sRGB bytes",
+    "lab(), oklab(), color(srgb ...) and rgba() can all describe one colour. Each value is painted to a 1px canvas and compared as bytes, so the diff reports rendered result rather than spelling.",
+  ],
+  [
+    "color-mix() was rejected",
+    "wrong colour space",
+    "The tidier modern way to take an alpha of a token. It serialises to color(srgb 0.988235 ...) instead of rgba(252, 192, 0, ...), so every glow would have moved. Hence the RGB triplets.",
+  ],
+  [
+    "Transitions must be disabled to measure",
+    "transition-colors does not repaint",
+    "Swapping a custom property at runtime does not drive a CSS colour transition, so elements carrying transition-colors keep their old paint until the next real style recalc. They read as stuck when they are merely stale. The measurement disables transitions first, and a live concept board should reload rather than hot-swap.",
+  ],
 ];
 
 export default function LeaksPage() {
@@ -131,68 +130,66 @@ export default function LeaksPage() {
   return (
     <KitPage
       title="Leaks"
-      lede="Values written as literals where a token was available. Read this page before changing the look and feel: these are the parts of the screen that will not move when you edit a skin block."
+      lede="Values written as literals where a token was available. The named ones are now fixed: a full skin swap moves everything on the page except one monochrome texture. This page is the record of what was wrong, what is literal on purpose, and how to re-check."
     >
       <KitSection
+        title="How much moves under a full skin swap"
+        note="Measured on the live homepage by overriding every skin and brand property at once, which is what a concept board does, and counting the painted fills that stay put."
+      >
+        <KitTable
+          head={["Pass", "Painted fills", "Unchanged", "Share", "Notes"]}
+          rows={SCORE}
+        />
+        <div className="mt-4">
+          <Note>
+            The two survivors are both grunge, the film-grain data URI. It is
+            monochrome, so there is nothing in it for a token to change. In
+            practice every colour-bearing surface now follows the skin.
+          </Note>
+        </div>
+      </KitSection>
+
+      <KitSection
         title="Is the system variable-driven?"
-        note="The short answer is yes. Colour, type, radius and rhythm all resolve through custom properties, and Tailwind v4 @utility is the mixin equivalent. This table is the honest version of that answer."
+        note="Colour, type, radius and rhythm all resolve through custom properties, and Tailwind v4 @utility is the mixin equivalent."
       >
         <KitTable head={["Concern", "Tokenised", "Detail"]} rows={VERDICT} />
       </KitSection>
 
       <KitSection
-        title="How much actually moves"
-        note="Measured, not estimated. Override every skin and brand property on the live homepage at once, which is what a concept board does, and count the painted fills that stay put."
+        title="Fixed"
+        count={FIXED.length}
+        note="Each of these used to hold its own literal. None of them changed appearance: the literals already matched the tokens they now read, which is what made the refactor safe to prove."
       >
-        <KitTable head={["Measure", "Count", "Detail"]} rows={MEASURED} />
-        <div className="mt-4">
-          <Note tone="warn">
-            Two in five painted surfaces ignore the skin. The visible result
-            is a page that reskins around its edges while the hero block
-            stays black, because the largest single offender is the media
-            ground below. Fix these before building concept boards, or every
-            board will show the same black hero.
-          </Note>
-        </div>
+        <KitTable head={["What", "Now reads", "Why it mattered"]} rows={FIXED} />
       </KitSection>
 
       <KitSection
-        title="Whole classes of leak, beyond the named rows"
-        count={WIDER_CLASSES.length}
-        note="Found by the measurement above rather than by reading files, which is why they are not in the itemised list: they repeat across many call sites instead of sitting in one place."
+        title="Literal on purpose"
+        count={STILL_LITERAL.length}
+        note="Not everything hardcoded is a mistake. Tokenising these would be the bug."
       >
-        <KitTable head={["Class", "Shape", "Where and why it matters"]} rows={WIDER_CLASSES} />
+        <KitTable head={["Where", "Value", "Why it is correct"]} rows={STILL_LITERAL} />
       </KitSection>
 
       <KitSection
-        title="Will break a restyle"
-        count={BREAKS_A_RESTYLE.length}
-        note="Named, single-site offenders. Each should read a variable and does not, and the first row matters most because it is the primary button. This list is not the whole picture on its own: see the measurement above."
+        title="Open questions for the reskin"
+        count={OPEN.length}
+        note="Naming decisions the refactor deliberately did not make on its own, because they change the design vocabulary rather than just the plumbing."
       >
-        <KitTable head={["Where", "Literal", "Why it matters"]} rows={BREAKS_A_RESTYLE} />
-        <div className="mt-4">
-          <Note tone="warn">
-            None of this is broken today, because every literal currently
-            matches the token it duplicates. The cost is paid the moment a
-            skin changes, which is exactly what this kit exists to support.
-          </Note>
-        </div>
+        <KitTable head={["Question", "Today", "The call to make"]} rows={OPEN} />
       </KitSection>
 
-      <KitSection
-        title="Hardcoded on purpose"
-        count={CORRECT_AS_IS.length}
-        note="Not everything literal is a mistake. These should stay exactly as they are, and tokenising them would be the bug."
-      >
-        <KitTable head={["Where", "Value", "Why it is correct"]} rows={CORRECT_AS_IS} />
+      <KitSection title="How this was measured">
+        <KitTable head={["Property", "Result", "Detail"]} rows={METHOD} />
       </KitSection>
 
       <KitSection title="Re-run the audit">
         <p className="mb-3 text-[0.8125rem] leading-relaxed text-[var(--kit-dim)]">
-          Line numbers above go stale. This finds the current set:
+          Finds any new hex literal that has crept into a component:
         </p>
         <pre className="overflow-x-auto rounded-[4px] border border-[var(--kit-line)] bg-[var(--kit-panel)] px-4 py-3 text-[0.75rem] leading-relaxed text-[var(--kit-text)]">
-          <code>{`grep -rnE '#[0-9a-fA-F]{6}' components/ app/globals.css 'app/(sales)/sales.css'`}</code>
+          <code>{`grep -rnE '#[0-9a-fA-F]{6}' components/ app/globals.css`}</code>
         </pre>
       </KitSection>
     </KitPage>

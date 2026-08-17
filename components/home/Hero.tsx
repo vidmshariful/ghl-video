@@ -79,7 +79,7 @@ export function Hero() {
                 y="0.5"
                 rx="16"
                 style={{ width: "calc(100% - 1px)", height: "calc(100% - 1px)" }}
-                stroke="#3A4157"
+                stroke="var(--sketch-line)"
                 strokeWidth="1"
                 initial={{ pathLength: 0, opacity: 1 }}
                 animate={{ pathLength: 1, opacity: [1, 1, 0] }}

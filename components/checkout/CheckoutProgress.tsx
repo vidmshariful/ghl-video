@@ -31,7 +31,7 @@ function circle(done: boolean, current: boolean, size: string) {
   const base = `flex ${size} shrink-0 items-center justify-center rounded-full font-mono font-bold [font-variant-numeric:tabular-nums]`;
   if (done) return `${base} bg-brand-gradient text-canvas`;
   if (current)
-    return `${base} border border-gold bg-gold/15 text-gold shadow-[0_0_16px_rgba(252,192,0,0.18)]`;
+    return `${base} border border-gold bg-gold/15 text-gold shadow-[0_0_16px_rgba(var(--gold-rgb),0.18)]`;
   return `${base} border border-hair text-dim`;
 }
 

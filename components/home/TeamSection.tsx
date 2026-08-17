@@ -15,7 +15,7 @@ function PhotoSlot({
   photo: string | null;
 }) {
   return (
-    <div className="group relative flex aspect-[4/5] items-end overflow-hidden rounded-media border border-hair bg-[#0a0a0a]">
+    <div className="group relative flex aspect-[4/5] items-end overflow-hidden rounded-media border border-hair bg-[var(--card-glass-mid)]">
       {photo ? (
         // eslint-disable-next-line @next/next/no-img-element -- static export
         <img
@@ -32,7 +32,7 @@ function PhotoSlot({
             className="absolute inset-0"
             style={{
               background:
-                "linear-gradient(160deg, rgba(252,192,0,0.08), rgba(0,0,0,0) 45%, rgba(0,204,0,0.08))",
+                "linear-gradient(160deg, rgba(var(--gold-rgb),0.08), rgba(0,0,0,0) 45%, rgba(var(--green-rgb),0.08))",
             }}
           />
           <span className="absolute right-3 top-3 font-mono text-label uppercase text-dim">

@@ -9,10 +9,21 @@ import { home, cta } from "@/lib/site";
 
 gsap.registerPlugin(ScrollTrigger);
 
-/* token colours as literals: GSAP tweens concrete hex, not var() */
-const DIM = "#7d8499"; // mirrors --dim in globals.css; GSAP tweens need a literal
-const INK = "#EEF0F6";
-const GOLD = "#FCC000";
+/* GSAP tweens concrete colours, not var(), so these used to be three hex
+ * literals copied from globals.css. Copies go stale: a reskin moved --dim
+ * and this animation kept the old grey. Read the resolved values instead,
+ * lazily on first use so it happens in the browser with the tokens applied
+ * (and inside whatever surface the component is mounted on). */
+function tokens() {
+  const s = getComputedStyle(document.documentElement);
+  const read = (name: string, fallback: string) =>
+    s.getPropertyValue(name).trim() || fallback;
+  return {
+    DIM: read("--dim", "#7d8499"),
+    INK: read("--text", "#EEF0F6"),
+    GOLD: read("--gold", "#FCC000"),
+  };
+}
 
 /*
  * About GHL Video: one large, centred positioning statement that colours
@@ -48,6 +59,7 @@ export function Manifesto() {
   useGSAP(
     () => {
       const els = gsap.utils.toArray<HTMLElement>(".mf-word");
+      const { DIM, INK, GOLD } = tokens();
       const lit = (el: HTMLElement) =>
         el.dataset.emph !== undefined ? GOLD : INK;
 

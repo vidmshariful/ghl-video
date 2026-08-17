@@ -361,7 +361,7 @@ export default async function SalesLandingPage({
         <div className="sp-wrap sp-featured">
           <SpVideo src={ft.src} poster={ft.poster} label={`Testimonial from ${ft.name}`} />
           <div>
-            <span className="sp-pill" style={{ color: "var(--sp-gold)", borderColor: "rgba(252,192,0,0.3)" }}>
+            <span className="sp-pill" style={{ color: "var(--sp-gold)", borderColor: "rgba(var(--gold-rgb),0.3)" }}>
               {ft.marker}
             </span>
             <blockquote style={{ margin: "1.2rem 0 0" }}>
