@@ -328,7 +328,19 @@ export const HANDBOOK: HandbookPage[] = [
             title: "A paid order did not reach HighLevel",
             body: "The payment is safe and recorded. What did not happen is the contact and opportunity being created, so the studio has no record of work that is already sold. This one does retry, so it only reaches you if it kept failing.",
           },
+          {
+            title: "The site and checkout disagree about a price",
+            body: "A price was changed and the change never reached checkout, so the page shows one number and the card is charged another. Fix it by opening Products and pressing Sync from catalog. You do not need to come back and clear the alarm: the check runs again the next morning and closes it once the two agree.",
+          },
+          {
+            title: "The daily price check could not run",
+            body: "Not a problem with a price, a problem with the checking. It means nobody is watching for price drift until it is fixed, which looks exactly the same as nothing being wrong. Worth telling whoever maintains the site.",
+          },
         ],
+      },
+      {
+        kind: "text",
+        body: "One of these you do not have to wait for. Prices are compared every morning, so a price that never reached checkout is caught within a day rather than whenever somebody happens to notice.",
       },
       {
         kind: "text",

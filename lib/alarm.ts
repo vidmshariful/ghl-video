@@ -44,6 +44,10 @@ export const ALARM_KINDS = {
   DELIVERABLES_FAILED: "fulfillment.deliverables_failed",
   /** The amount charged is not the amount the order says it is. */
   AMOUNT_MISMATCH: "checkout.amount_mismatch",
+  /** The site and checkout disagree about what something costs. */
+  PRICE_DRIFT: "catalog.price_drift",
+  /** The daily price check could not run, so nobody is watching. */
+  DRIFT_CHECK_FAILED: "catalog.drift_check_failed",
   /** Fired on purpose from the Health screen, so the chain can be seen working. */
   TEST: "system.test",
 } as const;
@@ -205,6 +209,8 @@ const HUMAN: Record<string, string> = {
   [ALARM_KINDS.FINALIZE_FAILED]: "A buyer pressed pay and the order was not written",
   [ALARM_KINDS.DELIVERABLES_FAILED]: "An order was paid but its videos were not created",
   [ALARM_KINDS.AMOUNT_MISMATCH]: "An order was charged a different amount than it should have been",
+  [ALARM_KINDS.PRICE_DRIFT]: "The site and checkout disagree about a price",
+  [ALARM_KINDS.DRIFT_CHECK_FAILED]: "The daily price check could not run",
   [ALARM_KINDS.TEST]: "Test alarm, nothing is wrong",
 };
 

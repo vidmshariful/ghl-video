@@ -275,5 +275,11 @@
       "destination": "/blog/what-is-ghl-video-a-complete-guide-for-highlevel-saas-and-agencies/",
       "permanent": true
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/price-drift",
+      "schedule": "0 6 * * *"
+    }
   ]
 }
