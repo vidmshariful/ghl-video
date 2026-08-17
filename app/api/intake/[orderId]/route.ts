@@ -254,6 +254,43 @@ export async function POST(
   }
 
   /*
+   * Lift the brand off this order and onto the account, so the next order does
+   * not ask for it again.
+   *
+   * Written to both places during the changeover: the order keeps its own copy
+   * so nothing that reads briefs today breaks, and the account gets the copy
+   * everything will read tomorrow. The order copy retires once the portal owns
+   * the brand kit properly.
+   *
+   * Merging, not replacing. A client editing one field of their brief must not
+   * blank the logo they uploaded months ago.
+   */
+  try {
+    const { data: ord } = await db
+      .from("orders")
+      .select("customer_id")
+      .eq("id", orderId)
+      .maybeSingle();
+    const customerId = ord?.customer_id as string | null;
+    if (customerId) {
+      const { saveBrandKit } = await import("@/lib/brand-kit");
+      await saveBrandKit(db, customerId, {
+        brandName,
+        primaryColor,
+        accentColor,
+        pronunciation: brandPronunciation,
+        notes,
+        logoPath,
+        screenshotPaths,
+      });
+    }
+  } catch (e) {
+    /* The brief is already saved. Never cost a client their upload over a
+     * copy we can rebuild from the order they just submitted. */
+    console.error(`[intake] brand kit not updated for order ${orderId}:`, e);
+  }
+
+  /*
    * The brief has landed, so the videos now have a date to be promised for.
    * Fail-soft on purpose: the brief itself is already saved, and a client
    * must never see their upload rejected because we could not do arithmetic.
