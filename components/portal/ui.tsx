@@ -275,14 +275,29 @@ const BUTTON_SIZES = {
   lg: "px-5 py-3 text-body",
 } as const;
 
-type ButtonProps = {
+type ButtonBase = {
   variant?: keyof typeof BUTTON_TONES;
   size?: keyof typeof BUTTON_SIZES;
   icon?: ReactNode;
   /** stretches to its container, for a card footer or a mobile action */
   full?: boolean;
+  className?: string;
   children: ReactNode;
-} & React.ButtonHTMLAttributes<HTMLButtonElement>;
+};
+
+/*
+ * `href` turns it into a link, and it is here because plenty of the things
+ * that look like buttons genuinely navigate: an asset to download, a mailto,
+ * an external landing page. Without it those anchors have to style
+ * themselves, which is how a portal ends up with a link that looks almost
+ * like a button and behaves nothing like one.
+ *
+ * A real anchor rather than a button that calls router.push, so middle click,
+ * open in new tab and copy link address all keep working.
+ */
+type ButtonProps =
+  | (ButtonBase & { href?: undefined } & React.ButtonHTMLAttributes<HTMLButtonElement>)
+  | (ButtonBase & { href: string } & React.AnchorHTMLAttributes<HTMLAnchorElement>);
 
 export function Button({
   variant = "secondary",
@@ -293,22 +308,33 @@ export function Button({
   children,
   ...rest
 }: ButtonProps) {
-  return (
-    <button
-      type="button"
-      {...rest}
-      className={cx(
-        "tap inline-flex items-center justify-center gap-2 transition-colors",
-        R_CONTROL,
-        BUTTON_TONES[variant],
-        BUTTON_SIZES[size],
-        full && "w-full",
-        "disabled:cursor-not-allowed disabled:opacity-50",
-        className,
-      )}
-    >
+  const cls = cx(
+    "tap inline-flex items-center justify-center gap-2 transition-colors",
+    R_CONTROL,
+    BUTTON_TONES[variant],
+    BUTTON_SIZES[size],
+    full && "w-full",
+    "disabled:cursor-not-allowed disabled:opacity-50",
+    className,
+  );
+  const inner = (
+    <>
       {icon && <span className="grid shrink-0 place-items-center [&>svg]:h-4 [&>svg]:w-4">{icon}</span>}
       {children}
+    </>
+  );
+
+  if ("href" in rest && rest.href) {
+    const anchor = rest as React.AnchorHTMLAttributes<HTMLAnchorElement>;
+    return (
+      <a {...anchor} className={cls}>
+        {inner}
+      </a>
+    );
+  }
+  return (
+    <button type="button" {...(rest as React.ButtonHTMLAttributes<HTMLButtonElement>)} className={cls}>
+      {inner}
     </button>
   );
 }

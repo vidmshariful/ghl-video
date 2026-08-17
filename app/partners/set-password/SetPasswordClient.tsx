@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Input } from "@/components/portal/ui";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
@@ -11,8 +12,6 @@ import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
  * token that detectSessionInUrl turns into a short-lived session; with
  * it, updateUser sets the password, then we head into /partners.
  */
-const fieldCls =
-  "w-full rounded-[8px] border border-hair bg-surface px-4 py-3.5 text-body text-ink placeholder:text-dim focus:border-gold focus:outline-none";
 
 export function SetPasswordClient() {
   const router = useRouter();
@@ -100,24 +99,22 @@ export function SetPasswordClient() {
                 <form onSubmit={submit} className="mt-8 grid gap-4">
                   <label className="grid gap-2">
                     <span className="font-mono text-label uppercase text-muted">New password</span>
-                    <input
+                    <Input
                       type="password"
                       required
                       autoComplete="new-password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className={fieldCls}
                     />
                   </label>
                   <label className="grid gap-2">
                     <span className="font-mono text-label uppercase text-muted">Repeat it</span>
-                    <input
+                    <Input
                       type="password"
                       required
                       autoComplete="new-password"
                       value={confirm}
                       onChange={(e) => setConfirm(e.target.value)}
-                      className={fieldCls}
                     />
                   </label>
                   {err && <p className="text-body-sm text-error">{err}</p>}

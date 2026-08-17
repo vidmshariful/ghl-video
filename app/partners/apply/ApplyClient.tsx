@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Input, Select, Textarea } from "@/components/portal/ui";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
 import { TIERS } from "@/lib/partner-program";
@@ -12,8 +13,6 @@ import { TIERS } from "@/lib/partner-program";
  * signup. Submitting creates an ACTIVE affiliate partner on the spot (see
  * /api/partners/apply). The hidden `website` field is the bot honeypot.
  */
-const fieldCls =
-  "w-full rounded-[8px] border border-hair bg-surface px-4 py-3 text-body text-ink placeholder:text-dim focus:border-gold focus:outline-none";
 const labelCls = "font-mono text-label uppercase text-muted";
 
 const CHANNELS = [
@@ -144,22 +143,20 @@ export function ApplyClient() {
                   <div className="grid gap-5 sm:grid-cols-2">
                     <label className="grid gap-2">
                       <span className={labelCls}>Your name</span>
-                      <input
+                      <Input
                         required
                         value={f.name}
                         onChange={(e) => set("name", e.target.value)}
-                        className={fieldCls}
                         autoComplete="name"
                       />
                     </label>
                     <label className="grid gap-2">
                       <span className={labelCls}>Email</span>
-                      <input
+                      <Input
                         type="email"
                         required
                         value={f.email}
                         onChange={(e) => set("email", e.target.value)}
-                        className={fieldCls}
                         autoComplete="email"
                       />
                     </label>
@@ -167,52 +164,47 @@ export function ApplyClient() {
                   <div className="grid gap-5 sm:grid-cols-2">
                     <label className="grid gap-2">
                       <span className={labelCls}>Company or brand (optional)</span>
-                      <input
+                      <Input
                         value={f.company}
                         onChange={(e) => set("company", e.target.value)}
-                        className={fieldCls}
                         autoComplete="organization"
                       />
                     </label>
                     <label className="grid gap-2">
                       <span className={labelCls}>Where is your audience?</span>
-                      <select
+                      <Select
                         value={f.channel}
                         onChange={(e) => set("channel", e.target.value)}
-                        className={fieldCls}
                       >
                         {CHANNELS.map((c) => (
                           <option key={c}>{c}</option>
                         ))}
-                      </select>
+                      </Select>
                     </label>
                   </div>
                   <label className="grid gap-2">
                     <span className={labelCls}>Audience size (rough is fine)</span>
-                    <input
+                    <Input
                       value={f.audience}
                       onChange={(e) => set("audience", e.target.value)}
-                      className={fieldCls}
                       placeholder="e.g. 12k YouTube subs, 3k newsletter"
                     />
                   </label>
                   <label className="grid gap-2">
                     <span className={labelCls}>Links (channel, site, community)</span>
-                    <input
+                    <Input
                       value={f.links}
                       onChange={(e) => set("links", e.target.value)}
-                      className={fieldCls}
                       placeholder="https://..."
                     />
                   </label>
                   <label className="grid gap-2">
                     <span className={labelCls}>How would you promote GHL Video?</span>
-                    <textarea
+                    <Textarea
                       required
                       rows={4}
                       value={f.message}
                       onChange={(e) => set("message", e.target.value)}
-                      className={fieldCls}
                       placeholder="Who your audience is and where you would put your link."
                     />
                   </label>

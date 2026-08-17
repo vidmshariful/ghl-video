@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Button, Input, Textarea } from "@/components/portal/ui";
 import Link from "next/link";
 import type { Session } from "@supabase/supabase-js";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
@@ -206,12 +207,6 @@ function FpStateCard({ data, err }: { data: FpGate | null; err: boolean }) {
   return null;
 }
 
-const fieldCls =
-  "w-full rounded-[8px] border border-hair bg-canvas px-4 py-3 text-body text-ink placeholder:text-dim focus:border-gold focus:outline-none";
-const btnPrimary =
-  "tap rounded-[8px] bg-brand-gradient px-6 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60";
-const btnGhost =
-  "tap rounded-[8px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold";
 
 async function authedFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const { data } = await supabase.auth.getSession();
@@ -319,32 +314,30 @@ function LoginView() {
                 </p>
                 <label className="grid gap-2">
                   <span className="font-mono text-label uppercase text-muted">Email</span>
-                  <input
+                  <Input
                     type="email"
                     required
                     autoComplete="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className={fieldCls}
                   />
                 </label>
                 {!reset && (
                   <label className="grid gap-2">
                     <span className="font-mono text-label uppercase text-muted">Password</span>
-                    <input
+                    <Input
                       type="password"
                       required
                       autoComplete="current-password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className={fieldCls}
                     />
                   </label>
                 )}
                 {err && <p className="text-body-sm text-error">{err}</p>}
-                <button type="submit" disabled={busy} className={btnPrimary}>
+                <Button variant="brand" type="submit" disabled={busy}>
                   {busy ? "One moment..." : reset ? "Send the link" : "Sign in"}
-                </button>
+                </Button>
               </form>
               <div className="mt-6 grid gap-3 border-t border-hair pt-6">
                 <button
@@ -391,16 +384,16 @@ function GateScreen({
           <p className="mt-3 text-body text-muted">{body}</p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
             {showApply && (
-              <Link href="/partners/apply" className={btnPrimary}>
+              <Button href="/partners/apply" variant="brand">
                 Apply to the program
-              </Link>
+              </Button>
             )}
-            <a href="mailto:hi@ghlvideo.com" className={btnGhost}>
+            <Button href="mailto:hi@ghlvideo.com">
               hi@ghlvideo.com
-            </a>
-            <button type="button" onClick={() => supabase.auth.signOut()} className={btnGhost}>
+            </Button>
+            <Button variant="secondary" onClick={() => supabase.auth.signOut()}>
               Sign out
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -478,7 +471,7 @@ function DashboardView({
           <button
             type="button"
             onClick={() => copy("primary", me.primaryLink ?? "")}
-            className={`${btnGhost} mt-4`}
+            className="mt-4"
           >
             {copied === "primary" ? "Copied" : "Copy link"}
           </button>
@@ -497,7 +490,7 @@ function DashboardView({
               <button
                 type="button"
                 onClick={() => copy("coupon", p.couponCode ?? "")}
-                className={`${btnGhost} mt-3`}
+                className="mt-3"
               >
                 {copied === "coupon" ? "Copied" : "Copy code"}
               </button>
@@ -521,16 +514,15 @@ function DashboardView({
             >
               <p className="break-all font-mono text-body-sm text-ink">{pg.url}</p>
               <div className="flex gap-2">
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
                   onClick={() => copy(pg.url, pg.url)}
-                  className={btnGhost}
                 >
                   {copied === pg.url ? "Copied" : "Copy"}
-                </button>
-                <a href={pg.url} target="_blank" rel="noopener" className={btnGhost}>
+                </Button>
+                <Button href={pg.url} target="_blank" rel="noopener">
                   Open
-                </a>
+                </Button>
               </div>
             </div>
           ))}
@@ -880,12 +872,12 @@ function AssetsView({ me }: { me: Me }) {
                 <p className="mt-0.5 break-all font-mono text-body-sm text-muted">{pg.url}</p>
               </div>
               <div className="flex shrink-0 gap-2">
-                <button type="button" onClick={() => copy(pg.url, pg.url)} className={btnGhost}>
+                <Button variant="secondary" onClick={() => copy(pg.url, pg.url)}>
                   {copied === pg.url ? "Copied" : "Copy"}
-                </button>
-                <a href={pg.url} target="_blank" rel="noopener" className={btnGhost}>
+                </Button>
+                <Button href={pg.url} target="_blank" rel="noopener">
                   Open
-                </a>
+                </Button>
               </div>
             </li>
           ))}
@@ -899,12 +891,12 @@ function AssetsView({ me }: { me: Me }) {
                 <p className="mt-0.5 break-all font-mono text-body-sm text-muted">{l.url}</p>
               </div>
               <div className="flex shrink-0 gap-2">
-                <button type="button" onClick={() => copy(l.url, l.url)} className={btnGhost}>
+                <Button variant="secondary" onClick={() => copy(l.url, l.url)}>
                   {copied === l.url ? "Copied" : "Copy"}
-                </button>
-                <a href={l.url} target="_blank" rel="noopener" className={btnGhost}>
+                </Button>
+                <Button href={l.url} target="_blank" rel="noopener">
                   Open
-                </a>
+                </Button>
               </div>
             </li>
           ))}
@@ -939,13 +931,12 @@ function AssetsView({ me }: { me: Me }) {
                   <p className="mt-0.5 text-body-sm text-muted">{a.description}</p>
                 )}
               </div>
-              <button
-                type="button"
+              <Button
+                variant="secondary"
                 onClick={() => copy(a.id, a.body ?? "")}
-                className={btnGhost}
               >
                 {copied === a.id ? "Copied" : "Copy text"}
-              </button>
+              </Button>
             </div>
             <pre className="mt-3 max-h-56 overflow-auto whitespace-pre-wrap rounded-[8px] border border-hair bg-canvas p-4 font-mono text-body-sm leading-relaxed text-muted">
               {a.body}
@@ -976,16 +967,15 @@ function AssetsView({ me }: { me: Me }) {
             {a.description && <p className="mt-1 text-body-sm text-muted">{a.description}</p>}
             {a.fileUrl && (
               <div className="mt-4 flex gap-2">
-                <a href={a.fileUrl} target="_blank" rel="noopener" className={btnGhost}>
+                <Button href={a.fileUrl} target="_blank" rel="noopener">
                   Open
-                </a>
-                <button
-                  type="button"
+                </Button>
+                <Button
+                  variant="secondary"
                   onClick={() => copy(a.id, a.fileUrl ?? "")}
-                  className={btnGhost}
                 >
                   {copied === a.id ? "Copied" : "Copy URL"}
-                </button>
+                </Button>
               </div>
             )}
           </div>
@@ -1231,35 +1221,33 @@ function SettingsView({
                 </div>
                 <label className="grid gap-2">
                   <span className="font-mono text-label uppercase text-muted">Name</span>
-                  <input value={name} onChange={(e) => setName(e.target.value)} required className={fieldCls} />
+                  <Input value={name} onChange={(e) => setName(e.target.value)} required />
                 </label>
                 <label className="grid gap-2">
                   <span className="font-mono text-label uppercase text-muted">Tagline</span>
-                  <input
+                  <Input
                     value={tagline}
                     onChange={(e) => setTagline(e.target.value)}
                     placeholder="A friend of you is a friend of GHL Video."
-                    className={fieldCls}
                     maxLength={200}
                   />
                 </label>
                 <label className="grid gap-2">
                   <span className="font-mono text-label uppercase text-muted">Short bio</span>
-                  <textarea
+                  <Textarea
                     value={bio}
                     onChange={(e) => setBio(e.target.value)}
                     rows={4}
                     placeholder="Who you are and who you help."
-                    className={fieldCls}
                     maxLength={1200}
                   />
                 </label>
                 {msg && <p className="text-body-sm text-green">{msg}</p>}
                 {err && <p className="text-body-sm text-error">{err}</p>}
                 <div>
-                  <button type="submit" disabled={busy} className={btnPrimary}>
+                  <Button variant="brand" type="submit" disabled={busy}>
                     {busy ? "Saving..." : "Save changes"}
-                  </button>
+                  </Button>
                 </div>
               </form>
             ) : null}
@@ -1414,7 +1402,7 @@ export function PartnersClient({ initialView }: { initialView: View }) {
                 <button
                   type="button"
                   onClick={() => supabase.auth.signOut()}
-                  className={`${btnGhost} mt-6`}
+                  className="mt-6"
                 >
                   Sign out
                 </button>
@@ -1598,9 +1586,9 @@ function Topbar({ email, onSignOut }: { email?: string; onSignOut?: () => void }
             <span className="hidden max-w-[14rem] truncate font-mono text-label text-dim sm:inline">
               {email}
             </span>
-            <button type="button" onClick={onSignOut} className={btnGhost}>
+            <Button variant="secondary" onClick={onSignOut}>
               Sign out
-            </button>
+            </Button>
           </>
         ) : null
       }

@@ -63,9 +63,6 @@ const NOT_YET_CONVERTED = new Set([
   "app/admin/StudioScreen.tsx",
   "app/admin/SubscriptionsScreen.tsx",
   "app/admin/TeamScreen.tsx",
-  "app/partners/PartnersClient.tsx",
-  "app/partners/apply/ApplyClient.tsx",
-  "app/partners/set-password/SetPasswordClient.tsx",
   "app/portal/set-password/SetPasswordClient.tsx",
 ]);
 
