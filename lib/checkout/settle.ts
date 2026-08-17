@@ -113,6 +113,27 @@ export async function settlePaidIntent(
           event_type: "deliverables_failed",
           payload: { error: e instanceof Error ? e.message : String(e) },
         });
+        /*
+         * Critical, and told on the first occurrence, because the swallow
+         * above is exactly what makes this dangerous. Everything else on the
+         * money path either retries itself or refuses to complete. This one
+         * completes: the order is paid, the customer is happy, and the work
+         * list is empty. Nothing will ever come back and fix it on its own.
+         *
+         * Per order, since each one needs npm run backfill:deliverables run
+         * against it and they do not fix as a batch.
+         */
+        const { ALARM_KINDS, raise } = await import("@/lib/alarm");
+        await raise(db, {
+          kind: ALARM_KINDS.DELIVERABLES_FAILED,
+          fingerprint: `${ALARM_KINDS.DELIVERABLES_FAILED}:${order.id}`,
+          severity: "critical",
+          message: `Order ${order.id} is paid but its videos were not created, so it will not appear on the studio board or in the customer's video list. Run npm run backfill:deliverables to rebuild it.`,
+          context: {
+            orderId: order.id as string,
+            error: e instanceof Error ? e.message : String(e),
+          },
+        });
       }
       // (coupon redemption is now reserved atomically at finalize, before the
       // charge, via reserve_coupon_redemption; nothing to count here.)
@@ -127,6 +148,27 @@ export async function settlePaidIntent(
             expected_cents: order.amount_cents,
             charged_cents: chargedCents,
             currency: pi.currency,
+          },
+        });
+        /*
+         * The price is re-derived on the server and stamped on the intent
+         * before the order is written, so the two agreeing is the normal
+         * state and disagreeing should be impossible. That is exactly why it
+         * is critical and told at once: it means either a real bug in the
+         * pricing path or somebody having a go at it, and both are things to
+         * look at today rather than in the weekly numbers.
+         */
+        const { ALARM_KINDS, raise } = await import("@/lib/alarm");
+        await raise(db, {
+          kind: ALARM_KINDS.AMOUNT_MISMATCH,
+          fingerprint: `${ALARM_KINDS.AMOUNT_MISMATCH}:${order.id}`,
+          severity: "critical",
+          message: `Order ${order.id} expected ${(Number(order.amount_cents) / 100).toFixed(2)} ${String(order.currency).toUpperCase()} but ${(chargedCents / 100).toFixed(2)} ${pi.currency.toUpperCase()} was charged.`,
+          context: {
+            orderId: order.id as string,
+            expected: `${(Number(order.amount_cents) / 100).toFixed(2)} ${String(order.currency).toUpperCase()}`,
+            charged: `${(chargedCents / 100).toFixed(2)} ${pi.currency.toUpperCase()}`,
+            paymentIntent: pi.id,
           },
         });
       }

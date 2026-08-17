@@ -294,6 +294,48 @@ export const HANDBOOK: HandbookPage[] = [
       },
     ],
   },
+
+  {
+    slug: "when-something-breaks",
+    title: "When something breaks",
+    summary: "What the Health screen tells you, and what to do about each thing on it.",
+    who: "Owner",
+    blocks: [
+      {
+        kind: "text",
+        body: "Most faults on the payment path fix themselves. When Stripe cannot tell us about a payment, it tries again, and the second or third attempt almost always works. That is the system behaving correctly, and you are deliberately not told about it. The Health screen is for what did not fix itself.",
+      },
+      {
+        kind: "text",
+        body: "You find out two ways. A bell appears in the top bar of the admin, and for anything serious you also get an email. Nothing is sent more than once every thirty minutes for the same problem, so a bad afternoon cannot fill your inbox.",
+      },
+      {
+        kind: "steps",
+        steps: [
+          {
+            title: "A payment came in that we could not turn into an order",
+            body: "Money was taken and there is nothing to attach it to. Nothing will fix this on its own. Open Stripe, find the payment, and either refund it or tell us what it was for so the order can be created by hand. This is the most serious thing on the screen.",
+          },
+          {
+            title: "An order was paid but its videos were not created",
+            body: "The client paid and is happy, but the order has no work list, so it will not appear on the studio board or in their video list. Nothing retries this. It is fixed by running the deliverables backfill, which rebuilds the list from what they bought.",
+          },
+          {
+            title: "An order was charged a different amount than it should have been",
+            body: "The price is worked out on our server and locked before the client pays, so this should be impossible. It means either a real bug or somebody interfering. Worth looking at the same day.",
+          },
+          {
+            title: "A paid order did not reach HighLevel",
+            body: "The payment is safe and recorded. What did not happen is the contact and opportunity being created, so the studio has no record of work that is already sold. This one does retry, so it only reaches you if it kept failing.",
+          },
+        ],
+      },
+      {
+        kind: "text",
+        body: "Marking something handled is a claim that you fixed it, not a way to hide it. If the same problem happens again the line comes straight back and you are told again, so there is no way to quietly lose one.",
+      },
+    ],
+  },
 ];
 
 export const handbookPage = (slug: string) => HANDBOOK.find((p) => p.slug === slug);

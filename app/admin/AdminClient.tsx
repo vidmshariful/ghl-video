@@ -16,6 +16,7 @@ import {
 } from "@/components/portal/Shell";
 import { HandbookScreen } from "./HandbookScreen";
 import { ReferenceScreen } from "./ReferenceScreen";
+import { HealthScreen } from "./HealthScreen";
 import { handbookFor } from "./handbook-map";
 import {
   BarChart3,
@@ -26,6 +27,7 @@ import {
   FileText,
   Globe,
   Handshake,
+  HeartPulse,
   LayoutDashboard,
   LifeBuoy,
   Link2,
@@ -274,6 +276,7 @@ export function AdminClient({ initialView }: { initialView: View }) {
     return () => window.removeEventListener("popstate", onPop);
   }, []);
   const [msgUnread, setMsgUnread] = useState(0);
+  const [alarmCount, setAlarmCount] = useState(0);
   const [me, setMe] = useState<{
     email: string;
     name: string | null;
@@ -343,6 +346,30 @@ export function AdminClient({ initialView }: { initialView: View }) {
     };
   }, [isAdmin]);
 
+  /* Open critical alarms, for the Health badge. Polled on the same cadence as
+   * the chat badge: the point of the badge is that trouble is visible from
+   * whatever screen you happen to be on, without going to look for it. */
+  useEffect(() => {
+    if (!isAdmin) return;
+    let active = true;
+    const tick = async () => {
+      try {
+        const r = await fetch("/api/admin/alarms", { headers: await authHeader() });
+        if (!r.ok) return;
+        const j = (await r.json()) as { criticalCount?: number };
+        if (active) setAlarmCount(j.criticalCount ?? 0);
+      } catch {
+        /* a health check that breaks the admin would be its own joke */
+      }
+    };
+    tick();
+    const t = window.setInterval(tick, 20000);
+    return () => {
+      active = false;
+      window.clearInterval(t);
+    };
+  }, [isAdmin]);
+
   if (!ready) return null;
   if (!session) return <Login onError={setLoginError} error={loginError} />;
   if (isAdmin === null) return null;
@@ -375,6 +402,7 @@ export function AdminClient({ initialView }: { initialView: View }) {
         { key: "dashboard", label: "Dashboard", icon: <LayoutDashboard /> },
         { key: "journal", label: "Journal", icon: <BookOpen /> },
         { key: "reference", label: "Reference", icon: <KeyRound /> },
+        { key: "health", label: "Health", icon: <HeartPulse />, badge: alarmCount || undefined },
       ],
     },
     {
@@ -517,6 +545,8 @@ export function AdminClient({ initialView }: { initialView: View }) {
             <StudioScreen />
           ) : view === "reference" ? (
             <ReferenceScreen />
+          ) : view === "health" ? (
+            <HealthScreen />
           ) : view === "journal" ? (
             <JournalScreen meEmail={me?.email ?? ""} />
           ) : view === "pages" ? (

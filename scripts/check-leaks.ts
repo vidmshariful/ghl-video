@@ -19,6 +19,15 @@ import { join, relative } from "node:path";
 import { LITERAL_ALLOWLIST, isAllowlisted } from "@/lib/design-tokens";
 
 const ROOT = process.cwd();
+
+/*
+ * Where the user interface lives, and therefore where a colour literal is a
+ * leak. lib/ is deliberately outside this: the part-boundary rules keep UI out
+ * of it, and what colours it does hold are inside generated email HTML, where
+ * a literal is the only thing mail clients render. Scanning it would mean
+ * pardoning every email template by name, which buys nothing and makes the
+ * allowlist harder to read.
+ */
 const ROOTS = ["app", "components"];
 const EXT = /\.(tsx?|css)$/;
 

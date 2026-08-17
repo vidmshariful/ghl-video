@@ -4,6 +4,7 @@ import { stripe } from "@/lib/checkout/stripe";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { syncSubscriptionToHighLevel } from "@/lib/checkout/fulfill";
 import { settlePaidIntent } from "@/lib/checkout/settle";
+import { ALARM_KINDS, raise } from "@/lib/alarm";
 
 export const runtime = "nodejs";
 
@@ -73,6 +74,23 @@ export async function POST(req: Request) {
     // event unrecorded and Stripe retries it.
     await db.from("stripe_events").insert({ id: event.id, type: event.type });
   } catch (err) {
+    /*
+     * Returning 500 is the correct handling: Stripe re-delivers and the retry
+     * usually lands, which is why this is not raised as critical and why it
+     * waits for three occurrences before telling anybody. One failure here is
+     * the system working. The same event failing over and over is an order
+     * that is paid for and going nowhere.
+     *
+     * Fingerprinted by event type rather than event id, so a broken HighLevel
+     * token shows up as one line that happened 240 times instead of 240 lines.
+     */
+    await raise(db, {
+      kind: ALARM_KINDS.WEBHOOK_FAILED,
+      fingerprint: `${ALARM_KINDS.WEBHOOK_FAILED}:${event.type}`,
+      message: (err as Error).message,
+      context: { eventType: event.type, eventId: event.id },
+      notifyAfter: 3,
+    });
     return NextResponse.json({ error: (err as Error).message }, { status: 500 });
   }
 
@@ -102,7 +120,25 @@ async function handleSucceeded(
     }
   }
 
-  if (syncError) throw new Error(syncError);
+  if (syncError) {
+    /*
+     * The buyer is fine: they paid, the order is marked paid, and they saw
+     * success. What did not happen is the HighLevel sync, so the studio has
+     * no contact and no opportunity for work that is already sold.
+     *
+     * Raised before the throw so it is recorded even though the throw is the
+     * thing that gets Stripe to retry. Three occurrences before anyone is
+     * told, for the same reason as the outer handler: the retry usually wins.
+     */
+    await raise(db, {
+      kind: ALARM_KINDS.FULFILL_FAILED,
+      fingerprint: ALARM_KINDS.FULFILL_FAILED,
+      message: syncError,
+      context: { paymentIntent: pi.id, orderStatus: status },
+      notifyAfter: 3,
+    });
+    throw new Error(syncError);
+  }
 }
 
 async function recoverOrphanPaidIntent(
@@ -114,9 +150,26 @@ async function recoverOrphanPaidIntent(
     ? await db.from("products").select("*").eq("sku", sku).maybeSingle()
     : { data: null };
   if (!product) {
-    console.error(
-      `[webhook] paid intent ${pi.id} has no order and no recognizable sku ("${sku}"); not recovered`,
-    );
+    /*
+     * Critical and told immediately, with no retry threshold, because this is
+     * the one failure in this file that no retry can fix. Money has been
+     * captured and there is nothing to attach it to, so every re-delivery
+     * lands here again. Somebody has to look at it by hand.
+     *
+     * Fingerprinted per intent: each stranded payment is its own piece of
+     * work and must not hide behind another one's line.
+     */
+    await raise(db, {
+      kind: ALARM_KINDS.ORPHAN_UNRECOVERABLE,
+      fingerprint: `${ALARM_KINDS.ORPHAN_UNRECOVERABLE}:${pi.id}`,
+      severity: "critical",
+      message: `A payment of ${(pi.amount / 100).toFixed(2)} ${pi.currency.toUpperCase()} was taken but could not be matched to a product, so no order exists for it.`,
+      context: {
+        paymentIntent: pi.id,
+        sku: sku || "(none on the payment)",
+        amount: `${(pi.amount / 100).toFixed(2)} ${pi.currency.toUpperCase()}`,
+      },
+    });
     return false;
   }
 

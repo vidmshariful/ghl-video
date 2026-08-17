@@ -21,6 +21,7 @@ export const HANDBOOK_FOR: Partial<Record<View, { slug: string; label: string }>
   messages: { slug: "reviews-and-revisions", label: "How feedback reaches us" },
   customers: { slug: "what-the-client-sees", label: "What the client sees" },
   settings: { slug: "who-can-see-what", label: "Roles and access" },
+  health: { slug: "when-something-breaks", label: "What each of these means" },
   code: { slug: "getting-on-the-site", label: "How site access works" },
 };
 

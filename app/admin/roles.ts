@@ -44,6 +44,11 @@ export const TOGGLEABLE_VIEWS: { key: View; label: string; group: string }[] = [
   { key: "studio", label: "Studio Insights", group: "CMS" },
   { key: "emails", label: "Emails (in Settings)", group: "Settings" },
   { key: "code", label: "Site code (in Settings)", group: "Settings" },
+  /* Toggleable rather than always-on: it reports payments that did not become
+   * orders and orders that did not reach the studio, which is the owner's and
+   * the manager's problem. A sales rep seeing it would be alarmed by something
+   * they cannot act on, so the sales_rep default below leaves it out. */
+  { key: "health", label: "Health", group: "System" },
 ];
 
 const ALL_TOGGLEABLE = TOGGLEABLE_VIEWS.map((v) => v.key);

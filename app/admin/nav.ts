@@ -5,6 +5,7 @@ export type View =
   | "dashboard"
   | "journal"
   | "reference"
+  | "health"
   | "orders"
   | "messages"
   | "subscriptions"
@@ -29,6 +30,7 @@ export const ALL_VIEWS: View[] = [
   "dashboard",
   "journal",
   "reference",
+  "health",
   "orders",
   "messages",
   "subscriptions",
