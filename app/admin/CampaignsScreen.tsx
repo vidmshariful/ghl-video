@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, Plus, Send, Trash2 } from "lucide-react";
 import {
   Button,
   Card,
@@ -106,6 +106,8 @@ export function CampaignsScreen() {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [mailBusy, setMailBusy] = useState<string | null>(null);
+  const [mailNote, setMailNote] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setErr("");
@@ -159,6 +161,51 @@ export function CampaignsScreen() {
     await load();
   }
 
+  /*
+   * Email the offer to its audience. Preview the count first, because "send
+   * marketing to an unknown number of people" is not a button anybody should
+   * press. campaign_sends makes repeat presses safe: only new matches go.
+   */
+  async function emailAudience(c: Campaign) {
+    setMailBusy(c.id);
+    setMailNote(null);
+    setErr("");
+    try {
+      const preview = await fetch("/api/admin/campaigns/send", {
+        method: "POST",
+        headers: { ...(await authHeader()), "Content-Type": "application/json" },
+        body: JSON.stringify({ id: c.id, dryRun: true }),
+      }).then((r) => r.json());
+      if (preview.error) return setErr(preview.error);
+      if (!preview.matched) {
+        return setMailNote(
+          preview.alreadySent
+            ? `Nobody new to email. All ${preview.alreadySent} matching clients already got this one.`
+            : "Nobody matches this audience right now.",
+        );
+      }
+      const go = confirm(
+        `Email "${c.title}" to ${preview.matched} client${preview.matched === 1 ? "" : "s"}?` +
+          (preview.alreadySent ? ` ${preview.alreadySent} already got it and are skipped.` : ""),
+      );
+      if (!go) return;
+      const res = await fetch("/api/admin/campaigns/send", {
+        method: "POST",
+        headers: { ...(await authHeader()), "Content-Type": "application/json" },
+        body: JSON.stringify({ id: c.id }),
+      }).then((r) => r.json());
+      if (res.error) return setErr(res.error);
+      setMailNote(
+        `Sent to ${res.sent} client${res.sent === 1 ? "" : "s"}.` +
+          (res.stoppedEarly ? ` Stopped early: ${res.stoppedEarly}` : ""),
+      );
+    } catch {
+      setErr("Could not email this offer.");
+    } finally {
+      setMailBusy(null);
+    }
+  }
+
   async function remove(c: Campaign) {
     if (!confirm(`Delete "${c.title}"? This cannot be undone.`)) return;
     await fetch(`/api/admin/campaigns?id=${encodeURIComponent(c.id)}`, {
@@ -203,6 +250,7 @@ export function CampaignsScreen() {
       />
 
       {err && <p className="mb-3 text-body-sm text-error">{err}</p>}
+      {mailNote && <p className="mb-3 text-body-sm text-muted">{mailNote}</p>}
 
       {draft && (
         <Card
@@ -376,6 +424,17 @@ export function CampaignsScreen() {
                 </div>
 
                 <div className="flex shrink-0 gap-2">
+                  {c.active && (c.audience === "customers" || c.audience === "dormant") && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      icon={<Send />}
+                      disabled={mailBusy === c.id}
+                      onClick={() => emailAudience(c)}
+                    >
+                      {mailBusy === c.id ? "Checking..." : "Email the audience"}
+                    </Button>
+                  )}
                   <Button variant="secondary" size="sm" onClick={() => toggle(c)}>
                     {c.active ? "Switch off" : "Switch on"}
                   </Button>
