@@ -22,6 +22,7 @@ import {
 import { PORTAL_SECTIONS, type PortalSection } from "./sections";
 import { DashboardView } from "./DashboardView";
 import { BrandKitView } from "./BrandKitView";
+import { ComingSoonView } from "./ComingSoonView";
 import { LibraryView } from "./LibraryView";
 import { Button, Card, Chip, EmptyState, Table, Td, Th } from "@/components/portal/ui";
 import {
@@ -46,6 +47,7 @@ import {
   PhoneCall,
   Repeat,
   Settings,
+  Sparkles,
   ShoppingCart,
 } from "lucide-react";
 import { MessagesView } from "./MessagesView";
@@ -1202,6 +1204,7 @@ function Portal({
         ...(can("orders")
           ? [{ key: "library", label: "Video Library", icon: <LibraryBig /> }]
           : []),
+        { key: "coming-soon", label: "Coming Soon", icon: <Sparkles /> },
         /* the existing route to a custom video, until the quote thread lands */
         { key: "book", label: "Book a Call", icon: <PhoneCall /> },
       ],
@@ -1390,6 +1393,8 @@ function Portal({
                 window.scrollTo({ top: 0 });
               }}
             />
+          ) : section === "coming-soon" ? (
+            <ComingSoonView authedFetch={authedFetch} />
           ) : section === "brand" && can("orders") ? (
             <BrandKitView authedFetch={authedFetch} canEdit={can("orders")} />
           ) : section === "messages" && can("messages") ? (

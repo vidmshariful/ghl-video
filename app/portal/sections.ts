@@ -8,6 +8,7 @@ export const PORTAL_SECTIONS = [
   "videos",
   "brand",
   "library",
+  "coming-soon",
   "messages",
   "subscriptions",
   "book",
