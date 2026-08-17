@@ -21,6 +21,7 @@ import {
 } from "@/components/portal/booking";
 import { PORTAL_SECTIONS, type PortalSection } from "./sections";
 import { DashboardView } from "./DashboardView";
+import { BrandKitView } from "./BrandKitView";
 import { Button, Card, Chip, EmptyState, Table, Td, Th } from "@/components/portal/ui";
 import {
   actForHeader,
@@ -31,6 +32,7 @@ import {
 } from "@/components/portal/act-for";
 import { memberCan } from "@/lib/team-features";
 import {
+  Palette,
   ArrowLeft,
   Clapperboard,
   Handshake,
@@ -1012,6 +1014,7 @@ function Portal({
   const [openOrder, setOpenOrder] = useState<string | null>(initialOrderId);
   const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
   const [msgUnread, setMsgUnread] = useState(0);
+  const [brandIncomplete, setBrandIncomplete] = useState(false);
   const [profile, setProfile] = useState<MyProfile | null>(null);
 
   /* clicking around pushes real URLs; back/forward walk the sections */
@@ -1072,6 +1075,20 @@ function Portal({
     loadProfile();
      
   }, []);
+
+  /* The Brand Kit nag. Re-read whenever the section changes, so saving the
+   * kit clears the dot immediately rather than leaving somebody staring at a
+   * badge telling them to do the thing they have just done. */
+  useEffect(() => {
+    if (!profile || !can("orders")) return;
+    authedFetch("/api/portal/brand-kit")
+      .then((j) => {
+        const c = (j as { completeness?: { ready?: boolean } }).completeness;
+        setBrandIncomplete(c ? !c.ready : false);
+      })
+      .catch(() => setBrandIncomplete(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile, section]);
 
   // Poll the unread count so the Messages badge stays live from any section.
   useEffect(() => {
@@ -1142,6 +1159,18 @@ function Portal({
     { key: "dashboard", label: "Dashboard", icon: <LayoutDashboard /> },
     ...(can("orders") ? [{ key: "orders", label: "Orders", icon: <ShoppingCart /> }] : []),
     ...(can("orders") ? [{ key: "videos", label: "My Videos", icon: <Clapperboard /> }] : []),
+    ...(can("orders")
+      ? [
+          {
+            key: "brand",
+            label: "Brand Kit",
+            icon: <Palette />,
+            /* the portal's one nag, and it only appears when an order is
+               genuinely stuck for want of these */
+            badge: brandIncomplete ? 1 : undefined,
+          },
+        ]
+      : []),
     ...(can("messages")
       ? [{ key: "messages", label: "Messages", icon: <MessageSquare />, badge: msgUnread || undefined }]
       : []),
@@ -1289,6 +1318,8 @@ function Portal({
                 />
               </div>
             </div>
+          ) : section === "brand" && can("orders") ? (
+            <BrandKitView authedFetch={authedFetch} canEdit={can("orders")} />
           ) : section === "messages" && can("messages") ? (
             <MessagesView
               pendingOrderId={pendingOrderId}
