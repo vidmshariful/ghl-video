@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 import {
@@ -1083,11 +1083,16 @@ function Portal({
      
   }, []);
 
-  /* The Brand Kit nag. Re-read whenever the section changes, so saving the
-   * kit clears the dot immediately rather than leaving somebody staring at a
-   * badge telling them to do the thing they have just done. */
+  /* The Brand Kit nag. Read once, then re-read only on the way OUT of the
+   * Brand screen, which is the only place it can change: saving there still
+   * clears the dot immediately, without the old version's identical fetch on
+   * every single navigation. */
+  const prevSectionRef = useRef<PortalSection | null>(null);
   useEffect(() => {
-    if (!profile || !can("orders")) return;
+    const first = prevSectionRef.current === null;
+    const leftBrand = prevSectionRef.current === "brand" && section !== "brand";
+    prevSectionRef.current = section;
+    if (!profile || !can("orders") || (!first && !leftBrand)) return;
     authedFetch("/api/portal/brand-kit")
       .then((j) => {
         const c = (j as { completeness?: { ready?: boolean } }).completeness;

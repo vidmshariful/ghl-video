@@ -425,7 +425,14 @@ export function DashboardView({
                           )}
                         </Td>
                         <Td>
-                          {o.status === "paid" && !o.intakeCompleted ? (
+                          {/* money states outrank production states: an order
+                              that was refunded or failed must never wear a
+                              working chip, least of all one reading "paid" */}
+                          {o.status === "refunded" ? (
+                            <Chip tone="neutral">Refunded</Chip>
+                          ) : o.status === "failed" ? (
+                            <Chip tone="bad">Payment failed</Chip>
+                          ) : o.status === "paid" && !o.intakeCompleted ? (
                             <Chip tone="warn">Waiting on your brief</Chip>
                           ) : o.stage === "delivered" ? (
                             <Chip tone="good">Delivered</Chip>
