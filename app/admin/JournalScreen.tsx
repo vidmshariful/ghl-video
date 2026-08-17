@@ -27,6 +27,11 @@ type Entry = {
   decided_on: string | null;
   author: string;
   created_at: string;
+  /* the owner answering back: how much he wants it, and why */
+  rating: number | null;
+  feedback: string | null;
+  feedback_at: string | null;
+  feedback_by: string | null;
 };
 
 type Tab = "log" | "decision" | "idea";
@@ -144,6 +149,8 @@ export function JournalScreen({ meEmail }: { meEmail: string }) {
   const [editing, setEditing] = useState<Entry | "new" | null>(null);
   const [showClosed, setShowClosed] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [noteFor, setNoteFor] = useState<string | null>(null);
+  const [noteDraft, setNoteDraft] = useState("");
   const [err, setErr] = useState("");
 
   async function load() {
@@ -184,6 +191,140 @@ export function JournalScreen({ meEmail }: { meEmail: string }) {
     const { error } = await supabase.from("journal").delete().eq("id", e.id);
     if (error) setErr(error.message);
     else load();
+  }
+
+  /* Clicking the star already set clears the rating, so a misclick is undone
+   * the same way it was made. Back to null, not down to one: unrated and
+   * rated-lowest are different answers and Claude reads them differently. */
+  async function rate(e: Entry, n: number) {
+    const next = e.rating === n ? null : n;
+    setRows((rs) => rs.map((r) => (r.id === e.id ? { ...r, rating: next } : r)));
+    const { error } = await supabase.from("journal").update({ rating: next }).eq("id", e.id);
+    if (error) {
+      setErr(error.message);
+      load();
+    }
+  }
+
+  async function saveFeedback(e: Entry, text: string) {
+    const body = text.trim() || null;
+    const { error } = await supabase
+      .from("journal")
+      .update({
+        feedback: body,
+        feedback_at: body ? new Date().toISOString() : null,
+        feedback_by: body ? meEmail || "team" : null,
+      })
+      .eq("id", e.id);
+    if (error) setErr(error.message);
+    else load();
+  }
+
+  /*
+   * How much you want it, and why.
+   *
+   * Both halves matter and the note is the more useful one: "yes but only for
+   * agencies" changes what gets built far more than four stars does. The
+   * stars exist so a list of thirty ideas ranks itself at a glance, and the
+   * CLI reads both at the start of every session, which is the only reason
+   * any of this is worth having.
+   */
+  function Reaction({ e }: { e: Entry }) {
+    const open = noteFor === e.id;
+    return (
+      <div className="mt-4 border-t border-hair pt-3">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-label uppercase tracking-[0.1em] text-dim">
+              Worth doing
+            </span>
+            <div className="flex items-center gap-0.5">
+              {[1, 2, 3, 4, 5].map((n) => {
+                const on = (e.rating ?? 0) >= n;
+                return (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => rate(e, n)}
+                    aria-label={
+                      e.rating === n ? `Clear the rating on #${e.seq}` : `Rate #${e.seq} ${n} out of 5`
+                    }
+                    aria-pressed={on}
+                    className={`tap rounded-[4px] px-0.5 text-body leading-none transition-colors ${
+                      on ? "text-gold" : "text-hair hover:text-dim"
+                    }`}
+                  >
+                    {on ? "★" : "☆"}
+                  </button>
+                );
+              })}
+            </div>
+            {e.rating != null && (
+              <span className="font-mono text-label text-dim">{e.rating}/5</span>
+            )}
+          </div>
+
+          {!open && (
+            <button
+              type="button"
+              onClick={() => {
+                setNoteFor(e.id);
+                setNoteDraft(e.feedback ?? "");
+              }}
+              className="tap font-mono text-label uppercase tracking-[0.1em] text-dim transition-colors hover:text-gold"
+            >
+              {e.feedback ? "Edit your note" : "Add a note"}
+            </button>
+          )}
+        </div>
+
+        {e.feedback && !open && (
+          <p className="mt-2.5 whitespace-pre-wrap rounded-[8px] border border-gold/30 bg-gold/5 px-3.5 py-2.5 text-body-sm leading-relaxed text-ink">
+            {e.feedback}
+          </p>
+        )}
+
+        {open && (
+          <div className="mt-2.5">
+            <textarea
+              autoFocus
+              rows={3}
+              value={noteDraft}
+              onChange={(ev) => setNoteDraft(ev.target.value)}
+              placeholder="What you think. Claude reads this before building anything."
+              className="tap w-full rounded-[8px] border border-hair bg-canvas px-3 py-2 text-body-sm text-ink placeholder:text-dim"
+            />
+            <div className="mt-2 flex gap-2">
+              <button
+                type="button"
+                onClick={async () => {
+                  await saveFeedback(e, noteDraft);
+                  setNoteFor(null);
+                }}
+                className={`${btn} border-gold/60 text-gold`}
+              >
+                Save note
+              </button>
+              <button type="button" onClick={() => setNoteFor(null)} className={btn}>
+                Cancel
+              </button>
+              {e.feedback && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await saveFeedback(e, "");
+                    setNoteFor(null);
+                  }}
+                  className={`${btn} text-error hover:border-error/60`}
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
   }
 
   if (!loaded) return <p className="text-body text-muted">Loading the journal...</p>;
@@ -339,6 +480,7 @@ export function JournalScreen({ meEmail }: { meEmail: string }) {
                   Mark superseded
                 </button>
               </div>
+              <Reaction e={e} />
             </div>
           ))}
           {supersededDecisions.length > 0 && (
@@ -419,6 +561,7 @@ export function JournalScreen({ meEmail }: { meEmail: string }) {
                   Drop
                 </button>
               </div>
+              <Reaction e={e} />
             </div>
           ))}
           {closedIdeas.length > 0 && (

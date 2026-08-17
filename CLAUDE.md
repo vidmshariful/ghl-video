@@ -215,6 +215,12 @@ what survives. Claude maintains it via `scripts/journal.mjs`:
 - **Session start:** run `node scripts/journal.mjs ideas` and address any
   open ideas before or alongside the day's work (discuss, plan, or build;
   move them with `set-status <seq> planned|done|dropped`).
+  The list comes back **best rated first**, and anything Shariful has
+  answered carries a `>> SHARIFUL SAYS:` note. Both are his direct steer on
+  what to build next: a 5/5 outranks your own sense of priority, and the
+  note usually matters more than the stars ("yes but only for agencies"
+  changes the build; four stars does not). Unrated is not rated-low, it
+  means he has not looked yet, so those are still worth raising.
 - **After finishing a meaningful piece of approved work** (and after any
   deploy): add a log entry. Founder language, no jargon, follow the copy
   rules. `node scripts/journal.mjs add --kind log --title "..." --body "..."`

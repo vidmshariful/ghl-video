@@ -58,10 +58,21 @@ function flag(name) {
   return i !== -1 && args[i + 1] !== undefined ? args[i + 1] : null;
 }
 
+/* The owner's rating, drawn so a scan of the list ranks itself. Unrated is
+ * shown as "not rated yet" rather than as zero stars: not looked at and
+ * looked at but not keen are different answers and must not read alike. */
+const stars = (r) => (r ? `${"*".repeat(r)}${"-".repeat(5 - r)} ${r}/5` : "not rated yet");
+
 const line = (e) => {
   const day = (e.decided_on ?? e.created_at ?? "").slice(0, 10);
   const status = e.status ? ` [${e.status}${e.superseded_by ? ` by #${e.superseded_by}` : ""}]` : "";
-  return `#${e.seq} ${e.kind.toUpperCase()} ${day}${status} (${e.author})\n  ${e.title}${e.body ? `\n  ${e.body.replaceAll("\n", "\n  ")}` : ""}`;
+  const rated = e.rating != null ? `  ${stars(e.rating)}` : "";
+  /* Shariful's note last, indented and marked, because it is the newest
+   * information on the entry and usually the part that changes what to do. */
+  const note = e.feedback
+    ? `\n\n  >> SHARIFUL SAYS: ${e.feedback.replaceAll("\n", "\n     ")}`
+    : "";
+  return `#${e.seq} ${e.kind.toUpperCase()} ${day}${status} (${e.author})${rated}\n  ${e.title}${e.body ? `\n  ${e.body.replaceAll("\n", "\n  ")}` : ""}${note}`;
 };
 
 if (cmd === "ideas") {
@@ -70,9 +81,21 @@ if (cmd === "ideas") {
     .select("*")
     .eq("kind", "idea")
     .in("status", ["open", "planned"])
+    /* Best rated first so the ones he wants lead the list. Unrated fall to
+     * the bottom rather than disappearing: an idea he has not seen yet is
+     * still worth raising, just after the ones he has already asked for. */
+    .order("rating", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: true });
   if (error) throw new Error(error.message);
   if (!data.length) console.log("No open ideas.");
+
+  const rated = data.filter((e) => e.rating != null);
+  const withNotes = data.filter((e) => e.feedback);
+  if (rated.length || withNotes.length) {
+    console.log(
+      `${rated.length} of ${data.length} rated, ${withNotes.length} with a note from Shariful. Best rated first.\n`,
+    );
+  }
   for (const e of data) console.log(line(e), "\n");
 } else if (cmd === "recent") {
   const n = Number(args[1]) || 15;
