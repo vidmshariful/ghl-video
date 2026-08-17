@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Button, Input, Textarea } from "@/components/portal/ui";
 import { authHeader } from "./client";
 
 /*
@@ -33,11 +34,6 @@ type Draft = {
 
 const EMPTY: Draft = { label: "", value: "", note: "", category: "General", secret: false };
 
-const field =
-  "tap w-full rounded-[8px] border border-hair bg-canvas px-3 py-2 text-body-sm text-ink placeholder:text-dim";
-const lab = "font-mono text-label uppercase tracking-[0.1em] text-dim";
-const btn =
-  "tap rounded-[8px] border border-hair px-3.5 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-40";
 
 export function ReferenceScreen() {
   const [items, setItems] = useState<Item[] | null>(null);
@@ -159,12 +155,11 @@ export function ReferenceScreen() {
       </div>
 
       {items.length > 0 && (
-        <input
+        <Input
           type="search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search by name, note or category"
-          className={`${field} mt-6 max-w-[28rem]`}
+          placeholder="Search by name, note or category" className="mt-6 max-w-[28rem]"
         />
       )}
 
@@ -177,22 +172,20 @@ export function ReferenceScreen() {
           </p>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             <label className="grid gap-1">
-              <span className={lab}>Name</span>
-              <input
+              <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Name</span>
+              <Input
                 value={draft.label}
                 onChange={(e) => setDraft({ ...draft, label: e.target.value })}
                 placeholder="Team site access key"
-                className={field}
               />
             </label>
             <label className="grid gap-1">
-              <span className={lab}>Category</span>
-              <input
+              <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Category</span>
+              <Input
                 value={draft.category}
                 onChange={(e) => setDraft({ ...draft, category: e.target.value })}
                 placeholder="Keys and access"
                 list="reference-categories"
-                className={field}
               />
               <datalist id="reference-categories">
                 {categories.map((c) => (
@@ -201,22 +194,20 @@ export function ReferenceScreen() {
               </datalist>
             </label>
             <label className="grid gap-1 md:col-span-2">
-              <span className={lab}>The thing itself</span>
-              <textarea
+              <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">The thing itself</span>
+              <Textarea
                 rows={2}
                 value={draft.value}
                 onChange={(e) => setDraft({ ...draft, value: e.target.value })}
                 placeholder="Paste the key, link or id"
-                className={field}
               />
             </label>
             <label className="grid gap-1 md:col-span-2">
-              <span className={lab}>Note, so future you remembers what it is for</span>
-              <input
+              <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Note, so future you remembers what it is for</span>
+              <Input
                 value={draft.note}
                 onChange={(e) => setDraft({ ...draft, note: e.target.value })}
                 placeholder="Give each teammate their own. Revoke one without touching the rest."
-                className={field}
               />
             </label>
           </div>
@@ -242,17 +233,16 @@ export function ReferenceScreen() {
           </p>
 
           <div className="mt-4 flex gap-2">
-            <button
-              type="button"
+            <Button
+              variant="secondary"
               disabled={busy || !draft.label.trim() || !draft.value.trim()}
-              onClick={save}
-              className={`${btn} border-gold/60 text-gold`}
+              onClick={save} className="border-gold/60 text-gold"
             >
               {busy ? "Saving..." : "Save"}
-            </button>
-            <button type="button" onClick={() => setDraft(null)} className={btn}>
+            </Button>
+            <Button variant="secondary" onClick={() => setDraft(null)}>
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -291,13 +281,13 @@ export function ReferenceScreen() {
                               {i.note && <p className="mt-1 text-body-sm text-muted">{i.note}</p>}
                             </div>
                             <div className="flex shrink-0 flex-wrap gap-2">
-                              <button
-                                type="button"
+                              <Button
+                                variant="secondary"
                                 onClick={() => copy(i)}
-                                className={`${btn} ${copied === i.id ? "border-green/60 text-green" : ""}`}
+                                className={copied === i.id ? "border-green/60 text-green" : ""}
                               >
                                 {copied === i.id ? "Copied" : "Copy"}
-                              </button>
+                              </Button>
                               {i.secret && (
                                 <button
                                   type="button"
@@ -306,13 +296,13 @@ export function ReferenceScreen() {
                                       ? setShown((s) => ({ ...s, [i.id]: "" }))
                                       : reveal(i)
                                   }
-                                  className={btn}
+                                  className="tap inline-flex items-center gap-2 rounded-[8px] border border-hair bg-surface px-4 py-2 text-body-sm text-ink transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-50"
                                 >
                                   {v ? "Hide" : "Show"}
                                 </button>
                               )}
-                              <button
-                                type="button"
+                              <Button
+                                variant="secondary"
                                 onClick={async () => {
                                   const full = await reveal(i);
                                   setDraft({
@@ -324,17 +314,15 @@ export function ReferenceScreen() {
                                     secret: i.secret,
                                   });
                                 }}
-                                className={btn}
                               >
                                 Edit
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => remove(i)}
-                                className={`${btn} hover:border-error/60 hover:text-error`}
+                              </Button>
+                              <Button
+                                variant="secondary"
+                                onClick={() => remove(i)} className="hover:border-error/60 hover:text-error"
                               >
                                 Delete
-                              </button>
+                              </Button>
                             </div>
                           </div>
 

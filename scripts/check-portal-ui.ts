@@ -45,24 +45,10 @@ const LOCAL_STYLE =
 /* Not yet converted. Delete a line when its screen moves onto the shared
  * vocabulary. Adding one back is the thing to argue about in review. */
 const NOT_YET_CONVERTED = new Set([
-  "app/admin/BlogScreen.tsx",
   "app/admin/BrandingBrief.tsx",
-  "app/admin/BumpsScreen.tsx",
   "app/admin/CatalogScreen.tsx",
-  "app/admin/CouponsScreen.tsx",
-  "app/admin/EmailTemplatesScreen.tsx",
-  "app/admin/HealthScreen.tsx",
-  "app/admin/JournalScreen.tsx",
-  "app/admin/PartnersScreen.tsx",
   "app/admin/ProductionJob.tsx",
-  "app/admin/ProductsHub.tsx",
-  "app/admin/ProductsScreen.tsx",
-  "app/admin/ReferenceScreen.tsx",
-  "app/admin/SeoScreen.tsx",
   "app/admin/SettingsScreen.tsx",
-  "app/admin/StudioScreen.tsx",
-  "app/admin/SubscriptionsScreen.tsx",
-  "app/admin/TeamScreen.tsx",
   "app/portal/set-password/SetPasswordClient.tsx",
 ]);
 

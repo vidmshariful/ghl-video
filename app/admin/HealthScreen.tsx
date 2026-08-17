@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Button } from "@/components/portal/ui";
 import { authHeader } from "./client";
 
 /*
@@ -28,8 +29,6 @@ type Alarm = {
   resolvedBy: string | null;
 };
 
-const btn =
-  "tap rounded-[8px] border border-hair px-3.5 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-40";
 
 const when = (iso: string) => {
   const d = new Date(iso);
@@ -150,21 +149,19 @@ export function HealthScreen() {
                       </p>
                     </div>
                     <div className="flex shrink-0 flex-wrap gap-2">
-                      <button
-                        type="button"
+                      <Button
+                        variant="secondary"
                         onClick={() => setExpanded((e) => ({ ...e, [a.id]: !e[a.id] }))}
-                        className={btn}
                       >
                         {expanded[a.id] ? "Hide detail" : "Detail"}
-                      </button>
-                      <button
-                        type="button"
+                      </Button>
+                      <Button
+                        variant="secondary"
                         disabled={busy === a.id}
-                        onClick={() => setResolvedState(a, false)}
-                        className={`${btn} hover:border-green/60 hover:text-green`}
+                        onClick={() => setResolvedState(a, false)} className="hover:border-green/60 hover:text-green"
                       >
                         {busy === a.id ? "Saving..." : "Mark handled"}
-                      </button>
+                      </Button>
                     </div>
                   </div>
 
@@ -212,14 +209,13 @@ export function HealthScreen() {
                       <span className="text-dim"> handled by {a.resolvedBy}</span>
                     )}
                   </span>
-                  <button
-                    type="button"
+                  <Button
+                    variant="secondary"
                     disabled={busy === a.id}
                     onClick={() => setResolvedState(a, true)}
-                    className={btn}
                   >
                     Reopen
-                  </button>
+                  </Button>
                 </li>
               ))}
             </ul>
@@ -234,14 +230,13 @@ export function HealthScreen() {
           and you are told again.
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <button
-            type="button"
+          <Button
+            variant="secondary"
             disabled={busy === "test"}
             onClick={sendTest}
-            className={btn}
           >
             {busy === "test" ? "Sending..." : "Send me a test alarm"}
-          </button>
+          </Button>
           <span className="text-body-sm text-dim">
             Nothing breaks. You get the real bell and the real email, so you know
             what one looks like before it matters.

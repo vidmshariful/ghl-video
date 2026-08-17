@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Button, Input, Select } from "@/components/portal/ui";
 import { supabase } from "./client";
 import { AdminModal } from "./Modal";
 
@@ -42,13 +43,6 @@ type PartnerLite = {
   coupon_code: string | null;
 };
 
-const field =
-  "mt-1.5 w-full rounded-[8px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none";
-const lab = "font-mono text-label uppercase text-muted";
-const btn =
-  "tap rounded-[8px] border border-hair px-4 py-2 text-body-sm text-ink transition-colors hover:border-gold/60";
-const btnGold =
-  "tap rounded-[8px] bg-brand-gradient px-5 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60";
 
 const discountLabel = (c: CouponRow) =>
   c.percent_off != null
@@ -165,22 +159,20 @@ function CouponForm({
     <form onSubmit={save}>
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
         <label>
-          <span className={lab}>Code (what the buyer types)</span>
-          <input
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Code (what the buyer types)</span>
+          <Input
             required
             value={f.code}
-            onChange={(e) => set("code", e.target.value.toUpperCase())}
-            className={`${field} font-mono uppercase`}
+            onChange={(e) => set("code", e.target.value.toUpperCase())} className="font-mono uppercase"
             placeholder="AIFIRST30"
             maxLength={32}
           />
         </label>
         <label>
-          <span className={lab}>Belongs to a partner? (optional)</span>
-          <select
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Belongs to a partner? (optional)</span>
+          <Select
             value={f.partnerId}
             onChange={(e) => set("partnerId", e.target.value)}
-            className={field}
           >
             <option value="">No, a store coupon</option>
             {partners.map((p) => (
@@ -188,72 +180,66 @@ function CouponForm({
                 {p.name} (?ref={p.ref})
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <label>
-          <span className={lab}>Discount type</span>
-          <select
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Discount type</span>
+          <Select
             value={f.kind}
             onChange={(e) => set("kind", e.target.value)}
-            className={field}
           >
             <option value="percent">Percent off</option>
             <option value="amount">Dollar amount off</option>
-          </select>
+          </Select>
         </label>
         {f.kind === "percent" ? (
           <label>
-            <span className={lab}>Percent off (1 to 90)</span>
-            <input
+            <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Percent off (1 to 90)</span>
+            <Input
               type="number"
               min={1}
               max={90}
               value={f.percent}
               onChange={(e) => set("percent", e.target.value)}
-              className={field}
               placeholder="30"
             />
           </label>
         ) : (
           <label>
-            <span className={lab}>Dollars off</span>
-            <input
+            <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Dollars off</span>
+            <Input
               type="number"
               min={1}
               step="0.01"
               value={f.amount}
               onChange={(e) => set("amount", e.target.value)}
-              className={field}
               placeholder="600"
             />
           </label>
         )}
         <label>
-          <span className={lab}>Limit to one SKU (blank = any product)</span>
-          <input
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Limit to one SKU (blank = any product)</span>
+          <Input
             value={f.sku}
-            onChange={(e) => set("sku", e.target.value)}
-            className={`${field} font-mono lowercase`}
+            onChange={(e) => set("sku", e.target.value)} className="font-mono lowercase"
             placeholder="pack-001"
           />
         </label>
         <label>
-          <span className={lab}>Valid until (blank = no end date)</span>
-          <input
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Valid until (blank = no end date)</span>
+          <Input
             type="datetime-local"
             value={f.until}
             onChange={(e) => set("until", e.target.value)}
-            className={field}
           />
         </label>
         <label>
-          <span className={lab}>Max redemptions (blank = unlimited)</span>
-          <input
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Max redemptions (blank = unlimited)</span>
+          <Input
             type="number"
             min={1}
             value={f.max}
             onChange={(e) => set("max", e.target.value)}
-            className={field}
           />
         </label>
         <div className="rounded-[8px] border border-hair p-4 sm:col-span-2">
@@ -269,26 +255,24 @@ function CouponForm({
           {f.subEligible && (
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <label>
-                <span className={lab}>On a subscription, the discount lasts</span>
-                <select
+                <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">On a subscription, the discount lasts</span>
+                <Select
                   value={f.subDuration}
                   onChange={(e) => set("subDuration", e.target.value)}
-                  className={field}
                 >
                   <option value="forever">Every month (as long as subscribed)</option>
                   <option value="once">First payment only</option>
                   <option value="repeating">First N months</option>
-                </select>
+                </Select>
               </label>
               {f.subDuration === "repeating" && (
                 <label>
-                  <span className={lab}>Number of months</span>
-                  <input
+                  <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Number of months</span>
+                  <Input
                     type="number"
                     min={1}
                     value={f.subMonths}
                     onChange={(e) => set("subMonths", e.target.value)}
-                    className={field}
                     placeholder="3"
                   />
                 </label>
@@ -308,12 +292,12 @@ function CouponForm({
       </div>
       {err && <p className="mt-4 text-body-sm text-error">{err}</p>}
       <div className="mt-6 flex gap-3">
-        <button type="submit" disabled={busy} className={btnGold}>
+        <Button variant="brand" type="submit" disabled={busy}>
           {busy ? "Saving" : "Save coupon"}
-        </button>
-        <button type="button" onClick={onCancel} className={btn}>
+        </Button>
+        <Button variant="secondary" onClick={onCancel}>
           Cancel
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -390,56 +374,53 @@ function PartnerCouponGenerator({
       </p>
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
         <label>
-          <span className={lab}>Partner</span>
-          <select value={partnerId} onChange={(e) => pickPartner(e.target.value)} className={field}>
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Partner</span>
+          <Select value={partnerId} onChange={(e) => pickPartner(e.target.value)}>
             {partners.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
                 {p.coupon_code ? ` (has ${p.coupon_code})` : " (no code yet)"}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <label>
-          <span className={lab}>Code</span>
-          <input
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Code</span>
+          <Input
             required
             value={code}
-            onChange={(e) => setCode(e.target.value.toUpperCase())}
-            className={`${field} font-mono uppercase`}
+            onChange={(e) => setCode(e.target.value.toUpperCase())} className="font-mono uppercase"
             maxLength={32}
           />
         </label>
         <label>
-          <span className={lab}>Percent off</span>
-          <input
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Percent off</span>
+          <Input
             type="number"
             min={1}
             max={90}
             value={percent}
             onChange={(e) => pickPercent(e.target.value)}
-            className={field}
           />
         </label>
         <label>
-          <span className={lab}>Months on editing plans</span>
-          <input
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Months on editing plans</span>
+          <Input
             type="number"
             min={1}
             value={months}
             onChange={(e) => setMonths(e.target.value)}
-            className={field}
           />
         </label>
       </div>
       {err && <p className="mt-4 text-body-sm text-error">{err}</p>}
       <div className="mt-6 flex gap-3">
-        <button type="submit" disabled={busy} className={btnGold}>
+        <Button variant="brand" type="submit" disabled={busy}>
           {busy ? "Creating" : "Create coupon"}
-        </button>
-        <button type="button" onClick={onCancel} className={btn}>
+        </Button>
+        <Button variant="secondary" onClick={onCancel}>
           Cancel
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -550,17 +531,16 @@ export function CouponsScreen() {
         <h1 className="font-display text-h2 text-ink">Coupons</h1>
         <div className="flex gap-2">
           {tab === "partner" && missingCount > 0 && (
-            <button type="button" onClick={createMissing} className={btn}>
+            <Button variant="secondary" onClick={createMissing}>
               Create missing ({missingCount})
-            </button>
+            </Button>
           )}
-          <button
-            type="button"
+          <Button
+            variant="brand"
             onClick={() => (tab === "store" ? setEditing("new") : setGenerating(true))}
-            className={btnGold}
           >
             {tab === "store" ? "Add coupon" : "Create partner coupon"}
-          </button>
+          </Button>
         </div>
       </div>
       <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
@@ -680,20 +660,18 @@ export function CouponsScreen() {
               >
                 {c.active ? "Turn off" : "Turn on"}
               </button>
-              <button
-                type="button"
+              <Button
+                variant="secondary"
                 onClick={() => setEditing(c)}
-                className={btn}
               >
                 Edit
-              </button>
-              <button
-                type="button"
-                onClick={() => remove(c)}
-                className={`${btn} text-error hover:border-error/60`}
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => remove(c)} className="text-error hover:border-error/60"
               >
                 Delete
-              </button>
+              </Button>
             </div>
           </li>
         ))}

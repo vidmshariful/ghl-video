@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Button, Input } from "@/components/portal/ui";
 import { AdminModal } from "./Modal";
 import { authHeader, supabase } from "./client";
 import type { View } from "./nav";
@@ -24,13 +25,6 @@ type TeamRow = {
 
 const GROUPS = ["Sales", "Production", "Affiliate", "Products & Packs", "CMS", "Settings"] as const;
 
-const btnGold =
-  "tap rounded-[8px] bg-brand-gradient px-5 py-2.5 text-body-sm font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60";
-const btnGhost =
-  "tap rounded-[8px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold";
-const inputCls =
-  "mt-2 w-full rounded-[8px] border border-hair bg-canvas px-4 py-2.5 text-body text-ink focus:border-gold focus:outline-none disabled:opacity-60";
-const labelCls = "font-mono text-label uppercase text-muted";
 
 function RoleBadge({ role }: { role: Role }) {
   const cls =
@@ -114,9 +108,9 @@ export function TeamScreen({
             teammates get a link to set their own password.
           </p>
         </div>
-        <button type="button" onClick={() => setEditing("new")} className={btnGold}>
+        <Button variant="brand" onClick={() => setEditing("new")}>
           Add teammate
-        </button>
+        </Button>
       </div>
 
       {notice ? <p className="mt-4 text-body-sm text-gold">{notice}</p> : null}
@@ -152,12 +146,12 @@ export function TeamScreen({
                   <RoleBadge role={row.role} />
                   <span className="w-32 text-body-sm text-muted">{access}</span>
                   <div className="flex shrink-0 items-center gap-2">
-                    <button type="button" onClick={() => sendLoginLink(row)} className={btnGhost}>
+                    <Button variant="secondary" onClick={() => sendLoginLink(row)}>
                       Send login link
-                    </button>
-                    <button type="button" onClick={() => setEditing(row)} className={btnGhost}>
+                    </Button>
+                    <Button variant="secondary" onClick={() => setEditing(row)}>
                       Edit
-                    </button>
+                    </Button>
                     {!isMe ? (
                       <button
                         type="button"
@@ -257,30 +251,28 @@ function TeamForm({
     >
       <form onSubmit={save} className="grid gap-5">
         <label className="block">
-          <span className={labelCls}>Full name</span>
-          <input
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Full name</span>
+          <Input
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className={inputCls}
             placeholder="Jordan Reeves"
           />
         </label>
         <label className="block">
-          <span className={labelCls}>Email</span>
-          <input
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Email</span>
+          <Input
             type="email"
             required
             disabled={isEdit}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className={inputCls}
             placeholder="jordan@vidiosa.com"
           />
         </label>
 
         <div>
-          <span className={labelCls}>Role</span>
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Role</span>
           <div className="mt-2 flex flex-wrap gap-2">
             {ROLES.map((r) => (
               <button
@@ -307,7 +299,7 @@ function TeamForm({
           </p>
         ) : (
           <div>
-            <span className={labelCls}>Menu access</span>
+            <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Menu access</span>
             <p className="mt-1 text-body-sm text-dim">
               Dashboard is always on. Check what this person can open.
             </p>
@@ -345,12 +337,12 @@ function TeamForm({
         {err ? <p className="text-body-sm text-error">{err}</p> : null}
 
         <div className="flex items-center gap-3 border-t border-hair pt-5">
-          <button type="submit" disabled={busy} className={btnGold}>
+          <Button variant="brand" type="submit" disabled={busy}>
             {busy ? "Saving..." : isEdit ? "Save changes" : "Add teammate"}
-          </button>
-          <button type="button" onClick={onClose} className={btnGhost}>
+          </Button>
+          <Button variant="secondary" onClick={onClose}>
             Cancel
-          </button>
+          </Button>
         </div>
       </form>
     </AdminModal>

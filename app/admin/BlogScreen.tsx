@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Button, Input, Select, Textarea } from "@/components/portal/ui";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
@@ -35,13 +36,6 @@ type Post = {
   updated_at: string;
 };
 
-const field =
-  "mt-1.5 w-full rounded-[8px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none";
-const lab = "font-mono text-label uppercase text-muted";
-const btnGold =
-  "tap rounded-[8px] bg-brand-gradient px-5 py-2.5 text-body-sm font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60";
-const btnGhost =
-  "tap rounded-[8px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-50";
 
 const slugify = (s: string) =>
   s
@@ -126,12 +120,12 @@ export function BlogScreen() {
           </p>
         </div>
         <div className="flex items-center gap-2.5">
-          <button type="button" onClick={() => setManagingCats(true)} className={btnGhost}>
+          <Button variant="secondary" onClick={() => setManagingCats(true)}>
             Categories
-          </button>
-          <button type="button" onClick={() => setEditing("new")} className={btnGold}>
+          </Button>
+          <Button variant="brand" onClick={() => setEditing("new")}>
             Write a post
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -192,14 +186,14 @@ export function BlogScreen() {
                         href={`/blog/${p.slug}/`}
                         target="_blank"
                         rel="noreferrer"
-                        className={btnGhost}
+                        className="tap inline-flex items-center gap-2 rounded-[8px] border border-hair bg-surface px-4 py-2 text-body-sm text-ink transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-50"
                       >
                         View
                       </a>
                     ) : null}
-                    <button type="button" onClick={() => setEditing(p)} className={btnGhost}>
+                    <Button variant="secondary" onClick={() => setEditing(p)}>
                       Edit
-                    </button>
+                    </Button>
                     <button
                       type="button"
                       onClick={() => remove(p)}
@@ -279,9 +273,9 @@ function CategoriesModal({
           <li key={c.id} className="flex items-center gap-3 rounded-[8px] border border-hair bg-canvas px-4 py-2.5">
             <span className="flex-1 text-body text-ink">{c.name}</span>
             <span className="font-mono text-label uppercase text-dim">/blog/category/{c.slug}</span>
-            <button type="button" onClick={() => rename(c)} className={btnGhost}>
+            <Button variant="secondary" onClick={() => rename(c)}>
               Rename
-            </button>
+            </Button>
             <button
               type="button"
               onClick={() => remove(c)}
@@ -295,15 +289,14 @@ function CategoriesModal({
       </ul>
       {err ? <p className="mt-3 text-body-sm text-error">{err}</p> : null}
       <form onSubmit={add} className="mt-4 flex gap-2 border-t border-hair pt-4">
-        <input
+        <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="New category name"
-          className={`${field} mt-0 flex-1`}
+          placeholder="New category name" className="mt-0 flex-1"
         />
-        <button type="submit" disabled={busy || !name.trim()} className={btnGold}>
+        <Button variant="brand" type="submit" disabled={busy || !name.trim()}>
           Add
-        </button>
+        </Button>
       </form>
     </AdminModal>
   );
@@ -479,19 +472,19 @@ function PostEditor({
   return (
     <div className="w-full">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <button type="button" onClick={onBack} className={btnGhost}>
+        <Button variant="secondary" onClick={onBack}>
           &#8592; All posts
-        </button>
+        </Button>
         <div className="flex items-center gap-2.5">
           {live ? (
-            <a href={`/blog/${slug}/`} target="_blank" rel="noreferrer" className={btnGhost}>
+            <a href={`/blog/${slug}/`} target="_blank" rel="noreferrer" className="tap inline-flex items-center gap-2 rounded-[8px] border border-hair bg-surface px-4 py-2 text-body-sm text-ink transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-50">
               View live
             </a>
           ) : null}
-          <button type="button" disabled={!!busy} onClick={() => save("draft")} className={btnGhost}>
+          <Button variant="secondary" disabled={!!busy} onClick={() => save("draft")}>
             {busy === "draft" ? "Saving..." : live ? "Save changes" : "Save draft"}
-          </button>
-          <button type="button" disabled={!!busy} onClick={() => save("publish")} className={btnGold}>
+          </Button>
+          <Button variant="brand" disabled={!!busy} onClick={() => save("publish")}>
             {busy === "publish"
               ? "Publishing..."
               : schedule
@@ -499,7 +492,7 @@ function PostEditor({
                 : live
                   ? "Update live post"
                   : "Publish"}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -568,7 +561,7 @@ function PostEditor({
         {/* the settings column */}
         <div className="grid content-start gap-5">
           <div className="rounded-[12px] border border-hair bg-surface p-4">
-            <p className={lab}>Cover image</p>
+            <p className="font-mono text-label uppercase tracking-[0.08em] text-muted">Cover image</p>
             {coverUrl ? (
               // eslint-disable-next-line @next/next/no-img-element -- admin preview of an uploaded asset
               <img src={coverUrl} alt="Cover" className="mt-2 w-full rounded-[4px] border border-hair" />
@@ -576,13 +569,13 @@ function PostEditor({
               <p className="mt-2 text-body-sm text-dim">Shown on the blog page and social shares.</p>
             )}
             <div className="mt-3 flex gap-2">
-              <button type="button" onClick={() => coverInput.current?.click()} className={btnGhost}>
+              <Button variant="secondary" onClick={() => coverInput.current?.click()}>
                 {coverUrl ? "Replace" : "Upload"}
-              </button>
+              </Button>
               {coverUrl ? (
-                <button type="button" onClick={() => setCoverUrl("")} className={btnGhost}>
+                <Button variant="secondary" onClick={() => setCoverUrl("")}>
                   Remove
-                </button>
+                </Button>
               ) : null}
             </div>
             <input ref={coverInput} type="file" accept="image/*" className="hidden" onChange={onCoverPicked} />
@@ -590,60 +583,57 @@ function PostEditor({
 
           <div className="rounded-[12px] border border-hair bg-surface p-4">
             <label className="block">
-              <span className={lab}>Category</span>
-              <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className={field}>
+              <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Category</span>
+              <Select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
                 <option value="">No category</option>
                 {cats.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
             <label className="mt-4 block">
-              <span className={lab}>Slug (the URL)</span>
-              <input
+              <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Slug (the URL)</span>
+              <Input
                 value={slug}
                 onChange={(e) => {
                   setSlugTouched(true);
                   setSlug(e.target.value);
                 }}
-                className={field}
               />
               <span className="mt-1 block truncate text-body-sm text-dim">/blog/{slugify(slug) || "..."}/</span>
             </label>
             <label className="mt-4 block">
-              <span className={lab}>Excerpt</span>
-              <textarea
+              <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Excerpt</span>
+              <Textarea
                 rows={3}
                 value={excerpt}
-                onChange={(e) => setExcerpt(e.target.value)}
-                className={`${field} resize-y`}
+                onChange={(e) => setExcerpt(e.target.value)} className="resize-y"
                 placeholder="One or two sentences shown on the blog page."
               />
             </label>
           </div>
 
           <div className="rounded-[12px] border border-hair bg-surface p-4">
-            <p className={lab}>Search engines</p>
+            <p className="font-mono text-label uppercase tracking-[0.08em] text-muted">Search engines</p>
             <label className="mt-3 block">
               <span className="text-body-sm text-muted">SEO title (empty = post title)</span>
-              <input value={seoTitle} onChange={(e) => setSeoTitle(e.target.value)} className={field} />
+              <Input value={seoTitle} onChange={(e) => setSeoTitle(e.target.value)} />
             </label>
             <label className="mt-3 block">
               <span className="text-body-sm text-muted">Meta description (empty = excerpt)</span>
-              <textarea
+              <Textarea
                 rows={3}
                 value={seoDescription}
-                onChange={(e) => setSeoDescription(e.target.value)}
-                className={`${field} resize-y`}
+                onChange={(e) => setSeoDescription(e.target.value)} className="resize-y"
               />
               <span className="mt-1 block text-body-sm text-dim">{(seoDescription || excerpt).length} characters. Aim for 150 to 160.</span>
             </label>
           </div>
 
           <div className="rounded-[12px] border border-hair bg-surface p-4">
-            <p className={lab}>Publishing</p>
+            <p className="font-mono text-label uppercase tracking-[0.08em] text-muted">Publishing</p>
             <label className="mt-3 flex items-center gap-2.5 text-body-sm text-ink">
               <input
                 type="checkbox"
@@ -654,11 +644,10 @@ function PostEditor({
               Schedule for later
             </label>
             {schedule ? (
-              <input
+              <Input
                 type="datetime-local"
                 value={scheduleAt}
                 onChange={(e) => setScheduleAt(e.target.value)}
-                className={field}
               />
             ) : null}
             {publishedAt ? (

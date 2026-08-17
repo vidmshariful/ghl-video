@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Button, Input, Select } from "@/components/portal/ui";
 import { supabase, money } from "./client";
 import { CatalogScreen } from "./CatalogScreen";
 import { BumpsScreen } from "./BumpsScreen";
@@ -46,13 +47,6 @@ type BundleRule = {
   sort: number;
 };
 
-const field =
-  "mt-1.5 w-full rounded-[8px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none";
-const lab = "font-mono text-label uppercase text-muted";
-const btnGhost =
-  "tap rounded-[8px] border border-hair px-3 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-50";
-const btnGold =
-  "tap rounded-[8px] bg-brand-gradient px-5 py-2.5 text-body-sm font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60";
 
 export function ProductsHub() {
   const [tab, setTab] = useState<Tab>("videos");
@@ -269,7 +263,7 @@ function PackEditor({
   return (
     <div className="grid gap-5 border-t border-hair bg-canvas/40 p-5 lg:grid-cols-2">
       <div>
-        <p className={lab}>Inside this pack ({items.length})</p>
+        <p className="font-mono text-label uppercase tracking-[0.08em] text-muted">Inside this pack ({items.length})</p>
         {items.length === 0 ? (
           (pack.pack_count ?? 0) > 0 ? (
             <p className="mt-2 max-w-[var(--measure-body)] text-body-sm text-muted">
@@ -300,9 +294,9 @@ function PackEditor({
                   {i.group_label ? (
                     <span className="font-mono text-label uppercase text-dim">{i.group_label}</span>
                   ) : null}
-                  <button type="button" disabled={busy} onClick={() => drop(i.id)} className={btnGhost}>
+                  <Button variant="secondary" disabled={busy} onClick={() => drop(i.id)}>
                     Remove
-                  </button>
+                  </Button>
                 </li>
               );
             })}
@@ -312,12 +306,11 @@ function PackEditor({
       </div>
 
       <div>
-        <p className={lab}>Add a video</p>
-        <input
+        <p className="font-mono text-label uppercase tracking-[0.08em] text-muted">Add a video</p>
+        <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search by name or code"
-          className={field}
         />
         <ul className="mt-2 max-h-80 overflow-y-auto rounded-[8px] border border-hair">
           {shown.slice(0, 40).map((v) => (
@@ -329,9 +322,9 @@ function PackEditor({
                 {v.code.toUpperCase()}
               </span>
               <span className="min-w-0 flex-1 truncate text-body-sm text-muted">{v.title}</span>
-              <button type="button" disabled={busy} onClick={() => add(v.code)} className={btnGhost}>
+              <Button variant="secondary" disabled={busy} onClick={() => add(v.code)}>
                 Add
-              </button>
+              </Button>
             </li>
           ))}
           {shown.length === 0 ? (
@@ -407,7 +400,7 @@ function BundleEditor({
   return (
     <div className="grid gap-5 border-t border-hair bg-canvas/40 p-5 lg:grid-cols-2">
       <div>
-        <p className={lab}>What the customer picks ({total} videos in total)</p>
+        <p className="font-mono text-label uppercase tracking-[0.08em] text-muted">What the customer picks ({total} videos in total)</p>
         {rules.length === 0 ? (
           <p className="mt-2 text-body-sm text-error">
             No picks set. A buyer would reach the intake form with nothing to choose.
@@ -426,9 +419,9 @@ function BundleEditor({
                 {r.library && r.library !== "any" ? (
                   <span className="font-mono text-label uppercase text-dim">{r.library}</span>
                 ) : null}
-                <button type="button" disabled={busy} onClick={() => drop(r.id)} className={btnGhost}>
+                <Button variant="secondary" disabled={busy} onClick={() => drop(r.id)}>
                   Remove
-                </button>
+                </Button>
               </li>
             ))}
           </ul>
@@ -437,49 +430,47 @@ function BundleEditor({
       </div>
 
       <div>
-        <p className={lab}>Add a pick rule</p>
+        <p className="font-mono text-label uppercase tracking-[0.08em] text-muted">Add a pick rule</p>
         <div className="mt-2 grid gap-3 sm:grid-cols-2">
           <label>
-            <span className={lab}>How many</span>
-            <input
+            <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">How many</span>
+            <Input
               type="number"
               min="1"
               value={count}
               onChange={(e) => setCount(e.target.value)}
-              className={field}
             />
           </label>
           <label>
-            <span className={lab}>From which category</span>
-            <select value={category} onChange={(e) => setCategory(e.target.value)} className={field}>
+            <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">From which category</span>
+            <Select value={category} onChange={(e) => setCategory(e.target.value)}>
               {CATEGORIES.map((c) => (
                 <option key={c} value={c}>
                   {c}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
           <label>
-            <span className={lab}>Library</span>
-            <select value={library} onChange={(e) => setLibrary(e.target.value)} className={field}>
+            <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Library</span>
+            <Select value={library} onChange={(e) => setLibrary(e.target.value)}>
               <option value="any">Any</option>
               <option value="new">New</option>
               <option value="classic">Classic</option>
-            </select>
+            </Select>
           </label>
           <label>
-            <span className={lab}>Label on the offer</span>
-            <input
+            <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Label on the offer</span>
+            <Input
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               placeholder={`${count}x ${category}`}
-              className={field}
             />
           </label>
         </div>
-        <button type="button" onClick={add} disabled={busy} className={`${btnGold} mt-4`}>
+        <Button variant="brand" onClick={add} disabled={busy} className="mt-4">
           Add rule
-        </button>
+        </Button>
       </div>
     </div>
   );

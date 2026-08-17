@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Button } from "@/components/portal/ui";
 import { authHeader, money, supabase, when } from "./client";
 
 type SubRow = {
@@ -65,11 +66,7 @@ export function SubscriptionsScreen() {
     }
   }
 
-  const btn =
-    "tap rounded-[8px] border border-hair px-3 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-50";
-  const btnDanger =
-    "tap rounded-[8px] border border-hair px-3 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-error/60 hover:text-error disabled:opacity-50";
-
+    
   if (!loaded) return <p className="text-body text-muted">Loading subscriptions...</p>;
 
   const active = rows.filter((r) => r.status === "active");
@@ -130,27 +127,25 @@ export function SubscriptionsScreen() {
               {r.status !== "canceled" && r.status !== "incomplete" ? (
                 <div className="flex w-full flex-wrap items-center gap-2 pt-1">
                   {r.cancel_at_period_end ? (
-                    <button type="button" disabled={busy === r.id} onClick={() => act(r.id, "resume")} className={btn}>
+                    <Button variant="secondary" disabled={busy === r.id} onClick={() => act(r.id, "resume")}>
                       Resume
-                    </button>
+                    </Button>
                   ) : (
-                    <button
-                      type="button"
+                    <Button
+                      variant="secondary"
                       disabled={busy === r.id}
                       onClick={() => act(r.id, "cancel_period_end", `Cancel ${r.customer_email}'s plan at the end of the period?`)}
-                      className={btn}
                     >
                       Cancel at period end
-                    </button>
+                    </Button>
                   )}
-                  <button
-                    type="button"
+                  <Button
+                    variant="danger"
                     disabled={busy === r.id}
                     onClick={() => act(r.id, "cancel_now", `Cancel ${r.customer_email}'s plan IMMEDIATELY? They lose access now.`)}
-                    className={btnDanger}
                   >
                     Cancel now
-                  </button>
+                  </Button>
                   {busy === r.id ? (
                     <span className="font-mono text-label uppercase text-dim">working...</span>
                   ) : null}

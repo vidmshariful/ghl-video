@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Button, Input, Select } from "@/components/portal/ui";
 import { AdminModal } from "./Modal";
 import { authHeader, supabase } from "./client";
 import { packsContaining, packsPickable } from "@/lib/content/pack-map";
@@ -53,9 +54,6 @@ const CATEGORIES = [
 
 const money = (cents: number) => `$${(cents / 100).toLocaleString("en-US")}`;
 
-const field =
-  "mt-1.5 w-full rounded-[8px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none";
-const lab = "font-mono text-label uppercase text-muted";
 
 export function CatalogScreen({
   kind = "video",
@@ -263,15 +261,15 @@ export function CatalogScreen({
                 </div>
                 <span className="w-16 shrink-0 font-mono text-body-sm text-ink">{money(row.price_cents)}</span>
                 <div className="flex shrink-0 items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                  <button type="button" onClick={() => copyLink(row)} className={btnGhost}>
+                  <Button variant="secondary" onClick={() => copyLink(row)}>
                     {copied === row.id ? "Copied" : "Buy link"}
-                  </button>
-                  <button type="button" onClick={() => toggle(row, "featured")} className={btnGhost}>
+                  </Button>
+                  <Button variant="secondary" onClick={() => toggle(row, "featured")}>
                     {row.featured ? "Unfeature" : "Feature"}
-                  </button>
-                  <button type="button" onClick={() => setEditing(row)} className={btnGhost}>
+                  </Button>
+                  <Button variant="secondary" onClick={() => setEditing(row)}>
                     Edit
-                  </button>
+                  </Button>
                   <button
                     type="button"
                     onClick={() => remove(row)}
@@ -303,8 +301,6 @@ export function CatalogScreen({
   );
 }
 
-const btnGhost =
-  "tap rounded-[8px] border border-hair px-3 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold";
 
 /* The relations a row cannot show inline: which packs carry this video,
  * which order bumps checkout will offer with it, and its links. Read-only;
@@ -329,7 +325,7 @@ function RowDetails({ row, bumps }: { row: CatalogRow; bumps: OrderBump[] }) {
   return (
     <div className="grid gap-4 border-t border-hair bg-canvas/40 px-4 py-4 sm:grid-cols-2 lg:grid-cols-3">
       <div>
-        <p className={lab}>In packs</p>
+        <p className="font-mono text-label uppercase tracking-[0.08em] text-muted">In packs</p>
         {memberOf.length === 0 && pickable.length === 0 ? (
           <p className="mt-1.5 text-body-sm text-dim">
             {isFaPack ? "This is itself a pack of animations." : "Not part of any pack."}
@@ -350,7 +346,7 @@ function RowDetails({ row, bumps }: { row: CatalogRow; bumps: OrderBump[] }) {
         )}
       </div>
       <div>
-        <p className={lab}>Order bumps at checkout</p>
+        <p className="font-mono text-label uppercase tracking-[0.08em] text-muted">Order bumps at checkout</p>
         {applicable.length === 0 ? (
           <p className="mt-1.5 text-body-sm text-dim">No bumps apply.</p>
         ) : (
@@ -371,7 +367,7 @@ function RowDetails({ row, bumps }: { row: CatalogRow; bumps: OrderBump[] }) {
         </p>
       </div>
       <div>
-        <p className={lab}>Links</p>
+        <p className="font-mono text-label uppercase tracking-[0.08em] text-muted">Links</p>
         <ul className="mt-1.5 grid gap-1 text-body-sm">
           <li className="truncate text-muted">
             Buy: <span className="text-ink">/checkout/{row.code}</span>
@@ -467,51 +463,51 @@ function CatalogForm({
     <AdminModal open onClose={onClose} title={isEdit ? `Edit ${row!.code.toUpperCase()}` : "Add a video"}>
       <form onSubmit={save} className="grid gap-4 sm:grid-cols-2">
         <label className="sm:col-span-2">
-          <span className={lab}>Title</span>
-          <input required value={v.title} onChange={(e) => set("title", e.target.value)} className={field} />
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Title</span>
+          <Input required value={v.title} onChange={(e) => set("title", e.target.value)} />
         </label>
         <label>
-          <span className={lab}>Code (sku)</span>
-          <input required value={v.code} onChange={(e) => set("code", e.target.value)} className={field} placeholder="fexp-038" />
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Code (sku)</span>
+          <Input required value={v.code} onChange={(e) => set("code", e.target.value)} placeholder="fexp-038" />
         </label>
         <label>
-          <span className={lab}>Category</span>
-          <select value={v.category} onChange={(e) => set("category", e.target.value)} className={field}>
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Category</span>
+          <Select value={v.category} onChange={(e) => set("category", e.target.value)}>
             {CATEGORIES.map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
-          </select>
+          </Select>
         </label>
         <label>
-          <span className={lab}>Library</span>
-          <select value={v.library} onChange={(e) => set("library", e.target.value)} className={field}>
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Library</span>
+          <Select value={v.library} onChange={(e) => set("library", e.target.value)}>
             <option value="new">New</option>
             <option value="classic">Classic</option>
-          </select>
+          </Select>
         </label>
         <label>
-          <span className={lab}>Price (USD)</span>
-          <input type="number" min="0" value={v.price} onChange={(e) => set("price", e.target.value)} className={field} />
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Price (USD)</span>
+          <Input type="number" min="0" value={v.price} onChange={(e) => set("price", e.target.value)} />
         </label>
         <label>
-          <span className={lab}>Subject / capability</span>
-          <input value={v.subject} onChange={(e) => set("subject", e.target.value)} className={field} placeholder="AI Receptionist" />
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Subject / capability</span>
+          <Input value={v.subject} onChange={(e) => set("subject", e.target.value)} placeholder="AI Receptionist" />
         </label>
         <label>
-          <span className={lab}>Release date</span>
-          <input type="date" value={v.release_date} onChange={(e) => set("release_date", e.target.value)} className={field} />
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Release date</span>
+          <Input type="date" value={v.release_date} onChange={(e) => set("release_date", e.target.value)} />
         </label>
         <label className="sm:col-span-2">
-          <span className={lab}>Video link (mp4 preview)</span>
-          <input value={v.video_url} onChange={(e) => set("video_url", e.target.value)} className={field} placeholder="https://..." />
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Video link (mp4 preview)</span>
+          <Input value={v.video_url} onChange={(e) => set("video_url", e.target.value)} placeholder="https://..." />
         </label>
         <label>
-          <span className={lab}>Poster URL</span>
-          <input value={v.poster_url} onChange={(e) => set("poster_url", e.target.value)} className={field} placeholder="/posters/..." />
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Poster URL</span>
+          <Input value={v.poster_url} onChange={(e) => set("poster_url", e.target.value)} placeholder="/posters/..." />
         </label>
         <label>
-          <span className={lab}>Wistia ID (classic)</span>
-          <input value={v.wistia_id} onChange={(e) => set("wistia_id", e.target.value)} className={field} />
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Wistia ID (classic)</span>
+          <Input value={v.wistia_id} onChange={(e) => set("wistia_id", e.target.value)} />
         </label>
         <div className="flex flex-wrap gap-5 sm:col-span-2">
           <label className="flex items-center gap-2 text-body-sm text-ink">
@@ -537,7 +533,7 @@ function CatalogForm({
           <button type="submit" disabled={busy} className="tap rounded-[8px] bg-brand-gradient px-6 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60">
             {busy ? "Saving..." : isEdit ? "Save changes" : "Add video"}
           </button>
-          <button type="button" onClick={onClose} className={btnGhost}>Cancel</button>
+          <Button variant="secondary" onClick={onClose}>Cancel</Button>
         </div>
       </form>
     </AdminModal>

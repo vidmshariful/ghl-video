@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Input, Select, Textarea } from "@/components/portal/ui";
 import { money, supabase } from "./client";
 import { AdminModal } from "./Modal";
 
@@ -16,9 +17,6 @@ type BumpRow = {
   sort: number;
 };
 
-const field =
-  "mt-1.5 w-full rounded-[8px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none";
-const lab = "font-mono text-label uppercase text-muted";
 
 const SCOPE_HINT: Record<BumpRow["scope"], string> = {
   all: "Shown on every product.",
@@ -92,69 +90,64 @@ function BumpForm({
     <form onSubmit={save}>
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
         <label className="sm:col-span-2">
-          <span className={lab}>Name</span>
-          <input
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Name</span>
+          <Input
             required
             value={b.name}
             onChange={(e) => set("name", e.target.value)}
-            className={field}
             placeholder="Niche customization"
           />
         </label>
         <label className="sm:col-span-2">
-          <span className={lab}>Description</span>
-          <textarea
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Description</span>
+          <Textarea
             rows={2}
             value={b.description}
-            onChange={(e) => set("description", e.target.value)}
-            className={`${field} resize-y`}
+            onChange={(e) => set("description", e.target.value)} className="resize-y"
             placeholder="Swap any graphic or footage so the video fits your niche."
           />
         </label>
         <label>
-          <span className={lab}>Price (USD)</span>
-          <input
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Price (USD)</span>
+          <Input
             required
             type="number"
             min="0"
             step="1"
             value={b.price}
             onChange={(e) => set("price", e.target.value)}
-            className={field}
           />
         </label>
         <label>
-          <span className={lab}>Price type</span>
-          <select value={b.unit} onChange={(e) => set("unit", e.target.value)} className={field}>
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Price type</span>
+          <Select value={b.unit} onChange={(e) => set("unit", e.target.value)}>
             <option value="flat">Flat (one price)</option>
             <option value="per_video">Per video (× video count)</option>
-          </select>
+          </Select>
         </label>
         <label>
-          <span className={lab}>Show on</span>
-          <select value={b.scope} onChange={(e) => set("scope", e.target.value)} className={field}>
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Show on</span>
+          <Select value={b.scope} onChange={(e) => set("scope", e.target.value)}>
             <option value="all">All products</option>
             <option value="kinds">By kind</option>
             <option value="prefixes">By code prefix</option>
             <option value="skus">Specific products</option>
-          </select>
+          </Select>
         </label>
         <label>
-          <span className={lab}>Sort</span>
-          <input
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Sort</span>
+          <Input
             type="number"
             value={b.sort}
             onChange={(e) => set("sort", e.target.value)}
-            className={field}
           />
         </label>
         {b.scope !== "all" ? (
           <label className="sm:col-span-2">
-            <span className={lab}>Targets</span>
-            <input
+            <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Targets</span>
+            <Input
               value={b.scopeValues}
               onChange={(e) => set("scopeValues", e.target.value)}
-              className={field}
               placeholder={SCOPE_HINT[b.scope as BumpRow["scope"]]}
             />
             <span className="mt-1 block font-mono text-label text-dim">

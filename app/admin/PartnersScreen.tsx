@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Button, Input, Select, Textarea } from "@/components/portal/ui";
 import { supabase, authHeader, when } from "./client";
 import { AdminModal } from "./Modal";
 
@@ -54,13 +55,6 @@ type AssetRow = {
 
 type Tab = "partners" | "applications" | "assets";
 
-const field =
-  "mt-1.5 w-full rounded-[8px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none";
-const lab = "font-mono text-label uppercase text-muted";
-const btn =
-  "tap rounded-[8px] border border-hair px-4 py-2 text-body-sm text-ink transition-colors hover:border-gold/60";
-const btnGold =
-  "tap rounded-[8px] bg-brand-gradient px-5 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60";
 
 const STATUS_STYLE: Record<PartnerRow["status"], string> = {
   active: "border-green/40 text-green",
@@ -167,152 +161,141 @@ function PartnerForm({
     <form onSubmit={save}>
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
         <label>
-          <span className={lab}>Name</span>
-          <input required value={f.name} onChange={(e) => set("name", e.target.value)} className={field} />
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Name</span>
+          <Input required value={f.name} onChange={(e) => set("name", e.target.value)} />
         </label>
         <label>
-          <span className={lab}>Email (their portal login)</span>
-          <input
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Email (their portal login)</span>
+          <Input
             type="email"
             value={f.email}
             onChange={(e) => set("email", e.target.value)}
-            className={field}
             placeholder="partner@example.com"
           />
         </label>
         <label>
-          <span className={lab}>Ref slug (?ref=... on their links)</span>
-          <input
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Ref slug (?ref=... on their links)</span>
+          <Input
             required
             value={f.ref}
-            onChange={(e) => set("ref", e.target.value.toLowerCase())}
-            className={`${field} font-mono lowercase`}
+            onChange={(e) => set("ref", e.target.value.toLowerCase())} className="font-mono lowercase"
             placeholder="jonah"
           />
         </label>
         <label>
-          <span className={lab}>Status</span>
-          <select value={f.status} onChange={(e) => set("status", e.target.value)} className={field}>
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Status</span>
+          <Select value={f.status} onChange={(e) => set("status", e.target.value)}>
             <option value="invited">Invited (can log in, activates on first sign-in)</option>
             <option value="active">Active</option>
             <option value="paused">Paused</option>
             <option value="applied">Applied (in review)</option>
             <option value="rejected">Rejected</option>
-          </select>
+          </Select>
         </label>
         <label>
-          <span className={lab}>Tier (rates live in FirstPromoter campaigns)</span>
-          <select value={f.tier} onChange={(e) => set("tier", e.target.value)} className={field}>
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Tier (rates live in FirstPromoter campaigns)</span>
+          <Select value={f.tier} onChange={(e) => set("tier", e.target.value)}>
             <option value="affiliate">Affiliate Partner (10% first order, 5% after)</option>
             <option value="vip">VIP Affiliate Partner (20% / 10%, audience coupon, own page)</option>
             <option value="partnership">Partnership Program (30% / 15%, contracted)</option>
-          </select>
+          </Select>
         </label>
         {f.tier === "vip" ? (
           <label>
-            <span className={lab}>Next VIP review (every six months)</span>
-            <input
+            <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Next VIP review (every six months)</span>
+            <Input
               type="date"
               value={f.review_at}
               onChange={(e) => set("review_at", e.target.value)}
-              className={field}
             />
           </label>
         ) : null}
         <label>
-          <span className={lab}>Coupon code (their checkout backup)</span>
-          <input
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Coupon code (their checkout backup)</span>
+          <Input
             value={f.coupon_code}
-            onChange={(e) => set("coupon_code", e.target.value.toUpperCase())}
-            className={`${field} font-mono uppercase`}
+            onChange={(e) => set("coupon_code", e.target.value.toUpperCase())} className="font-mono uppercase"
             placeholder="JONAH10"
           />
         </label>
         <div className="grid grid-cols-2 gap-4">
           <label>
-            <span className={lab}>% off</span>
-            <input
+            <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">% off</span>
+            <Input
               type="number"
               min={0}
               max={90}
               value={f.discount_percent}
               onChange={(e) => set("discount_percent", e.target.value)}
-              className={field}
             />
           </label>
           <label>
-            <span className={lab}>Months</span>
-            <input
+            <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Months</span>
+            <Input
               type="number"
               min={0}
               max={36}
               value={f.discount_months}
               onChange={(e) => set("discount_months", e.target.value)}
-              className={field}
             />
           </label>
         </div>
         <label>
-          <span className={lab}>Stripe coupon id (editing plans)</span>
-          <input
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Stripe coupon id (editing plans)</span>
+          <Input
             value={f.stripe_coupon_id}
-            onChange={(e) => set("stripe_coupon_id", e.target.value)}
-            className={`${field} font-mono`}
+            onChange={(e) => set("stripe_coupon_id", e.target.value)} className="font-mono"
             placeholder="bzD89jmL"
           />
         </label>
         <label>
-          <span className={lab}>FirstPromoter ref (?fpr=... token)</span>
-          <input
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">FirstPromoter ref (?fpr=... token)</span>
+          <Input
             value={f.fp_ref}
-            onChange={(e) => set("fp_ref", e.target.value)}
-            className={`${field} font-mono`}
+            onChange={(e) => set("fp_ref", e.target.value)} className="font-mono"
             placeholder="their FP referral token"
           />
         </label>
         <label>
-          <span className={lab}>FirstPromoter promoter id (for stats, later)</span>
-          <input
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">FirstPromoter promoter id (for stats, later)</span>
+          <Input
             value={f.fp_promoter_id}
-            onChange={(e) => set("fp_promoter_id", e.target.value)}
-            className={`${field} font-mono`}
+            onChange={(e) => set("fp_promoter_id", e.target.value)} className="font-mono"
           />
         </label>
         <label>
-          <span className={lab}>Photo path (/partners/name.jpg in the repo)</span>
-          <input
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Photo path (/partners/name.jpg in the repo)</span>
+          <Input
             value={f.photo_path}
-            onChange={(e) => set("photo_path", e.target.value)}
-            className={`${field} font-mono`}
+            onChange={(e) => set("photo_path", e.target.value)} className="font-mono"
             placeholder="/partners/jonah-cockshaw.jpg"
           />
         </label>
         <label className="sm:col-span-2">
-          <span className={lab}>Tagline (their partner page headline)</span>
-          <input
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Tagline (their partner page headline)</span>
+          <Input
             value={f.tagline}
             onChange={(e) => set("tagline", e.target.value)}
-            className={field}
             placeholder="A friend of Jonah is a friend of GHL Video."
           />
         </label>
         <label className="sm:col-span-2">
-          <span className={lab}>Bio</span>
-          <textarea rows={3} value={f.bio} onChange={(e) => set("bio", e.target.value)} className={field} />
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Bio</span>
+          <Textarea rows={3} value={f.bio} onChange={(e) => set("bio", e.target.value)} />
         </label>
         <label className="sm:col-span-2">
-          <span className={lab}>Team notes (never shown to the partner)</span>
-          <textarea rows={2} value={f.notes} onChange={(e) => set("notes", e.target.value)} className={field} />
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Team notes (never shown to the partner)</span>
+          <Textarea rows={2} value={f.notes} onChange={(e) => set("notes", e.target.value)} />
         </label>
       </div>
       {err && <p className="mt-4 text-body-sm text-error">{err}</p>}
       <div className="mt-6 flex gap-3">
-        <button type="submit" disabled={busy} className={btnGold}>
+        <Button variant="brand" type="submit" disabled={busy}>
           {busy ? "Saving" : "Save partner"}
-        </button>
-        <button type="button" onClick={onCancel} className={btn}>
+        </Button>
+        <Button variant="secondary" onClick={onCancel}>
           Cancel
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -391,33 +374,31 @@ function AssetForm({
     <form onSubmit={save}>
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
         <label>
-          <span className={lab}>Type</span>
-          <select
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Type</span>
+          <Select
             value={f.kind}
             onChange={(e) => set("kind", e.target.value)}
-            className={field}
           >
             {KINDS.map((k) => (
               <option key={k} value={k}>
                 {k === "copy" ? "Swipe copy (text)" : k[0].toUpperCase() + k.slice(1)}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <label>
-          <span className={lab}>Title</span>
-          <input required value={f.title} onChange={(e) => set("title", e.target.value)} className={field} />
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Title</span>
+          <Input required value={f.title} onChange={(e) => set("title", e.target.value)} />
         </label>
         <label className="sm:col-span-2">
-          <span className={lab}>Description (optional)</span>
-          <input value={f.description} onChange={(e) => set("description", e.target.value)} className={field} />
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Description (optional)</span>
+          <Input value={f.description} onChange={(e) => set("description", e.target.value)} />
         </label>
         <label>
-          <span className={lab}>Who sees it</span>
-          <select
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Who sees it</span>
+          <Select
             value={f.partner_id}
             onChange={(e) => set("partner_id", e.target.value)}
-            className={field}
           >
             <option value="">Every partner (global)</option>
             {partners.map((p) => (
@@ -425,39 +406,38 @@ function AssetForm({
                 Only {p.name}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <label>
-          <span className={lab}>Sort (low shows first)</span>
-          <input type="number" value={f.sort} onChange={(e) => set("sort", e.target.value)} className={field} />
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Sort (low shows first)</span>
+          <Input type="number" value={f.sort} onChange={(e) => set("sort", e.target.value)} />
         </label>
         {isCopy ? (
           <label className="sm:col-span-2">
-            <span className={lab}>The copy. Use {"{{LINK}}"} where their tracked link goes</span>
-            <textarea rows={6} value={f.body} onChange={(e) => set("body", e.target.value)} className={`${field} font-mono`} />
+            <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">The copy. Use {"{{LINK}}"} where their tracked link goes</span>
+            <Textarea rows={6} value={f.body} onChange={(e) => set("body", e.target.value)} className="font-mono" />
           </label>
         ) : (
           <>
             <label>
-              <span className={lab}>File source</span>
-              <select value={f.source} onChange={(e) => set("source", e.target.value)} className={field}>
+              <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">File source</span>
+              <Select value={f.source} onChange={(e) => set("source", e.target.value)}>
                 <option value="upload">Upload a file (up to 50 MB)</option>
                 <option value="url">Link an external URL</option>
-              </select>
+              </Select>
             </label>
             {f.source === "upload" ? (
               <label>
-                <span className={lab}>File</span>
-                <input
+                <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">File</span>
+                <Input
                   type="file"
-                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                  className={`${field} file:mr-3 file:rounded-[8px] file:border-0 file:bg-gold/15 file:px-3 file:py-1 file:text-gold`}
+                  onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="file:mr-3 file:rounded-[8px] file:border-0 file:bg-gold/15 file:px-3 file:py-1 file:text-gold"
                 />
               </label>
             ) : (
               <label>
-                <span className={lab}>URL</span>
-                <input value={f.url} onChange={(e) => set("url", e.target.value)} className={`${field} font-mono`} placeholder="https://..." />
+                <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">URL</span>
+                <Input value={f.url} onChange={(e) => set("url", e.target.value)} className="font-mono" placeholder="https://..." />
               </label>
             )}
           </>
@@ -465,12 +445,12 @@ function AssetForm({
       </div>
       {err && <p className="mt-4 text-body-sm text-error">{err}</p>}
       <div className="mt-6 flex gap-3">
-        <button type="submit" disabled={busy} className={btnGold}>
+        <Button variant="brand" type="submit" disabled={busy}>
           {busy ? "Saving" : "Add asset"}
-        </button>
-        <button type="button" onClick={onCancel} className={btn}>
+        </Button>
+        <Button variant="secondary" onClick={onCancel}>
           Cancel
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -571,14 +551,14 @@ export function PartnersScreen() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-h2 text-ink">Partners</h1>
         {tab === "partners" && (
-          <button type="button" onClick={() => setEditing("new")} className={btnGold}>
+          <Button variant="brand" onClick={() => setEditing("new")}>
             Add partner
-          </button>
+          </Button>
         )}
         {tab === "assets" && (
-          <button type="button" onClick={() => setAddingAsset(true)} className={btnGold}>
+          <Button variant="brand" onClick={() => setAddingAsset(true)}>
             Add asset
-          </button>
+          </Button>
         )}
       </div>
       <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
@@ -684,27 +664,25 @@ export function PartnersScreen() {
                 </div>
                 <div className="flex shrink-0 flex-wrap gap-2">
                   {p.email && p.status !== "paused" && (
-                    <button type="button" onClick={() => invite(p)} className={btn}>
+                    <Button variant="secondary" onClick={() => invite(p)}>
                       {p.status === "active" ? "Resend access" : "Invite"}
-                    </button>
+                    </Button>
                   )}
-                  <button
-                    type="button"
+                  <Button
+                    variant="secondary"
                     onClick={() => setStatus(p, p.status === "paused" ? "active" : "paused")}
-                    className={btn}
                   >
                     {p.status === "paused" ? "Reactivate" : "Pause"}
-                  </button>
-                  <button type="button" onClick={() => setEditing(p)} className={btn}>
+                  </Button>
+                  <Button variant="secondary" onClick={() => setEditing(p)}>
                     Edit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => removePartner(p)}
-                    className={`${btn} text-error hover:border-error/60`}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => removePartner(p)} className="text-error hover:border-error/60"
                   >
                     Delete
-                  </button>
+                  </Button>
                 </div>
               </li>
             ))}
@@ -743,31 +721,29 @@ export function PartnersScreen() {
                     </p>
                   </div>
                   <div className="flex shrink-0 flex-wrap gap-2">
-                    <button
-                      type="button"
+                    <Button
+                      variant="secondary"
                       onClick={() => setOpenApp(openApp === p.id ? null : p.id)}
-                      className={btn}
                     >
                       {openApp === p.id ? "Hide answers" : "View answers"}
-                    </button>
+                    </Button>
                     {p.status === "applied" && (
                       <>
-                        <button type="button" onClick={() => setEditing(p)} className={btnGold}>
+                        <Button variant="brand" onClick={() => setEditing(p)}>
                           Approve and set up
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setStatus(p, "rejected")}
-                          className={`${btn} text-error hover:border-error/60`}
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          onClick={() => setStatus(p, "rejected")} className="text-error hover:border-error/60"
                         >
                           Reject
-                        </button>
+                        </Button>
                       </>
                     )}
                     {p.status === "rejected" && (
-                      <button type="button" onClick={() => setEditing(p)} className={btn}>
+                      <Button variant="secondary" onClick={() => setEditing(p)}>
                         Reconsider
-                      </button>
+                      </Button>
                     )}
                   </div>
                 </div>
@@ -827,16 +803,15 @@ export function PartnersScreen() {
                     </p>
                   </div>
                   <div className="flex shrink-0 gap-2">
-                    <button type="button" onClick={() => toggleAsset(a)} className={btn}>
+                    <Button variant="secondary" onClick={() => toggleAsset(a)}>
                       {a.active ? "Turn off" : "Turn on"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => removeAsset(a)}
-                      className={`${btn} text-error hover:border-error/60`}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => removeAsset(a)} className="text-error hover:border-error/60"
                     >
                       Delete
-                    </button>
+                    </Button>
                   </div>
                 </li>
               );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Button, Input, Select, Textarea } from "@/components/portal/ui";
 import { authHeader, when } from "./client";
 import { BrandingBrief } from "./BrandingBrief";
 import {
@@ -63,11 +64,6 @@ type Mate = { email: string; name: string; role: string };
 type Update = { body: string; createdAt: string };
 
 const box = "rounded-[12px] border border-hair bg-surface p-5 md:p-6";
-const lab = "font-mono text-label uppercase tracking-[0.1em] text-dim";
-const field =
-  "tap w-full rounded-[8px] border border-hair bg-canvas px-3 py-2 text-body-sm text-ink placeholder:text-dim disabled:opacity-50";
-const btn =
-  "tap rounded-[8px] border border-hair px-3.5 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-40";
 
 export function ProductionJob({ id, onBack }: { id: string; onBack: () => void }) {
   const [job, setJob] = useState<Job | null>(null);
@@ -245,12 +241,11 @@ export function ProductionJob({ id, onBack }: { id: string; onBack: () => void }
       <div className={box}>
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="grid gap-1.5">
-            <span className={lab}>Owner</span>
-            <select
+            <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Owner</span>
+            <Select
               value={job.assignedEmail ?? ""}
               disabled={busy === "job"}
               onChange={(e) => saveJob({ assignedEmail: e.target.value })}
-              className={field}
             >
               <option value="">Nobody yet</option>
               {team.map((m) => (
@@ -258,16 +253,15 @@ export function ProductionJob({ id, onBack }: { id: string; onBack: () => void }
                   {m.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
 
           <label className="grid gap-1.5">
-            <span className={lab}>Stage</span>
-            <select
+            <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Stage</span>
+            <Select
               value={delivered ? "delivered" : job.stage}
               disabled={busy === "job" || delivered}
               onChange={(e) => saveJob({ stage: e.target.value })}
-              className={field}
             >
               {["paid", "intake", "production", "review"].map((s) => (
                 <option key={s} value={s}>
@@ -275,7 +269,7 @@ export function ProductionJob({ id, onBack }: { id: string; onBack: () => void }
                 </option>
               ))}
               {delivered && <option value="delivered">Delivered</option>}
-            </select>
+            </Select>
           </label>
         </div>
 
@@ -326,7 +320,7 @@ export function ProductionJob({ id, onBack }: { id: string; onBack: () => void }
             {videos.length === 1 ? "The video" : `The videos (${videos.length})`}
           </p>
           {videos.length > 0 && (
-            <p className={lab}>
+            <p className="font-mono text-label uppercase tracking-[0.08em] text-muted">
               {ready} of {videos.length} with the client
             </p>
           )}
@@ -334,17 +328,16 @@ export function ProductionJob({ id, onBack }: { id: string; onBack: () => void }
 
         {videos.length > 1 && (
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <span className={lab}>Set all to</span>
+            <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Set all to</span>
             {(["in_production", "ready"] as DeliverableStatus[]).map((st) => (
-              <button
+              <Button
                 key={st}
-                type="button"
+                variant="secondary"
                 disabled={busy === "job" || videos.every((v) => v.status === st)}
-                onClick={() => setAll(st)}
-                className={`${btn} disabled:opacity-30`}
+                onClick={() => setAll(st)} className="disabled:opacity-30"
               >
                 {STATUS_LABEL[st]}
-              </button>
+              </Button>
             ))}
           </div>
         )}
@@ -364,7 +357,7 @@ export function ProductionJob({ id, onBack }: { id: string; onBack: () => void }
                   </span>
                   <div className="min-w-[12rem] flex-1">
                     <p className="text-body-sm font-semibold leading-snug text-ink">{d.title}</p>
-                    <p className={`mt-1 ${lab}`}>
+                    <p className={`mt-1 font-mono text-label uppercase tracking-[0.08em] text-muted`}>
                       {d.catalog_code ? d.catalog_code.toUpperCase() : "Not chosen yet"}
                       {d.group_label ? ` / ${d.group_label}` : ""}
                       {/* How many times the client has sent it back. "Round 2"
@@ -383,41 +376,38 @@ export function ProductionJob({ id, onBack }: { id: string; onBack: () => void }
 
                 <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,180px)_1fr]">
                   <label className="grid gap-1">
-                    <span className={lab}>Status</span>
-                    <select
+                    <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Status</span>
+                    <Select
                       value={d.status}
                       disabled={busy === d.id}
                       onChange={(e) => saveVideo(d.id, { status: e.target.value })}
-                      className={field}
                     >
                       {DELIVERABLE_STATUSES.map((s) => (
                         <option key={s} value={s}>
                           {STATUS_LABEL[s]}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </label>
 
                   <label className="grid gap-1">
-                    <span className={lab}>Video link</span>
+                    <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Video link</span>
                     <div className="flex gap-2">
-                      <input
+                      <Input
                         type="url"
                         inputMode="url"
                         placeholder="https://... the HighLevel mp4"
                         value={links[d.id] ?? ""}
                         disabled={busy === d.id}
                         onChange={(e) => setLinks((p) => ({ ...p, [d.id]: e.target.value }))}
-                        className={field}
                       />
-                      <button
-                        type="button"
+                      <Button
+                        variant="secondary"
                         disabled={busy === d.id || (links[d.id] ?? "") === (d.video_url ?? "")}
-                        onClick={() => saveVideo(d.id, { videoUrl: links[d.id] ?? "" })}
-                        className={`${btn} shrink-0`}
+                        onClick={() => saveVideo(d.id, { videoUrl: links[d.id] ?? "" })} className="shrink-0"
                       >
                         Save
-                      </button>
+                      </Button>
                     </div>
                   </label>
                 </div>
@@ -468,21 +458,19 @@ export function ProductionJob({ id, onBack }: { id: string; onBack: () => void }
       <div className={box}>
         <p className="font-mono text-label uppercase text-gold">Client updates</p>
         <div className="mt-3 grid gap-2">
-          <textarea
+          <Textarea
             rows={2}
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="First cut is in review."
-            className={field}
           />
-          <button
-            type="button"
+          <Button
+            variant="secondary"
             disabled={busy === "job" || !note.trim()}
-            onClick={() => fulfillment({ update: note })}
-            className={`${btn} justify-self-start`}
+            onClick={() => fulfillment({ update: note })} className="justify-self-start"
           >
             Post update
-          </button>
+          </Button>
           <p className="text-body-sm text-dim">
             The client sees this on their order and gets it by email.
           </p>
@@ -493,7 +481,7 @@ export function ProductionJob({ id, onBack }: { id: string; onBack: () => void }
             {updates.map((u, i) => (
               <li key={i} className="border-l-2 border-gold/40 pl-4">
                 <p className="text-body-sm text-ink">{u.body}</p>
-                <p className={`mt-0.5 ${lab}`}>{when(u.createdAt)}</p>
+                <p className={`mt-0.5 font-mono text-label uppercase tracking-[0.08em] text-muted`}>{when(u.createdAt)}</p>
               </li>
             ))}
           </ul>
@@ -586,7 +574,7 @@ function StudioThread({
     <div className="mt-3 border-t border-hair pt-3">
       {cuts.length > 1 && (
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          <span className={lab}>Cuts</span>
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Cuts</span>
           {cuts.map((v, i) => (
             <span
               key={v.id}
@@ -647,7 +635,7 @@ function StudioThread({
                 )}
               </div>
               <p className="mt-1.5 whitespace-pre-wrap text-body-sm text-muted">{c.body}</p>
-              <p className={`mt-1 ${lab}`}>
+              <p className={`mt-1 font-mono text-label uppercase tracking-[0.08em] text-muted`}>
                 {when(c.createdAt)}
                 {c.version && cuts.length > 1 ? ` / on v${c.version}` : ""}
               </p>
@@ -656,30 +644,28 @@ function StudioThread({
                 <div key={r.id} className="mt-2 border-l-2 border-blue/40 pl-3">
                   <span className="text-body-sm font-semibold text-ink">{r.name}</span>
                   <p className="mt-0.5 whitespace-pre-wrap text-body-sm text-muted">{r.body}</p>
-                  <p className={`mt-0.5 ${lab}`}>{when(r.createdAt)}</p>
+                  <p className={`mt-0.5 font-mono text-label uppercase tracking-[0.08em] text-muted`}>{when(r.createdAt)}</p>
                 </div>
               ))}
 
               {replyTo === c.id ? (
                 <div className="mt-2 grid gap-2">
-                  <textarea
+                  <Textarea
                     rows={2}
                     autoFocus
                     value={replyText}
                     onChange={(e) => setReplyText(e.target.value)}
                     onKeyDown={enterSends(() => post({ body: replyText, parentId: c.id }))}
                     placeholder="Answer this note. Enter to send."
-                    className={field}
                   />
                   <div className="flex gap-2">
-                    <button
-                      type="button"
+                    <Button
+                      variant="secondary"
                       disabled={busy || !replyText.trim()}
                       onClick={() => post({ body: replyText, parentId: c.id })}
-                      className={btn}
                     >
                       Send
-                    </button>
+                    </Button>
                     <button
                       type="button"
                       onClick={() => {
@@ -699,7 +685,7 @@ function StudioThread({
                     setReplyTo(c.id);
                     setReplyText("");
                   }}
-                  className={`tap mt-2 ${lab} transition-colors hover:text-gold`}
+                  className={`tap mt-2 font-mono text-label uppercase tracking-[0.08em] text-muted transition-colors hover:text-gold`}
                 >
                   Reply to this note
                 </button>
@@ -710,22 +696,20 @@ function StudioThread({
       )}
 
       <div className="mt-3 grid gap-2">
-        <textarea
+        <Textarea
           rows={2}
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={enterSends(() => post({ body: text }))}
           placeholder="A general note on this video. Enter to send."
-          className={field}
         />
-        <button
-          type="button"
+        <Button
+          variant="secondary"
           disabled={busy || !text.trim()}
-          onClick={() => post({ body: text })}
-          className={`${btn} justify-self-start`}
+          onClick={() => post({ body: text })} className="justify-self-start"
         >
           Post
-        </button>
+        </Button>
       </div>
     </div>
   );

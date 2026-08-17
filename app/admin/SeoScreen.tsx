@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Button, Input, Textarea } from "@/components/portal/ui";
 import { authHeader, when } from "./client";
 import { sitePages } from "@/lib/pages-list";
 import { site } from "@/lib/site";
@@ -55,13 +56,6 @@ type AuditRow = {
   pages: PageFacts[];
 };
 
-const field =
-  "mt-1.5 w-full rounded-[8px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none";
-const lab = "font-mono text-label uppercase text-muted";
-const btnGold =
-  "tap rounded-[8px] bg-brand-gradient px-5 py-2.5 text-body-sm font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60";
-const btnGhost =
-  "tap rounded-[8px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-50";
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const r = await fetch(path, {
@@ -252,9 +246,9 @@ function HealthTab() {
             </p>
           )}
         </div>
-        <button type="button" onClick={run} disabled={running} className={btnGold}>
+        <Button variant="brand" onClick={run} disabled={running}>
           {running ? "Checking..." : latest ? "Check again" : "Run the check"}
-        </button>
+        </Button>
       </div>
 
       {running ? (
@@ -322,7 +316,7 @@ function HealthTab() {
                       href={f.path}
                       target="_blank"
                       rel="noreferrer"
-                      className={`${btnGhost} shrink-0`}
+                      className="tap inline-flex items-center gap-2 rounded-[8px] border border-hair bg-surface px-4 py-2 text-body-sm text-ink transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-50 shrink-0"
                     >
                       Open
                     </a>
@@ -501,19 +495,18 @@ function PageEditor({
     <div className="grid gap-5 border-t border-hair bg-canvas/40 p-5 lg:grid-cols-2">
       <div className="grid content-start gap-4">
         <label className="block">
-          <span className={lab}>Title</span>
-          <input value={title} onChange={(e) => setTitle(e.target.value)} className={field} placeholder="Leave empty to keep the built-in title" />
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Title</span>
+          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Leave empty to keep the built-in title" />
           <span className={`mt-1 block font-mono text-label uppercase ${counterClass(title.length, TITLE_MIN, TITLE_MAX)}`}>
             {title.length} characters {title.length ? `/ aim for ${TITLE_MIN} to ${TITLE_MAX}` : ""}
           </span>
         </label>
         <label className="block">
-          <span className={lab}>Description</span>
-          <textarea
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Description</span>
+          <Textarea
             rows={3}
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className={`${field} resize-y`}
+            onChange={(e) => setDescription(e.target.value)} className="resize-y"
             placeholder="Leave empty to keep the built-in description"
           />
           <span className={`mt-1 block font-mono text-label uppercase ${counterClass(description.length, DESC_MIN, DESC_MAX)}`}>
@@ -521,8 +514,8 @@ function PageEditor({
           </span>
         </label>
         <label className="block">
-          <span className={lab}>Share image (optional)</span>
-          <input value={ogImage} onChange={(e) => setOgImage(e.target.value)} className={field} placeholder="https://... or /og.png" />
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Share image (optional)</span>
+          <Input value={ogImage} onChange={(e) => setOgImage(e.target.value)} placeholder="https://... or /og.png" />
         </label>
         <label className="flex items-center gap-2.5 text-body-sm text-ink">
           <input
@@ -539,15 +532,15 @@ function PageEditor({
         </label>
         {err ? <p className="text-body-sm text-error">{err}</p> : null}
         <div className="flex items-center gap-3">
-          <button type="button" onClick={save} disabled={busy} className={btnGold}>
+          <Button variant="brand" onClick={save} disabled={busy}>
             {busy ? "Saving..." : "Save"}
-          </button>
+          </Button>
           {row ? (
-            <button type="button" onClick={reset} disabled={busy} className={btnGhost}>
+            <Button variant="secondary" onClick={reset} disabled={busy}>
               Reset to default
-            </button>
+            </Button>
           ) : null}
-          <a href={path} target="_blank" rel="noreferrer" className={btnGhost}>
+          <a href={path} target="_blank" rel="noreferrer" className="tap inline-flex items-center gap-2 rounded-[8px] border border-hair bg-surface px-4 py-2 text-body-sm text-ink transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-50">
             View page
           </a>
         </div>
@@ -555,7 +548,7 @@ function PageEditor({
 
       {/* what the search result will look like */}
       <div>
-        <p className={lab}>Google preview</p>
+        <p className="font-mono text-label uppercase tracking-[0.08em] text-muted">Google preview</p>
         <div className="mt-2 rounded-[12px] border border-hair bg-surface p-5">
           <p className="truncate font-mono text-label text-muted">
             {site.url.replace(/^https?:\/\//, "")}
@@ -670,16 +663,16 @@ function RedirectsTab() {
       <div className="mt-6 rounded-[12px] border border-hair bg-surface p-5">
         <div className="grid gap-4 md:grid-cols-2">
           <label className="block">
-            <span className={lab}>Old URL on this site</span>
-            <input value={source} onChange={(e) => setSource(e.target.value)} className={field} placeholder="/old-page" />
+            <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Old URL on this site</span>
+            <Input value={source} onChange={(e) => setSource(e.target.value)} placeholder="/old-page" />
           </label>
           <label className="block">
-            <span className={lab}>Send visitors to</span>
-            <input value={destination} onChange={(e) => setDestination(e.target.value)} className={field} placeholder="/new-page/ or https://..." />
+            <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Send visitors to</span>
+            <Input value={destination} onChange={(e) => setDestination(e.target.value)} placeholder="/new-page/ or https://..." />
           </label>
           <label className="block md:col-span-2">
-            <span className={lab}>Note (optional)</span>
-            <input value={note} onChange={(e) => setNote(e.target.value)} className={field} placeholder="Why this exists, for whoever reads it later" />
+            <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Note (optional)</span>
+            <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Why this exists, for whoever reads it later" />
           </label>
         </div>
         <label className="mt-4 flex items-center gap-2.5 text-body-sm text-ink">
@@ -690,21 +683,20 @@ function RedirectsTab() {
         {warning ? (
           <div className="mt-4 rounded-[8px] border border-error/40 bg-error/[0.07] p-4">
             <p className="text-body-sm text-ink">{warning}</p>
-            <button type="button" onClick={() => add(true)} disabled={busy} className={`${btnGhost} mt-3`}>
+            <Button variant="secondary" onClick={() => add(true)} disabled={busy} className="mt-3">
               I understand, add it anyway
-            </button>
+            </Button>
           </div>
         ) : null}
         {err ? <p className="mt-3 text-body-sm text-error">{err}</p> : null}
 
-        <button
-          type="button"
+        <Button
+          variant="brand"
           onClick={() => add(false)}
-          disabled={busy || !source.trim() || !destination.trim()}
-          className={`${btnGold} mt-4`}
+          disabled={busy || !source.trim() || !destination.trim()} className="mt-4"
         >
           {busy ? "Saving..." : "Add redirect"}
-        </button>
+        </Button>
       </div>
 
       <div className="mt-6 overflow-hidden rounded-[12px] border border-hair">
@@ -740,12 +732,12 @@ function RedirectsTab() {
                   {r.active ? "On" : "Off"}
                 </span>
                 <div className="flex shrink-0 items-center gap-2">
-                  <a href={r.source} target="_blank" rel="noreferrer" className={btnGhost}>
+                  <a href={r.source} target="_blank" rel="noreferrer" className="tap inline-flex items-center gap-2 rounded-[8px] border border-hair bg-surface px-4 py-2 text-body-sm text-ink transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-50">
                     Test
                   </a>
-                  <button type="button" onClick={() => toggle(r)} className={btnGhost}>
+                  <Button variant="secondary" onClick={() => toggle(r)}>
                     {r.active ? "Turn off" : "Turn on"}
-                  </button>
+                  </Button>
                   <button
                     type="button"
                     onClick={() => remove(r)}

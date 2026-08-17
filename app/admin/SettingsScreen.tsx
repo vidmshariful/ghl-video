@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Button, Input, Textarea } from "@/components/portal/ui";
 import { authHeader } from "./client";
 import { TeamScreen } from "./TeamScreen";
 import { EmailTemplatesScreen } from "./EmailTemplatesScreen";
@@ -35,11 +36,6 @@ type IntegrationsPayload = {
   adminAlertEmail: string;
 };
 
-const fieldCls =
-  "w-full rounded-[8px] border border-hair bg-canvas px-4 py-3 text-body text-ink placeholder:text-dim focus:border-gold focus:outline-none";
-const btnGold =
-  "tap rounded-[8px] bg-brand-gradient px-6 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60";
-const labelCls = "font-mono text-label uppercase text-muted";
 
 type Tab = "profile" | "team" | "integrations" | "emails" | "code";
 
@@ -186,12 +182,11 @@ function ProfileTab({ me, onMeChanged }: { me: Me; onMeChanged: () => void }) {
         <form onSubmit={save} className="mt-6 grid max-w-md gap-4 border-t border-hair pt-6">
           <label className="grid gap-2">
             <span className="font-mono text-label uppercase text-muted">Your name</span>
-            <input
+            <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
               maxLength={120}
-              className={fieldCls}
             />
           </label>
           <p className="text-body-sm text-dim">
@@ -204,9 +199,9 @@ function ProfileTab({ me, onMeChanged }: { me: Me; onMeChanged: () => void }) {
           {msg && <p className="text-body-sm text-green">{msg}</p>}
           {err && <p className="text-body-sm text-error">{err}</p>}
           <div>
-            <button type="submit" disabled={busy} className={btnGold}>
+            <Button variant="brand" type="submit" disabled={busy}>
               {busy ? "Saving" : "Save changes"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>
@@ -527,13 +522,12 @@ function GoogleCard() {
             only the server can read it and is never shown again.
           </p>
           <label className="mt-4 block">
-            <span className={labelCls}>Paste the key file here</span>
-            <textarea
+            <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Paste the key file here</span>
+            <Textarea
               rows={5}
               value={key}
               onChange={(e) => setKey(e.target.value)}
-              spellCheck={false}
-              className={`${fieldCls} mt-1.5 resize-y font-mono text-body-sm`}
+              spellCheck={false} className="mt-1.5 resize-y font-mono text-body-sm"
               placeholder={'{ "type": "service_account", "project_id": "...", ... }'}
             />
           </label>
@@ -551,7 +545,7 @@ function GoogleCard() {
         <div className="mt-5 border-t border-hair pt-5">
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
             <div className="min-w-0">
-              <p className={labelCls}>Connected as</p>
+              <p className="font-mono text-label uppercase tracking-[0.08em] text-muted">Connected as</p>
               <p className="mt-1 break-all font-mono text-body-sm text-ink">{conn.clientEmail}</p>
             </div>
             <button
@@ -579,7 +573,7 @@ function GoogleCard() {
           ) : null}
 
           <div className="mt-5">
-            <p className={labelCls}>Which property to read</p>
+            <p className="font-mono text-label uppercase tracking-[0.08em] text-muted">Which property to read</p>
             {properties.length === 0 ? (
               <p className="mt-2 max-w-[var(--measure-body)] text-body-sm text-muted">
                 This account cannot see any property yet. In Search Console open
@@ -608,7 +602,7 @@ function GoogleCard() {
           </div>
 
           <div className="mt-5">
-            <p className={labelCls}>Which Analytics property to read</p>
+            <p className="font-mono text-label uppercase tracking-[0.08em] text-muted">Which Analytics property to read</p>
             {gaProperties.length === 0 ? (
               <p className="mt-2 max-w-[var(--measure-body)] text-body-sm text-muted">
                 {gaError ||

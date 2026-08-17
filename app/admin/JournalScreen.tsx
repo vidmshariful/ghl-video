@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Button, Input, Textarea } from "@/components/portal/ui";
 import { supabase } from "./client";
 import { AdminModal } from "./Modal";
 
@@ -36,13 +37,6 @@ type Entry = {
 
 type Tab = "log" | "decision" | "idea";
 
-const field =
-  "mt-1.5 w-full rounded-[8px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none";
-const lab = "font-mono text-label uppercase text-muted";
-const btn =
-  "tap rounded-[8px] border border-hair px-4 py-2 text-body-sm text-ink transition-colors hover:border-gold/60";
-const btnGold =
-  "tap rounded-[8px] bg-brand-gradient px-5 py-2.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60";
 
 const IDEA_STATUS_STYLE: Record<string, string> = {
   open: "border-gold/40 text-gold",
@@ -114,30 +108,30 @@ function EntryForm({
     <form onSubmit={save}>
       <div className="mt-5 grid gap-4">
         <label>
-          <span className={lab}>{kind === "idea" ? "The idea, in one line" : "Title"}</span>
-          <input required value={title} onChange={(e) => setTitle(e.target.value)} className={field} />
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">{kind === "idea" ? "The idea, in one line" : "Title"}</span>
+          <Input required value={title} onChange={(e) => setTitle(e.target.value)} />
         </label>
         <label>
-          <span className={lab}>
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">
             {kind === "decision" ? "What we decided, and why" : "Details (optional)"}
           </span>
-          <textarea rows={4} value={body} onChange={(e) => setBody(e.target.value)} className={field} />
+          <Textarea rows={4} value={body} onChange={(e) => setBody(e.target.value)} />
         </label>
         {kind !== "idea" && (
           <label className="max-w-56">
-            <span className={lab}>{kind === "decision" ? "Decided on" : "For the day"}</span>
-            <input type="date" value={decidedOn ?? ""} onChange={(e) => setDecidedOn(e.target.value)} className={field} />
+            <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">{kind === "decision" ? "Decided on" : "For the day"}</span>
+            <Input type="date" value={decidedOn ?? ""} onChange={(e) => setDecidedOn(e.target.value)} />
           </label>
         )}
       </div>
       {err && <p className="mt-4 text-body-sm text-error">{err}</p>}
       <div className="mt-6 flex gap-3">
-        <button type="submit" disabled={busy} className={btnGold}>
+        <Button variant="brand" type="submit" disabled={busy}>
           {busy ? "Saving" : isNew ? "Save" : "Save changes"}
-        </button>
-        <button type="button" onClick={onCancel} className={btn}>
+        </Button>
+        <Button variant="secondary" onClick={onCancel}>
           Cancel
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -295,30 +289,28 @@ export function JournalScreen({ meEmail }: { meEmail: string }) {
               className="tap w-full rounded-[8px] border border-hair bg-canvas px-3 py-2 text-body-sm text-ink placeholder:text-dim"
             />
             <div className="mt-2 flex gap-2">
-              <button
-                type="button"
+              <Button
+                variant="secondary"
                 onClick={async () => {
                   await saveFeedback(e, noteDraft);
                   setNoteFor(null);
-                }}
-                className={`${btn} border-gold/60 text-gold`}
+                }} className="border-gold/60 text-gold"
               >
                 Save note
-              </button>
-              <button type="button" onClick={() => setNoteFor(null)} className={btn}>
+              </Button>
+              <Button variant="secondary" onClick={() => setNoteFor(null)}>
                 Cancel
-              </button>
+              </Button>
               {e.feedback && (
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
                   onClick={async () => {
                     await saveFeedback(e, "");
                     setNoteFor(null);
-                  }}
-                  className={`${btn} text-error hover:border-error/60`}
+                  }} className="text-error hover:border-error/60"
                 >
                   Remove
-                </button>
+                </Button>
               )}
             </div>
           </div>
@@ -356,9 +348,9 @@ export function JournalScreen({ meEmail }: { meEmail: string }) {
     <div className="max-w-4xl">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-h2 text-ink">Journal</h1>
-        <button type="button" onClick={() => setEditing("new")} className={btnGold}>
+        <Button variant="brand" onClick={() => setEditing("new")}>
           {tab === "log" ? "Add note" : tab === "decision" ? "Record decision" : "Jot an idea"}
-        </button>
+        </Button>
       </div>
       <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
         {tab === "log"
@@ -445,9 +437,9 @@ export function JournalScreen({ meEmail }: { meEmail: string }) {
                       </p>
                     )}
                     {e.author !== "claude" && (
-                      <button type="button" onClick={() => setEditing(e)} className={`${btn} mt-3`}>
+                      <Button variant="secondary" onClick={() => setEditing(e)} className="mt-3">
                         Edit
-                      </button>
+                      </Button>
                     )}
                   </div>
                 ))}
@@ -473,12 +465,12 @@ export function JournalScreen({ meEmail }: { meEmail: string }) {
                 <p className="mt-1.5 whitespace-pre-wrap text-body-sm leading-relaxed text-muted">{e.body}</p>
               )}
               <div className="mt-3 flex gap-2">
-                <button type="button" onClick={() => setEditing(e)} className={btn}>
+                <Button variant="secondary" onClick={() => setEditing(e)}>
                   Edit
-                </button>
-                <button type="button" onClick={() => supersede(e)} className={btn}>
+                </Button>
+                <Button variant="secondary" onClick={() => supersede(e)}>
                   Mark superseded
-                </button>
+                </Button>
               </div>
               <Reaction e={e} />
             </div>
@@ -506,9 +498,9 @@ export function JournalScreen({ meEmail }: { meEmail: string }) {
                       {e.body && (
                         <p className="mt-1.5 whitespace-pre-wrap text-body-sm leading-relaxed text-dim">{e.body}</p>
                       )}
-                      <button type="button" onClick={() => setStatus(e, "active")} className={`${btn} mt-3`}>
+                      <Button variant="secondary" onClick={() => setStatus(e, "active")} className="mt-3">
                         Reactivate
-                      </button>
+                      </Button>
                     </div>
                   ))}
                 </div>
@@ -542,24 +534,23 @@ export function JournalScreen({ meEmail }: { meEmail: string }) {
                 <p className="mt-1.5 whitespace-pre-wrap text-body-sm leading-relaxed text-muted">{e.body}</p>
               )}
               <div className="mt-3 flex flex-wrap gap-2">
-                <button type="button" onClick={() => setEditing(e)} className={btn}>
+                <Button variant="secondary" onClick={() => setEditing(e)}>
                   Edit
-                </button>
+                </Button>
                 {e.status === "open" && (
-                  <button type="button" onClick={() => setStatus(e, "planned")} className={btn}>
+                  <Button variant="secondary" onClick={() => setStatus(e, "planned")}>
                     Mark planned
-                  </button>
+                  </Button>
                 )}
-                <button type="button" onClick={() => setStatus(e, "done")} className={btn}>
+                <Button variant="secondary" onClick={() => setStatus(e, "done")}>
                   Done
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setStatus(e, "dropped")}
-                  className={`${btn} text-error hover:border-error/60`}
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => setStatus(e, "dropped")} className="text-error hover:border-error/60"
                 >
                   Drop
-                </button>
+                </Button>
               </div>
               <Reaction e={e} />
             </div>
@@ -586,16 +577,15 @@ export function JournalScreen({ meEmail }: { meEmail: string }) {
                         </span>
                       </div>
                       <div className="mt-3 flex gap-2">
-                        <button type="button" onClick={() => setStatus(e, "open")} className={btn}>
+                        <Button variant="secondary" onClick={() => setStatus(e, "open")}>
                           Reopen
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => remove(e)}
-                          className={`${btn} text-error hover:border-error/60`}
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          onClick={() => remove(e)} className="text-error hover:border-error/60"
                         >
                           Delete
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   ))}

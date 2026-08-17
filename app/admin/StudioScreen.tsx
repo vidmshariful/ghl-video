@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Input, Select } from "@/components/portal/ui";
 import { supabase } from "./client";
 import { AdminModal } from "./Modal";
 
@@ -38,9 +39,6 @@ type RequestRow = {
   created_at: string;
 };
 
-const field =
-  "mt-1.5 w-full rounded-[8px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none";
-const lab = "font-mono text-label uppercase text-muted";
 
 const SERVICE_NAMES: Record<SlotRow["service"], string> = {
   premade: "Premade Videos",
@@ -96,32 +94,29 @@ function SlotEditor({ slot, onSaved }: { slot: SlotRow; onSaved: () => void }) {
         </p>
       </div>
       <label>
-        <span className={lab}>Period label</span>
-        <input
+        <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Period label</span>
+        <Input
           value={s.period}
           onChange={(e) => setS((x) => ({ ...x, period: e.target.value }))}
-          className={field}
           placeholder="This week"
         />
       </label>
       <label>
-        <span className={lab}>Total slots</span>
-        <input
+        <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Total slots</span>
+        <Input
           type="number"
           min={0}
           value={s.total}
           onChange={(e) => setS((x) => ({ ...x, total: e.target.value }))}
-          className={field}
         />
       </label>
       <label>
-        <span className={lab}>Remaining</span>
-        <input
+        <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Remaining</span>
+        <Input
           type="number"
           min={0}
           value={s.remaining}
           onChange={(e) => setS((x) => ({ ...x, remaining: e.target.value }))}
-          className={field}
         />
       </label>
       <div className="flex items-center gap-3">
@@ -196,74 +191,67 @@ function UpdateForm({
     <form onSubmit={save}>
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
         <label className="sm:col-span-2">
-          <span className={lab}>Title</span>
-          <input
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Title</span>
+          <Input
             required
             value={u.title}
             onChange={(e) => set("title", e.target.value)}
-            className={field}
             placeholder="Payments + Invoicing Explainer"
           />
         </label>
         <label>
-          <span className={lab}>Status</span>
-          <select
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Status</span>
+          <Select
             value={u.status}
             onChange={(e) => set("status", e.target.value)}
-            className={field}
           >
             <option value="selected">Up next</option>
             <option value="in_production">In production</option>
             <option value="published">Published</option>
-          </select>
+          </Select>
         </label>
         <label>
-          <span className={lab}>Video type</span>
-          <select
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Video type</span>
+          <Select
             value={u.format}
             onChange={(e) => set("format", e.target.value)}
-            className={field}
           >
             <option value="">None</option>
             <option value="Explainer">Explainer</option>
             <option value="Demo">Demo</option>
             <option value="Marketing / Promo">Marketing / Promo</option>
-          </select>
+          </Select>
         </label>
         <label>
-          <span className={lab}>Target / published date</span>
-          <input
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Target / published date</span>
+          <Input
             type="date"
             value={u.target}
             onChange={(e) => set("target", e.target.value)}
-            className={field}
           />
         </label>
         <label className="sm:col-span-2">
-          <span className={lab}>Note (one line, optional)</span>
-          <input
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Note (one line, optional)</span>
+          <Input
             value={u.note}
             onChange={(e) => set("note", e.target.value)}
-            className={field}
             placeholder="Scripted and voiced; animation pass this week."
           />
         </label>
         <label>
-          <span className={lab}>Library slug (Order Now link when published)</span>
-          <input
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Library slug (Order Now link when published)</span>
+          <Input
             value={u.slug}
             onChange={(e) => set("slug", e.target.value)}
-            className={field}
             placeholder="payments-invoicing-explainer"
           />
         </label>
         <label>
-          <span className={lab}>Sort</span>
-          <input
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Sort</span>
+          <Input
             type="number"
             value={u.sort}
             onChange={(e) => set("sort", e.target.value)}
-            className={field}
           />
         </label>
         <label className="flex items-center gap-3 sm:col-span-2">

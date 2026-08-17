@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Input, Select, Textarea } from "@/components/portal/ui";
 import { authHeader, supabase } from "./client";
 import {
   DEFAULT_TEMPLATES,
@@ -25,9 +26,6 @@ const SAMPLE: Record<string, string> = {
   delivery_url: `${SITE_URL}/portal`,
 };
 
-const field =
-  "mt-1.5 w-full rounded-[8px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none";
-const lab = "font-mono text-label uppercase text-muted";
 
 export function EmailTemplatesScreen({ embedded = false }: { embedded?: boolean } = {}) {
   const [rows, setRows] = useState<Record<string, Row>>({});
@@ -126,13 +124,13 @@ export function EmailTemplatesScreen({ embedded = false }: { embedded?: boolean 
           </p>
         </div>
         {DEFAULT_TEMPLATES.length > 1 && (
-          <select value={sel} onChange={(e) => setSel(e.target.value)} className={`${field} w-auto`}>
+          <Select value={sel} onChange={(e) => setSel(e.target.value)} className="w-auto">
             {DEFAULT_TEMPLATES.map((t) => (
               <option key={t.key} value={t.key}>
                 {t.name}
               </option>
             ))}
-          </select>
+          </Select>
         )}
       </div>
 
@@ -151,22 +149,21 @@ export function EmailTemplatesScreen({ embedded = false }: { embedded?: boolean 
           </div>
 
           <label className="block">
-            <span className={lab}>Subject</span>
-            <input value={subject} onChange={(e) => setSubject(e.target.value)} className={field} />
+            <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Subject</span>
+            <Input value={subject} onChange={(e) => setSubject(e.target.value)} />
           </label>
 
           <label className="mt-4 block">
-            <span className={lab}>Body (HTML)</span>
-            <textarea
+            <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Body (HTML)</span>
+            <Textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              spellCheck={false}
-              className={`${field} h-72 font-mono text-body-sm`}
+              spellCheck={false} className="h-72 font-mono text-body-sm"
             />
           </label>
 
           <div className="mt-4 rounded-[8px] border border-hair bg-canvas p-4">
-            <p className={lab}>Variables</p>
+            <p className="font-mono text-label uppercase tracking-[0.08em] text-muted">Variables</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {vars.map((v) => (
                 <code
@@ -209,7 +206,7 @@ export function EmailTemplatesScreen({ embedded = false }: { embedded?: boolean 
 
         {/* live preview */}
         <div>
-          <p className={`${lab} mb-2`}>Preview (with sample data)</p>
+          <p className="font-mono text-label uppercase tracking-[0.08em] text-muted mb-2">Preview (with sample data)</p>
           <iframe
             title="Email preview"
             sandbox=""

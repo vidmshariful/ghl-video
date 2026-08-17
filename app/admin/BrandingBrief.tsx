@@ -36,8 +36,6 @@ export function BrandingBrief({ orderId }: { orderId: string }) {
       .then((j) => setBrief((j?.intake as Brief) ?? null))
       .catch(() => setBrief(null));
   }, [orderId]);
-
-  const lab = "shrink-0 font-mono text-label uppercase text-dim";
   const chip =
     "rounded-[8px] border border-hair px-3 py-1 font-mono text-label uppercase text-ink hover:border-gold/60";
   // map a picked video slug to its title, for the fulfillment team
@@ -61,17 +59,17 @@ export function BrandingBrief({ orderId }: { orderId: string }) {
       ) : (
         <div className="mt-2 grid gap-2 text-body-sm">
           <div className="flex gap-2">
-            <span className={lab}>Brand:</span>
+            <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Brand:</span>
             <span className="text-muted">{brief.brandName}</span>
           </div>
           <div className="flex flex-wrap items-center gap-5">
             <span className="inline-flex items-center gap-2">
-              <span className={lab}>Primary</span>
+              <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Primary</span>
               <span className="h-4 w-4 rounded border border-hair" style={{ background: brief.primaryColor }} />
               <span className="font-mono text-muted">{brief.primaryColor}</span>
             </span>
             <span className="inline-flex items-center gap-2">
-              <span className={lab}>Accent</span>
+              <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Accent</span>
               <span className="h-4 w-4 rounded border border-hair" style={{ background: brief.accentColor }} />
               <span className="font-mono text-muted">{brief.accentColor}</span>
             </span>
@@ -85,7 +83,7 @@ export function BrandingBrief({ orderId }: { orderId: string }) {
                 if (!slugs.length) return null;
                 return (
                   <div key={c.key} className="flex gap-2">
-                    <span className={lab}>{c.label}:</span>
+                    <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">{c.label}:</span>
                     <span className="text-muted">
                       {slugs.map((slug) => slugTitle[slug] ?? slug).join(", ")}
                     </span>
@@ -96,13 +94,13 @@ export function BrandingBrief({ orderId }: { orderId: string }) {
           ) : null}
           {brief.brandPronunciation ? (
             <div className="flex gap-2">
-              <span className={lab}>Say it:</span>
+              <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Say it:</span>
               <span className="text-muted">{brief.brandPronunciation}</span>
             </div>
           ) : null}
           {brief.notes ? (
             <div className="flex gap-2">
-              <span className={lab}>Notes:</span>
+              <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Notes:</span>
               <span className="whitespace-pre-wrap text-muted">{brief.notes}</span>
             </div>
           ) : null}

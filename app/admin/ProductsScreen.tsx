@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Input, Select, Textarea } from "@/components/portal/ui";
 import { authHeader, money, supabase } from "./client";
 import { AdminModal } from "./Modal";
 import { BumpsScreen } from "./BumpsScreen";
@@ -18,9 +19,6 @@ type ProductRow = {
   metadata: Record<string, unknown> | null;
 };
 
-const field =
-  "mt-1.5 w-full rounded-[8px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none";
-const lab = "font-mono text-label uppercase text-muted";
 
 function ProductForm({
   initial,
@@ -86,64 +84,59 @@ function ProductForm({
     <form onSubmit={save}>
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
         <label>
-          <span className={lab}>SKU (checkout slug)</span>
-          <input
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">SKU (checkout slug)</span>
+          <Input
             required
             disabled={!isNew}
             value={p.sku}
-            onChange={(e) => set("sku", e.target.value)}
-            className={`${field} disabled:opacity-60`}
+            onChange={(e) => set("sku", e.target.value)} className="disabled:opacity-60"
             placeholder="all-in-one-ai-first-positioning"
           />
         </label>
         <label>
-          <span className={lab}>Type</span>
-          <select value={p.type} onChange={(e) => set("type", e.target.value)} className={field}>
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Type</span>
+          <Select value={p.type} onChange={(e) => set("type", e.target.value)}>
             <option value="one_time">One-time</option>
             <option value="subscription">Subscription</option>
-          </select>
+          </Select>
         </label>
         <label className="sm:col-span-2">
-          <span className={lab}>Name</span>
-          <input required value={p.name} onChange={(e) => set("name", e.target.value)} className={field} />
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Name</span>
+          <Input required value={p.name} onChange={(e) => set("name", e.target.value)} />
         </label>
         <label className="sm:col-span-2">
-          <span className={lab}>Description</span>
-          <textarea
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Description</span>
+          <Textarea
             rows={2}
             value={p.description}
-            onChange={(e) => set("description", e.target.value)}
-            className={`${field} resize-y`}
+            onChange={(e) => set("description", e.target.value)} className="resize-y"
           />
         </label>
         <label>
-          <span className={lab}>Price (USD)</span>
-          <input
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Price (USD)</span>
+          <Input
             required
             type="number"
             min="0"
             step="1"
             value={p.price}
             onChange={(e) => set("price", e.target.value)}
-            className={field}
           />
         </label>
         <label>
-          <span className={lab}>Delivery days</span>
-          <input
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Delivery days</span>
+          <Input
             type="number"
             min="0"
             value={p.delivery_days}
             onChange={(e) => set("delivery_days", e.target.value)}
-            className={field}
           />
         </label>
         <label className="sm:col-span-2">
-          <span className={lab}>HighLevel tags (comma separated)</span>
-          <input
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">HighLevel tags (comma separated)</span>
+          <Input
             value={p.tags}
             onChange={(e) => set("tags", e.target.value)}
-            className={field}
             placeholder="ghlv-purchase, ghlv-all-in-one-ai-first-positioning"
           />
         </label>
