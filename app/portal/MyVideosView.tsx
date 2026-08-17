@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { STATUS_LABEL, type DeliverableStatus } from "@/lib/deliverable-status";
+import { PlayCircle } from "lucide-react";
+import { Card, Chip, EmptyState, Tabs } from "@/components/portal/ui";
 import { VideoReview } from "./VideoReview";
 
 /*
@@ -52,12 +54,15 @@ type Group = {
 /** a video plus where it came from, which is what a flat list needs */
 type Owned = Video & { packName: string | null; packId: string | null };
 
-const TONE: Record<DeliverableStatus, string> = {
-  queued: "border-hair text-dim",
-  in_production: "border-gold/50 text-gold",
-  ready: "border-blue/50 text-blue",
-  revisions: "border-error/50 text-error",
-  approved: "border-green/50 text-green",
+/* Which of the shared chip tones each video state wears. Mapped rather than
+ * styled here, so a change to what "warn" looks like moves this screen too
+ * instead of leaving it as the one place that still paints its own. */
+const CHIP_TONE: Record<DeliverableStatus, "neutral" | "good" | "warn" | "bad" | "info"> = {
+  queued: "neutral",
+  in_production: "warn",
+  ready: "info",
+  revisions: "bad",
+  approved: "good",
 };
 
 const EXPLAINER: Record<DeliverableStatus, string> = {
@@ -126,11 +131,11 @@ export function MyVideosView({
 
   if (!all.length) {
     return (
-      <div className="rounded-[12px] border border-hair bg-surface p-8 text-center">
-        <p className="text-body text-muted">
-          Your videos will appear here as soon as your first order is under way.
-        </p>
-      </div>
+      <EmptyState
+        icon={<PlayCircle />}
+        title="No videos yet"
+        description="Your videos appear here as soon as your first order is under way, each one with the date it is promised for."
+      />
     );
   }
 
@@ -139,44 +144,37 @@ export function MyVideosView({
   return (
     <div>
       {waiting > 0 && (
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-[12px] border border-blue/40 bg-blue/5 px-5 py-4">
-          <p className="text-body text-ink">
-            {waiting === 1
-              ? "1 video is ready for you to review."
-              : `${waiting} videos are ready for you to review.`}
-          </p>
-          <p className="font-mono text-label uppercase tracking-[0.1em] text-blue">
-            Watch, leave notes, then approve
-          </p>
+        <div className="mb-5">
+          <Card
+            tone="dark"
+            title={
+              waiting === 1
+                ? "One video is ready for you"
+                : `${waiting} videos are ready for you`
+            }
+            description="Watch it, leave notes on anything you want changed, then approve."
+          >
+            <p className="text-body-sm text-chrome-muted">
+              One round of changes is included on every video. Nothing is
+              delivered until you say so.
+            </p>
+          </Card>
         </div>
       )}
 
       {/* Packs only exists for people who own one. */}
       {packs.length > 0 && (
-        <div className="flex gap-1 border-b border-hair">
-          {(
-            [
-              { key: "videos", label: "Videos", n: all.length },
-              { key: "packs", label: "Packs", n: packs.length },
-            ] as const
-          ).map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => {
-                setTab(t.key);
-                setOpenPack(null);
-              }}
-              className={`tap rounded-t-[8px] px-4 py-2.5 text-body-sm transition-colors ${
-                tab === t.key
-                  ? "border border-b-0 border-hair bg-surface font-semibold text-gold"
-                  : "text-muted hover:text-ink"
-              }`}
-            >
-              {t.label} ({t.n})
-            </button>
-          ))}
-        </div>
+        <Tabs
+          tabs={[
+            { key: "videos" as const, label: "Videos", count: all.length },
+            { key: "packs" as const, label: "Packs", count: packs.length },
+          ]}
+          active={tab}
+          onChange={(k) => {
+            setTab(k);
+            setOpenPack(null);
+          }}
+        />
       )}
 
       {tab === "videos" || packs.length === 0 ? (
@@ -337,11 +335,7 @@ function VideoCard({
           <h3 className="min-w-[10rem] flex-1 text-body-sm font-semibold leading-snug text-ink">
             {v.title}
           </h3>
-          <span
-            className={`shrink-0 rounded-full border px-2.5 py-0.5 font-mono text-label uppercase ${TONE[v.status]}`}
-          >
-            {STATUS_LABEL[v.status]}
-          </span>
+          <Chip tone={CHIP_TONE[v.status]}>{STATUS_LABEL[v.status]}</Chip>
         </div>
 
         {/* When to expect it. Shown for anything not yet finished, including
