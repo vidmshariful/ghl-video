@@ -13,7 +13,6 @@ import { TIERS } from "@/lib/partner-program";
  * signup. Submitting creates an ACTIVE affiliate partner on the spot (see
  * /api/partners/apply). The hidden `website` field is the bot honeypot.
  */
-const labelCls = "font-mono text-label uppercase text-muted";
 
 const CHANNELS = [
   "YouTube channel",
@@ -142,7 +141,7 @@ export function ApplyClient() {
                 <form onSubmit={submit} className="mt-5 grid gap-5">
                   <div className="grid gap-5 sm:grid-cols-2">
                     <label className="grid gap-2">
-                      <span className={labelCls}>Your name</span>
+                      <span className="mb-0.5 font-mono text-label uppercase tracking-[0.08em] text-muted">Your name</span>
                       <Input
                         required
                         value={f.name}
@@ -151,7 +150,7 @@ export function ApplyClient() {
                       />
                     </label>
                     <label className="grid gap-2">
-                      <span className={labelCls}>Email</span>
+                      <span className="mb-0.5 font-mono text-label uppercase tracking-[0.08em] text-muted">Email</span>
                       <Input
                         type="email"
                         required
@@ -163,7 +162,7 @@ export function ApplyClient() {
                   </div>
                   <div className="grid gap-5 sm:grid-cols-2">
                     <label className="grid gap-2">
-                      <span className={labelCls}>Company or brand (optional)</span>
+                      <span className="mb-0.5 font-mono text-label uppercase tracking-[0.08em] text-muted">Company or brand (optional)</span>
                       <Input
                         value={f.company}
                         onChange={(e) => set("company", e.target.value)}
@@ -171,7 +170,7 @@ export function ApplyClient() {
                       />
                     </label>
                     <label className="grid gap-2">
-                      <span className={labelCls}>Where is your audience?</span>
+                      <span className="mb-0.5 font-mono text-label uppercase tracking-[0.08em] text-muted">Where is your audience?</span>
                       <Select
                         value={f.channel}
                         onChange={(e) => set("channel", e.target.value)}
@@ -183,7 +182,7 @@ export function ApplyClient() {
                     </label>
                   </div>
                   <label className="grid gap-2">
-                    <span className={labelCls}>Audience size (rough is fine)</span>
+                    <span className="mb-0.5 font-mono text-label uppercase tracking-[0.08em] text-muted">Audience size (rough is fine)</span>
                     <Input
                       value={f.audience}
                       onChange={(e) => set("audience", e.target.value)}
@@ -191,7 +190,7 @@ export function ApplyClient() {
                     />
                   </label>
                   <label className="grid gap-2">
-                    <span className={labelCls}>Links (channel, site, community)</span>
+                    <span className="mb-0.5 font-mono text-label uppercase tracking-[0.08em] text-muted">Links (channel, site, community)</span>
                     <Input
                       value={f.links}
                       onChange={(e) => set("links", e.target.value)}
@@ -199,7 +198,7 @@ export function ApplyClient() {
                     />
                   </label>
                   <label className="grid gap-2">
-                    <span className={labelCls}>How would you promote GHL Video?</span>
+                    <span className="mb-0.5 font-mono text-label uppercase tracking-[0.08em] text-muted">How would you promote GHL Video?</span>
                     <Textarea
                       required
                       rows={4}
