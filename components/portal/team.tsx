@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Button, Input } from "@/components/portal/ui";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 import { teamFeaturesFor, type TeamFeature } from "@/lib/team-features";
 
@@ -29,12 +30,6 @@ const STATUS_CHIP: Record<Member["status"], { label: string; cls: string }> = {
 const addedOn = (iso: string) =>
   new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
-const fieldCls =
-  "w-full rounded-[8px] border border-hair bg-canvas px-4 py-3 text-body text-ink placeholder:text-dim focus:border-gold focus:outline-none";
-const btnGold =
-  "tap rounded-[8px] bg-brand-gradient px-5 py-2.5 text-body-sm font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60";
-const btnGhost =
-  "tap rounded-[8px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-50";
 
 async function teamFetch(path: string, init?: RequestInit) {
   const { data } = await supabase.auth.getSession();
@@ -129,7 +124,7 @@ function MemberForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="grid gap-2">
           <span className="font-mono text-label uppercase text-muted">Their name</span>
-          <input value={name} onChange={(e) => setName(e.target.value)} required maxLength={120} className={fieldCls} />
+          <Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={120} />
         </label>
         <label className="grid gap-2">
           <span className="font-mono text-label uppercase text-muted">Their email</span>
@@ -139,7 +134,6 @@ function MemberForm({
             onChange={(e) => setEmail(e.target.value)}
             required
             disabled={isEdit}
-            className={`${fieldCls} disabled:opacity-60`}
           />
         </label>
       </div>
@@ -151,12 +145,12 @@ function MemberForm({
       </div>
       {error && <p className="text-body-sm text-error">{error}</p>}
       <div className="flex flex-wrap gap-2">
-        <button type="submit" disabled={busy} className={btnGold}>
+        <Button variant="brand" type="submit" disabled={busy}>
           {busy ? "Saving" : isEdit ? "Save changes" : "Add and send invite"}
-        </button>
-        <button type="button" onClick={onCancel} disabled={busy} className={btnGhost}>
+        </Button>
+        <Button variant="secondary" onClick={onCancel} disabled={busy}>
           Cancel
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -252,9 +246,9 @@ export function TeamCard({
           </p>
         </div>
         {editing === null ? (
-          <button type="button" onClick={() => setEditing("new")} className={btnGold}>
+          <Button variant="brand" onClick={() => setEditing("new")}>
             Add a teammate
-          </button>
+          </Button>
         ) : null}
       </div>
 
@@ -322,17 +316,17 @@ export function TeamCard({
                       {summary(m)}
                     </span>
                     {m.status === "invited" ? (
-                      <button type="button" onClick={() => act(m, "resend")} className={btnGhost}>
+                      <Button variant="secondary" onClick={() => act(m, "resend")}>
                         Resend invite
-                      </button>
+                      </Button>
                     ) : null}
-                    <button type="button" onClick={() => setEditing(m)} className={btnGhost}>
+                    <Button variant="secondary" onClick={() => setEditing(m)}>
                       Edit
-                    </button>
+                    </Button>
                     {m.status === "active" ? (
-                      <button type="button" onClick={() => act(m, "pause")} className={btnGhost}>
+                      <Button variant="secondary" onClick={() => act(m, "pause")}>
                         Pause
-                      </button>
+                      </Button>
                     ) : m.status === "paused" ? (
                       <button
                         type="button"

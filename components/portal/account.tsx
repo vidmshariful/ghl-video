@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { Button, Input } from "@/components/portal/ui";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 import { PortalAvatar } from "@/components/portal/Shell";
 
@@ -10,10 +11,6 @@ import { PortalAvatar } from "@/components/portal/Shell";
  * Supabase auth / the portal APIs with the same session the shell holds.
  */
 
-const fieldCls =
-  "w-full rounded-[8px] border border-hair bg-canvas px-4 py-3 text-body text-ink placeholder:text-dim focus:border-gold focus:outline-none";
-const btnGhost =
-  "tap rounded-[8px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-50";
 
 async function authHeaders(): Promise<Record<string, string>> {
   const { data } = await supabase.auth.getSession();
@@ -79,18 +76,17 @@ export function AvatarUploader({
       <div className="mt-3 flex flex-wrap items-center gap-4">
         <PortalAvatar name={name} email={email} url={avatarUrl} size="xl" />
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
+          <Button
+            variant="secondary"
             disabled={busy}
             onClick={() => inputRef.current?.click()}
-            className={btnGhost}
           >
             {busy ? "Working" : avatarUrl ? "Change photo" : "Upload photo"}
-          </button>
+          </Button>
           {avatarUrl ? (
-            <button type="button" disabled={busy} onClick={remove} className={btnGhost}>
+            <Button variant="secondary" disabled={busy} onClick={remove}>
               Remove
-            </button>
+            </Button>
           ) : null}
         </div>
         <input
@@ -165,38 +161,35 @@ export function PasswordCard({ resetRedirect }: { resetRedirect: string }) {
       <form onSubmit={change} className="mt-4 grid max-w-md gap-4">
         <label className="grid gap-2">
           <span className="font-mono text-label uppercase text-muted">Current password</span>
-          <input
+          <Input
             type="password"
             required
             autoComplete="current-password"
             value={current}
             onChange={(e) => setCurrent(e.target.value)}
-            className={fieldCls}
           />
         </label>
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="grid gap-2">
             <span className="font-mono text-label uppercase text-muted">New password</span>
-            <input
+            <Input
               type="password"
               required
               minLength={8}
               autoComplete="new-password"
               value={next}
               onChange={(e) => setNext(e.target.value)}
-              className={fieldCls}
             />
           </label>
           <label className="grid gap-2">
             <span className="font-mono text-label uppercase text-muted">Repeat it</span>
-            <input
+            <Input
               type="password"
               required
               minLength={8}
               autoComplete="new-password"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
-              className={fieldCls}
             />
           </label>
         </div>

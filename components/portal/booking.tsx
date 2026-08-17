@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Input, Textarea } from "@/components/portal/ui";
 
 /*
  * Booking and growth views for the customer and partner portals: calls are
@@ -204,8 +205,6 @@ export function WhiteLabelView() {
 }
 
 /* ---------------- Affiliate application (customer portal) ---------------- */
-const fieldCls =
-  "w-full rounded-[8px] border border-hair bg-canvas px-4 py-3 text-body text-ink placeholder:text-dim focus:border-gold focus:outline-none";
 
 export function AffiliateApplyView({
   prefillName,
@@ -336,7 +335,7 @@ export function AffiliateApplyView({
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="grid gap-2">
             <span className="font-mono text-label uppercase text-muted">Your name</span>
-            <input value={name} onChange={(e) => setName(e.target.value)} required maxLength={120} className={fieldCls} />
+            <Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={120} />
           </label>
           <div className="grid gap-2">
             <span className="font-mono text-label uppercase text-muted">Email</span>
@@ -346,45 +345,41 @@ export function AffiliateApplyView({
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="grid gap-2">
             <span className="font-mono text-label uppercase text-muted">Main channel</span>
-            <input
+            <Input
               value={channel}
               onChange={(e) => setChannel(e.target.value)}
               placeholder="Your network, community, YouTube, clients"
               maxLength={120}
-              className={fieldCls}
             />
           </label>
           <label className="grid gap-2">
             <span className="font-mono text-label uppercase text-muted">Audience</span>
-            <input
+            <Input
               value={audience}
               onChange={(e) => setAudience(e.target.value)}
               placeholder="Who follows you, roughly how many"
               maxLength={200}
-              className={fieldCls}
             />
           </label>
         </div>
         <label className="grid gap-2">
           <span className="font-mono text-label uppercase text-muted">Links</span>
-          <input
+          <Input
             value={links}
             onChange={(e) => setLinks(e.target.value)}
             placeholder="Your site, channel, or socials"
             maxLength={600}
-            className={fieldCls}
           />
         </label>
         <label className="grid gap-2">
           <span className="font-mono text-label uppercase text-muted">Who would you send our way</span>
-          <textarea
+          <Textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             required
             rows={4}
             placeholder="Fellow SaaS founders, an agency circle, a community. A few lines is plenty."
             maxLength={2000}
-            className={fieldCls}
           />
         </label>
         {err && <p className="text-body-sm text-error">{err}</p>}
@@ -503,13 +498,12 @@ export function SocialXView({ authedFetch }: {
             <span className="font-mono text-label uppercase text-muted">
               Anything we should know (optional)
             </span>
-            <textarea
+            <Textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               rows={3}
               placeholder="Which channels you care about, posting volume, timing."
               maxLength={1000}
-              className={fieldCls}
             />
           </label>
           {err && <p className="text-body-sm text-error">{err}</p>}
