@@ -202,6 +202,10 @@ export const HANDBOOK: HandbookPage[] = [
       },
       {
         kind: "text",
+        body: "Every video they are still waiting on carries a date. The clock starts when their brief arrives, not when they pay, because we cannot begin without their logo and notes, so a video with no brief in says so instead of showing a date. If we pass the date, the card says the date we had promised rather than going quiet. That is deliberate: a card that stops mentioning it once we are late is what makes somebody open a chat window to ask.",
+      },
+      {
+        kind: "text",
         body: "They never see an unfinished cut. The link is withheld until the video is Ready, no matter what has been pasted in.",
       },
     ],

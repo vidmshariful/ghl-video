@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { describeDue } from "@/lib/delivery-dates";
 import { verifyAdmin } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 
@@ -27,7 +28,7 @@ export async function GET(req: Request) {
   const { data: orders } = await db
     .from("orders")
     .select(
-      "id, invoice_number, customer_email, fulfillment_stage, intake_completed, assigned_admin_email, assigned_manager, customers(name), products(name)",
+      "id, invoice_number, customer_email, fulfillment_stage, intake_completed, intake_completed_at, assigned_admin_email, assigned_manager, customers(name), products(name)",
     )
     .eq("status", "paid")
     .neq("archived", true);
@@ -38,7 +39,7 @@ export async function GET(req: Request) {
   const [{ data: videos }, { data: notes }] = await Promise.all([
     db
       .from("order_deliverables")
-      .select("id, order_id, title, status, position, ready_at, updated_at, revision_round, video_url")
+      .select("id, order_id, title, status, position, ready_at, updated_at, revision_round, video_url, due_at")
       .in("order_id", ids)
       .order("position"),
     // unanswered client notes: no reply from us and not ticked off
@@ -96,6 +97,18 @@ export async function GET(req: Request) {
         openNotes: open.length,
         latestNote: open[open.length - 1]?.body?.slice(0, 120) ?? null,
         waitingDays: bucket === "waiting" ? days(v.ready_at as string | null) : null,
+        /* What the client was promised. Worded server-side so the board and
+         * the client's own screen can never say different things about the
+         * same video. */
+        due: describeDue(
+          {
+            dueAt: v.due_at as string | null,
+            status,
+            briefLandedAt: (o.intake_completed_at as string | null) ?? null,
+          },
+          Date.now(),
+          "studio",
+        ),
         sinceDays: days((v.updated_at as string) ?? null),
         customer:
           ((o.customers as unknown as { name: string | null } | null)?.name ??

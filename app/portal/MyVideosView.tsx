@@ -35,6 +35,8 @@ type Video = {
   videoUrl: string | null;
   readyAt: string | null;
   approvedAt: string | null;
+  /* worded by the server so the portal and the studio board agree */
+  due?: { text: string; tone: string } | null;
 };
 
 type Group = {
@@ -341,6 +343,23 @@ function VideoCard({
             {STATUS_LABEL[v.status]}
           </span>
         </div>
+
+        {/* When to expect it. Shown for anything not yet finished, including
+            the ones we are late on: a card that goes quiet once it slips is
+            exactly what makes somebody open a chat window to ask. */}
+        {v.due?.text && (
+          <p
+            className={`mt-1.5 font-mono text-label uppercase tracking-[0.1em] ${
+              v.due.tone === "late"
+                ? "text-error"
+                : v.due.tone === "today"
+                  ? "text-gold"
+                  : "text-muted"
+            }`}
+          >
+            {v.due.text}
+          </p>
+        )}
 
         {/* where it came from, so a pack video is never a mystery */}
         {showPack && v.packName && (

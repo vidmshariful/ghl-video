@@ -54,6 +54,8 @@ export type Deliverable = {
   updated_at: string;
   ready_at: string | null;
   approved_at: string | null;
+  /* when this video is promised; null until the client's brief lands */
+  due_at: string | null;
 };
 
 /** One planned row, before it exists in the database. */
@@ -202,6 +204,50 @@ export async function createDeliverablesForOrder(
     throw new Error(`deliverables insert failed: ${error.message}`);
   }
   return { created: plans.length };
+}
+
+/**
+ * Stamp the promised date on every video of an order.
+ *
+ * Called when the brief lands, because that is when the clock starts and not
+ * before. Safe to call again: it recomputes from the order's own intake date,
+ * so a resubmitted brief does not quietly move the deadline, and a video the
+ * studio has already finished is left alone.
+ *
+ * Returns how many it dated, or a reason it could not, so the caller can log
+ * rather than guess.
+ */
+export async function setDueDatesForOrder(
+  db: DB,
+  orderId: string,
+): Promise<{ dated: number; reason?: string }> {
+  const { data: order } = await db
+    .from("orders")
+    .select("id, intake_completed_at, products(metadata)")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (!order) return { dated: 0, reason: "order not found" };
+
+  const briefAt = order.intake_completed_at as string | null;
+  /* No brief, no promise. A date invented from the payment would be a
+   * commitment we never made and might have no way of keeping. */
+  if (!briefAt) return { dated: 0, reason: "no brief yet" };
+
+  const { turnaroundDays, dueAtFrom } = await import("@/lib/delivery-dates");
+  const meta = (order.products as { metadata?: unknown } | null)?.metadata;
+  const due = dueAtFrom(briefAt, turnaroundDays(meta));
+
+  /* Finished work keeps whatever it was promised: rewriting the date on a
+   * delivered video would erase the evidence of whether we were on time. */
+  const { data, error } = await db
+    .from("order_deliverables")
+    .update({ due_at: due })
+    .eq("order_id", orderId)
+    .not("status", "in", "(approved,delivered)")
+    .select("id");
+
+  if (error) throw new Error(`due date update failed: ${error.message}`);
+  return { dated: (data ?? []).length };
 }
 
 /**

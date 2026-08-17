@@ -27,6 +27,8 @@ type Item = {
   latestNote: string | null;
   waitingDays: number | null;
   sinceDays: number | null;
+  /* the promised date, worded by the server */
+  due?: { text: string; tone: string } | null;
   customer: string;
   invoice: string | null;
   product: string;
@@ -146,6 +148,21 @@ export function StudioQueue({ onOpenJob }: { onOpenJob: (orderId: string) => voi
                             {i.customer}
                             {i.invoice ? ` / ${i.invoice}` : ""}
                           </span>
+                          {/* Late work earns the only red on this screen, so
+                              scanning for trouble takes no reading. */}
+                          {i.due?.text && (
+                            <span
+                              className={`shrink-0 rounded-full border px-2.5 py-0.5 font-mono text-label uppercase ${
+                                i.due.tone === "late"
+                                  ? "border-error/50 text-error"
+                                  : i.due.tone === "today"
+                                    ? "border-gold/50 text-gold"
+                                    : "border-hair text-dim"
+                              }`}
+                            >
+                              {i.due.text}
+                            </span>
+                          )}
                         </div>
 
                         <p className="mt-1 font-mono text-label uppercase tracking-[0.1em] text-dim">

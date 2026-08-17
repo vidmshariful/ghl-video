@@ -38,7 +38,7 @@ async function loadOrder(db: DB, id: string) {
   const { data } = await db
     .from("orders")
     .select(
-      "id, status, intake_completed, metadata, product:products(name, sku, metadata)",
+      "id, status, intake_completed, intake_completed_at, metadata, product:products(name, sku, metadata)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -217,6 +217,9 @@ export async function POST(
     .from("orders")
     .update({
       intake_completed: true,
+      /* The delivery clock starts here. Only stamped the first time, so
+       * editing a brief later cannot push the promised date back. */
+      ...(order.intake_completed_at ? {} : { intake_completed_at: new Date().toISOString() }),
       metadata: { ...(order.metadata ?? {}), intake },
     })
     .eq("id", orderId);
@@ -248,6 +251,20 @@ export async function POST(
     } catch (e) {
       console.error(`[intake] naming deliverables failed for order ${orderId}:`, e);
     }
+  }
+
+  /*
+   * The brief has landed, so the videos now have a date to be promised for.
+   * Fail-soft on purpose: the brief itself is already saved, and a client
+   * must never see their upload rejected because we could not do arithmetic.
+   * A missing date shows as no date rather than a wrong one, and the backfill
+   * script can always fill it in.
+   */
+  try {
+    const { setDueDatesForOrder } = await import("@/lib/deliverables");
+    await setDueDatesForOrder(db, orderId);
+  } catch (e) {
+    console.error(`[intake] due dates failed for order ${orderId}:`, e);
   }
 
   return NextResponse.json({ ok: true });

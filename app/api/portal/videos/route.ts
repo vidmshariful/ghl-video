@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { describeDue } from "@/lib/delivery-dates";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { contextCan, resolvePortalContext } from "@/lib/account-team";
 import {
@@ -36,7 +37,7 @@ export async function GET(req: Request) {
 
   const { data: orders } = await db
     .from("orders")
-    .select("id, invoice_number, created_at, fulfillment_stage, product:products(name, sku, metadata)")
+    .select("id, invoice_number, created_at, fulfillment_stage, intake_completed_at, product:products(name, sku, metadata)")
     .eq("customer_email", email)
     .eq("status", "paid")
     .order("created_at", { ascending: false });
@@ -95,6 +96,18 @@ export async function GET(req: Request) {
             videoUrl: isWatchable(status) ? ((d.video_url as string | null) ?? null) : null,
             readyAt: d.ready_at as string | null,
             approvedAt: d.approved_at as string | null,
+            /* The promised date, worded here rather than in the browser so
+             * the client portal and the studio board can never describe the
+             * same video differently. */
+            due: describeDue(
+              {
+                dueAt: d.due_at as string | null,
+                status,
+                briefLandedAt: (o.intake_completed_at as string | null) ?? null,
+              },
+              Date.now(),
+              "client",
+            ),
           };
         }),
       };
