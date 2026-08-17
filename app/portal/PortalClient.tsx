@@ -21,6 +21,7 @@ import {
 } from "@/components/portal/booking";
 import { PORTAL_SECTIONS, type PortalSection } from "./sections";
 import { DashboardView } from "./DashboardView";
+import { Card, Chip, EmptyState, Table, Td, Th } from "@/components/portal/ui";
 import {
   actForHeader,
   getActFor,
@@ -62,11 +63,14 @@ const STAGES = [
   { key: "delivered", label: "Delivered" },
 ] as const;
 
-const STATUS_STYLE: Record<string, string> = {
-  paid: "border-green/40 text-green",
-  pending: "border-gold/40 text-gold",
-  failed: "border-error/40 text-error",
-  refunded: "border-hair text-dim",
+/* Payment states, mapped onto the shared chip tones rather than painted
+ * here. One order should never wear two different greens depending on which
+ * screen it is being looked at from. */
+const PAYMENT_TONE: Record<string, "neutral" | "good" | "warn" | "bad" | "info"> = {
+  paid: "good",
+  pending: "warn",
+  failed: "bad",
+  refunded: "neutral",
 };
 
 const money = (cents: number, cur = "usd") =>
@@ -113,6 +117,7 @@ type OrderSummary = {
   stage: string;
   invoiceNumber: string | null;
   createdAt: string;
+  intakeCompleted: boolean;
 };
 
 function Shell({ children }: { children: React.ReactNode }) {
@@ -395,9 +400,7 @@ function OrderDetailView({
         )}
         <div className="mt-1 flex flex-wrap items-baseline justify-between gap-3">
           <h2 className="font-display text-h3 text-ink">{order.productName ?? "Order"}</h2>
-          <span className={`rounded-full border px-2.5 py-0.5 font-mono text-label uppercase ${STATUS_STYLE[order.status]}`}>
-            {order.status}
-          </span>
+          <Chip tone={PAYMENT_TONE[order.status] ?? "neutral"}>{order.status}</Chip>
         </div>
         <p className="mt-1 font-mono text-label uppercase text-dim">
           {day(order.createdAt)} / {money(order.amountCents, order.currency)}
@@ -564,6 +567,16 @@ function OrderDetailView({
 }
 
 /* ---- orders list ---- */
+/*
+ * Orders, as a list you can compare down rather than a stack of full width
+ * buttons. Every row carries the same four facts in the same places, which
+ * is the whole reason a table beats a pile of cards here: somebody scanning
+ * for "which one is stuck" should not have to read each entry to find out.
+ *
+ * The state column deliberately says "waiting on your brief" rather than the
+ * internal stage name. It is the one row state the client can act on, and
+ * naming it in their words is what turns a list into something useful.
+ */
 function OrdersList({ onOpen }: { onOpen: (id: string) => void }) {
   const [orders, setOrders] = useState<OrderSummary[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -583,59 +596,74 @@ function OrdersList({ onOpen }: { onOpen: (id: string) => void }) {
   }, []);
 
   if (!loaded) return <p className="text-body text-muted">Loading your orders...</p>;
+
+  /* Failed and empty are different problems and get different words. One is
+   * ours to fix, the other is simply a client who has not bought yet. */
   if (failed)
     return (
-      <div className="rounded-[12px] border border-hair bg-surface px-6 py-12 text-center">
-        <p className="font-display text-h4 text-ink">We could not load your orders.</p>
-        <p className="mt-2 text-body text-muted">
-          Please refresh the page, or sign in again if your session has expired.
-        </p>
-      </div>
+      <EmptyState
+        title="We could not load your orders"
+        description="Refresh the page, or sign in again if your session has expired. Nothing is lost."
+      />
     );
+
   if (orders.length === 0)
     return (
-      <div className="rounded-[12px] border border-hair bg-surface px-6 py-12 text-center">
-        <p className="font-display text-h4 text-ink">No orders yet.</p>
-        <p className="mt-2 text-body text-muted">When you place an order it will show up here.</p>
-      </div>
+      <EmptyState
+        title="No orders yet"
+        description="When you order a video it appears here, with its invoice and everything you need to follow it."
+      />
     );
 
   return (
-    <ul className="grid gap-3">
-      {orders.map((o) => (
-        <li key={o.id}>
-          <button
-            type="button"
-            onClick={() => onOpen(o.id)}
-            className="flex w-full flex-wrap items-center justify-between gap-x-6 gap-y-2 rounded-[12px] border border-hair bg-surface px-5 py-5 text-left transition-colors hover:border-gold/40"
-          >
-            <div className="min-w-0">
-              {o.productCode && (
-                <p className="font-mono text-label uppercase tracking-[0.12em] text-gold/80">
-                  {o.productCode}
-                </p>
-              )}
-              <p className="mt-0.5 font-display text-h4 text-ink">{o.productName ?? "Order"}</p>
-              <p className="mt-1 font-mono text-label uppercase text-dim">
-                {day(o.createdAt)}
-                {o.invoiceNumber ? ` / ${o.invoiceNumber}` : ""}
-              </p>
-            </div>
-            <div className="flex shrink-0 items-center gap-4">
-              <span className="font-mono text-label uppercase text-muted">
-                {STAGES.find((s) => s.key === o.stage)?.label ?? o.stage}
-              </span>
-              <span className={`rounded-full border px-2.5 py-0.5 font-mono text-label uppercase ${STATUS_STYLE[o.status]}`}>
-                {o.status}
-              </span>
-              <span className="font-mono text-price font-bold text-ink [font-variant-numeric:tabular-nums]">
-                {money(o.amountCents, o.currency)}
-              </span>
-            </div>
-          </button>
-        </li>
-      ))}
-    </ul>
+    <Card padded={false}>
+      <div className="px-5 py-5">
+        <Table>
+          <thead>
+            <tr>
+              <Th>Order</Th>
+              <Th>Where it is up to</Th>
+              <Th>Invoice</Th>
+              <Th align="right">Amount</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {orders.map((o) => (
+              <tr
+                key={o.id}
+                onClick={() => onOpen(o.id)}
+                className="tap cursor-pointer transition-colors hover:bg-hair/30"
+              >
+                <Td strong>
+                  <span className="block">{o.productName ?? "Order"}</span>
+                  <span className="mt-0.5 block font-mono text-label uppercase text-dim">
+                    {o.productCode ? `${o.productCode} / ` : ""}
+                    {day(o.createdAt)}
+                  </span>
+                </Td>
+                <Td>
+                  {o.status === "paid" && !o.intakeCompleted ? (
+                    <Chip tone="warn">Waiting on your brief</Chip>
+                  ) : o.status !== "paid" ? (
+                    <Chip tone="neutral">{o.status}</Chip>
+                  ) : o.stage === "delivered" ? (
+                    <Chip tone="good">Delivered</Chip>
+                  ) : (
+                    <Chip tone="info">
+                      {STAGES.find((s) => s.key === o.stage)?.label ?? o.stage}
+                    </Chip>
+                  )}
+                </Td>
+                <Td>{o.invoiceNumber ?? "-"}</Td>
+                <Td align="right" strong>
+                  {money(o.amountCents, o.currency)}
+                </Td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      </div>
+    </Card>
   );
 }
 
