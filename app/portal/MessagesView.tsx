@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { chatGet, chatPostJson } from "@/components/chat/api";
+import { ArrowLeft } from "lucide-react";
+import { Button, PageHeader } from "@/components/portal/ui";
 import { ChatThread } from "@/components/chat/ChatThread";
 import { useFillHeight } from "@/components/chat/useFillHeight";
 
@@ -78,16 +80,19 @@ export function MessagesView({
     const title = threads?.find((t) => t.id === openId)?.title ?? "Conversation";
     return (
       <div ref={fillRef} style={{ height: fillHeight }} className="flex flex-col">
-        <button
-          type="button"
-          onClick={() => {
-            setOpenId(null);
-            loadList();
-          }}
-          className="tap self-start font-mono text-label uppercase text-muted transition-colors hover:text-gold"
-        >
-          &larr; All messages
-        </button>
+        <div className="self-start">
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={<ArrowLeft />}
+            onClick={() => {
+              setOpenId(null);
+              loadList();
+            }}
+          >
+            All messages
+          </Button>
+        </div>
         <h2 className="mt-3 font-display text-h4 text-ink">{title}</h2>
         <div className="mt-3 min-h-0 flex-1">
           <ChatThread
@@ -106,10 +111,10 @@ export function MessagesView({
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="font-display text-h2 text-ink">Messages</h1>
-        <p className="mt-2 text-body text-muted">Talk to your producer about anything.</p>
-      </div>
+      <PageHeader
+        title="Messages"
+        description="Talk to your producer. Anything about a specific order has its own thread, so nothing gets lost in one long conversation."
+      />
       <button
         type="button"
         onClick={() => (general ? setOpenId(general.id) : openByOrder(null))}

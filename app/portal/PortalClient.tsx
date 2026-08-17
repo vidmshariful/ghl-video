@@ -31,6 +31,7 @@ import {
 } from "@/components/portal/act-for";
 import { memberCan } from "@/lib/team-features";
 import {
+  ArrowLeft,
   Clapperboard,
   Handshake,
   Layers,
@@ -379,9 +380,11 @@ function OrderDetailView({
 
   return (
     <div className="grid gap-8">
-      <button type="button" onClick={onBack} className="justify-self-start font-mono text-label uppercase text-muted transition-colors hover:text-gold">
-        &larr; All orders
-      </button>
+      <div className="justify-self-start">
+        <Button variant="ghost" size="sm" icon={<ArrowLeft />} onClick={onBack}>
+          All orders
+        </Button>
+      </div>
 
       <div>
         {order.productCode && (
@@ -481,18 +484,18 @@ function OrderDetailView({
             <button
               type="button"
               onClick={() => onMessageStudio(id)}
-              className="tap rounded-[8px] border border-gold/50 bg-gold/[0.06] px-4 py-2 font-mono text-label uppercase text-gold transition-colors hover:bg-gold/[0.12]"
+              className="tap inline-flex items-center gap-2 rounded-[8px] border border-chrome bg-chrome px-4 py-2 text-body-sm text-chrome-text transition-colors hover:bg-chrome-2"
             >
               Message the studio
             </button>
           ) : null}
-          <a href="mailto:hi@ghlvideo.com" className="tap rounded-[8px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold">
+          <a href="mailto:hi@ghlvideo.com" className="tap inline-flex items-center gap-2 rounded-[8px] border border-hair bg-surface px-4 py-2 text-body-sm text-ink transition-colors hover:border-gold/60 hover:text-gold">
             Email
           </a>
-          <a href="https://wa.me/" target="_blank" rel="noopener" className="tap rounded-[8px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold">
+          <a href="https://wa.me/" target="_blank" rel="noopener" className="tap inline-flex items-center gap-2 rounded-[8px] border border-hair bg-surface px-4 py-2 text-body-sm text-ink transition-colors hover:border-gold/60 hover:text-gold">
             WhatsApp
           </a>
-          <a href="/contact/" className="tap rounded-[8px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold">
+          <a href="/contact/" className="tap inline-flex items-center gap-2 rounded-[8px] border border-hair bg-surface px-4 py-2 text-body-sm text-ink transition-colors hover:border-gold/60 hover:text-gold">
             Book a call
           </a>
         </div>
