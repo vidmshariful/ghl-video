@@ -118,6 +118,53 @@ function GettingStarted({ steps }: { steps: Step[] }) {
   );
 }
 
+/*
+ * The offer slot. One offer, chosen on the server, or nothing at all.
+ *
+ * It sits below the work, never above it, and it never shows while somebody
+ * is still getting started. A client whose paid order is stuck waiting for a
+ * brief should not be sold anything: the useful thing we can do for them is
+ * the brief, and putting a discount above it says we would rather have their
+ * money again than finish what they already paid for.
+ */
+type Offer = {
+  id: string;
+  title: string;
+  body: string | null;
+  ctaLabel: string;
+  href: string;
+  discount: string | null;
+};
+
+function OfferSlot({ offer }: { offer: Offer }) {
+  const go = () => {
+    /* counted, but never waited on: a counter must not stand between somebody
+     * and the thing they just clicked */
+    void fetch("/api/portal/campaign", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: offer.id }),
+      keepalive: true,
+    }).catch(() => {});
+    window.location.href = offer.href;
+  };
+  return (
+    <Card
+      title={offer.title}
+      description={offer.body ?? undefined}
+      actions={
+        <Button variant="secondary" onClick={go}>
+          {offer.ctaLabel}
+        </Button>
+      }
+    >
+      {offer.discount && (
+        <Chip tone="good">{offer.discount}</Chip>
+      )}
+    </Card>
+  );
+}
+
 /** The one thing worth doing next, and where it goes. */
 type NextAction =
   | { kind: "brief"; order: OrderSummary }
@@ -145,6 +192,7 @@ export function DashboardView({
   const [groups, setGroups] = useState<Group[] | null>(null);
   /* null while unknown, so the checklist never flashes a step as undone */
   const [brandReady, setBrandReady] = useState<boolean | null>(null);
+  const [offer, setOffer] = useState<Offer | null>(null);
   const canOrders = can("orders");
 
   useEffect(() => {
@@ -165,6 +213,9 @@ export function DashboardView({
       /* on failure assume it is fine: nagging over a network blip is worse
        * than missing one prompt */
       .catch(() => setBrandReady(true));
+    authedFetch("/api/portal/campaign")
+      .then((j) => setOffer((j.campaign as Offer | null) ?? null))
+      .catch(() => setOffer(null));
   }, [canOrders, authedFetch]);
 
   const loading = orders === null || groups === null;
@@ -305,6 +356,16 @@ export function DashboardView({
               </p>
             </Card>
           ) : null}
+        </div>
+      )}
+
+      {/* The offer, if there is one for this person. Never while they are
+          still getting started: selling to somebody whose paid order is stuck
+          waiting on them says we would rather have their money again than
+          finish what they already bought. */}
+      {!loading && !onboarding && offer && (
+        <div className="mt-3">
+          <OfferSlot offer={offer} />
         </div>
       )}
 

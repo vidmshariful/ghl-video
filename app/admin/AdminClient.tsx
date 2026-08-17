@@ -37,6 +37,7 @@ import {
   Search,
   Settings,
   ShoppingCart,
+  Megaphone,
   Ticket,
   Users,
 } from "lucide-react";
@@ -45,6 +46,7 @@ import { OrdersScreen } from "./OrdersScreen";
 import { MessagesScreen } from "./MessagesScreen";
 import { SubscriptionsScreen } from "./SubscriptionsScreen";
 import { chatGet } from "@/components/chat/api";
+import { CampaignsScreen } from "./CampaignsScreen";
 import { CouponsScreen } from "./CouponsScreen";
 import { LinksScreen } from "./LinksScreen";
 import { InvoicesScreen } from "./InvoicesScreen";
@@ -412,6 +414,7 @@ export function AdminClient({ initialView }: { initialView: View }) {
         { key: "subscriptions", label: "Subscriptions", icon: <Repeat /> },
         { key: "invoices", label: "Invoices", icon: <FileText /> },
         { key: "coupons", label: "Coupons", icon: <Ticket /> },
+        { key: "campaigns", label: "Offers", icon: <Megaphone /> },
         { key: "links", label: "Links", icon: <Link2 /> },
         { key: "customers", label: "Customers", icon: <Users /> },
       ],
@@ -533,6 +536,8 @@ export function AdminClient({ initialView }: { initialView: View }) {
             <ProductsHub />
           ) : view === "coupons" ? (
             <CouponsScreen />
+          ) : view === "campaigns" ? (
+            <CampaignsScreen />
           ) : view === "links" ? (
             <LinksScreen />
           ) : view === "invoices" ? (
