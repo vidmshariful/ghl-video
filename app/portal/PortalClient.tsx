@@ -20,6 +20,7 @@ import {
   WhiteLabelView,
 } from "@/components/portal/booking";
 import { PORTAL_SECTIONS, type PortalSection } from "./sections";
+import { DashboardView } from "./DashboardView";
 import {
   actForHeader,
   getActFor,
@@ -983,162 +984,7 @@ function PageHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   );
 }
 
-function StatCard({
-  label,
-  value,
-  accent,
-  onClick,
-}: {
-  label: string;
-  value: string;
-  accent?: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="tap rounded-[12px] border border-hair bg-surface px-5 py-4 text-left transition-colors hover:border-gold/40"
-    >
-      <p className="font-mono text-label uppercase text-dim">{label}</p>
-      <p
-        className={`mt-1 font-display text-h3 [font-variant-numeric:tabular-nums] ${
-          accent ? "text-gold" : "text-ink"
-        }`}
-      >
-        {value}
-      </p>
-    </button>
-  );
-}
 
-function PortalDashboard({
-  session,
-  firstName,
-  actingForLabel,
-  can,
-  unread,
-  onOpenOrder,
-  onGo,
-}: {
-  session: Session;
-  firstName: string | null;
-  actingForLabel: string | null;
-  can: (key: string) => boolean;
-  unread: number;
-  onOpenOrder: (id: string) => void;
-  onGo: (s: PortalSection) => void;
-}) {
-  const [orders, setOrders] = useState<OrderSummary[] | null>(null);
-  const canOrders = can("orders");
-  useEffect(() => {
-    if (!canOrders) {
-      setOrders([]);
-      return;
-    }
-    authedFetch("/api/portal/orders")
-      .then((j) => setOrders(j.orders ?? []))
-      .catch(() => setOrders([]));
-  }, [canOrders]);
-
-  const list = orders ?? [];
-  const active = list.filter((o) => o.status === "paid" && o.stage !== "delivered");
-  const delivered = list.filter((o) => o.stage === "delivered");
-  const latest = list[0] ?? null;
-  const num = (v: number) => (orders === null ? "-" : String(v));
-
-  const primary =
-    "tap inline-flex items-center gap-2 rounded-[8px] bg-brand-gradient px-6 py-3 text-body font-semibold text-canvas transition-all hover:brightness-110";
-  const ghost =
-    "tap inline-flex items-center gap-2 rounded-[8px] border border-hair px-6 py-3 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold";
-
-  return (
-    <div>
-      <p className="font-mono text-label uppercase text-gold">[ Your portal ]</p>
-      <h1 className="mt-3 font-display text-h2 text-ink">
-        {firstName ? `Welcome back, ${firstName}.` : "Welcome back."}
-      </h1>
-      <p className="mt-1 font-mono text-label uppercase text-dim">
-        {actingForLabel
-          ? `Working in ${actingForLabel}'s portal`
-          : session.user.email}
-      </p>
-
-      <div className="mt-8 grid gap-4 sm:grid-cols-3">
-        {can("orders") ? (
-          <StatCard label="Active projects" value={num(active.length)} onClick={() => onGo("orders")} />
-        ) : null}
-        {can("messages") ? (
-          <StatCard
-            label="Unread messages"
-            value={String(unread)}
-            accent={unread > 0}
-            onClick={() => onGo("messages")}
-          />
-        ) : null}
-        {can("orders") ? (
-          <StatCard label="Delivered" value={num(delivered.length)} onClick={() => onGo("orders")} />
-        ) : null}
-      </div>
-
-      {latest ? (
-        <div className="mt-6 rounded-[12px] border border-hair bg-surface p-6">
-          <p className="font-mono text-label uppercase text-muted">Latest project</p>
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-4">
-            <div className="min-w-0">
-              {latest.productCode ? (
-                <p className="font-mono text-label uppercase tracking-[0.12em] text-gold/80">
-                  {latest.productCode}
-                </p>
-              ) : null}
-              <p className="mt-0.5 font-display text-h4 text-ink">{latest.productName ?? "Order"}</p>
-              <p className="mt-1 font-mono text-label uppercase text-dim">
-                {STAGES.find((s) => s.key === latest.stage)?.label ?? latest.stage}
-                {latest.invoiceNumber ? ` / ${latest.invoiceNumber}` : ""}
-              </p>
-            </div>
-            <button type="button" onClick={() => onOpenOrder(latest.id)} className={ghost}>
-              Open project
-            </button>
-          </div>
-        </div>
-      ) : orders !== null && list.length === 0 ? (
-        <div className="mt-6 rounded-[12px] border border-hair bg-surface p-6">
-          <p className="font-display text-h4 text-ink">No projects yet.</p>
-          <p className="mt-2 text-body text-muted">
-            Browse the premade library or book a call to start a custom video.
-          </p>
-          <div className="mt-5 flex flex-wrap gap-3">
-            <a href="/premade/" className={primary}>
-              Browse videos<span aria-hidden="true">&rarr;</span>
-            </a>
-            <a href="/contact/" className={ghost}>
-              Book a call
-            </a>
-          </div>
-        </div>
-      ) : null}
-
-      <p className="mt-10 font-mono text-label uppercase text-dim">Quick actions</p>
-      <div className="mt-3 flex flex-wrap gap-3">
-        {can("messages") ? (
-          <button type="button" onClick={() => onGo("messages")} className={ghost}>
-            Message the studio
-          </button>
-        ) : null}
-        <a href="/contact/" className={ghost}>
-          Book a call
-        </a>
-        <a href="/premade/" className={ghost}>
-          Browse videos
-        </a>
-        <a href="mailto:hi@ghlvideo.com" className={ghost}>
-          Email us
-        </a>
-      </div>
-    </div>
-  );
-}
 
 function Portal({
   session,
@@ -1386,14 +1232,17 @@ function Portal({
         <section className="min-w-0 flex-1 p-4 md:p-8">
           <div key={section + (openOrder ?? "")} className="portal-view">
           {section === "dashboard" ? (
-            <PortalDashboard
-              session={session}
+            <DashboardView
               firstName={profile.name?.split(" ")[0] ?? null}
-              actingForLabel={acting ? acting.name || acting.email : null}
+              subtitle={
+                acting
+                  ? `Working in ${acting.name || acting.email}'s portal`
+                  : (session.user.email ?? "")
+              }
               can={can}
-              unread={msgUnread}
+              authedFetch={authedFetch}
               onOpenOrder={openOrderById}
-              onGo={go}
+              onGo={(s) => go(s as PortalSection)}
             />
           ) : section === "orders" && can("orders") ? (
             openOrder ? (
@@ -1456,14 +1305,17 @@ function Portal({
               </div>
             </div>
           ) : (
-            <PortalDashboard
-              session={session}
+            <DashboardView
               firstName={profile.name?.split(" ")[0] ?? null}
-              actingForLabel={acting ? acting.name || acting.email : null}
+              subtitle={
+                acting
+                  ? `Working in ${acting.name || acting.email}'s portal`
+                  : (session.user.email ?? "")
+              }
               can={can}
-              unread={msgUnread}
+              authedFetch={authedFetch}
               onOpenOrder={openOrderById}
-              onGo={go}
+              onGo={(s) => go(s as PortalSection)}
             />
           )}
           </div>

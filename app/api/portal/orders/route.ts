@@ -18,7 +18,7 @@ export async function GET(req: Request) {
   const { data } = await db
     .from("orders")
     .select(
-      "id, amount_cents, currency, status, fulfillment_stage, invoice_number, created_at, product:products(name, sku, metadata)",
+      "id, amount_cents, currency, status, fulfillment_stage, invoice_number, created_at, intake_completed, product:products(name, sku, metadata)",
     )
     .eq("customer_email", email)
     .order("created_at", { ascending: false });
@@ -39,6 +39,9 @@ export async function GET(req: Request) {
       stage: o.fulfillment_stage,
       invoiceNumber: o.invoice_number,
       createdAt: o.created_at,
+      /* the dashboard needs this to say "waiting on your brief", which is the
+         most actionable thing it can tell somebody */
+      intakeCompleted: Boolean(o.intake_completed),
     };
   });
   return NextResponse.json({ email, orders });
