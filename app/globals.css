@@ -129,15 +129,48 @@
 /* fork more than colors later (radius, type scale), add the variable  */
 /* here and point the @theme mapping at it the same way.               */
 /* ------------------------------------------------------------------ */
+/* ================================================================
+   THE PORTALS: /admin, /portal, /partners
+
+   Hybrid, by client direction (17 August 2026): dark chrome, light
+   content. The sidebar and top bar stay dark in EVERY theme; the
+   working area beneath them is light by default.
+
+   That split is why this block has two halves now. Chrome and
+   content used to share one set of tokens, which is exactly why
+   hybrid was impossible before: lightening the content lightened
+   the sidebar along with it.
+
+     --chrome-*        the rail and the bar. Never themed.
+     everything else   the working area. Themed.
+
+   Dark mode darkens the CONTENT only. The chrome does not move,
+   because a rail that changes with the theme stops being the fixed
+   frame the whole layout is hung on.
+   ================================================================ */
 [data-surface="portal"] {
-  /* the three portals: /admin, /portal, /partners */
-  --canvas: #08090d;
-  --surface: #111219;
-  --card: #161821;
-  --hair: #2b2f40;
-  --text: #eef0f6;
-  --muted: #9096a8;
-  --dim: #7d8499;
+  color-scheme: light;
+
+  /* ---- chrome: identical in both themes, on purpose ---- */
+  --chrome: #0c0e14;
+  /* the raised state: a hovered item, or the screen you are on */
+  --chrome-2: #171a23;
+  --chrome-line: #262b38;
+  --chrome-text: #e9ecf3;
+  --chrome-muted: #949cb0;
+  /* group headings and anything deliberately quiet on the rail.
+     Lifted from the old --dim, which measured 3.6 against the rail
+     and failed the bar on the surface it is used most. */
+  --chrome-dim: #99a1b5;
+
+  /* ---- content: the working area ---- */
+  --canvas: #f2f4f8;
+  --surface: #ffffff;
+  --card: #ffffff;
+  --hair: #e3e7ef;
+  --text: #101523;
+  --muted: #545c6d;
+  --dim: #6b7488;
 }
 
 [data-surface="checkout"] {
@@ -168,23 +201,29 @@
   --kit-warn: #ffb02e;
 }
 
-/* The portals' LIGHT theme. The top-bar switch stamps data-theme on <html>
+/* The portals' DARK theme. The top-bar switch stamps data-theme on <html>
    (persisted in localStorage, applied pre-paint by the layouts' init
    script); only the portal surface responds, the other surfaces are
-   untouched. Values chosen so muted + dim keep AA on white. */
-[data-theme="light"] [data-surface="portal"] {
-  color-scheme: light;
-  --canvas: #f4f6f9;
-  --surface: #ffffff;
-  --card: #ffffff;
-  --hair: #e3e7ef;
-  --text: #101523;
-  --muted: #5b6474;
-  --dim: #737d92;
+   untouched.
+
+   Content only. The chrome tokens are deliberately absent here: the rail
+   is already this dark and should look the same whichever theme is on. */
+[data-theme="dark"] [data-surface="portal"] {
+  color-scheme: dark;
+  --canvas: #0d0f15;
+  --surface: #14161d;
+  --card: #191c25;
+  --hair: #2b3040;
+  --text: #eef0f6;
+  --muted: #a3aabb;
+  --dim: #858d9f;
 }
 /* Buttons on bright brand fills keep near-black text in BOTH themes (the
-   design rule); .text-canvas would flip to near-white in light mode. */
-[data-theme="light"] [data-surface="portal"] .text-canvas {
+   design rule); .text-canvas would otherwise flip to near-white. Light is
+   now the portal default, so this applies unconditionally and again under
+   dark, rather than only under an explicit light stamp. */
+[data-surface="portal"] .text-canvas,
+[data-theme="dark"] [data-surface="portal"] .text-canvas {
   color: var(--on-brand);
 }
 
@@ -238,6 +277,17 @@
   --color-ground-deep: var(--ground-deep);
   --color-ground-mid: var(--ground-mid);
   --color-on-brand: var(--on-brand);
+
+  /* The portal chrome, as utilities: bg-chrome, border-chrome-line,
+     text-chrome-text. Only the rail and the bar may use these. Content
+     using them would put a dark block in the middle of a light page,
+     which is the exact leak the split exists to prevent. */
+  --color-chrome: var(--chrome);
+  --color-chrome-2: var(--chrome-2);
+  --color-chrome-line: var(--chrome-line);
+  --color-chrome-text: var(--chrome-text);
+  --color-chrome-muted: var(--chrome-muted);
+  --color-chrome-dim: var(--chrome-dim);
 
   --font-display: var(--font-heading);
   --font-sans: var(--font-body);

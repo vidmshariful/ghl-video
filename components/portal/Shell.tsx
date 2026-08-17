@@ -75,7 +75,7 @@ export function PortalAvatar({
       <img
         src={url}
         alt=""
-        className={`${cls} shrink-0 rounded-full border border-hair object-cover`}
+        className={`${cls} shrink-0 rounded-full border border-chrome-line object-cover`}
       />
     );
   }
@@ -110,7 +110,7 @@ export function TopIconButton({
       onClick={onClick}
       aria-label={badge ? `${label} (${badge} unread)` : label}
       title={label}
-      className={`tap relative h-9 w-9 place-items-center rounded-full border border-hair text-muted transition-colors hover:border-gold/60 hover:text-gold ${
+      className={`tap relative h-9 w-9 place-items-center rounded-full border border-chrome-line text-chrome-muted transition-colors hover:border-gold/60 hover:text-gold ${
         mobileHidden ? "hidden sm:grid" : "grid"
       }`}
     >
@@ -310,10 +310,10 @@ export function ProfileMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label="Your account"
-        className="tap flex items-center gap-1.5 rounded-full border border-hair p-0.5 pr-1.5 transition-colors hover:border-gold/50"
+        className="tap flex items-center gap-1.5 rounded-full border border-chrome-line p-0.5 pr-1.5 transition-colors hover:border-gold/50"
       >
         <PortalAvatar name={name} email={email} url={avatarUrl} />
-        <ChevronDown size={13} className="text-dim" aria-hidden="true" />
+        <ChevronDown size={13} className="text-chrome-dim" aria-hidden="true" />
       </button>
       {open ? (
         <div className="absolute right-0 top-full z-50 mt-2 w-[min(18rem,calc(100vw-2rem))] rounded-[12px] border border-hair bg-surface p-1.5 shadow-2xl">
@@ -389,7 +389,7 @@ export function ThemeToggle() {
       onClick={flip}
       aria-label={light ? "Switch to dark mode" : "Switch to light mode"}
       title={light ? "Dark mode" : "Light mode"}
-      className="tap grid h-9 w-9 place-items-center rounded-full border border-hair text-muted transition-colors hover:border-gold/60 hover:text-gold"
+      className="tap grid h-9 w-9 place-items-center rounded-full border border-chrome-line text-chrome-muted transition-colors hover:border-gold/60 hover:text-gold"
     >
       {light ? <Moon size={16} /> : <Sun size={16} />}
     </button>
@@ -406,10 +406,10 @@ export function PortalTopbar({
   right?: ReactNode;
 }) {
   return (
-    <header className="sticky top-0 z-40 flex items-center justify-between border-b border-hair bg-surface/90 px-4 py-3 backdrop-blur md:px-6">
+    <header className="sticky top-0 z-40 flex items-center justify-between border-b border-chrome-line bg-chrome px-4 py-3 md:px-6">
       <div className="flex min-w-0 items-center gap-3">
         <Logo className="h-6 shrink-0" />
-        <span className="truncate font-mono text-label uppercase tracking-[0.1em] text-muted">
+        <span className="truncate font-mono text-label uppercase tracking-[0.1em] text-chrome-muted">
           / {area}
         </span>
       </div>
@@ -503,13 +503,13 @@ export function PortalSidebar({
       onClick={() => onSelect(it.key)}
       className={`tap group flex w-full items-center gap-2.5 rounded-[8px] px-3 py-2 text-left text-body-sm transition-colors ${
         active === it.key
-          ? "bg-gold/15 font-semibold text-gold"
-          : "text-muted hover:bg-hair/40 hover:text-ink"
+          ? "bg-chrome-2 font-semibold text-chrome-text"
+          : "text-chrome-muted hover:bg-chrome-2/70 hover:text-chrome-text"
       }`}
     >
       <span
         className={`grid h-5 w-5 shrink-0 place-items-center [&>svg]:h-[16px] [&>svg]:w-[16px] ${
-          active === it.key ? "text-gold" : "text-dim group-hover:text-ink"
+          active === it.key ? "text-gold" : "text-chrome-dim group-hover:text-chrome-text"
         }`}
       >
         {it.icon}
@@ -527,13 +527,13 @@ export function PortalSidebar({
     /* outer nav stretches to the column floor so the rail's background never
        stops short; the inner div sticks, its group list scrolls, and the
        pinned block (Settings) always sits on the rail's floor */
-    <nav className="border-b border-hair bg-surface/60 md:w-60 md:shrink-0 md:border-b-0 md:border-r">
+    <nav className="border-b border-chrome-line bg-chrome md:w-60 md:shrink-0 md:border-b-0 md:border-r">
       <div className="p-3 md:sticky md:top-[3.55rem] md:flex md:h-[calc(100vh-3.55rem)] md:flex-col md:p-4">
       {/* mobile: one compact dropdown */}
       <select
         value={active}
         onChange={(e) => onSelect(e.target.value)}
-        className="w-full rounded-[8px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none md:hidden"
+        className="w-full rounded-[8px] border border-chrome-line bg-chrome-2 px-3 py-2.5 text-body text-chrome-text focus:border-gold focus:outline-none md:hidden"
       >
         {groups.map((g) => {
           const opts = g.items.map((it) => (
@@ -575,7 +575,7 @@ export function PortalSidebar({
                 type="button"
                 onClick={() => toggle(g.title)}
                 aria-expanded={open?.[g.title] ?? false}
-                className="tap flex w-full items-center justify-between rounded-[8px] px-3 py-1.5 font-mono text-label font-bold uppercase tracking-[0.12em] text-dim transition-colors hover:text-muted"
+                className="tap flex w-full items-center justify-between rounded-[8px] px-3 py-1.5 font-mono text-label font-bold uppercase tracking-[0.12em] text-chrome-dim transition-colors hover:text-chrome-text"
               >
                 <span className="inline-flex items-center gap-2">
                   {g.title}
@@ -616,7 +616,7 @@ export function PortalSidebar({
 
       {/* pinned to the rail's floor, visible from every scroll position */}
       {bottom && bottom.length > 0 ? (
-        <ul className="hidden shrink-0 flex-col gap-0.5 border-t border-hair pt-3 md:mt-3 md:flex">
+        <ul className="hidden shrink-0 flex-col gap-0.5 border-t border-chrome-line pt-3 md:mt-3 md:flex">
           {bottom.map((it) => (
             <li key={it.key}>
               <Item it={it} />
