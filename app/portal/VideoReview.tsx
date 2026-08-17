@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Button, Textarea } from "@/components/portal/ui";
 import { ConfirmDialog } from "./ConfirmDialog";
 
 /*
@@ -42,9 +43,6 @@ const when = (iso: string) =>
     hour: "numeric",
     minute: "2-digit",
   });
-
-const fieldCls =
-  "tap w-full rounded-[8px] border border-hair bg-canvas px-3 py-2 text-body-sm text-ink placeholder:text-dim";
 
 export function VideoReview({
   videoId,
@@ -204,24 +202,22 @@ export function VideoReview({
 
       {replyTo === c.id ? (
         <div className="mt-2 grid gap-2">
-          <textarea
+          <Textarea
             rows={2}
             autoFocus
             value={replyText}
             onChange={(e) => setReplyText(e.target.value)}
             onKeyDown={enterSends(() => send("comment", { parentId: c.id, body: replyText }))}
             placeholder="Reply. Enter to send."
-            className={fieldCls}
           />
           <div className="flex gap-2">
-            <button
-              type="button"
+            <Button
+              size="sm"
               disabled={busy || !replyText.trim()}
               onClick={() => send("comment", { parentId: c.id, body: replyText })}
-              className="tap rounded-[8px] border border-hair px-3 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-40"
             >
               Send
-            </button>
+            </Button>
             <button
               type="button"
               onClick={() => {
@@ -310,31 +306,17 @@ export function VideoReview({
         )}
 
         <div className="mt-3 flex flex-wrap gap-2">
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => setAsk("approve")}
-            className="tap rounded-[8px] bg-brand-gradient px-4 py-2 font-mono text-label font-bold uppercase text-canvas transition-opacity hover:opacity-90 disabled:opacity-40"
-          >
+          <Button variant="brand" disabled={busy} onClick={() => setAsk("approve")}>
             Approve this video
-          </button>
+          </Button>
           {canRequestChanges ? (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => setAsk("changes")}
-              className="tap rounded-[8px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-40"
-            >
+            <Button variant="secondary" disabled={busy} onClick={() => setAsk("changes")}>
               Request changes
-            </button>
+            </Button>
           ) : onMessageStudio ? (
-            <button
-              type="button"
-              onClick={onMessageStudio}
-              className="tap rounded-[8px] border border-hair px-4 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
-            >
+            <Button variant="secondary" onClick={onMessageStudio}>
               Message the studio
-            </button>
+            </Button>
           ) : null}
         </div>
 
@@ -358,14 +340,13 @@ export function VideoReview({
         </p>
 
         <div className="mt-2 grid gap-2">
-          <textarea
+          <Textarea
             rows={3}
             value={text}
             onChange={(e) => setText(e.target.value)}
             onFocus={pause}
             onKeyDown={enterSends(() => send("comment"))}
             placeholder="What would you like changed? Enter to send."
-            className={fieldCls}
           />
           <label className="flex items-center gap-2 text-body-sm text-muted">
             <input
