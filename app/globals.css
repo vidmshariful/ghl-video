@@ -149,7 +149,7 @@
    frame the whole layout is hung on.
    ================================================================ */
 [data-surface="portal"] {
-  color-scheme: light;
+  color-scheme: dark;
 
   /* ---- chrome: identical in both themes, on purpose ---- */
   --chrome: #0c0e14;
@@ -163,7 +163,42 @@
      and failed the bar on the surface it is used most. */
   --chrome-dim: #99a1b5;
 
-  /* ---- content: the working area ---- */
+  /* ---- content: dark is the portal's default face ----
+     These are the values the old data-theme="dark" block carried. That
+     block was dead on arrival: the toggle models "no attribute = dark"
+     and only ever STAMPS "light", so nothing in the product could set
+     data-theme="dark" and the dark palette never rendered. Making dark
+     the default both delivers the look Shariful asked for and makes the
+     toggle true for the first time. */
+  --canvas: #0d0f15;
+  --surface: #14161d;
+  --card: #191c25;
+  --hair: #2b3040;
+  --text: #eef0f6;
+  --muted: #a3aabb;
+  --dim: #858d9f;
+
+  /* The black gradient with grain, on the surface root so every portal
+     (customer, partner, admin) wears it and nothing else can. Three
+     layers: film grain (monochrome fractal noise, tiled), one faint gold
+     glow at the top so the dark has a direction, and the gradient itself
+     falling to near-black. Cards and the rail paint their own fills over
+     it; the grain shows in the gaps, which is where it belongs. */
+  background-color: #08090d;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E"),
+    radial-gradient(55rem 36rem at 82% -8%, rgba(252, 192, 0, 0.045), transparent 62%),
+    linear-gradient(180deg, #11141c 0%, #0a0c11 48%, #08090d 100%);
+}
+
+/* The portals' LIGHT theme, for anyone who prefers paper. The top-bar
+   switch stamps data-theme="light" on <html> (persisted in localStorage,
+   applied pre-paint by the layouts' init script); only the portal surface
+   responds. Content only: the chrome stays dark in both themes, because a
+   rail that changes with the theme stops being the fixed frame the whole
+   layout is hung on. */
+[data-theme="light"] [data-surface="portal"] {
+  color-scheme: light;
   --canvas: #f2f4f8;
   --surface: #ffffff;
   --card: #ffffff;
@@ -171,6 +206,8 @@
   --text: #101523;
   --muted: #545c6d;
   --dim: #6b7488;
+  background-color: var(--canvas);
+  background-image: none;
 }
 
 [data-surface="checkout"] {
@@ -201,29 +238,12 @@
   --kit-warn: #ffb02e;
 }
 
-/* The portals' DARK theme. The top-bar switch stamps data-theme on <html>
-   (persisted in localStorage, applied pre-paint by the layouts' init
-   script); only the portal surface responds, the other surfaces are
-   untouched.
-
-   Content only. The chrome tokens are deliberately absent here: the rail
-   is already this dark and should look the same whichever theme is on. */
-[data-theme="dark"] [data-surface="portal"] {
-  color-scheme: dark;
-  --canvas: #0d0f15;
-  --surface: #14161d;
-  --card: #191c25;
-  --hair: #2b3040;
-  --text: #eef0f6;
-  --muted: #a3aabb;
-  --dim: #858d9f;
-}
 /* Buttons on bright brand fills keep near-black text in BOTH themes (the
-   design rule); .text-canvas would otherwise flip to near-white. Light is
-   now the portal default, so this applies unconditionally and again under
-   dark, rather than only under an explicit light stamp. */
+   design rule); .text-canvas would otherwise track the theme's canvas.
+   Applies unconditionally so the gradient buttons read the same on the
+   dark default and under an explicit light stamp. */
 [data-surface="portal"] .text-canvas,
-[data-theme="dark"] [data-surface="portal"] .text-canvas {
+[data-theme="light"] [data-surface="portal"] .text-canvas {
   color: var(--on-brand);
 }
 

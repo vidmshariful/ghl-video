@@ -128,7 +128,10 @@ function PreviewVideo({
       muted
       loop
       playsInline
-      preload="none"
+      /* no poster means the tile would sit pure black until hover, which on
+         the dark skin reads as a hole; metadata fetches just enough for the
+         browser to paint the first frame as its own cover */
+      preload={poster ? "none" : "metadata"}
       poster={poster ?? undefined}
       className={className ?? "h-full w-full object-cover"}
     />
@@ -191,7 +194,18 @@ function VideoCard({
         {isCollection ? (
           <CollectionCover item={item} />
         ) : item.previewUrl && !reduced ? (
-          <PreviewVideo src={item.previewUrl} poster={item.posterUrl} active={hover} />
+          <>
+            <PreviewVideo src={item.previewUrl} poster={item.posterUrl} active={hover} />
+            {/* says "this plays" without a click; steps aside while it does */}
+            <span
+              aria-hidden="true"
+              className={`pointer-events-none absolute inset-0 grid place-items-center transition-opacity duration-200 ${hover ? "opacity-0" : "opacity-100"}`}
+            >
+              <span className="grid h-10 w-10 place-items-center rounded-full bg-canvas/60 text-ink backdrop-blur-sm">
+                <PlayCircle size={20} />
+              </span>
+            </span>
+          </>
         ) : item.posterUrl ? (
           /* eslint-disable-next-line @next/next/no-img-element */
           <img src={item.posterUrl} alt="" className="h-full w-full object-cover" />
