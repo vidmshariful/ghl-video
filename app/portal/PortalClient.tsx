@@ -985,11 +985,11 @@ function SettingsView({
 }
 
 /* ---- signed-in portal (app shell) ---- */
-const pathFor = (s: PortalSection, orderId?: string | null) =>
+const pathFor = (s: PortalSection, sub?: string | null) =>
   s === "dashboard"
     ? "/portal/"
-    : s === "orders" && orderId
-      ? `/portal/orders/${orderId}/`
+    : (s === "orders" || s === "library") && sub
+      ? `/portal/${s}/${sub}/`
       : `/portal/${s}/`;
 
 function PageHeader({ title, subtitle }: { title: string; subtitle?: string }) {
@@ -1007,21 +1007,25 @@ function Portal({
   session,
   initialView,
   initialOrderId,
+  initialItemCode,
 }: {
   session: Session;
   initialView: PortalSection;
   initialOrderId: string | null;
+  initialItemCode: string | null;
 }) {
   const [section, setSection] = useState<PortalSection>(initialView);
   const [openOrder, setOpenOrder] = useState<string | null>(initialOrderId);
+  /* the library item open at /portal/library/<code>/, if any */
+  const [openItem, setOpenItem] = useState<string | null>(initialItemCode);
   const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
   const [msgUnread, setMsgUnread] = useState(0);
   const [brandIncomplete, setBrandIncomplete] = useState(false);
   const [profile, setProfile] = useState<MyProfile | null>(null);
 
   /* clicking around pushes real URLs; back/forward walk the sections */
-  const pushUrl = (s: PortalSection, orderId?: string | null) => {
-    const path = pathFor(s, orderId);
+  const pushUrl = (s: PortalSection, sub?: string | null) => {
+    const path = pathFor(s, sub);
     if (window.location.pathname !== path) window.history.pushState(null, "", path);
   };
   useEffect(() => {
@@ -1033,6 +1037,7 @@ function Portal({
         : "dashboard";
       setSection(next);
       setOpenOrder(next === "orders" && segs[1] ? segs[1] : null);
+      setOpenItem(next === "library" && segs[1] ? segs[1] : null);
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
@@ -1112,6 +1117,7 @@ function Portal({
   const go = (s: PortalSection) => {
     setSection(s);
     setOpenOrder(null);
+    setOpenItem(null);
     pushUrl(s);
   };
   const openOrderById = (id: string) => {
@@ -1370,7 +1376,15 @@ function Portal({
               </div>
             </div>
           ) : section === "library" && can("orders") ? (
-            <LibraryView authedFetch={authedFetch} />
+            <LibraryView
+              authedFetch={authedFetch}
+              openCode={openItem}
+              onOpenItem={(code) => {
+                setOpenItem(code);
+                pushUrl("library", code);
+                window.scrollTo({ top: 0 });
+              }}
+            />
           ) : section === "brand" && can("orders") ? (
             <BrandKitView authedFetch={authedFetch} canEdit={can("orders")} />
           ) : section === "messages" && can("messages") ? (
@@ -1425,9 +1439,11 @@ function Portal({
 export function PortalClient({
   initialView,
   initialOrderId,
+  initialItemCode,
 }: {
   initialView: PortalSection;
   initialOrderId: string | null;
+  initialItemCode: string | null;
 }) {
   const [session, setSession] = useState<Session | null>(null);
   const [ready, setReady] = useState(false);
@@ -1451,7 +1467,12 @@ export function PortalClient({
           </Shell>
         </>
       ) : session ? (
-        <Portal session={session} initialView={initialView} initialOrderId={initialOrderId} />
+        <Portal
+          session={session}
+          initialView={initialView}
+          initialOrderId={initialOrderId}
+          initialItemCode={initialItemCode}
+        />
       ) : (
         <>
           <PortalTopbar area="Portal" />

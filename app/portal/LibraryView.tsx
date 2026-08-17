@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, PlayCircle, Search, ShoppingCart } from "lucide-react";
+import { ArrowLeft, Check, PlayCircle, Search, ShoppingCart } from "lucide-react";
 import {
   Button,
   Card,
@@ -15,15 +15,30 @@ import {
 /*
  * The library: everything we sell, inside the portal.
  *
- * The premade page on the main site was doing two jobs at once, pitching and
- * listing, and did neither well. This does one: it is for somebody who has
- * already decided to buy and is choosing what.
+ * Two levels on purpose. The GRID is a calm shelf: posters, prices, and a
+ * preview that plays on hover, because eighty videos all animating at once is
+ * a wall of noise nobody can scan. The DETAIL is where intent goes: click any
+ * card and it opens at /portal/library/<code>/ with a real player, and for a
+ * pack or bundle, everything inside it. "12 videos" on a cover was the
+ * argument for buying; the open pack is the proof.
+ *
+ * Every card is a real link. A founder deciding with a cofounder can send
+ * them the exact pack, and middle-click works, because the fake-button card
+ * that breaks both is the single most common marketplace mistake.
  *
  * Videos they already own are marked and sorted to the end rather than
- * hidden. Hiding them would make the collection look smaller than it is, and
- * somebody who owns nine of a pack wants to see the three they are missing
- * beside the nine they have.
+ * hidden, and inside a pack each member they own is ticked: somebody who owns
+ * nine of twelve wants to see exactly which three they are missing.
  */
+
+type Member = {
+  code: string;
+  title: string;
+  category: string | null;
+  posterUrl: string | null;
+  previewUrl: string | null;
+  owned: boolean;
+};
 
 type Item = {
   code: string;
@@ -31,11 +46,11 @@ type Item = {
   subject: string | null;
   category: string | null;
   kind: "video" | "pack" | "bundle";
-  /* packs and bundles only: how many videos, their member stills, and the
-   * headline of what is inside */
   videoCount: number | null;
   covers: string[];
   contains: string | null;
+  members: Member[] | null;
+  slots: { label: string; count: number }[] | null;
   priceCents: number;
   posterUrl: string | null;
   previewUrl: string | null;
@@ -50,15 +65,83 @@ const money = (cents: number) =>
     minimumFractionDigits: 0,
   });
 
+/** prefers-reduced-motion, live. Motion off means posters, not autoplay. */
+function useReducedMotion() {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReduced(mq.matches);
+    const on = (e: MediaQueryListEvent) => setReduced(e.matches);
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
+  return reduced;
+}
+
 /*
- * The cover of a pack or a bundle.
+ * A preview that actually plays.
+ *
+ * The first version put the file in a <source> child with preload="none" and
+ * called play() once on hover. Chrome's power saver is allowed to interrupt
+ * exactly that call, and did, which is why the library looked like it played
+ * nothing. This one holds src on the element, and when play() is refused it
+ * waits for canplay and tries once more, but only while the pointer is still
+ * on the card. Nothing loads until first hover, so browsing stays light.
+ */
+function PreviewVideo({
+  src,
+  poster,
+  active,
+  className,
+}: {
+  src: string;
+  poster: string | null;
+  active: boolean;
+  className?: string;
+}) {
+  const ref = useRef<HTMLVideoElement>(null);
+  const wanted = useRef(false);
+
+  useEffect(() => {
+    const v = ref.current;
+    if (!v) return;
+    wanted.current = active;
+    if (!active) {
+      v.pause();
+      v.currentTime = 0;
+      return;
+    }
+    v.muted = true;
+    v.play().catch(() => {
+      const retry = () => {
+        if (wanted.current) v.play().catch(() => {});
+      };
+      v.addEventListener("canplay", retry, { once: true });
+      if (v.readyState === 0) v.load();
+    });
+  }, [active]);
+
+  return (
+    <video
+      ref={ref}
+      src={src}
+      muted
+      loop
+      playsInline
+      preload="none"
+      poster={poster ?? undefined}
+      className={className ?? "h-full w-full object-cover"}
+    />
+  );
+}
+
+/*
+ * The cover of a pack or a bundle on the shelf.
  *
  * A collection has no footage of its own, so left alone it rendered as an
  * empty black rectangle, and it was the $1,595 items that looked emptiest.
  * Where we know the members, their stills are the cover. Where we do not,
- * because the customer picks the videos at intake, the number is the cover:
- * seventy nine videos is the entire argument for buying one, and it was the
- * one thing the card was not saying.
+ * the number is the cover: seventy nine videos is the entire argument.
  */
 function CollectionCover({ item }: { item: Item }) {
   if (item.covers.length >= 4) {
@@ -84,39 +167,31 @@ function CollectionCover({ item }: { item: Item }) {
   );
 }
 
-/* One card. The preview plays on hover, which is the closest thing to
- * picking a video up and looking at it. */
-function VideoCard({ item, onOrder }: { item: Item; onOrder: (code: string) => void }) {
-  const vid = useRef<HTMLVideoElement>(null);
+/* One shelf card. The stretched link opens the detail; the Order button sits
+ * above it, so buying stays one click for somebody already decided. */
+function VideoCard({
+  item,
+  reduced,
+  onOpen,
+}: {
+  item: Item;
+  reduced: boolean;
+  onOpen: (code: string) => void;
+}) {
+  const [hover, setHover] = useState(false);
   const isCollection = item.kind !== "video";
 
   return (
     <div
-      className={`group flex h-full flex-col overflow-hidden rounded-[12px] border bg-surface transition-colors ${
-        item.owned ? "border-hair" : "border-hair hover:border-gold/50"
-      }`}
-      onMouseEnter={() => vid.current?.play().catch(() => {})}
-      onMouseLeave={() => {
-        if (!vid.current) return;
-        vid.current.pause();
-        vid.current.currentTime = 0;
-      }}
+      className="group relative flex h-full flex-col overflow-hidden rounded-[12px] border border-hair bg-surface transition-all duration-200 hover:-translate-y-0.5 hover:border-gold/50 hover:shadow-[0_14px_34px_-16px_rgba(0,0,0,0.55)] focus-within:border-gold/50 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
     >
       <div className="relative aspect-video bg-ground-deep">
         {isCollection ? (
           <CollectionCover item={item} />
-        ) : item.previewUrl ? (
-          <video
-            ref={vid}
-            muted
-            loop
-            playsInline
-            preload="none"
-            poster={item.posterUrl ?? undefined}
-            className="h-full w-full object-cover"
-          >
-            <source src={item.previewUrl} type="video/mp4" />
-          </video>
+        ) : item.previewUrl && !reduced ? (
+          <PreviewVideo src={item.previewUrl} poster={item.posterUrl} active={hover} />
         ) : item.posterUrl ? (
           /* eslint-disable-next-line @next/next/no-img-element */
           <img src={item.posterUrl} alt="" className="h-full w-full object-cover" />
@@ -126,21 +201,17 @@ function VideoCard({ item, onOrder }: { item: Item; onOrder: (code: string) => v
           </div>
         )}
         {item.owned && (
-          <span className="absolute left-2 top-2 inline-flex items-center gap-1.5 rounded-full bg-chrome px-2.5 py-1 font-mono text-label uppercase text-chrome-text">
+          <span className="absolute left-2 top-2 z-10 inline-flex items-center gap-1.5 rounded-full bg-chrome px-2.5 py-1 font-mono text-label uppercase text-chrome-text">
             <Check size={11} aria-hidden="true" /> Yours
           </span>
         )}
-        {/* the mosaic shows the videos but not how many, so the count is
-            stated over it; the panel cover already says it in full */}
         {isCollection && item.covers.length >= 4 && item.videoCount && (
-          <span className="absolute bottom-2 right-2 rounded-full bg-chrome px-2.5 py-1 font-mono text-label uppercase text-chrome-text">
+          <span className="absolute bottom-2 right-2 z-10 rounded-full bg-chrome px-2.5 py-1 font-mono text-label uppercase text-chrome-text">
             {item.videoCount} videos
           </span>
         )}
       </div>
 
-      {/* flex-1 with the button on mt-auto, so the buttons line up across a
-          row whether a title runs to one line or two */}
       <div className="flex flex-1 flex-col p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -155,7 +226,7 @@ function VideoCard({ item, onOrder }: { item: Item; onOrder: (code: string) => v
           </span>
         </div>
 
-        <div className="mt-auto pt-3">
+        <div className="relative z-10 mt-auto pt-3">
           {item.owned ? (
             <Button variant="ghost" size="sm" full disabled>
               Already yours
@@ -166,29 +237,234 @@ function VideoCard({ item, onOrder }: { item: Item; onOrder: (code: string) => v
               size="sm"
               full
               icon={<ShoppingCart />}
-              onClick={() => onOrder(item.code)}
+              href={`/checkout/${item.code}/`}
             >
               Order now
             </Button>
           )}
         </div>
       </div>
+
+      {/* the stretched link: the whole card opens the detail, as a real URL */}
+      <a
+        href={`/portal/library/${item.code}/`}
+        aria-label={`Open ${item.title}`}
+        className="absolute inset-0 z-[5] rounded-[12px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-gold"
+        onClick={(e) => {
+          /* modified clicks keep native behaviour: new tab, window, download */
+          if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+          e.preventDefault();
+          onOpen(item.code);
+        }}
+      />
+    </div>
+  );
+}
+
+/*
+ * The open item: a real player and, for a collection, everything inside it.
+ *
+ * A pack has no footage of its own, so its player IS its members: click any
+ * video inside and it plays up top. That turns "12 videos included" from a
+ * claim into something a buyer can flip through, which is the whole reason
+ * this view exists.
+ */
+function ItemDetail({
+  item,
+  reduced,
+  onBack,
+}: {
+  item: Item;
+  reduced: boolean;
+  onBack: () => void;
+}) {
+  const playable = (item.members ?? []).filter((m) => m.previewUrl);
+  const [playing, setPlaying] = useState<Member | null>(playable[0] ?? null);
+  /* reopening a different item resets the hero to its first playable member */
+  useEffect(() => {
+    setPlaying(((item.members ?? []).filter((m) => m.previewUrl))[0] ?? null);
+  }, [item.code, item.members]);
+
+  const heroSrc = item.kind === "video" ? item.previewUrl : (playing?.previewUrl ?? null);
+  const heroPoster = item.kind === "video" ? item.posterUrl : (playing?.posterUrl ?? null);
+
+  return (
+    <div>
+      <Button variant="ghost" size="sm" icon={<ArrowLeft />} onClick={onBack}>
+        Back to the library
+      </Button>
+
+      <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
+        <div className="min-w-0">
+          <div className="overflow-hidden rounded-[12px] border border-hair bg-ground-deep">
+            {heroSrc ? (
+              <video
+                key={heroSrc}
+                src={heroSrc}
+                poster={heroPoster ?? undefined}
+                controls
+                autoPlay={!reduced}
+                muted
+                playsInline
+                className="aspect-video w-full bg-black object-contain"
+              />
+            ) : (
+              <div className="aspect-video">
+                <CollectionCover item={item} />
+              </div>
+            )}
+          </div>
+          {item.kind !== "video" && playing && (
+            <p className="mt-2 truncate font-mono text-label uppercase text-dim">
+              Playing: {playing.title}
+            </p>
+          )}
+
+          {/* what is inside, by name */}
+          {item.members && item.members.length > 0 && (
+            <div className="mt-6">
+              <h2 className="font-display text-h4 text-ink">
+                The {item.members.length} videos inside
+              </h2>
+              <p className="mt-1 text-body-sm text-muted">
+                Click any of them to watch its preview above.
+                {item.members.some((m) => m.owned)
+                  ? " Ones you already own are ticked."
+                  : ""}
+              </p>
+              <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-4">
+                {item.members.map((m) => {
+                  const current = playing?.code === m.code;
+                  return (
+                    <button
+                      key={m.code}
+                      type="button"
+                      disabled={!m.previewUrl}
+                      onClick={() => m.previewUrl && setPlaying(m)}
+                      aria-pressed={current}
+                      className={`group/m overflow-hidden rounded-[8px] border text-left transition-colors ${
+                        current
+                          ? "border-gold"
+                          : "border-hair hover:border-gold/50 disabled:cursor-default disabled:hover:border-hair"
+                      }`}
+                    >
+                      <div className="relative aspect-video bg-ground-deep">
+                        {m.posterUrl ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img src={m.posterUrl} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="grid h-full place-items-center text-dim">
+                            <PlayCircle size={20} aria-hidden="true" />
+                          </div>
+                        )}
+                        {m.owned && (
+                          <span className="absolute left-1.5 top-1.5 grid h-5 w-5 place-items-center rounded-full bg-chrome text-chrome-text">
+                            <Check size={11} aria-hidden="true" />
+                          </span>
+                        )}
+                      </div>
+                      <p className="truncate px-2.5 py-2 text-body-sm font-medium text-ink">
+                        {m.title}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* a bundle whose contents the buyer picks: show the shape honestly */}
+          {!item.members?.length && item.slots && item.slots.length > 0 && (
+            <div className="mt-6">
+              <h2 className="font-display text-h4 text-ink">
+                What the {item.videoCount} videos are
+              </h2>
+              <p className="mt-1 text-body-sm text-muted">
+                You choose the exact videos after checkout, from the whole
+                library, guided by these slots. Your brand goes on every one.
+              </p>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                {item.slots.map((s) => (
+                  <div
+                    key={s.label}
+                    className="flex items-center justify-between rounded-[8px] border border-hair bg-surface px-4 py-3"
+                  >
+                    <span className="text-body-sm font-medium text-ink">{s.label}</span>
+                    <span className="font-mono text-body-sm font-semibold tabular-nums text-ink">
+                      x {s.count}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* the buying column, sticky so the action never scrolls away */}
+        <div className="lg:sticky lg:top-20">
+          <Card>
+            <p className="font-mono text-label uppercase text-dim">
+              {item.code.toUpperCase()}
+              {item.category ? ` / ${item.category}` : ""}
+            </p>
+            <h1 className="mt-1.5 font-display text-h3 text-ink">{item.title}</h1>
+            {item.subject && <p className="mt-2 text-body-sm text-muted">{item.subject}</p>}
+
+            <div className="mt-4 flex items-baseline justify-between border-t border-hair pt-4">
+              <span className="text-body-sm text-muted">
+                {item.videoCount ? `${item.videoCount} videos` : "One video"}
+              </span>
+              <span className="font-mono text-h3 font-semibold tabular-nums text-ink">
+                {money(item.priceCents)}
+              </span>
+            </div>
+            {item.videoCount && item.videoCount > 1 && (
+              <p className="mt-1 text-right font-mono text-label uppercase text-dim">
+                {money(Math.round(item.priceCents / item.videoCount))} per video
+              </p>
+            )}
+
+            <div className="mt-4">
+              {item.owned ? (
+                <Button variant="ghost" full disabled>
+                  Already yours
+                </Button>
+              ) : (
+                <Button variant="brand" full icon={<ShoppingCart />} href={`/checkout/${item.code}/`}>
+                  Order now
+                </Button>
+              )}
+            </div>
+            <p className="mt-3 text-body-sm text-dim">
+              Delivered with your logo, your colours and your platform on
+              screen. Not a template with a watermark.
+            </p>
+          </Card>
+        </div>
+      </div>
+
     </div>
   );
 }
 
 export function LibraryView({
   authedFetch,
+  openCode,
+  onOpenItem,
 }: {
   authedFetch: (path: string) => Promise<Record<string, unknown>>;
+  /** the item open at /portal/library/<code>/, or null for the shelf */
+  openCode: string | null;
+  onOpenItem: (code: string | null) => void;
 }) {
   const [items, setItems] = useState<Item[] | null>(null);
   const [q, setQ] = useState("");
   const [kind, setKind] = useState<"all" | "video" | "pack" | "bundle">("all");
   const [category, setCategory] = useState<string>("all");
+  const reduced = useReducedMotion();
 
   useEffect(() => {
-    authedFetch("/api/portal/library")
+    authedFetch("/api/portal/library/")
       .then((j) => setItems((j.items as Item[]) ?? []))
       .catch(() => setItems([]));
   }, [authedFetch]);
@@ -223,11 +499,16 @@ export function LibraryView({
     );
   }, [items, q, kind, category]);
 
-  const order = (code: string) => {
-    window.location.href = `/checkout/${code}/`;
-  };
-
   if (!items) return <p className="text-body text-muted">Loading the library...</p>;
+
+  /* the open item, resolved from the URL segment; unknown codes fall back to
+   * the shelf rather than a dead end */
+  const open = openCode ? (items.find((i) => i.code === openCode.toLowerCase()) ?? null) : null;
+  if (openCode && open) {
+    return (
+      <ItemDetail item={open} reduced={reduced} onBack={() => onOpenItem(null)} />
+    );
+  }
 
   const ownedCount = items.filter((i) => i.owned).length;
 
@@ -318,7 +599,7 @@ export function LibraryView({
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {shown.map((i) => (
-            <VideoCard key={i.code} item={i} onOrder={order} />
+            <VideoCard key={i.code} item={i} reduced={reduced} onOpen={onOpenItem} />
           ))}
         </div>
       )}

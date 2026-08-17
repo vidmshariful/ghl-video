@@ -142,6 +142,32 @@ export async function GET(req: Request) {
     }
   }
 
+  /*
+   * A collection's members, in full, so the card can OPEN.
+   *
+   * "12 videos" on the cover was the argument for buying; this is the proof.
+   * Members are described from the whole catalogue, not the sellable slice,
+   * because a pack can legitimately contain a video that is not sold alone.
+   * Owned marks apply per member: somebody who owns three of a pack's nine
+   * should see exactly which three when they look inside.
+   */
+  const byCode = new Map(((catalog ?? []) as Row[]).map((c) => [String(c.code), c]));
+  function membersDetail(code: string) {
+    const members = membersOf.get(code) ?? [];
+    if (!members.length) return null;
+    return members.map((m) => {
+      const c = byCode.get(m);
+      return {
+        code: m,
+        title: c ? String(c.title) : m.toUpperCase(),
+        category: (c?.category as string | null) ?? null,
+        posterUrl: (c?.poster_url as string | null) ?? null,
+        previewUrl: (c?.video_url as string | null) ?? null,
+        owned: owned.has(m),
+      };
+    });
+  }
+
   const items = ((catalog ?? []) as Row[])
     /* the sellable slice, now that the members have been read off the rest */
     .filter((c) => c.on_site && !c.coming_soon)
@@ -150,11 +176,15 @@ export async function GET(req: Request) {
       const p = priced.get(code);
       if (!p) return null; // no active product: not for sale right now
       const { videoCount, covers, contains } = contentsOf(c);
+      const kind = String(c.kind);
       return {
         code,
         videoCount,
         covers,
         contains,
+        /* what is actually inside, for the detail view */
+        members: kind === "video" ? null : membersDetail(code),
+        slots: kind === "video" ? null : (slotsOf.get(code) ?? null),
         title: String(c.title),
         subject: (c.subject as string | null) ?? null,
         /* Packs and bundles have no category, and that is correct rather than
