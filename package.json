@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "prebuild": "npm test && npm run check:tokens && npm run check:leaks",
+    "prebuild": "npm test && npm run check:tokens && npm run check:leaks && npm run check:portal-ui",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -23,6 +23,7 @@
     "check:handbook": "tsx scripts/check-handbook.ts",
     "check:tokens": "tsx scripts/check-tokens.ts",
     "check:leaks": "tsx scripts/check-leaks.ts",
+    "check:portal-ui": "tsx scripts/check-portal-ui.ts",
     "backfill:deliverables": "tsx scripts/backfill-deliverables.ts",
     "seed:pack-rows": "tsx scripts/seed-pack-rows.ts"
   },
