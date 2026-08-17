@@ -432,6 +432,11 @@ export type NavGroup = {
   /* empty title = always-visible top-level items (Dashboard, Journal) */
   title: string;
   items: NavItem[];
+  /* Start open on a fresh visit. For a short menu whose groups ARE the
+   * product (the customer portal sells from its rail), collapsing them hides
+   * the store; a long admin rail still wants the compact default. The
+   * visitor's own open/close choices always win over this. */
+  defaultOpen?: boolean;
 };
 
 export function PortalSidebar({
@@ -467,7 +472,7 @@ export function PortalSidebar({
     const initial: Record<string, boolean> = {};
     for (const g of groups) {
       if (!g.title) continue;
-      initial[g.title] = g.items.some((it) => it.key === active);
+      initial[g.title] = (g.defaultOpen ?? false) || g.items.some((it) => it.key === active);
     }
     setOpen(initial);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- initial mount only

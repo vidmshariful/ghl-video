@@ -1157,40 +1157,84 @@ function Portal({
   }
 
   const acting = profile.actingFor;
-  const nav = [
-    { key: "dashboard", label: "Dashboard", icon: <LayoutDashboard /> },
-    ...(can("orders") ? [{ key: "orders", label: "Orders", icon: <ShoppingCart /> }] : []),
-    ...(can("orders") ? [{ key: "videos", label: "My Videos", icon: <Clapperboard /> }] : []),
-    ...(can("orders")
-      ? [{ key: "library", label: "Video Library", icon: <LibraryBig /> }]
-      : []),
-    ...(can("orders")
-      ? [
-          {
-            key: "brand",
-            label: "Brand Kit",
-            icon: <Palette />,
-            /* the portal's one nag, and it only appears when an order is
-               genuinely stuck for want of these */
-            badge: brandIncomplete ? 1 : undefined,
-          },
-        ]
-      : []),
-    ...(can("messages")
-      ? [{ key: "messages", label: "Messages", icon: <MessageSquare />, badge: msgUnread || undefined }]
-      : []),
-    ...(can("subscriptions")
-      ? [{ key: "subscriptions", label: "Subscriptions", icon: <Repeat /> }]
-      : []),
-    { key: "book", label: "Book a Call", icon: <PhoneCall /> },
-  ];
-  /* growth offers are aimed at the account owner, not their team */
+
+  /*
+   * The menu, grouped the way a client thinks rather than the way we built it.
+   *
+   * The flat list this replaces was in the order the screens happened to be
+   * written, which put Orders second: our idea of the relationship, not
+   * theirs. Somebody logging in wants their videos. Everything else is either
+   * getting more of them, or admin.
+   *
+   * So: the two things they came for at the top with no heading on them, then
+   * three named groups. The headings do real work here, because the difference
+   * between "buy something" and "look after the account" is exactly the
+   * distinction a flat list of eleven links destroys.
+   *
+   * Two items from the locked blueprint are deliberately absent, Coming Soon
+   * and Request a Quote, because neither is built. A menu entry that goes
+   * nowhere is worse than a missing one: it teaches people the menu lies.
+   * They get added when the screens exist, not before.
+   */
   const groups = [
-    { title: "", items: nav },
+    {
+      title: "",
+      items: [
+        { key: "dashboard", label: "Dashboard", icon: <LayoutDashboard /> },
+        ...(can("orders") ? [{ key: "videos", label: "My Videos", icon: <Clapperboard /> }] : []),
+      ],
+    },
+    {
+      title: "Get more videos",
+      defaultOpen: true,
+      items: [
+        ...(can("orders")
+          ? [{ key: "library", label: "Video Library", icon: <LibraryBig /> }]
+          : []),
+        /* the existing route to a custom video, until the quote thread lands */
+        { key: "book", label: "Book a Call", icon: <PhoneCall /> },
+      ],
+    },
+    {
+      title: "My account",
+      defaultOpen: true,
+      items: [
+        ...(can("orders")
+          ? [
+              {
+                key: "brand",
+                label: "Brand Kit",
+                icon: <Palette />,
+                /* the portal's one nag, and it only appears when an order is
+                   genuinely stuck for want of these */
+                badge: brandIncomplete ? 1 : undefined,
+              },
+            ]
+          : []),
+        ...(can("orders")
+          ? [{ key: "orders", label: "Orders and Invoices", icon: <ShoppingCart /> }]
+          : []),
+        ...(can("subscriptions")
+          ? [{ key: "subscriptions", label: "Subscriptions", icon: <Repeat /> }]
+          : []),
+        ...(can("messages")
+          ? [
+              {
+                key: "messages",
+                label: "Messages",
+                icon: <MessageSquare />,
+                badge: msgUnread || undefined,
+              },
+            ]
+          : []),
+      ],
+    },
+    /* these are offers aimed at the account owner, not at their team */
     ...(profile.isOwner
       ? [
           {
-            title: "Grow",
+            title: "More from us",
+            defaultOpen: true,
             items: [
               { key: "affiliate", label: "Affiliate program", icon: <Handshake /> },
               { key: "whitelabel", label: "White-label", icon: <Layers /> },
@@ -1199,7 +1243,9 @@ function Portal({
           },
         ]
       : []),
-  ];
+    /* a teammate with narrow access can empty a whole group, and a heading
+     * over nothing looks like something failed to load */
+  ].filter((g) => g.items.length > 0);
 
   /* the account switcher inside the profile menu, shown to anyone on a team */
   const switcher =
