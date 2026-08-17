@@ -437,15 +437,23 @@ body {
 }
 
 /* display headings never strand a single word on their last line,
-   and paragraphs avoid one-word orphans where the engine supports it */
+   and paragraphs avoid one-word orphans where the engine supports it.
+
+   The longhand, not the `text-wrap` shorthand, and that matters. The
+   shorthand also sets wrap-mode, and because these element rules sit outside
+   any cascade layer they beat every layered utility no matter how specific.
+   Written as `text-wrap: pretty` this quietly cancelled the nowrap inside
+   Tailwind's `truncate` on every paragraph in the platform, so long names,
+   emails and titles wrapped instead of ending in an ellipsis. `-style` only
+   sets how a line breaks, never whether it breaks. */
 h1,
 h2,
 h3 {
-  text-wrap: balance;
+  text-wrap-style: balance;
 }
 
 p {
-  text-wrap: pretty;
+  text-wrap-style: pretty;
 }
 
 /* Dismissed soft-launch notice: hide the bar and collapse the header + page

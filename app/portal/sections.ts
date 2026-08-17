@@ -7,6 +7,7 @@ export const PORTAL_SECTIONS = [
   "orders",
   "videos",
   "brand",
+  "library",
   "messages",
   "subscriptions",
   "book",

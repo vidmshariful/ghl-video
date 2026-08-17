@@ -22,6 +22,7 @@ import {
 import { PORTAL_SECTIONS, type PortalSection } from "./sections";
 import { DashboardView } from "./DashboardView";
 import { BrandKitView } from "./BrandKitView";
+import { LibraryView } from "./LibraryView";
 import { Button, Card, Chip, EmptyState, Table, Td, Th } from "@/components/portal/ui";
 import {
   actForHeader,
@@ -32,6 +33,7 @@ import {
 } from "@/components/portal/act-for";
 import { memberCan } from "@/lib/team-features";
 import {
+  LibraryBig,
   Palette,
   ArrowLeft,
   Clapperboard,
@@ -1160,6 +1162,9 @@ function Portal({
     ...(can("orders") ? [{ key: "orders", label: "Orders", icon: <ShoppingCart /> }] : []),
     ...(can("orders") ? [{ key: "videos", label: "My Videos", icon: <Clapperboard /> }] : []),
     ...(can("orders")
+      ? [{ key: "library", label: "Video Library", icon: <LibraryBig /> }]
+      : []),
+    ...(can("orders")
       ? [
           {
             key: "brand",
@@ -1318,6 +1323,8 @@ function Portal({
                 />
               </div>
             </div>
+          ) : section === "library" && can("orders") ? (
+            <LibraryView authedFetch={authedFetch} />
           ) : section === "brand" && can("orders") ? (
             <BrandKitView authedFetch={authedFetch} canEdit={can("orders")} />
           ) : section === "messages" && can("messages") ? (
