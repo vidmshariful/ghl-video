@@ -38,11 +38,25 @@ async function loadOrder(db: DB, id: string) {
   const { data } = await db
     .from("orders")
     .select(
-      "id, status, intake_completed, intake_completed_at, metadata, product:products(name, sku, metadata)",
+      "id, customer_id, status, intake_completed, intake_completed_at, metadata, product:products(name, sku, metadata)",
     )
     .eq("id", id)
     .maybeSingle();
   return data;
+}
+
+/*
+ * The brand this order's customer has already given us, if any.
+ *
+ * A second order used to ask for the same logo, colours and pronunciation as
+ * the first, which is most of why a repeat order took minutes instead of
+ * seconds. The kit is per customer, so once it exists the brief starts filled
+ * in and the buyer is confirming rather than retyping.
+ */
+async function loadKit(db: DB, customerId: string | null) {
+  if (!customerId) return null;
+  const { getBrandKit } = await import("@/lib/brand-kit");
+  return getBrandKit(db, customerId);
 }
 
 async function signOne(db: DB, path: string | null): Promise<string | null> {
@@ -78,6 +92,25 @@ export async function GET(
     ).filter((u): u is string => !!u);
   }
 
+  /* Only when this order has no brief of its own. An order already briefed
+   * shows what was actually sent for it, never a later edit of the kit: the
+   * studio worked from what was on the order. */
+  let prefill: Record<string, unknown> | null = null;
+  if (!intake) {
+    const kit = await loadKit(db, (order.customer_id as string | null) ?? null);
+    if (kit) {
+      prefill = {
+        brandName: kit.brandName ?? "",
+        brandPronunciation: kit.pronunciation ?? "",
+        primaryColor: kit.primaryColor ?? "",
+        accentColor: kit.accentColor ?? "",
+        notes: kit.notes ?? "",
+        logoOnFile: Boolean(kit.logoPath),
+        logoUrl: await signOne(db, kit.logoPath ?? null),
+      };
+    }
+  }
+
   return NextResponse.json({
     productName: product?.name ?? null,
     productCode: product?.metadata?.code ?? product?.sku?.toUpperCase() ?? null,
@@ -86,6 +119,7 @@ export async function GET(
     bundleSku: product?.sku ?? null,
     intakeCompleted: !!order.intake_completed,
     intake: intake ? { ...intake, logoUrl, screenshotUrls } : null,
+    prefill,
   });
 }
 
@@ -157,7 +191,17 @@ export async function POST(
     return path;
   };
 
+  /*
+   * Falling back to the account's logo is what makes a repeat order quick.
+   * Without it the buyer has to find and upload the identical file again for
+   * every order, which is the single most annoying thing about ordering twice.
+   * A file posted here still wins, so replacing it stays possible.
+   */
   let logoPath = prev?.logoPath ?? null;
+  if (!logoPath) {
+    const kit = await loadKit(db, (order.customer_id as string | null) ?? null);
+    logoPath = kit?.logoPath ?? null;
+  }
   let screenshotPaths = prev?.screenshotPaths ?? [];
   try {
     const logo = form.get("logo");

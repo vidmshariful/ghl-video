@@ -98,6 +98,56 @@ type Details = { name: string; email: string; company: string; phone: string; co
 const EMPTY: Details = { name: "", email: "", company: "", phone: "", country: "US", password: "" };
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/*
+ * The buyer we already know.
+ *
+ * Ordering a second video used to mean typing the same name, email, company
+ * and phone again, and then being asked to "create a password" for an account
+ * that already exists. That last one is not just friction, it is wrong: the
+ * password would be ignored, so the buyer would come away believing they had
+ * set one.
+ *
+ * So when there is a portal session, the details come from it and the password
+ * field is gone. The buyer can still edit any of it, because the name on a
+ * card is not always the name on the account.
+ */
+type KnownBuyer = { email: string; name: string; company: string; phone: string } | null;
+
+function useKnownBuyer(): KnownBuyer {
+  const [buyer, setBuyer] = useState<KnownBuyer>(null);
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      try {
+        const { supabaseBrowser } = await import("@/lib/supabase-browser");
+        const { data } = await supabaseBrowser.auth.getSession();
+        const token = data.session?.access_token;
+        const email = data.session?.user?.email;
+        if (!token || !email || !live) return;
+        const r = await fetch("/api/portal/me", {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+        });
+        if (!r.ok || !live) return;
+        const j = (await r.json()) as { name?: string | null; company?: string | null; phone?: string | null };
+        if (!live) return;
+        setBuyer({
+          email,
+          name: j.name ?? "",
+          company: j.company ?? "",
+          phone: j.phone ?? "",
+        });
+      } catch {
+        /* never block a purchase over this: an unknown buyer just types it */
+      }
+    })();
+    return () => {
+      live = false;
+    };
+  }, []);
+  return buyer;
+}
+
 /* Tell FirstPromoter which email this tracked visitor is, right before we
  * take payment. This is FP's "signup" binding: it creates the lead its
  * Stripe integration attaches the sale to. Without it a click stays an
@@ -186,6 +236,26 @@ function OneTimeCheckout({
   initialCouponCode,
 }: CommonProps) {
   const [details, setDetails] = useState<Details>(EMPTY);
+  /* a signed-in customer: fill their details in and drop the password field */
+  const known = useKnownBuyer();
+  useEffect(() => {
+    if (!known) return;
+    setDetails((d) => ({
+      ...d,
+      /* never overwrite something they have already typed */
+      email: d.email || known.email,
+      name: d.name || known.name,
+      company: d.company || known.company,
+      phone: d.phone || known.phone,
+    }));
+  }, [known]);
+  /*
+   * Only while the email is still theirs. Somebody signed in can retype the
+   * email to buy for a colleague, and that colleague's account is new: it
+   * needs a password like anybody else. Keying off the session alone would
+   * create it without one and leave them unable to sign in.
+   */
+  const buyingAsSelf = !!known && details.email.trim().toLowerCase() === known.email.toLowerCase();
   const [selected, setSelected] = useState<string[]>([]);
   const [step, setStep] = useState<"details" | "payment">("details");
   const [detailErr, setDetailErr] = useState<string | null>(null);
@@ -277,7 +347,8 @@ function OneTimeCheckout({
     if (!EMAIL_RE.test(details.email)) return setDetailErr("A valid email is required.");
     if (!details.company.trim()) return setDetailErr("Your SaaS or company name is required.");
     if (details.phone.replace(/\D/g, "").length < 6) return setDetailErr("A valid phone number is required.");
-    if (details.password.length < PASSWORD_MIN_LENGTH)
+    /* only when there is a password to create: a signed-in buyer has one */
+    if (!buyingAsSelf && details.password.length < PASSWORD_MIN_LENGTH)
       return setDetailErr(`Your password needs at least ${PASSWORD_MIN_LENGTH} characters.`);
     setDetailErr(null);
     setStep("payment");
@@ -294,6 +365,7 @@ function OneTimeCheckout({
           onNext={next}
           onEdit={() => setStep("details")}
           nextLabel="Next"
+          knownBuyer={buyingAsSelf}
         />
         <PaymentBlock open={step === "payment"}>
           {step === "payment" ? (
@@ -558,6 +630,26 @@ function SubscriptionCheckout({
   initialCouponCode,
 }: CommonProps) {
   const [details, setDetails] = useState<Details>(EMPTY);
+  /* a signed-in customer: fill their details in and drop the password field */
+  const known = useKnownBuyer();
+  useEffect(() => {
+    if (!known) return;
+    setDetails((d) => ({
+      ...d,
+      /* never overwrite something they have already typed */
+      email: d.email || known.email,
+      name: d.name || known.name,
+      company: d.company || known.company,
+      phone: d.phone || known.phone,
+    }));
+  }, [known]);
+  /*
+   * Only while the email is still theirs. Somebody signed in can retype the
+   * email to buy for a colleague, and that colleague's account is new: it
+   * needs a password like anybody else. Keying off the session alone would
+   * create it without one and leave them unable to sign in.
+   */
+  const buyingAsSelf = !!known && details.email.trim().toLowerCase() === known.email.toLowerCase();
   const [step, setStep] = useState<"details" | "payment">("details");
   const [detailErr, setDetailErr] = useState<string | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
@@ -664,7 +756,8 @@ function SubscriptionCheckout({
     if (!EMAIL_RE.test(details.email)) return setDetailErr("A valid email is required.");
     if (!details.company.trim()) return setDetailErr("Your SaaS or company name is required.");
     if (details.phone.replace(/\D/g, "").length < 6) return setDetailErr("A valid phone number is required.");
-    if (details.password.length < PASSWORD_MIN_LENGTH)
+    /* only when there is a password to create: a signed-in buyer has one */
+    if (!buyingAsSelf && details.password.length < PASSWORD_MIN_LENGTH)
       return setDetailErr(`Your password needs at least ${PASSWORD_MIN_LENGTH} characters.`);
     setDetailErr(null);
     setStarting(true);
@@ -717,6 +810,7 @@ function SubscriptionCheckout({
           onEdit={() => setStep("details")}
           nextLabel={starting ? "Starting..." : "Continue"}
           nextBusy={starting}
+          knownBuyer={buyingAsSelf}
         />
         <PaymentBlock open={step === "payment"}>
           {step === "payment" && clientSecret && successPath ? (
@@ -856,6 +950,7 @@ function DetailsBlock({
   onEdit,
   nextLabel,
   nextBusy = false,
+  knownBuyer = false,
 }: {
   step: "details" | "payment";
   details: Details;
@@ -865,6 +960,8 @@ function DetailsBlock({
   onEdit: () => void;
   nextLabel: string;
   nextBusy?: boolean;
+  /** they are signed in already, so there is no password to create */
+  knownBuyer?: boolean;
 }) {
   const open = step === "details";
   return (
@@ -910,23 +1007,35 @@ function DetailsBlock({
               every field added to a payment form costs a few people. Framing
               it as the way into the thing they are paying for is what makes
               it read as part of the purchase instead of an extra step.
+
+              Gone entirely for somebody already signed in. Their password
+              would be ignored (changing the password of an existing account
+              from a payment form would be an account takeover), so asking for
+              one would be collecting a secret we intend to throw away.
             */}
-            <label>
-              <span className={labelCls}>Create a password</span>
-              <input
-                type="password"
-                required
-                minLength={PASSWORD_MIN_LENGTH}
-                autoComplete="new-password"
-                value={details.password}
-                onChange={onChange("password")}
-                className={inputCls}
-                placeholder="At least 8 characters"
-              />
-              <span className="mt-1.5 block text-body-sm text-dim">
-                This is your login for the portal, where your videos land.
-              </span>
-            </label>
+            {knownBuyer ? (
+              <p className="text-body-sm text-dim">
+                Signed in as {details.email}. This order lands in the same
+                portal, so there is nothing else to set up.
+              </p>
+            ) : (
+              <label>
+                <span className={labelCls}>Create a password</span>
+                <input
+                  type="password"
+                  required
+                  minLength={PASSWORD_MIN_LENGTH}
+                  autoComplete="new-password"
+                  value={details.password}
+                  onChange={onChange("password")}
+                  className={inputCls}
+                  placeholder="At least 8 characters"
+                />
+                <span className="mt-1.5 block text-body-sm text-dim">
+                  This is your login for the portal, where your videos land.
+                </span>
+              </label>
+            )}
           </div>
           {error ? <div className="mt-4"><ErrorLine msg={error} /></div> : null}
           <button

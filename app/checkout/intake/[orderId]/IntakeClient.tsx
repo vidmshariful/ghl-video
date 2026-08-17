@@ -25,12 +25,24 @@ type Existing = {
   screenshotUrls: string[];
   videoSelections?: BundleSelections | null;
 };
+/* What we already hold for this account, sent only when this order has no
+ * brief of its own. A second order should be a confirmation, not a retype. */
+type Prefill = {
+  brandName: string;
+  brandPronunciation: string;
+  primaryColor: string;
+  accentColor: string;
+  notes: string;
+  logoOnFile: boolean;
+  logoUrl: string | null;
+};
 type Loaded = {
   productName: string | null;
   productCode: string | null;
   bundleSku: string | null;
   intakeCompleted: boolean;
   intake: Existing | null;
+  prefill: Prefill | null;
 };
 
 const PICK_LABEL: Record<BundlePickKey, string> = {
@@ -102,6 +114,15 @@ export function IntakeClient({ orderId }: { orderId: string }) {
               feature: s.feature ?? [],
             });
           }
+        } else if (j.prefill) {
+          /* a returning customer: start from what they gave us last time.
+           * The video picks are deliberately not carried over, because those
+           * belong to the order, not to the brand. */
+          setBrandName(j.prefill.brandName || "");
+          if (j.prefill.primaryColor) setPrimaryColor(j.prefill.primaryColor);
+          if (j.prefill.accentColor) setAccentColor(j.prefill.accentColor);
+          setBrandPronunciation(j.prefill.brandPronunciation || "");
+          setNotes(j.prefill.notes || "");
         }
         setPhase("ready");
       } catch {
@@ -195,6 +216,8 @@ export function IntakeClient({ orderId }: { orderId: string }) {
   }
 
   const alreadyDone = !!data?.intakeCompleted;
+  /* a returning customer whose brand we already hold */
+  const prefilled = !data?.intake && !!data?.prefill?.brandName;
 
   return (
     <div>
@@ -203,12 +226,16 @@ export function IntakeClient({ orderId }: { orderId: string }) {
           {data?.productCode ? `${data.productCode} / ` : ""}Branding brief
         </p>
         <h1 className="mt-3 font-display text-h2 text-ink">
-          {alreadyDone ? "Update your branding brief." : "Now let us brand it."}
+          {alreadyDone
+            ? "Update your branding brief."
+            : prefilled
+              ? "Same brand as last time?"
+              : "Now let us brand it."}
         </h1>
         <p className="mx-auto mt-3 max-w-[52ch] text-body leading-relaxed text-muted">
-          This is what turns your order into your videos: your logo, colors,
-          dashboard screens, and how your brand name is said. It takes about
-          three minutes, and the delivery clock starts once it is in.
+          {prefilled
+            ? "We already have your brand, so this is filled in. Check it over, change anything that is different for this video, and send it."
+            : "This is what turns your order into your videos: your logo, colors, dashboard screens, and how your brand name is said. It takes about three minutes, and the delivery clock starts once it is in."}
         </p>
       </header>
 
@@ -368,6 +395,26 @@ export function IntakeClient({ orderId }: { orderId: string }) {
                 View
               </a>{" "}
               or choose a file to replace it.
+            </p>
+          ) : data?.prefill?.logoOnFile ? (
+            /* the point of the whole prefill: no hunting for the same file */
+            <p className="mb-2 text-body-sm text-muted">
+              We already have your logo, so you can leave this empty.
+              {data.prefill.logoUrl ? (
+                <>
+                  {" "}
+                  <a
+                    href={data.prefill.logoUrl}
+                    target="_blank"
+                    rel="noopener"
+                    className="text-gold hover:underline"
+                  >
+                    View it
+                  </a>
+                  .
+                </>
+              ) : null}{" "}
+              Upload a file only if it has changed.
             </p>
           ) : null}
           <input ref={logoRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml,application/pdf" className={fileCls} />
