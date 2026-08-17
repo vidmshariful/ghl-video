@@ -103,7 +103,9 @@ export async function POST(req: Request) {
   await db.from("customers").upsert({ email, name, company, phone }, { onConflict: "email", ignoreDuplicates: true });
   const { data: customer } = await db.from("customers").select("*").eq("email", email).single();
   if (!customer) return NextResponse.json({ error: "Could not start checkout." }, { status: 500 });
-  await ensureAuthAccount(email); // portal account, best-effort
+  // Portal account with the password chosen at checkout, best-effort. A
+  // repeat buyer keeps the one they already had; see account.ts.
+  await ensureAuthAccount(email, asStr(payload.password) || null);
 
   let stripeCustomerId: string | null = customer.stripe_customer_id;
   if (!stripeCustomerId) {

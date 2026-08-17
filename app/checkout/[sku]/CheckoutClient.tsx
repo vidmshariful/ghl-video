@@ -11,6 +11,7 @@ import {
 import { useRouter } from "next/navigation";
 import { SecurePaymentsBand } from "@/components/checkout/SecurePaymentsBand";
 import { dialCodes, toE164 } from "@/lib/dial-codes";
+import { PASSWORD_MIN_LENGTH } from "@/lib/checkout/password-rules";
 
 /*
  * On-domain checkout, a two-step accordion inside one card. The buyer fills
@@ -93,8 +94,8 @@ export type CheckoutBump = {
   priceCents: number;
 };
 
-type Details = { name: string; email: string; company: string; phone: string; country: string };
-const EMPTY: Details = { name: "", email: "", company: "", phone: "", country: "US" };
+type Details = { name: string; email: string; company: string; phone: string; country: string; password: string };
+const EMPTY: Details = { name: "", email: "", company: "", phone: "", country: "US", password: "" };
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /* Tell FirstPromoter which email this tracked visitor is, right before we
@@ -276,6 +277,8 @@ function OneTimeCheckout({
     if (!EMAIL_RE.test(details.email)) return setDetailErr("A valid email is required.");
     if (!details.company.trim()) return setDetailErr("Your SaaS or company name is required.");
     if (details.phone.replace(/\D/g, "").length < 6) return setDetailErr("A valid phone number is required.");
+    if (details.password.length < PASSWORD_MIN_LENGTH)
+      return setDetailErr(`Your password needs at least ${PASSWORD_MIN_LENGTH} characters.`);
     setDetailErr(null);
     setStep("payment");
   }
@@ -474,6 +477,7 @@ function PayBox({
           email: details.email,
           company: details.company,
           phone: toE164(details.country, details.phone),
+          password: details.password,
           bumpIds: selected,
           couponCode: couponCode ?? undefined,
         }),
@@ -660,6 +664,8 @@ function SubscriptionCheckout({
     if (!EMAIL_RE.test(details.email)) return setDetailErr("A valid email is required.");
     if (!details.company.trim()) return setDetailErr("Your SaaS or company name is required.");
     if (details.phone.replace(/\D/g, "").length < 6) return setDetailErr("A valid phone number is required.");
+    if (details.password.length < PASSWORD_MIN_LENGTH)
+      return setDetailErr(`Your password needs at least ${PASSWORD_MIN_LENGTH} characters.`);
     setDetailErr(null);
     setStarting(true);
     fpReferral(details.email);
@@ -673,6 +679,7 @@ function SubscriptionCheckout({
           email: details.email,
           company: details.company,
           phone: toE164(details.country, details.phone),
+          password: details.password,
           ref: partnerRef ?? undefined,
           couponCode: coupon?.code ?? undefined,
         }),
@@ -896,6 +903,29 @@ function DetailsBlock({
                 </select>
                 <input type="tel" required autoComplete="tel" value={details.phone} onChange={onChange("phone")} className={`${inputCls} min-w-0 flex-1`} placeholder="555 000 0000" />
               </div>
+            </label>
+            {/*
+              Last on purpose, and worded as their login rather than as
+              signing up. They are here to buy, not to join something, and
+              every field added to a payment form costs a few people. Framing
+              it as the way into the thing they are paying for is what makes
+              it read as part of the purchase instead of an extra step.
+            */}
+            <label>
+              <span className={labelCls}>Create a password</span>
+              <input
+                type="password"
+                required
+                minLength={PASSWORD_MIN_LENGTH}
+                autoComplete="new-password"
+                value={details.password}
+                onChange={onChange("password")}
+                className={inputCls}
+                placeholder="At least 8 characters"
+              />
+              <span className="mt-1.5 block text-body-sm text-dim">
+                This is your login for the portal, where your videos land.
+              </span>
             </label>
           </div>
           {error ? <div className="mt-4"><ErrorLine msg={error} /></div> : null}

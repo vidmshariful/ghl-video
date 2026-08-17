@@ -230,10 +230,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Could not complete checkout." }, { status: 500 });
   }
 
-  // Give the buyer a portal account keyed to this email (best-effort, never
-  // blocks checkout). They set a password from the portal, or use the
-  // email-link fallback.
-  await ensureAuthAccount(email);
+  /* Give the buyer a portal account keyed to this email, with the password
+   * they chose at checkout, so they can sign in the moment they have paid
+   * instead of meeting a reset screen. Best-effort: never blocks the order.
+   *
+   * A repeat buyer keeps the password they already had. See account.ts for
+   * why overwriting it would be an account takeover hole. */
+  const account = await ensureAuthAccount(email, asStr(payload.password) || null);
 
   let stripeCustomerId: string | null = customer.stripe_customer_id;
   if (!stripeCustomerId) {
@@ -347,5 +350,8 @@ export async function POST(req: Request) {
     },
   });
 
-  return NextResponse.json({ orderId: order.id });
+  /* accountReady tells the thank-you page whether the password just typed
+   * actually works. False for a repeat buyer, who signs in with the one they
+   * already have, so we can word the next step honestly either way. */
+  return NextResponse.json({ orderId: order.id, accountReady: account.passwordSet });
 }
