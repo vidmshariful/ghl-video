@@ -41,3 +41,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 qa-screens/
+
+# scratch scripts used while debugging; never part of the app
+.tmp-*
