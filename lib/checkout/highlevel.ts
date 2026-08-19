@@ -1,4 +1,5 @@
 import "server-only";
+import { HighLevelError, existingOpportunityId } from "./highlevel-errors";
 
 /*
  * HighLevel (LeadConnector) API v2 sync. Called from the Stripe webhook
@@ -56,7 +57,11 @@ async function hlFetch(path: string, init: RequestInit) {
     /* non-JSON body */
   }
   if (!r.ok) {
-    throw new Error(`HL ${init.method} ${path} -> ${r.status}: ${text.slice(0, 300)}`);
+    throw new HighLevelError(
+      `HL ${init.method} ${path} -> ${r.status}: ${text.slice(0, 300)}`,
+      r.status,
+      json,
+    );
   }
   return json as Record<string, unknown>;
 }
@@ -103,18 +108,26 @@ async function createOpportunityIn(input: {
   pipelineId: string;
   pipelineStageId: string;
 }): Promise<string> {
-  const j = await hlFetch("/opportunities/", {
-    method: "POST",
-    body: JSON.stringify({
-      pipelineId: input.pipelineId,
-      pipelineStageId: input.pipelineStageId,
-      locationId: locationId(),
-      contactId: input.contactId,
-      name: input.name,
-      status: "open",
-      monetaryValue: input.monetaryValue,
-    }),
-  });
+  let j: Record<string, unknown>;
+  try {
+    j = await hlFetch("/opportunities/", {
+      method: "POST",
+      body: JSON.stringify({
+        pipelineId: input.pipelineId,
+        pipelineStageId: input.pipelineStageId,
+        locationId: locationId(),
+        contactId: input.contactId,
+        name: input.name,
+        status: "open",
+        monetaryValue: input.monetaryValue,
+      }),
+    });
+  } catch (err) {
+    /* already had one: take the id HighLevel just handed us and move on */
+    const existing = existingOpportunityId(err);
+    if (existing) return existing;
+    throw err;
+  }
   const opp = (j.opportunity as Record<string, unknown>) ?? j;
   const id = (opp.id as string) ?? (j.id as string);
   if (!id) throw new Error(`HL createOpportunity: no id in ${JSON.stringify(j).slice(0, 200)}`);

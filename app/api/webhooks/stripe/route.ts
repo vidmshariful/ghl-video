@@ -114,9 +114,25 @@ async function handleSucceeded(
   // settle it normally. Intents without a recognizable sku (created by some
   // other integration on this Stripe account) are logged and left alone.
   if (status === "unknown") {
-    const recovered = await recoverOrphanPaidIntent(db, pi);
-    if (recovered) {
-      ({ syncError } = await settlePaidIntent(db, pi, { fulfill: true }));
+    /*
+     * Subscription billing is not an orphan.
+     *
+     * A plan's invoice raises payment_intent.succeeded with no sku and no
+     * order row, because a subscription lives in `subscriptions` and never
+     * had an order. Left alone this reached the orphan path and raised a
+     * CRITICAL "money taken, nothing to attach it to" alarm, which is both
+     * wrong and corrosive: it would fire again on every monthly renewal for
+     * every subscriber, and an alarm screen that cries wolf monthly is one
+     * nobody reads on the day it matters. The subscription lifecycle events
+     * own these payments.
+     */
+    if (await isSubscriptionBilling(db, pi)) {
+      console.info(`[webhook] ${pi.id} is subscription billing, not an orphan`);
+    } else {
+      const recovered = await recoverOrphanPaidIntent(db, pi);
+      if (recovered) {
+        ({ syncError } = await settlePaidIntent(db, pi, { fulfill: true }));
+      }
     }
   }
 
@@ -139,6 +155,37 @@ async function handleSucceeded(
     });
     throw new Error(syncError);
   }
+}
+
+/*
+ * Does this payment belong to a subscription rather than to an order?
+ *
+ * Judged on two signals together, because either alone is too loose. The
+ * Stripe customer must be one we already hold a subscription row for, and
+ * the intent must carry none of checkout's own metadata: `finalize` stamps
+ * sku and order_id onto every one-time intent BEFORE the pending order is
+ * written, so a genuine one-time payment that stranded still has them and
+ * still gets the alarm it deserves.
+ *
+ * `pi.invoice` would say this outright, but Stripe dropped it from the
+ * PaymentIntent shape in this API version, so we ask our own records instead
+ * of trusting an untyped field.
+ */
+async function isSubscriptionBilling(
+  db: ReturnType<typeof supabaseAdmin>,
+  pi: Stripe.PaymentIntent,
+): Promise<boolean> {
+  const meta = pi.metadata ?? {};
+  if (meta.sku || meta.order_id) return false;
+  const customerId = typeof pi.customer === "string" ? pi.customer : pi.customer?.id;
+  if (!customerId) return false;
+  const { data } = await db
+    .from("subscriptions")
+    .select("id")
+    .eq("stripe_customer_id", customerId)
+    .limit(1)
+    .maybeSingle();
+  return Boolean(data);
 }
 
 async function recoverOrphanPaidIntent(
