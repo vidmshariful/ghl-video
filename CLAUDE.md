@@ -239,3 +239,14 @@ pages get added to `lib/pages-list.ts`. No console errors. `npx tsc
 --noEmit`, `npm run lint`, and `npm run build` must pass clean; screenshot
 changed screens at desktop and mobile before calling them done. If a screen
 feels templated, push it once more.
+
+**Judge a build by its exit code, never by reading its output.** `prebuild`
+runs the tests plus check:tokens, check:leaks and check:portal-ui, and a
+failure there prints text that matches no obvious keyword. Piping the build
+through `grep` to skim it can therefore show a screen full of passing gates
+while the command exited 1. That happened, and because `git push` still
+succeeds when Vercel's build does not, production sat nine commits behind
+while every push looked green. Run it as `npm run build > /tmp/build.log
+2>&1; echo $?` and believe the number. Same rule for the check: scripts. A
+push is not a deploy: confirm the deployment went green before saying it
+shipped.
