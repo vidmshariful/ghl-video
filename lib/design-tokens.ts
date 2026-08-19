@@ -95,6 +95,15 @@ export const LITERAL_ALLOWLIST: { path: string; why: string; only?: string[] }[]
     only: ["#0090FC", "#00CC00"],
     why: "The client's own brand colours, typed by them at intake. These are data we collect, not styling we apply, and they must not follow our skin. The two values are the starting suggestions in the picker.",
   },
+  {
+    path: "app/api/admin/campaigns/send/route.ts",
+    why: "Colours inside a generated offer email. Mail clients do not support custom properties, so a literal is the only thing that renders. Same reason as the other two email routes above.",
+  },
+  {
+    path: "app/portal/BrandKitView.tsx",
+    only: ["#F25C1A", "#1F7A4D"],
+    why: "Example hex codes shown to the client so they can see what we are asking for, in a hint and two placeholders. They are illustrative text, not styling: nothing on the screen is painted with them. Scoped rather than pardoning the whole file, so a real leak here would still be caught.",
+  },
 ];
 
 /** Is this literal pardoned in this file? */
