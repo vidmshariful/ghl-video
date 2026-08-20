@@ -245,7 +245,9 @@ export const oldVideos: OldVideo[] = [
     slug: "ai-employee-explainer",
     title: "AI Employee Explainer",
     type: "Explainer",
-    price: 395,
+    /* repriced to 195 in the DB catalogue on 5 Aug 2026 and synced to
+       checkout on the 20th; this fallback follows the owner's price */
+    price: 195,
     wistiaId: "gq4rntluy4",
     poster: "https://embed-ssl.wistia.com/deliveries/ff1732dc84ecb4ebff55d486acb0e05942e69bcb.jpg?image_crop_resized=960x540",
   },
