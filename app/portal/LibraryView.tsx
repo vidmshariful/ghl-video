@@ -4,10 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   Check,
-  ListChecks,
   PlayCircle,
   Search,
-  Share2,
   ShoppingCart,
 } from "lucide-react";
 import {
@@ -22,6 +20,7 @@ import {
 /* the same card the public library uses, so the two read as one product
  * (owner decision, August 2026) */
 import { LibraryCard, PreviewLightbox } from "@/components/library/cards";
+import { PickTray } from "@/components/library/tray";
 import type { BrowseVideo, Version } from "@/components/library/catalog";
 
 /*
@@ -212,34 +211,45 @@ function VideoCard({
   item,
   reduced,
   onOpen,
-  picking = false,
   picked = false,
+  onTogglePick,
 }: {
   item: Item;
   reduced: boolean;
   onOpen: (code: string) => void;
-  /* while picking, the card toggles instead of opening */
-  picking?: boolean;
   picked?: boolean;
+  onTogglePick?: () => void;
 }) {
   const [hover, setHover] = useState(false);
   const isCollection = item.kind !== "video";
-  /* while picking, the whole card is a toggle, so it says so */
-  const openLabel = picking
-    ? picked
-      ? `Remove ${item.title} from your list`
-      : `Add ${item.title} to your list`
-    : `Open ${item.title}`;
+  const openLabel = `Open ${item.title}`;
 
   return (
     <div
-      data-picking={picking ? "true" : undefined}
       className={`group relative flex h-full flex-col overflow-hidden rounded-[12px] border bg-surface transition-all duration-200 hover:-translate-y-0.5 hover:border-gold/50 hover:shadow-[0_14px_34px_-16px_rgba(0,0,0,0.55)] focus-within:border-gold/50 motion-reduce:transition-none motion-reduce:hover:translate-y-0 ${
         picked ? "border-gold" : "border-hair"
       }`}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >
+      {onTogglePick && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onTogglePick();
+          }}
+          aria-pressed={picked}
+          aria-label={picked ? `Remove ${item.title} from your list` : `Add ${item.title} to your list`}
+          className={`tap absolute right-2 top-2 z-20 grid h-8 w-8 place-items-center rounded-full backdrop-blur-sm transition-colors ${
+            picked ? "bg-gold text-canvas" : "bg-canvas/70 text-ink hover:bg-canvas/90"
+          }`}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.5">
+            {picked ? <path d="m5 13 4 4 10-11" /> : <path d="M12 5v14M5 12h14" />}
+          </svg>
+        </button>
+      )}
       <div className="relative aspect-video bg-ground-deep">
         {isCollection ? (
           <CollectionCover item={item} />
@@ -530,32 +540,25 @@ export function LibraryView({
   /* the shared card's lightbox */
   const [preview, setPreview] = useState<{ video: BrowseVideo; version: Version } | null>(null);
 
-  /* picking a few to send somebody */
-  const [picking, setPicking] = useState(false);
+  /* picks for the share tray. No mode: every card carries its add button
+     and the tray appears once something is in it, same as the public
+     library, because the first version made browsing stop while choosing
+     happened and that UX was rightly called bad. */
   const [picked, setPicked] = useState<string[]>([]);
-  const [shareHref, setShareHref] = useState("");
-  const [sharing, setSharing] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const togglePick = (code: string) =>
+    setPicked((p) => (p.includes(code) ? p.filter((c) => c !== code) : [...p, code]));
 
-  const pickedTotal = (items ?? [])
-    .filter((i) => picked.includes(i.code))
-    .reduce((sum, i) => sum + i.priceCents, 0);
-
-  async function share() {
-    setSharing(true);
-    setCopied(false);
+  const share = async (codes: string[]): Promise<string | null> => {
     try {
       const j = (await authedFetch("/api/portal/lists", {
         method: "POST",
-        body: JSON.stringify({ codes: picked }),
+        body: JSON.stringify({ codes }),
       })) as { href?: string };
-      if (j.href) setShareHref(`${window.location.origin}${j.href}`);
+      return j.href ?? null;
     } catch {
-      /* the button simply does not resolve into a link */
-    } finally {
-      setSharing(false);
+      return null;
     }
-  }
+  };
 
   useEffect(() => {
     authedFetch("/api/portal/library/")
@@ -672,70 +675,6 @@ export function LibraryView({
         </div>
       </Toolbar>
 
-      {/*
-        * Picking, and sending the picks to whoever has to agree.
-        *
-        * A founder choosing six videos is very often not the only person
-        * deciding, and until now the only way to show a cofounder was a
-        * screenshot. Turning picking on is deliberately a choice rather than
-        * always-on: somebody browsing for one video should not have to think
-        * about a list.
-        */}
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <Button
-          variant={picking ? "primary" : "secondary"}
-          size="sm"
-          icon={<ListChecks />}
-          onClick={() => {
-            setPicking((v) => !v);
-            if (picking) setPicked([]);
-          }}
-        >
-          {picking ? "Done picking" : "Pick a few to share"}
-        </Button>
-        {picking && (
-          <>
-            <span className="font-mono text-label uppercase text-dim">
-              {picked.length === 0
-                ? "Tap the videos you are considering"
-                : `${picked.length} picked, ${money(pickedTotal)}`}
-            </span>
-            {picked.length > 0 && (
-              <Button variant="brand" size="sm" icon={<Share2 />} onClick={share} disabled={sharing}>
-                {sharing ? "Making the link..." : "Share the list"}
-              </Button>
-            )}
-          </>
-        )}
-      </div>
-
-      {shareHref && (
-        <div className="mb-4">
-          <Card tone="dark" title="Send them this link">
-            <p className="text-body-sm text-chrome-muted">
-              It shows what you picked and what it comes to, and nothing else.
-              They do not need an account. Either of you can order from it, or
-              ask us to invoice the set.
-            </p>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <code className="min-w-0 flex-1 truncate rounded-[8px] border border-chrome-line bg-chrome-2 px-3 py-2 font-mono text-body-sm text-chrome-text">
-                {shareHref}
-              </code>
-              <Button
-                variant="brand"
-                size="sm"
-                onClick={() => {
-                  void navigator.clipboard?.writeText(shareHref);
-                  setCopied(true);
-                }}
-              >
-                {copied ? "Copied" : "Copy"}
-              </Button>
-            </div>
-          </Card>
-        </div>
-      )}
-
       {shown.length === 0 ? (
         <EmptyState
           icon={<Search />}
@@ -758,36 +697,40 @@ export function LibraryView({
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {shown.map((i) =>
             /* Videos wear the same card as the public library, preview
-               lightbox and all, so the shop reads as one product inside and
-               out. Packs and bundles keep the montage cover, which is the
-               argument for buying them, and picking mode keeps the plain
-               toggle card because a toggle should look like one. */
-            i.kind === "video" && !picking ? (
+               lightbox, add button and all, so the shop reads as one product
+               inside and out. Packs and bundles keep the montage cover,
+               which is the argument for buying them. */
+            i.kind === "video" ? (
               <LibraryCard
                 key={i.code}
                 video={toBrowse(i)}
                 onPreview={(video, version) => setPreview({ video, version })}
+                picked={picked.includes(i.code)}
+                onTogglePick={() => togglePick(i.code)}
               />
             ) : (
               <VideoCard
                 key={i.code}
                 item={i}
                 reduced={reduced}
-                picking={picking}
                 picked={picked.includes(i.code)}
-                onOpen={
-                  picking
-                    ? (code) =>
-                        setPicked((p) =>
-                          p.includes(code) ? p.filter((c) => c !== code) : [...p, code],
-                        )
-                    : onOpenItem
-                }
+                onTogglePick={() => togglePick(i.code)}
+                onOpen={onOpenItem}
               />
             ),
           )}
         </div>
       )}
+
+      <PickTray
+        items={picked
+          .map((code) => items.find((i) => i.code === code))
+          .filter((i): i is Item => Boolean(i))
+          .map(toBrowse)}
+        onRemove={(slug) => setPicked((p) => p.filter((c) => c !== slug))}
+        onClear={() => setPicked([])}
+        share={share}
+      />
 
       {preview && (
         <PreviewLightbox

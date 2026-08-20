@@ -18,6 +18,8 @@ export type BrowseVideo = {
   code?: string | null;
   /* video, pack or bundle; absent on legacy rows, which are all videos */
   kind?: "video" | "pack" | "bundle" | null;
+  /* the admin-curated flag; drives the Featured filter on the library */
+  featured?: boolean;
   title: string;
   typeTag: string;
   subTag: string;
@@ -176,6 +178,7 @@ export function catalogToBrowse(r: CatalogRow): BrowseVideo {
     slug: r.code,
     code: r.code,
     kind: r.kind ?? "video",
+    featured: r.featured,
     title: r.title,
     /* collections mostly carry no category of their own; the kind is the
        honest tag, and it keeps the category rail free of a nameless row */

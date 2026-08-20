@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PortalTopbar } from "@/components/portal/Shell";
-import { LibraryExplorer } from "@/components/library/explorer";
-import { featuredBrowse, libraryBrowse } from "@/components/library/catalog";
+import { LibraryExplorer } from "./Explorer";
+import { libraryBrowse } from "@/components/library/catalog";
 import { getCatalog } from "@/lib/catalog-db";
 import { JsonLd } from "@/components/JsonLd";
 import { productCatalogSchema } from "@/lib/schema";
@@ -32,11 +32,13 @@ export default async function LibraryPage() {
    * with a dead buy button.
    */
   const db = supabaseAdmin();
-  const [{ data: packItems }, { data: bundleRules }, { data: products }] = await Promise.all([
-    db.from("catalog_pack_items").select("pack_code"),
-    db.from("catalog_bundle_rules").select("bundle_code, count"),
-    db.from("products").select("sku, active"),
-  ]);
+  const [{ data: packItems }, { data: bundleRules }, { data: products }, { data: statRows }] =
+    await Promise.all([
+      db.from("catalog_pack_items").select("pack_code"),
+      db.from("catalog_bundle_rules").select("bundle_code, count"),
+      db.from("products").select("sku, active"),
+      db.from("catalog_stats").select("code, loves, plays"),
+    ]);
   const memberCount = new Map<string, number>();
   for (const i of packItems ?? [])
     memberCount.set(String(i.pack_code), (memberCount.get(String(i.pack_code)) ?? 0) + 1);
@@ -56,8 +58,18 @@ export default async function LibraryPage() {
         : v,
     )
     /* a collection with a dead product row must not render a buy button */
-    .filter((v) => (v.kind && v.kind !== "video" ? sellable.has(v.slug) : true));
-  const featured = featuredBrowse(rows);
+    .filter((v) => (v.kind && v.kind !== "video" ? sellable.has(v.slug) : true))
+    /* videos lead the default shelf; the sixteen collections were sorting
+       ahead of them and burying the footage under tiles of numbers. The
+       Packs and Bundles tabs still put collections front and centre. */
+    .sort((a, b) => Number(a.kind !== "video" && !!a.kind) - Number(b.kind !== "video" && !!b.kind));
+  /* hearts and plays, keyed by code, for the two ranked filters */
+  const stats = Object.fromEntries(
+    ((statRows ?? []) as { code: string; loves: number; plays: number }[]).map((r) => [
+      r.code,
+      { loves: Number(r.loves), plays: Number(r.plays) },
+    ]),
+  );
 
   const schema = videos
     .filter((v) => !v.previewOnly && v.price > 0)
@@ -91,7 +103,7 @@ export default async function LibraryPage() {
       />
 
       <div className="flex-1">
-        <LibraryExplorer videos={videos} featured={featured} />
+        <LibraryExplorer videos={videos} stats={stats} />
       </div>
 
       {/* thin, but a real footer: the entity and the disclaimer go on every

@@ -238,9 +238,21 @@ function NicheNote({ price = 50 }: { price?: number }) {
 export function LibraryCard({
   video,
   onPreview,
+  loves,
+  loved = false,
+  onToggleLove,
+  picked = false,
+  onTogglePick,
 }: {
   video: BrowseVideo;
   onPreview: (v: BrowseVideo, version: Version) => void;
+  /* the heart. Absent = the surface does not do reactions */
+  loves?: number;
+  loved?: boolean;
+  onToggleLove?: () => void;
+  /* the share list. Absent = the surface does not do picking */
+  picked?: boolean;
+  onTogglePick?: () => void;
 }) {
   const [version, setVersion] = useState<Version>("simplified");
   const twoCut = video.previewOnly && video.realPreview;
@@ -268,7 +280,72 @@ export function LibraryCard({
       : codeFor(video.slug);
 
   return (
-    <div className="group/card flex h-full flex-col border border-hair bg-card shadow-[0_4px_18px_-8px_rgba(0,0,0,0.6)] transition-all duration-300 hover:-translate-y-0.5 hover:border-gold/30 hover:shadow-[0_18px_40px_-14px_rgba(0,0,0,0.85)]">
+    <div
+      className={`group/card relative flex h-full flex-col border bg-card shadow-[0_4px_18px_-8px_rgba(0,0,0,0.6)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-14px_rgba(0,0,0,0.85)] ${
+        picked ? "border-gold/70" : "border-hair hover:border-gold/30"
+      }`}
+    >
+      {/* the marketplace pair, always there: no mode to switch into first.
+          They sit over the media, above every preview affordance. */}
+      {(onToggleLove || onTogglePick) && (
+        <div className="absolute right-2 top-2 z-20 flex items-center gap-1.5">
+          {onToggleLove && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleLove();
+              }}
+              aria-pressed={loved}
+              aria-label={loved ? `Unlove ${video.title}` : `Love ${video.title}`}
+              className={`tap flex h-8 min-w-8 items-center justify-center gap-1 rounded-full px-2 font-mono text-label tabular-nums backdrop-blur-sm transition-colors ${
+                loved
+                  ? "bg-gold text-canvas"
+                  : "bg-canvas/70 text-ink hover:bg-canvas/90"
+              }`}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                className="h-3.5 w-3.5"
+                fill={loved ? "currentColor" : "none"}
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M12 21C7 16.6 3 13.3 3 9.3 3 6.4 5.2 4.5 7.7 4.5c1.7 0 3.3.9 4.3 2.4 1-1.5 2.6-2.4 4.3-2.4 2.5 0 4.7 1.9 4.7 4.8 0 4-4 7.3-9 11.7z" />
+              </svg>
+              {typeof loves === "number" && loves > 0 ? loves : null}
+            </button>
+          )}
+          {onTogglePick && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onTogglePick();
+              }}
+              aria-pressed={picked}
+              aria-label={
+                picked ? `Remove ${video.title} from your list` : `Add ${video.title} to your list`
+              }
+              className={`tap grid h-8 w-8 place-items-center rounded-full backdrop-blur-sm transition-colors ${
+                picked ? "bg-gold text-canvas" : "bg-canvas/70 text-ink hover:bg-canvas/90"
+              }`}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                className="h-3.5 w-3.5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+              >
+                {picked ? <path d="m5 13 4 4 10-11" /> : <path d="M12 5v14M5 12h14" />}
+              </svg>
+            </button>
+          )}
+        </div>
+      )}
       {video.wistiaId && video.poster ? (
         <PosterPlay
           video={video}
@@ -346,7 +423,11 @@ export function LibraryCard({
               <BuyVideoLink video={video} />
             </div>
           </div>
-          <NicheNote price={nicheAddonPrice(!!code?.startsWith("DEMO"))} />
+          {/* the niche add-on is a per-video customisation; printed on a
+              bundle it read as noise beside a four-figure price */}
+          {video.kind !== "pack" && video.kind !== "bundle" && (
+            <NicheNote price={nicheAddonPrice(!!code?.startsWith("DEMO"))} />
+          )}
         </>
       )}
     </div>
