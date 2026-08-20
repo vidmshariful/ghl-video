@@ -44,3 +44,6 @@ qa-screens/
 
 # scratch scripts used while debugging; never part of the app
 .tmp-*
+
+# personal Claude Code overrides for this project, never team-wide
+.claude/settings.local.json
