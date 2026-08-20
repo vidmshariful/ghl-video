@@ -53,33 +53,57 @@ export async function GET(req: Request) {
   if (ctx.isOwner) {
     const { data } = await db
       .from("customers")
-      .select("name, company, phone")
+      .select("id, name, company, phone, hidden_sections")
       .ilike("email", user.email)
       .maybeSingle();
+    if (data?.id) void touchLastSeen(db, String(data.id));
     return NextResponse.json({
       ...base,
       name: (data?.name as string | null) ?? profile.displayName ?? null,
       company: (data?.company as string | null) ?? null,
       phone: (data?.phone as string | null) ?? null,
+      hiddenSections: (data?.hidden_sections as string[] | null) ?? [],
       actingFor: null,
     });
   }
 
   const { data: owner } = await db
     .from("customers")
-    .select("name")
+    .select("id, name, hidden_sections")
     .ilike("email", ctx.ownerEmail)
     .maybeSingle();
+  if (owner?.id) void touchLastSeen(db, String(owner.id));
   return NextResponse.json({
     ...base,
     name: profile.displayName ?? null,
     company: null,
     phone: null,
+    /* the account's restrictions, not the teammate's own: hiding a section
+     * from a client hides it from everybody working in that account */
+    hiddenSections: (owner?.hidden_sections as string[] | null) ?? [],
     actingFor: {
       email: ctx.ownerEmail,
       name: (owner?.name as string | null) ?? null,
     },
   });
+}
+
+/*
+ * When this account was last in the portal.
+ *
+ * Written on every profile load, which is once per visit rather than once per
+ * screen, and deliberately not awaited: a client should never wait on our
+ * bookkeeping, and a failed write only costs one stale timestamp.
+ */
+async function touchLastSeen(db: ReturnType<typeof supabaseAdmin>, customerId: string) {
+  try {
+    await db
+      .from("customers")
+      .update({ last_seen_at: new Date().toISOString() })
+      .eq("id", customerId);
+  } catch {
+    /* never worth failing a page load over */
+  }
 }
 
 export async function PATCH(req: Request) {

@@ -245,9 +245,16 @@ function PagesScreen() {
 /* ---------------------------------------------------------------- */
 /* Shell                                                             */
 /* ---------------------------------------------------------------- */
-const pathFor = (v: View) => (v === "dashboard" ? "/admin/" : `/admin/${v}/`);
+const pathFor = (v: View, sub?: string | null) =>
+  v === "dashboard" ? "/admin/" : sub ? `/admin/${v}/${sub}/` : `/admin/${v}/`;
 
-export function AdminClient({ initialView }: { initialView: View }) {
+export function AdminClient({
+  initialView,
+  initialCustomerId = null,
+}: {
+  initialView: View;
+  initialCustomerId?: string | null;
+}) {
   const [session, setSession] = useState<Session | null>(null);
   const [ready, setReady] = useState(false);
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
@@ -255,6 +262,9 @@ export function AdminClient({ initialView }: { initialView: View }) {
   /* which handbook topic to open when the help view is reached from a
      screen's own link, rather than from the menu */
   const [helpSlug, setHelpSlug] = useState<string | null>(null);
+  /* the client record open at /admin/customers/<id>/, so one can be linked
+     to a teammate rather than described */
+  const [customerId, setCustomerId] = useState<string | null>(initialCustomerId);
 
   const [loginError, setLoginError] = useState("");
 
@@ -265,14 +275,24 @@ export function AdminClient({ initialView }: { initialView: View }) {
   const go = (v: View, slug: string | null = null) => {
     setView(v);
     setHelpSlug(v === "help" ? slug : null);
+    setCustomerId(null);
     if (window.location.pathname !== pathFor(v)) {
       window.history.pushState(null, "", pathFor(v));
     }
   };
+
+  /* opening a client record is a navigation, so it gets a URL of its own */
+  const openCustomer = (id: string | null) => {
+    setCustomerId(id);
+    const path = pathFor("customers", id);
+    if (window.location.pathname !== path) window.history.pushState(null, "", path);
+  };
   useEffect(() => {
     const onPop = () => {
-      const seg = window.location.pathname.replace(/^\/admin\/?/, "").replace(/\/$/, "");
+      const segs = window.location.pathname.replace(/^\/admin\/?/, "").split("/").filter(Boolean);
+      const seg = segs[0] ?? "";
       setView(seg && (ALL_VIEWS as string[]).includes(seg) ? (seg as View) : "dashboard");
+      setCustomerId(seg === "customers" && segs[1] ? segs[1] : null);
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
@@ -543,7 +563,7 @@ export function AdminClient({ initialView }: { initialView: View }) {
           ) : view === "invoices" ? (
             <InvoicesScreen />
           ) : view === "customers" ? (
-            <CustomersScreen />
+            <CustomersScreen openId={customerId} onOpen={openCustomer} />
           ) : view === "partners" ? (
             <PartnersScreen />
           ) : view === "studio" ? (

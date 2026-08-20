@@ -110,6 +110,7 @@ type MyProfile = {
   avatarUrl: string | null;
   isOwner: boolean;
   features: string[] | null;
+  hiddenSections?: string[] | null;
   actingFor: { email: string; name: string | null } | null;
   memberships: { ownerEmail: string; ownerName: string | null; status: string }[];
 };
@@ -1049,6 +1050,21 @@ function Portal({
   const can = (key: string) =>
     !profile || profile.isOwner || memberCan(profile.features, key);
 
+  /*
+   * Sections switched off for this account by us.
+   *
+   * Separate from `can`, which is the owner deciding what their teammates
+   * reach. This is us deciding what the whole account sees, because a client
+   * who only ever buys custom video should not be shown a premade library.
+   * It gates the menu AND the section itself, so a hidden screen cannot be
+   * reached by typing its URL.
+   */
+  const hiddenSections = new Set(profile?.hiddenSections ?? []);
+  const shows = (key: string) => !hiddenSections.has(key);
+  /* Typing the URL of a switched-off section lands on the dashboard. Gating
+   * only the menu would hide the door and leave the room open. */
+  const view: PortalSection = shows(section) ? section : "dashboard";
+
   // Who is signed in and which account they act for. Handles two edge
   // cases: a stale saved account (membership revoked -> fall back to self),
   // and a member's first sign-in (auto-enter their only membership).
@@ -1259,7 +1275,9 @@ function Portal({
       : []),
     /* a teammate with narrow access can empty a whole group, and a heading
      * over nothing looks like something failed to load */
-  ].filter((g) => g.items.length > 0);
+  ]
+    .map((g) => ({ ...g, items: g.items.filter((i) => shows(i.key)) }))
+    .filter((g) => g.items.length > 0);
 
   /* the account switcher inside the profile menu, shown to anyone on a team */
   const switcher =
@@ -1338,7 +1356,7 @@ function Portal({
 
         <section className="min-w-0 flex-1 p-4 md:p-8">
           <div key={section + (openOrder ?? "")} className="portal-view">
-          {section === "dashboard" ? (
+          {view === "dashboard" ? (
             <DashboardView
               firstName={profile.name?.split(" ")[0] ?? null}
               subtitle={
@@ -1351,7 +1369,7 @@ function Portal({
               onOpenOrder={openOrderById}
               onGo={(s) => go(s as PortalSection)}
             />
-          ) : section === "orders" && can("orders") ? (
+          ) : view === "orders" && can("orders") ? (
             openOrder ? (
               <OrderDetailView
                 id={openOrder}
@@ -1370,7 +1388,7 @@ function Portal({
                 </div>
               </div>
             )
-          ) : section === "videos" && can("orders") ? (
+          ) : view === "videos" && can("orders") ? (
             <div>
               <PageHeader
                 title="My Videos"
@@ -1383,7 +1401,7 @@ function Portal({
                 />
               </div>
             </div>
-          ) : section === "library" && can("orders") ? (
+          ) : view === "library" && can("orders") ? (
             <LibraryView
               authedFetch={authedFetch}
               openCode={openItem}
@@ -1393,32 +1411,32 @@ function Portal({
                 window.scrollTo({ top: 0 });
               }}
             />
-          ) : section === "coming-soon" ? (
+          ) : view === "coming-soon" ? (
             <ComingSoonView authedFetch={authedFetch} />
-          ) : section === "brand" && can("orders") ? (
+          ) : view === "brand" && can("orders") ? (
             <BrandKitView authedFetch={authedFetch} canEdit={can("orders")} />
-          ) : section === "messages" && can("messages") ? (
+          ) : view === "messages" && can("messages") ? (
             <MessagesView
               pendingOrderId={pendingOrderId}
               onConsumePending={() => setPendingOrderId(null)}
               onUnread={setMsgUnread}
             />
-          ) : section === "book" ? (
+          ) : view === "book" ? (
             <BookACallView />
-          ) : section === "affiliate" && profile.isOwner ? (
+          ) : view === "affiliate" && profile.isOwner ? (
             <AffiliateApplyView
               prefillName={profile.name ?? ""}
               prefillEmail={profile.email}
             />
-          ) : section === "whitelabel" && profile.isOwner ? (
+          ) : view === "whitelabel" && profile.isOwner ? (
             <WhiteLabelView />
-          ) : section === "socialx" && profile.isOwner ? (
+          ) : view === "socialx" && profile.isOwner ? (
             <SocialXView authedFetch={authedFetch} />
-          ) : section === "settings" ? (
+          ) : view === "settings" ? (
             <SettingsView profile={profile} onSaved={loadProfile} />
-          ) : section === "help" ? (
+          ) : view === "help" ? (
             <PortalHelp />
-          ) : section === "subscriptions" && can("subscriptions") ? (
+          ) : view === "subscriptions" && can("subscriptions") ? (
             <div>
               <PageHeader title="Subscriptions" subtitle="Manage your editing plan and billing." />
               <div className="mt-6">
