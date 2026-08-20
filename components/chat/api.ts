@@ -44,7 +44,10 @@ export async function chatGet<T>(path: string): Promise<T> {
     headers: { ...(t ? { Authorization: `Bearer ${t}` } : {}), ...actForHeader() },
     cache: "no-store",
   });
-  return r.json();
+  /* a 404 page or a gate block is HTML; json() throwing here used to strand
+     the thread on "Loading..." forever, which is how a one-line path bug
+     read as a dead feature */
+  return r.json().catch(() => ({ error: `The server answered ${r.status}.` }) as T);
 }
 
 export async function chatPostForm<T>(path: string, form: FormData): Promise<T> {
@@ -54,7 +57,7 @@ export async function chatPostForm<T>(path: string, form: FormData): Promise<T> 
     headers: { ...(t ? { Authorization: `Bearer ${t}` } : {}), ...actForHeader() },
     body: form,
   });
-  return r.json();
+  return r.json().catch(() => ({ error: `The server answered ${r.status}.` }) as T);
 }
 
 export async function chatPostJson<T>(path: string, body: unknown): Promise<T> {

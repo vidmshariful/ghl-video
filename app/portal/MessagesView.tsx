@@ -67,7 +67,7 @@ export function MessagesView({
       <div ref={fillRef} className="min-h-0 flex-1" style={{ height: fillHeight ?? undefined }}>
         {openId ? (
           <ChatThread
-            base={`/api/portal/conversations/${openId}/messages`}
+            base={`/api/portal/conversations/${openId}`}
             selfRole="customer"
             emptyLine="Say hello. A real person answers, usually within the hour."
           />

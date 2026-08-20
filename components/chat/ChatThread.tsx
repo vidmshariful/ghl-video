@@ -47,7 +47,14 @@ export function ChatThread({
   });
 
   const load = useCallback(async () => {
-    const j = await chatGet<{ messages?: ChatMessage[] }>(`${base}/messages`);
+    const j = await chatGet<{ messages?: ChatMessage[]; error?: string }>(`${base}/messages`);
+    if (j.error && !Array.isArray(j.messages)) {
+      /* keep whatever is on screen; below the composer the error says why
+         nothing new is arriving */
+      setErr(j.error);
+      setMessages((prev) => prev ?? []);
+      return;
+    }
     const next = j.messages ?? [];
     setMessages((prev) => {
       if (
