@@ -14,7 +14,7 @@ export const HIDEABLE_SECTIONS: { key: string; label: string }[] = [
   { key: "book", label: "Book a Call" },
   { key: "brand", label: "Brand Kit" },
   { key: "orders", label: "Orders and Invoices" },
-  { key: "subscriptions", label: "My Plan" },
+  { key: "subscriptions", label: "Editing" },
   { key: "messages", label: "Messages" },
   { key: "affiliate", label: "Affiliate program" },
   { key: "whitelabel", label: "White-label" },

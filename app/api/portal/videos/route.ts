@@ -61,7 +61,30 @@ export async function GET(req: Request) {
     .order("created_at", { ascending: false });
   const projectIds = ((projects ?? []) as { id: string }[]).map((p) => p.id);
 
-  if (!ids.length && !projectIds.length) return NextResponse.json({ groups: [] });
+  /*
+   * Editing plan work belongs in this list too, for the same reason custom
+   * jobs do. A subscription creates no order, so a client whose only work is
+   * a monthly plan had an empty My Videos while we were actively editing for
+   * them. Each billing month becomes a group here, which means the counts,
+   * review and approval all work for them without any of it being written a
+   * second time.
+   */
+  const { data: subs } = await db
+    .from("subscriptions")
+    .select("id, plan_name")
+    .ilike("customer_email", email);
+  const subIds = ((subs ?? []) as { id: string }[]).map((s) => s.id);
+  const { data: months } = subIds.length
+    ? await db
+        .from("subscription_cycles")
+        .select("id, subscription_id, period_start, period_end")
+        .in("subscription_id", subIds)
+        .order("period_start", { ascending: false })
+    : { data: [] };
+  const monthIds = ((months ?? []) as { id: string }[]).map((m) => m.id);
+
+  if (!ids.length && !projectIds.length && !monthIds.length)
+    return NextResponse.json({ groups: [] });
 
   const { data: rows } = ids.length
     ? await db.from("order_deliverables").select("*").in("order_id", ids).order("position")
@@ -73,6 +96,15 @@ export async function GET(req: Request) {
         .select("*")
         .in("project_id", projectIds)
         .order("position")
+    : { data: [] };
+
+  const { data: monthRows } = monthIds.length
+    ? await db
+        .from("order_deliverables")
+        .select("*")
+        .in("cycle_id", monthIds)
+        .is("cancelled_at", null)
+        .order("created_at")
     : { data: [] };
 
   const byOrder = new Map<string, typeof rows>();
@@ -186,5 +218,63 @@ export async function GET(req: Request) {
     })
     .filter((g): g is NonNullable<typeof g> => g !== null);
 
-  return NextResponse.json({ groups: [...groups, ...projectGroups] });
+  /* one group per billing month, so a client sees "August" rather than a
+     flat list that never ends */
+  const planName = ((subs ?? []) as { plan_name?: string }[])[0]?.plan_name ?? "Editing";
+  const monthGroups = ((months ?? []) as Record<string, unknown>[])
+    .map((m) => {
+      const list = ((monthRows ?? []) as Record<string, unknown>[]).filter(
+        (r) => String(r.cycle_id) === String(m.id),
+      );
+      if (!list.length) return null;
+      const label = new Date(String(m.period_start)).toLocaleDateString("en-US", {
+        month: "long",
+        year: "numeric",
+      });
+      return {
+        orderId: String(m.id),
+        invoiceNumber: null,
+        orderedAt: String(m.period_start),
+        productName: `${planName}, ${label}`,
+        productCode: "EDITING",
+        kind: list.length > 1 ? ("pack" as const) : ("video" as const),
+        videos: list.map((d) => {
+          const status = d.status as DeliverableStatus;
+          return {
+            id: String(d.id),
+            title: String(d.title),
+            code: null,
+            category: (d.form as string | null) === "long" ? "Long form" : "Short form",
+            groupLabel: null,
+            status,
+            revisionRound: Number(d.revision_round ?? 0),
+            canReview: canReview(status),
+            /* every editing tier sells unlimited revisions, so a plan client
+               is never stopped at a round the page they bought from says
+               does not exist */
+            canRequestChanges: status !== "approved",
+            revisionsIncluded: 0,
+            revisionsUsed: Number(d.revision_round ?? 0),
+            unlimitedRevisions: true,
+            videoUrl: isWatchable(status) ? ((d.video_url as string | null) ?? null) : null,
+            readyAt: (d.ready_at as string | null) ?? null,
+            approvedAt: (d.approved_at as string | null) ?? null,
+            due: describeDue(
+              {
+                dueAt: (d.due_at as string | null) ?? null,
+                status,
+                /* the clock starts when their footage lands, never when they
+                   asked: that rule is the whole editing SOP in one field */
+                briefLandedAt: (d.assets_ready_at as string | null) ?? null,
+              },
+              Date.now(),
+              "client",
+            ),
+          };
+        }),
+      };
+    })
+    .filter((g): g is NonNullable<typeof g> => g !== null);
+
+  return NextResponse.json({ groups: [...groups, ...projectGroups, ...monthGroups] });
 }

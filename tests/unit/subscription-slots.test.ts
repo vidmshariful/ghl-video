@@ -4,6 +4,8 @@ import {
   cycleWindow,
   describeSlots,
   overPlanWarning,
+  promisedFrom,
+  queueOrder,
   slotsUsed,
   type Allowance,
 } from "@/lib/subscription-slots";
@@ -117,4 +119,84 @@ describe("which month a plan is in", () => {
     assert.ok(start < new Date("2026-03-31T12:00:00Z"));
     assert.ok(start > new Date("2026-02-01T00:00:00Z"));
   });
+});
+
+/* ---- the rules Shariful settled after the first build ---- */
+
+test("a cancelled request hands its slot back", () => {
+  const use = slotsUsed(
+    [
+      { form: "long" },
+      { form: "long", cancelledAt: "2026-08-20T00:00:00Z" },
+      { form: "short" },
+    ],
+    { longForm: 4, shortForm: 8 },
+  );
+  assert.equal(use.longUsed, 1);
+  assert.equal(use.longLeft, 3);
+  assert.equal(use.shortUsed, 1);
+});
+
+test("an approved video keeps its slot", () => {
+  const use = slotsUsed([{ form: "long", cancelledAt: null }], { longForm: 2, shortForm: 4 });
+  assert.equal(use.longUsed, 1);
+});
+
+test("short cuts off a long form each spend a short slot", () => {
+  /* one long form request carrying three cuts: the cuts are rows of their
+     own, so the month sees 1 long and 3 short */
+  const items = [
+    { form: "long" as const },
+    { form: "short" as const },
+    { form: "short" as const },
+    { form: "short" as const },
+  ];
+  const use = slotsUsed(items, { longForm: 4, shortForm: 8 });
+  assert.equal(use.longUsed, 1);
+  assert.equal(use.shortUsed, 3);
+  assert.equal(use.shortLeft, 5);
+  assert.equal(use.overPlan, false);
+});
+
+test("the promise is three business days and skips the weekend", () => {
+  /* Thursday 2026-08-20 plus three business days is Tuesday the 25th */
+  const out = promisedFrom(new Date("2026-08-20T10:00:00Z"));
+  assert.equal(out.toISOString().slice(0, 10), "2026-08-25");
+});
+
+test("footage landing on a Friday is promised on Wednesday", () => {
+  const out = promisedFrom(new Date("2026-08-21T10:00:00Z"));
+  assert.equal(out.toISOString().slice(0, 10), "2026-08-26");
+});
+
+test("waiting on footage sorts behind everything, whatever the plan", () => {
+  const scaleWaiting = {
+    planPriority: 0,
+    assetsReadyAt: null,
+    requestedDueAt: null,
+    createdAt: "2026-08-01T00:00:00Z",
+  };
+  const starterReady = {
+    planPriority: 2,
+    assetsReadyAt: "2026-08-19T00:00:00Z",
+    requestedDueAt: null,
+    createdAt: "2026-08-19T00:00:00Z",
+  };
+  assert.ok(queueOrder(scaleWaiting, starterReady) > 0);
+});
+
+test("Scale jumps the line once the footage is in", () => {
+  const scale = {
+    planPriority: 0,
+    assetsReadyAt: "2026-08-19T00:00:00Z",
+    requestedDueAt: null,
+    createdAt: "2026-08-19T00:00:00Z",
+  };
+  const starter = {
+    planPriority: 2,
+    assetsReadyAt: "2026-08-10T00:00:00Z",
+    requestedDueAt: null,
+    createdAt: "2026-08-10T00:00:00Z",
+  };
+  assert.ok(queueOrder(scale, starter) < 0);
 });

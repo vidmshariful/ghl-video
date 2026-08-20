@@ -30,6 +30,17 @@ export function planNameFor(sku: string | null): string {
   return editingPlans.find((p) => p.sku === sku)?.name ?? "Editing";
 }
 
+/** What the pack promises, in the words the client bought it with. */
+export function planFeatures(sku: string | null): string[] {
+  const plan = editingPlans.find((p) => p.sku === sku);
+  return plan ? [...plan.features] : [];
+}
+
+/** Scale jumps the line, which is a thing the editing page sells. */
+export function planPriority(sku: string | null): number {
+  return sku === "editing-scale" ? 0 : sku === "editing-growth" ? 1 : 2;
+}
+
 export type Cycle = {
   id: string;
   periodStart: string;

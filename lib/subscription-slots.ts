@@ -35,13 +35,14 @@ export type SlotUse = {
   overPlan: boolean;
 };
 
-/** Count what a month has already committed. */
-export function slotsUsed(
-  items: { form: Form | null }[],
-  allowance: Allowance,
-): SlotUse {
-  const longUsed = items.filter((i) => i.form === "long").length;
-  const shortUsed = items.filter((i) => i.form === "short").length;
+/** A request, as far as counting is concerned. */
+export type Countable = { form: Form | null; cancelledAt?: string | null };
+
+/** Count what a month has already committed. Cancelled requests do not. */
+export function slotsUsed(items: Countable[], allowance: Allowance): SlotUse {
+  const live = items.filter((i) => !i.cancelledAt);
+  const longUsed = live.filter((i) => i.form === "long").length;
+  const shortUsed = live.filter((i) => i.form === "short").length;
   return {
     longUsed,
     shortUsed,
@@ -100,4 +101,55 @@ export function cycleWindow(periodEnd: Date): { start: Date; end: Date } {
   const start = new Date(periodEnd);
   start.setMonth(start.getMonth() - 1);
   return { start, end: periodEnd };
+}
+
+/*
+ * When a video is promised, counted from the moment footage lands.
+ *
+ * The editing page publishes "2 to 3 business days per video", so that is
+ * what this returns: three business days, which is the end of the window we
+ * sell rather than the start of it. Promising the optimistic end of a range
+ * is how a studio is late on a date it chose itself.
+ *
+ * Weekends are skipped because business days are what was advertised. Public
+ * holidays are not, deliberately: the studio is not in one country and a
+ * holiday table that goes stale is worse than a date somebody can adjust by
+ * hand, which they can, on the card.
+ */
+export const TURNAROUND_BUSINESS_DAYS = 3;
+
+export function promisedFrom(assetsLandedAt: Date, businessDays = TURNAROUND_BUSINESS_DAYS): Date {
+  const d = new Date(assetsLandedAt);
+  let left = businessDays;
+  while (left > 0) {
+    d.setDate(d.getDate() + 1);
+    const day = d.getDay();
+    if (day !== 0 && day !== 6) left--;
+  }
+  return d;
+}
+
+/*
+ * The order the studio works in.
+ *
+ * Scale subscribers jump the line, which the editing page sells in as many
+ * words, so it has to be true here and not just in the copy. After plan
+ * comes the date the client asked for, then the order they arrived in.
+ * Requests still waiting on footage sort last whatever plan they are on:
+ * nobody can edit a video that is not there.
+ */
+export type Queued = {
+  planPriority: number;
+  assetsReadyAt: string | null;
+  requestedDueAt: string | null;
+  createdAt: string;
+};
+
+export function queueOrder(a: Queued, b: Queued): number {
+  const waiting = (q: Queued) => (q.assetsReadyAt ? 0 : 1);
+  if (waiting(a) !== waiting(b)) return waiting(a) - waiting(b);
+  if (a.planPriority !== b.planPriority) return a.planPriority - b.planPriority;
+  const due = (q: Queued) => (q.requestedDueAt ? Date.parse(q.requestedDueAt) : Infinity);
+  if (due(a) !== due(b)) return due(a) - due(b);
+  return Date.parse(a.createdAt) - Date.parse(b.createdAt);
 }

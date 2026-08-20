@@ -1,21 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { Button, Card, Chip, Input, Select } from "@/components/portal/ui";
-import { authHeader, money, supabase, when } from "./client";
+import { useEffect, useState } from "react";
+import { ChevronRight } from "lucide-react";
+import { Card, Chip, PageHeader } from "@/components/portal/ui";
+import { money, supabase, when } from "./client";
+import { SubscriptionDetail } from "./SubscriptionDetail";
 
-type EditRequest = {
-  id: string;
-  title: string;
-  brief: string | null;
-  status: string;
-  form: string | null;
-  dueAt: string | null;
-  requestedDueAt: string | null;
-  customerEmail: string | null;
-  planName: string | null;
-  month: { startsAt: string; endsAt: string } | null;
-};
+/*
+ * Every recurring plan, and nothing else.
+ *
+ * This screen is the commercial record for subscriptions, the way Orders is
+ * for one-time sales. It used to also carry the studio's queue of editing
+ * requests, which was the wrong home for it: a video request is production
+ * work, so it lives on the Production board under Editing with the rest of
+ * the work. Money here, work there, and neither screen makes you scroll past
+ * the other's job to do your own.
+ */
 
 type SubRow = {
   id: string;
@@ -30,22 +30,20 @@ type SubRow = {
   customer: { name: string | null } | null;
 };
 
-const STATUS_STYLE: Record<string, string> = {
-  active: "border-green/40 text-green",
-  trialing: "border-gold/40 text-gold",
-  past_due: "border-error/40 text-error",
-  incomplete: "border-hair text-dim",
-  canceled: "border-hair text-dim",
-  unpaid: "border-error/40 text-error",
+const TONE: Record<string, "good" | "warn" | "bad" | "neutral"> = {
+  active: "good",
+  trialing: "warn",
+  past_due: "bad",
+  unpaid: "bad",
+  canceled: "neutral",
+  incomplete: "neutral",
 };
 
 export function SubscriptionsScreen() {
   const [rows, setRows] = useState<SubRow[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [err, setErr] = useState("");
-  const [note, setNote] = useState("");
-  const [requests, setRequests] = useState<EditRequest[]>([]);
-  const [busy, setBusy] = useState<string | null>(null);
+  const [open, setOpen] = useState<string | null>(null);
 
   async function load() {
     const { data, error } = await supabase
@@ -58,323 +56,87 @@ export function SubscriptionsScreen() {
   }
 
   useEffect(() => {
-    load();
+    void load();
   }, []);
 
-  /* work asked for on a plan. It hangs off a billing month rather than an
-   * order, so the production board cannot see it yet and this is where the
-   * studio picks it up. */
-  const loadRequests = useCallback(async () => {
-    try {
-      const r = await fetch("/api/admin/edit-requests", {
-        headers: await authHeader(),
-      });
-      const j = await r.json();
-      if (r.ok) setRequests(j.requests as EditRequest[]);
-    } catch {
-      /* the panel just stays empty */
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadRequests();
-  }, [loadRequests]);
-
-  async function moveRequest(id: string, patch: Record<string, unknown>) {
-    await fetch("/api/admin/edit-requests", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", ...(await authHeader()) },
-      body: JSON.stringify({ id, ...patch }),
-    }).catch(() => null);
-    await loadRequests();
-  }
-
-  /*
-   * Change what a plan bills from its next renewal.
-   *
-   * Nothing is prorated, so the month the client is inside stays exactly as
-   * they agreed to it, and they get an email saying what changed and why
-   * before any money moves.
-   */
-  async function reprice(r: SubRow) {
-    const current = (r.amount_cents / 100).toFixed(2);
-    const entered = window.prompt(
-      `New monthly price for ${r.customer_email}, in dollars.\n\nThey pay $${current} today. The new amount starts at their next renewal; this month is untouched.`,
-      current,
+  /* A plan takes over the screen rather than opening a drawer: it carries
+     the pack, every charge and every month, which never fitted in one. */
+  if (open) {
+    return (
+      <SubscriptionDetail
+        id={open}
+        onBack={() => {
+          setOpen(null);
+          void load();
+        }}
+      />
     );
-    if (entered === null) return;
-    const dollars = Number(entered);
-    if (!Number.isFinite(dollars) || dollars < 0) {
-      return setErr("That is not an amount.");
-    }
-    const reason = window.prompt(
-      "Why is it changing? The client sees this line in their email.",
-      "We applied the discount you were promised.",
-    );
-    if (reason === null) return;
-
-    setBusy(r.id);
-    setErr("");
-    try {
-      const res = await fetch(`/api/admin/subscriptions/${r.id}/price`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          ...(await authHeader()),
-        },
-        body: JSON.stringify({
-          amountCents: Math.round(dollars * 100),
-          reason,
-        }),
-      });
-      const j = await res.json();
-      if (!res.ok) setErr(j.error ?? "Could not change the price.");
-      else {
-        setNote(
-          `Now $${(j.newCents / 100).toFixed(2)} a month from ${j.effective}. ${r.customer_email} has been emailed.`,
-        );
-        await load();
-      }
-    } catch (e) {
-      setErr((e as Error).message);
-    } finally {
-      setBusy(null);
-    }
   }
 
-  async function act(id: string, action: string, confirmMsg?: string) {
-    if (confirmMsg && !window.confirm(confirmMsg)) return;
-    setBusy(id);
-    setErr("");
-    try {
-      const r = await fetch(`/api/admin/subscriptions/${id}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(await authHeader()),
-        },
-        body: JSON.stringify({ action }),
-      });
-      const j = await r.json();
-      if (!j.ok) setErr(j.error ?? "Action failed.");
-      else await load();
-    } catch (e) {
-      setErr((e as Error).message);
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  if (!loaded)
-    return <p className="text-body text-muted">Loading subscriptions...</p>;
+  if (!loaded) return <p className="text-body text-muted">Loading subscriptions...</p>;
 
   const active = rows.filter((r) => r.status === "active");
   const mrr = active.reduce((s, r) => s + r.amount_cents, 0);
-  const summary: [string, string, string][] = [
-    ["MRR", money(mrr), "text-gold"],
-    ["Active", String(active.length), "text-green"],
-    ["Total", String(rows.length), "text-muted"],
-  ];
-
-  const openRequests = requests.filter((r) => r.status !== "approved");
 
   return (
     <div className="w-full">
-      <h1 className="font-display text-h2 text-ink">Subscriptions</h1>
-      <p className="mt-2 text-body text-muted">
-        Editing plans, newest first. {rows.length} total.
-      </p>
+      <PageHeader
+        title="Subscriptions"
+        description="Recurring plans and their billing. Open one for the pack, the charges and the months. The editing work is in Production."
+      />
 
-      <div className="mt-6 grid grid-cols-3 gap-4">
-        {summary.map(([label, val, cls]) => (
-          <div
-            key={label}
-            className="rounded-[12px] border border-hair bg-surface p-6"
-          >
+      <div className="grid grid-cols-3 gap-3">
+        {(
+          [
+            ["Recurring, per month", money(mrr), "text-gold"],
+            ["Active", String(active.length), "text-green"],
+            ["All time", String(rows.length), "text-ink"],
+          ] as const
+        ).map(([label, val, cls]) => (
+          <Card key={label}>
             <p className="font-mono text-label uppercase text-dim">{label}</p>
-            <p
-              className={`mt-1 font-display text-h3 [font-variant-numeric:tabular-nums] ${cls}`}
-            >
-              {val}
-            </p>
-          </div>
+            <p className={`mt-2 font-display text-h3 tabular-nums ${cls}`}>{val}</p>
+          </Card>
         ))}
       </div>
 
       {err && <p className="mt-4 text-body-sm text-error">{err}</p>}
-      {note && <p className="mt-4 text-body-sm text-green">{note}</p>}
 
       {rows.length === 0 ? (
         <p className="mt-8 text-body text-muted">No subscriptions yet.</p>
       ) : (
-        <ul className="mt-6 overflow-hidden rounded-[12px] border border-hair">
+        <ul className="mt-3 overflow-hidden rounded-[12px] border border-hair">
           {rows.map((r) => (
-            <li
-              key={r.id}
-              className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-hair bg-surface px-5 py-4 first:border-t-0"
-            >
-              <div className="min-w-0">
-                <p className="text-body font-semibold text-ink">
-                  {r.customer?.name || r.customer_email}
-                  <span className="ml-3 font-mono text-body-sm text-muted">
-                    {r.plan_name}
-                  </span>
-                </p>
-                <p className="mt-0.5 font-mono text-label uppercase text-dim">
-                  {r.customer_email}
-                  {r.current_period_end
-                    ? ` / ${r.cancel_at_period_end ? "ends" : "renews"} ${when(r.current_period_end)}`
-                    : ""}
-                </p>
-              </div>
-              <div className="flex shrink-0 items-center gap-3">
-                <span
-                  className={`rounded-full border px-2.5 py-0.5 font-mono text-label uppercase ${STATUS_STYLE[r.status] ?? "border-hair text-dim"}`}
-                >
-                  {r.status}
-                </span>
-                <span className="font-mono text-price font-bold text-ink [font-variant-numeric:tabular-nums]">
-                  {money(r.amount_cents, r.currency)}/mo
-                </span>
-              </div>
-              {r.status !== "canceled" && r.status !== "incomplete" ? (
-                <div className="flex w-full flex-wrap items-center gap-2 pt-1">
-                  {r.cancel_at_period_end ? (
-                    <Button
-                      variant="secondary"
-                      disabled={busy === r.id}
-                      onClick={() => act(r.id, "resume")}
-                    >
-                      Resume
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="secondary"
-                      disabled={busy === r.id}
-                      onClick={() =>
-                        act(
-                          r.id,
-                          "cancel_period_end",
-                          `Cancel ${r.customer_email}'s plan at the end of the period?`,
-                        )
-                      }
-                    >
-                      Cancel at period end
-                    </Button>
-                  )}
-                  <Button
-                    variant="secondary"
-                    disabled={busy === r.id}
-                    onClick={() => reprice(r)}
-                  >
-                    Change price
-                  </Button>
-                  <Button
-                    variant="danger"
-                    disabled={busy === r.id}
-                    onClick={() =>
-                      act(
-                        r.id,
-                        "cancel_now",
-                        `Cancel ${r.customer_email}'s plan IMMEDIATELY? They lose access now.`,
-                      )
-                    }
-                  >
-                    Cancel now
-                  </Button>
-                  {busy === r.id ? (
-                    <span className="font-mono text-label uppercase text-dim">
-                      working...
-                    </span>
-                  ) : null}
+            <li key={r.id} className="border-t border-hair first:border-t-0">
+              <button
+                type="button"
+                onClick={() => setOpen(r.id)}
+                className="tap flex w-full flex-wrap items-center justify-between gap-x-6 gap-y-2 bg-surface px-5 py-4 text-left transition-colors hover:bg-card"
+              >
+                <div className="min-w-0">
+                  <p className="text-body font-semibold text-ink">
+                    {r.customer?.name || r.customer_email}
+                    <span className="ml-3 font-mono text-body-sm text-muted">{r.plan_name}</span>
+                  </p>
+                  <p className="mt-0.5 font-mono text-label uppercase text-dim">
+                    {r.customer_email}
+                    {r.current_period_end
+                      ? ` / ${r.cancel_at_period_end ? "ends" : "renews"} ${when(r.current_period_end)}`
+                      : ""}
+                  </p>
                 </div>
-              ) : null}
+                <div className="flex shrink-0 items-center gap-3">
+                  <Chip tone={TONE[r.status] ?? "neutral"}>{r.status.replace(/_/g, " ")}</Chip>
+                  <span className="font-mono text-price font-bold tabular-nums text-ink">
+                    {money(r.amount_cents, r.currency)}/mo
+                  </span>
+                  <ChevronRight size={16} className="text-dim" aria-hidden="true" />
+                </div>
+              </button>
             </li>
           ))}
         </ul>
       )}
-
-      {/* Work asked for on a plan. It counts against a billing month rather
-          than an order, so the production board cannot see it yet. */}
-      <div className="mt-8">
-        <h2 className="font-display text-h4 text-ink">Editing requests</h2>
-        <p className="mt-1 text-body-sm text-muted">
-          What plan clients have asked for. The date they wanted is their ask,
-          not a promise: set a real one and they see that instead.
-        </p>
-
-        {openRequests.length === 0 ? (
-          <p className="mt-4 text-body-sm text-dim">Nothing waiting.</p>
-        ) : (
-          <div className="mt-4 grid gap-2.5">
-            {openRequests.map((q) => (
-              <Card key={q.id}>
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-body font-semibold text-ink">
-                        {q.title}
-                      </p>
-                      <Chip tone={q.status === "queued" ? "neutral" : "info"}>
-                        {q.status.replace(/_/g, " ")}
-                      </Chip>
-                      <Chip tone="neutral">
-                        {q.form === "long" ? "long form" : "short form"}
-                      </Chip>
-                    </div>
-                    <p className="mt-0.5 font-mono text-label uppercase text-dim">
-                      {q.customerEmail} / {q.planName}
-                      {q.month ? ` / month of ${when(q.month.startsAt)}` : ""}
-                    </p>
-                    {q.brief && (
-                      <p className="mt-1.5 whitespace-pre-wrap text-body-sm text-muted">
-                        {q.brief}
-                      </p>
-                    )}
-                    {q.requestedDueAt && (
-                      <p className="mt-1.5 text-body-sm text-gold">
-                        They asked for {when(q.requestedDueAt)}
-                        {q.dueAt
-                          ? ` / you promised ${when(q.dueAt)}`
-                          : " / no date promised yet"}
-                      </p>
-                    )}
-                  </div>
-                  {/* the controls carry their own width: the primitives are
-                      w-full, so a wrapper is what actually sizes them */}
-                  <div className="flex shrink-0 flex-wrap items-center gap-2">
-                    <div className="w-[10rem]">
-                      <Input
-                        type="date"
-                        aria-label={`Promised date for ${q.title}`}
-                        defaultValue={q.dueAt ? q.dueAt.slice(0, 10) : ""}
-                        onChange={(e) =>
-                          moveRequest(q.id, { dueAt: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div className="w-[11rem]">
-                      <Select
-                        value={q.status}
-                        aria-label={`Status for ${q.title}`}
-                        onChange={(e) =>
-                          moveRequest(q.id, { status: e.target.value })
-                        }
-                      >
-                        <option value="queued">Queued</option>
-                        <option value="in_production">In production</option>
-                        <option value="ready">Ready to review</option>
-                        <option value="revisions">Revisions</option>
-                        <option value="approved">Approved</option>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   );
 }

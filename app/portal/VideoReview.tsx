@@ -15,7 +15,10 @@ import { ConfirmDialog } from "./ConfirmDialog";
  * without the confusion.
  *
  * One round of changes is included, and the client is told so before they use
- * it. That is the difference between a policy and a nasty surprise.
+ * it. That is the difference between a policy and a nasty surprise. Editing
+ * plans are the exception: every tier sells unlimited revisions on the
+ * editing page, so unlimitedRevisions swaps the wording rather than letting
+ * a client hit a wall the page they bought from says does not exist.
  *
  * Notes point at a moment, not at a spot on the frame. Pointing at a place was
  * built and then removed by the owner: see the idea box if it comes back.
@@ -52,6 +55,7 @@ export function VideoReview({
   canRequestChanges,
   revisionsIncluded,
   revisionsUsed,
+  unlimitedRevisions = false,
   onChanged,
   onMessageStudio,
   authedFetch,
@@ -63,6 +67,9 @@ export function VideoReview({
   canRequestChanges: boolean;
   revisionsIncluded: number;
   revisionsUsed: number;
+  /* Every editing plan sells unlimited revisions in as many words, so an
+   * editing client is never told they have used a round they do not have. */
+  unlimitedRevisions?: boolean;
   onChanged: () => void;
   onMessageStudio?: () => void;
   authedFetch: (path: string, init?: RequestInit) => Promise<unknown>;
@@ -263,7 +270,11 @@ export function VideoReview({
       {ask === "changes" && (
         <ConfirmDialog
           title="Send your notes and ask for changes?"
-          body={`This uses your ${revisionsIncluded === 1 ? "one included revision round" : `${revisionsIncluded} included revision rounds`}, so make sure every note is in first.`}
+          body={
+            unlimitedRevisions
+              ? "Put every note in first and we will do them in one pass, which is faster for you than three rounds."
+              : `This uses your ${revisionsIncluded === 1 ? "one included revision round" : `${revisionsIncluded} included revision rounds`}, so make sure every note is in first.`
+          }
           confirmLabel="Yes, send them"
           onConfirm={() => {
             setAsk(null);
@@ -324,9 +335,11 @@ export function VideoReview({
         <p className="mt-2 text-body-sm text-dim">
           {status === "revisions"
             ? "We are working on your changes. You can still add notes below, and we will pick them up."
-            : canRequestChanges
-              ? `${revisionsIncluded} round of revisions is included. Please add all of your notes first, then request changes in one go. Further rounds may be charged.`
-              : `You have used your ${revisionsUsed} included revision round. Send us a message about anything else and we will sort it out with you.`}
+            : unlimitedRevisions
+              ? "Revisions are unlimited on your plan. Add all of your notes first and we will do them in one pass."
+              : canRequestChanges
+                ? `${revisionsIncluded} round of revisions is included. Please add all of your notes first, then request changes in one go. Further rounds may be charged.`
+                : `You have used your ${revisionsUsed} included revision round. Send us a message about anything else and we will sort it out with you.`}
         </p>
       </div>
 

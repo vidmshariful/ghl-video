@@ -5,6 +5,7 @@ import { supabase, money, when } from "./client";
 import { authHeader } from "./client";
 import { ProductionJob } from "./ProductionJob";
 import { StudioQueue } from "./StudioQueue";
+import { EditingBoard, EditingClients } from "./EditingBoard";
 import type { View } from "./nav";
 
 /*
@@ -64,7 +65,9 @@ export function ProductionScreen({ onNavigate }: { onNavigate: (v: View) => void
   const [busyId, setBusyId] = useState<string | null>(null);
   const [err, setErr] = useState("");
   const [openJob, setOpenJob] = useState<string | null>(null);
-  const [view, setView] = useState<"queue" | "board">("queue");
+  const [view, setView] = useState<"queue" | "board" | "editing">("queue");
+  /* which editing client is open, if any */
+  const [openClient, setOpenClient] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [mine, setMine] = useState(false);
   const [me, setMe] = useState("");
@@ -197,6 +200,10 @@ export function ProductionScreen({ onNavigate }: { onNavigate: (v: View) => void
           [
             { key: "queue", label: "What needs us" },
             { key: "board", label: "The board" },
+            /* editing plan work. It counts against a billing month rather
+               than an order, so it cannot sit on the order board, but it is
+               production all the same and belongs on this screen. */
+            { key: "editing", label: "Editing" },
           ] as const
         ).map((t) => (
           <button
@@ -214,7 +221,15 @@ export function ProductionScreen({ onNavigate }: { onNavigate: (v: View) => void
         ))}
       </div>
 
-      {view === "queue" ? (
+      {view === "editing" ? (
+        <div className="mt-6">
+          {openClient ? (
+            <EditingBoard id={openClient} onBack={() => setOpenClient(null)} />
+          ) : (
+            <EditingClients onOpen={setOpenClient} />
+          )}
+        </div>
+      ) : view === "queue" ? (
         <div className="mt-6">
           <StudioQueue onOpenJob={setOpenJob} />
         </div>

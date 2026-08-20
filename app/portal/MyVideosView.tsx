@@ -34,6 +34,8 @@ type Video = {
   canRequestChanges: boolean;
   revisionsIncluded: number;
   revisionsUsed: number;
+  /* set on editing plan videos, where every tier sells unlimited rounds */
+  unlimitedRevisions?: boolean;
   videoUrl: string | null;
   readyAt: string | null;
   approvedAt: string | null;
@@ -493,6 +495,7 @@ function VideoPopup({
               canRequestChanges={v.canRequestChanges}
               revisionsIncluded={v.revisionsIncluded}
               revisionsUsed={v.revisionsUsed}
+              unlimitedRevisions={v.unlimitedRevisions}
               onChanged={onChanged}
               onMessageStudio={onMessageStudio}
               authedFetch={authedFetch}

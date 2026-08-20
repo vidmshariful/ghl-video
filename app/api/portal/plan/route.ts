@@ -1,36 +1,59 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { contextCan, resolvePortalContext } from "@/lib/account-team";
-import { currentCycle, cycleHistory, planNameFor } from "@/lib/subscription-cycles";
-import { describeSlots, overPlanWarning, slotsUsed, type Form } from "@/lib/subscription-slots";
+import { currentCycle, cycleHistory, planFeatures, planNameFor } from "@/lib/subscription-cycles";
+import {
+  describeSlots,
+  overPlanWarning,
+  slotsUsed,
+  type Form,
+} from "@/lib/subscription-slots";
+import { ASPECTS, CLIENT_STATUS_WORD, columnFor, type Aspect } from "@/lib/editing-sop";
 
 export const runtime = "nodejs";
 
 /*
- * An editing client's own plan: what it covers, what is left this month, and
- * what they have asked for.
+ * An editing client's plan, from their side.
  *
- * This is the screen that was empty. A subscription creates no order, so a
- * client paying every month had a portal showing them nothing at all while
- * we were editing for them.
+ * A subscription creates no order, and every video we track used to hang off
+ * an order, so a client paying every month opened their portal and saw
+ * nothing at all while we were editing for them. This is the screen that
+ * fixes that.
  *
  * Slots are counted from the videos attached to the CURRENT cycle, so the
  * count resets on its own at renewal with nothing to run and nothing to
- * forget. Nothing rolls over, by decision.
+ * forget. Nothing rolls over, by decision. A cancelled request hands its slot
+ * back, also by decision, so "2 left" always means "you can ask for 2 more".
  */
 
 type Row = Record<string, unknown>;
+const CUTS_MAX = 10;
 
 async function planFor(db: ReturnType<typeof supabaseAdmin>, email: string) {
   const { data } = await db
     .from("subscriptions")
-    .select("id, status, amount_cents, currency, current_period_end, cancel_at_period_end, plan_name, created_at, product:products(sku, name)")
+    .select(
+      "id, status, amount_cents, currency, current_period_end, cancel_at_period_end, plan_name, created_at, metadata, product:products(sku, name)",
+    )
     .ilike("customer_email", email)
     .in("status", ["active", "trialing", "past_due"])
     .order("created_at", { ascending: false })
     .maybeSingle();
   return data;
 }
+
+const skuOf = (sub: Row | null) =>
+  sub
+    ? (((sub.product as { sku?: string } | null)?.sku ??
+        (sub.metadata as { sku?: string } | null)?.sku) ||
+      null)
+    : null;
+
+const cycleArgs = (sub: Row) => ({
+  id: String(sub.id),
+  current_period_end: (sub.current_period_end as string | null) ?? null,
+  product: { sku: skuOf(sub) },
+});
 
 export async function GET(req: Request) {
   const db = supabaseAdmin();
@@ -41,54 +64,85 @@ export async function GET(req: Request) {
   const sub = await planFor(db, ctx.ownerEmail);
   if (!sub) return NextResponse.json({ plan: null });
 
-  const cycle = await currentCycle(db, sub as never);
+  const cycle = await currentCycle(db, cycleArgs(sub as Row));
   if (!cycle) return NextResponse.json({ plan: null });
 
   const { data: videos } = await db
     .from("order_deliverables")
-    .select("id, title, status, form, note, due_at, requested_due_at, requested_at, video_url, created_at")
+    .select(
+      "id, parent_id, title, status, form, aspect, note, due_at, requested_due_at, assets_ready_at, assets_url, reference_url, video_url, revision_round, cancelled_at, cancelled_reason, created_at",
+    )
     .eq("cycle_id", cycle.id)
     .order("created_at", { ascending: false });
 
-  const items = ((videos ?? []) as Row[]).map((v) => ({
-    id: String(v.id),
-    title: String(v.title),
-    status: String(v.status),
-    form: (v.form as Form | null) ?? null,
-    brief: (v.note as string | null) ?? null,
-    dueAt: (v.due_at as string | null) ?? null,
-    requestedDueAt: (v.requested_due_at as string | null) ?? null,
-    createdAt: String(v.created_at),
-  }));
+  const items = ((videos ?? []) as Row[]).map((v) => {
+    const status = String(v.status);
+    const column = columnFor({
+      status,
+      assetsReadyAt: (v.assets_ready_at as string | null) ?? null,
+    });
+    return {
+      id: String(v.id),
+      parentId: (v.parent_id as string | null) ?? null,
+      title: String(v.title),
+      status,
+      /* the word THEY read, which is not always our word for it */
+      state: CLIENT_STATUS_WORD[column] ?? status,
+      column,
+      form: (v.form as Form | null) ?? null,
+      aspect: (v.aspect as string | null) ?? null,
+      brief: (v.note as string | null) ?? null,
+      dueAt: (v.due_at as string | null) ?? null,
+      requestedDueAt: (v.requested_due_at as string | null) ?? null,
+      assetsReadyAt: (v.assets_ready_at as string | null) ?? null,
+      assetsUrl: (v.assets_url as string | null) ?? null,
+      /* withheld until it is genuinely watchable, the same rule the rest of
+       * the portal follows: a client finding an unfinished cut is the exact
+       * accident this prevents */
+      videoUrl:
+        status === "ready" || status === "revisions" || status === "approved"
+          ? ((v.video_url as string | null) ?? null)
+          : null,
+      canReview: status === "ready" || status === "revisions",
+      /* every editing tier sells unlimited revisions, so they get them */
+      revisionsUsed: Number(v.revision_round ?? 0),
+      cancelledAt: (v.cancelled_at as string | null) ?? null,
+      cancelledReason: (v.cancelled_reason as string | null) ?? null,
+      /* they can pull a request back while it is still only a request */
+      canCancel: !v.cancelled_at && status === "queued",
+      createdAt: String(v.created_at),
+    };
+  });
 
   const use = slotsUsed(items, {
     longForm: cycle.longFormAllowed,
     shortForm: cycle.shortFormAllowed,
   });
 
-  const planName =
-    (sub.plan_name as string | null) ??
-    planNameFor((sub.product as { sku?: string } | null)?.sku ?? null);
+  const sku = skuOf(sub as Row);
+  const planName = (sub.plan_name as string | null) ?? planNameFor(sku);
 
   /* past months, so a client can see what they got for what they paid */
   const history = await cycleHistory(db, String(sub.id));
   const pastIds = history.filter((h) => h.id !== cycle.id).map((h) => h.id);
   const { data: pastVideos } = pastIds.length
-    ? await db.from("order_deliverables").select("cycle_id, form").in("cycle_id", pastIds)
+    ? await db
+        .from("order_deliverables")
+        .select("cycle_id, form, cancelled_at")
+        .in("cycle_id", pastIds)
     : { data: [] };
 
   return NextResponse.json({
     plan: {
       planName,
+      sku,
+      includes: planFeatures(sku),
       status: String(sub.status),
       amountCents: Number(sub.amount_cents ?? 0),
       renewsAt: (sub.current_period_end as string | null) ?? null,
       endingAtPeriodEnd: Boolean(sub.cancel_at_period_end),
-      cycle: {
-        id: cycle.id,
-        startsAt: cycle.periodStart,
-        endsAt: cycle.periodEnd,
-      },
+      aspects: ASPECTS.map((a) => ({ ...a })),
+      cycle: { id: cycle.id, startsAt: cycle.periodStart, endsAt: cycle.periodEnd },
       slots: { ...use, summary: describeSlots(use) },
       /* what they would be told if they asked for one more of each */
       warnings: {
@@ -100,7 +154,7 @@ export async function GET(req: Request) {
         .filter((h) => h.id !== cycle.id)
         .map((h) => {
           const mine = ((pastVideos ?? []) as Row[]).filter(
-            (v) => String(v.cycle_id) === h.id,
+            (v) => String(v.cycle_id) === h.id && !v.cancelled_at,
           );
           return {
             id: h.id,
@@ -123,6 +177,12 @@ export async function GET(req: Request) {
  * the studio works through them one at a time against the plan; asking for
  * more than the month covers earns a warning and an upgrade offer, which the
  * screen shows before they submit and this route repeats in its answer.
+ *
+ * A long form request may carry short cuts taken from it. Each cut becomes a
+ * video of its own, hanging off the long one, because that is what it is: a
+ * separate job off the same footage, with its own slot, its own review and
+ * its own approval. One long form plus three cuts spends one long slot and
+ * three short ones.
  */
 export async function POST(req: Request) {
   const db = supabaseAdmin();
@@ -133,58 +193,195 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "You do not have access to this." }, { status: 403 });
 
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+
+  /* cancelling a request is a POST too, so the client needs one route */
+  if (typeof b.cancel === "string") return cancel(db, ctx.ownerEmail, b.cancel);
+
   const title = typeof b.title === "string" ? b.title.trim().slice(0, 160) : "";
   const brief = typeof b.brief === "string" ? b.brief.trim().slice(0, 4000) : "";
   const form: Form = b.form === "long" ? "long" : "short";
+  const assetsUrl = typeof b.assetsUrl === "string" ? b.assetsUrl.trim().slice(0, 1000) : "";
+  const referenceUrl =
+    typeof b.referenceUrl === "string" ? b.referenceUrl.trim().slice(0, 1000) : "";
+  const aspect = ASPECTS.some((a) => a.key === b.aspect) ? (b.aspect as Aspect) : null;
+  const targetSeconds =
+    Number.isFinite(Number(b.targetMinutes)) && Number(b.targetMinutes) > 0
+      ? Math.round(Number(b.targetMinutes) * 60)
+      : null;
   const wantedBy =
     typeof b.requestedDueAt === "string" && b.requestedDueAt ? b.requestedDueAt : null;
+
+  /* short cuts, only ever off a long form request */
+  const cuts =
+    form === "long" && Array.isArray(b.cuts)
+      ? (b.cuts as unknown[])
+          .map((c) =>
+            typeof c === "string"
+              ? c.trim().slice(0, 400)
+              : typeof (c as Row)?.instruction === "string"
+                ? String((c as Row).instruction).trim().slice(0, 400)
+                : "",
+          )
+          .filter(Boolean)
+          .slice(0, CUTS_MAX)
+      : [];
 
   if (!title) return NextResponse.json({ error: "Give the video a name." }, { status: 400 });
   if (!brief)
     return NextResponse.json(
-      { error: "Tell us what to edit, and where the footage is." },
+      { error: "Tell us what you want done with it." },
+      { status: 400 },
+    );
+  if (!assetsUrl)
+    return NextResponse.json(
+      { error: "Paste the link to your footage. Drive, Dropbox, Frame.io, whatever you use." },
       { status: 400 },
     );
 
   const sub = await planFor(db, ctx.ownerEmail);
   if (!sub) return NextResponse.json({ error: "You have no active plan." }, { status: 400 });
-  const cycle = await currentCycle(db, sub as never);
+  const cycle = await currentCycle(db, cycleArgs(sub as Row));
   if (!cycle) return NextResponse.json({ error: "You have no active plan." }, { status: 400 });
 
   const { data: existing } = await db
     .from("order_deliverables")
-    .select("id, form")
+    .select("id, form, cancelled_at")
     .eq("cycle_id", cycle.id);
-  const before = slotsUsed(((existing ?? []) as Row[]).map((v) => ({ form: v.form as Form | null })), {
+  const allowance = {
     longForm: cycle.longFormAllowed,
     shortForm: cycle.shortFormAllowed,
-  });
+  };
+  const before = slotsUsed(
+    ((existing ?? []) as Row[]).map((v) => ({
+      form: v.form as Form | null,
+      cancelledAt: (v.cancelled_at as string | null) ?? null,
+    })),
+    allowance,
+  );
 
-  const planName =
-    (sub.plan_name as string | null) ??
-    planNameFor((sub.product as { sku?: string } | null)?.sku ?? null);
-  const warning = overPlanWarning(before, form, planName);
+  const planName = (sub.plan_name as string | null) ?? planNameFor(skuOf(sub as Row));
 
-  const { error } = await db.from("order_deliverables").insert({
-    cycle_id: cycle.id,
-    title,
-    note: brief,
-    form,
-    status: "queued",
-    /* their ask, kept apart from due_at, which is what we commit to */
-    requested_due_at: wantedBy,
-    requested_at: new Date().toISOString(),
-    position: (existing ?? []).length,
-  });
-  if (error) return NextResponse.json({ error: "Could not save that." }, { status: 500 });
+  /*
+   * The warning covers everything this one submission spends, not just the
+   * parent. Somebody asking for a long form with four cuts when two short
+   * slots are left needs telling before they press it, not after.
+   */
+  const warnings = [
+    overPlanWarning(before, form, planName),
+    cuts.length && before.shortLeft < cuts.length
+      ? overPlanWarning(before, "short", planName)
+      : null,
+  ].filter(Boolean) as string[];
+
+  const now = new Date().toISOString();
+  const { data: made, error } = await db
+    .from("order_deliverables")
+    .insert({
+      cycle_id: cycle.id,
+      title,
+      note: brief,
+      form,
+      status: "queued",
+      aspect,
+      target_seconds: targetSeconds,
+      assets_url: assetsUrl,
+      reference_url: referenceUrl || null,
+      /* their ask, kept apart from due_at, which is what we commit to */
+      requested_due_at: wantedBy,
+      requested_at: now,
+      position: (existing ?? []).length,
+    })
+    .select("id")
+    .single();
+  if (error || !made) return NextResponse.json({ error: "Could not save that." }, { status: 500 });
+
+  if (cuts.length) {
+    const { error: cutError } = await db.from("order_deliverables").insert(
+      cuts.map((instruction, i) => ({
+        cycle_id: cycle.id,
+        parent_id: made.id,
+        title: `${title}, short cut ${i + 1}`,
+        note: instruction,
+        form: "short",
+        status: "queued",
+        aspect: "9:16",
+        assets_url: assetsUrl,
+        requested_due_at: wantedBy,
+        requested_at: now,
+        position: (existing ?? []).length + i + 1,
+      })),
+    );
+    /* the parent is already in. A failed cut is worth saying out loud
+     * rather than silently losing. */
+    if (cutError)
+      return NextResponse.json(
+        {
+          ok: true,
+          warning:
+            "We have your video, but the short cuts did not save. Tell your producer and they will add them.",
+        },
+        { status: 200 },
+      );
+  }
 
   const { pushAdminNotifications } = await import("@/lib/notifications");
   await pushAdminNotifications(db, {
     kind: "edit_requested",
     title: `Edit requested: ${title}`,
-    body: `${ctx.ownerEmail}, ${form} form${wantedBy ? `, wants it by ${wantedBy.slice(0, 10)}` : ""}${warning ? ". Over their plan this month." : ""}`,
-    href: "/admin/subscriptions/",
+    body: `${ctx.ownerEmail}, ${form} form${cuts.length ? ` plus ${cuts.length} short ${cuts.length === 1 ? "cut" : "cuts"}` : ""}${wantedBy ? `, wants it by ${wantedBy.slice(0, 10)}` : ""}${warnings.length ? ". Over their plan this month." : ""}`,
+    href: "/admin/production/",
   });
 
-  return NextResponse.json({ ok: true, warning });
+  return NextResponse.json({
+    ok: true,
+    warning: warnings[0] ?? null,
+    cuts: cuts.length,
+  });
+}
+
+/*
+ * Pull a request back.
+ *
+ * Only while it is still only a request. Once an editor has started, the
+ * work has happened and the slot has been spent; at that point they ask
+ * their producer rather than press a button, which is also the point at
+ * which somebody should be having a conversation about it.
+ */
+async function cancel(
+  db: ReturnType<typeof supabaseAdmin>,
+  email: string,
+  id: string,
+) {
+  const { data: row } = await db
+    .from("order_deliverables")
+    .select("id, status, cycle_id, cancelled_at")
+    .eq("id", id)
+    .maybeSingle();
+  if (!row?.cycle_id) return NextResponse.json({ error: "Not found." }, { status: 404 });
+  if (row.cancelled_at) return NextResponse.json({ ok: true });
+
+  /* prove it is theirs before touching it */
+  const { data: cyc } = await db
+    .from("subscription_cycles")
+    .select("subscription:subscriptions!inner(customer_email)")
+    .eq("id", row.cycle_id)
+    .maybeSingle();
+  const owner = (cyc?.subscription as { customer_email?: string } | null)?.customer_email ?? "";
+  if (owner.toLowerCase() !== email.toLowerCase())
+    return NextResponse.json({ error: "Not found." }, { status: 404 });
+
+  if (row.status !== "queued")
+    return NextResponse.json(
+      { error: "We have already started this one. Message your producer and we will sort it." },
+      { status: 400 },
+    );
+
+  const at = new Date().toISOString();
+  /* the cuts go with it: they only ever existed off this video */
+  await db
+    .from("order_deliverables")
+    .update({ cancelled_at: at, cancelled_reason: "Cancelled by the client" })
+    .or(`id.eq.${id},parent_id.eq.${id}`);
+
+  return NextResponse.json({ ok: true, cancelled: true });
 }
