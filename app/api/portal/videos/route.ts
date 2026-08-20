@@ -43,13 +43,37 @@ export async function GET(req: Request) {
     .order("created_at", { ascending: false });
 
   const ids = (orders ?? []).map((o) => o.id as string);
-  if (!ids.length) return NextResponse.json({ groups: [] });
 
-  const { data: rows } = await db
-    .from("order_deliverables")
-    .select("*")
-    .in("order_id", ids)
-    .order("position");
+  /*
+   * Custom jobs belong in this list too.
+   *
+   * A client whose only work is a custom project has no orders at all, so
+   * bailing out on an empty order list left their portal blank while we were
+   * actively making something for them. Their job becomes a group here, which
+   * means My Videos, the dashboard counts, review and approval all work for
+   * them without any of it being written a second time.
+   */
+  const { data: projects } = await db
+    .from("projects")
+    .select("id, title, status, created_at, due_at")
+    .ilike("customer_email", email)
+    .neq("status", "cancelled")
+    .order("created_at", { ascending: false });
+  const projectIds = ((projects ?? []) as { id: string }[]).map((p) => p.id);
+
+  if (!ids.length && !projectIds.length) return NextResponse.json({ groups: [] });
+
+  const { data: rows } = ids.length
+    ? await db.from("order_deliverables").select("*").in("order_id", ids).order("position")
+    : { data: [] };
+
+  const { data: projectRows } = projectIds.length
+    ? await db
+        .from("order_deliverables")
+        .select("*")
+        .in("project_id", projectIds)
+        .order("position")
+    : { data: [] };
 
   const byOrder = new Map<string, typeof rows>();
   for (const r of rows ?? []) {
@@ -114,5 +138,53 @@ export async function GET(req: Request) {
     })
     .filter((g): g is NonNullable<typeof g> => g !== null);
 
-  return NextResponse.json({ groups });
+  /* the same shape, so every screen downstream treats a job like an order */
+  const projectGroups = ((projects ?? []) as Record<string, unknown>[])
+    .map((p) => {
+      const list = ((projectRows ?? []) as Record<string, unknown>[]).filter(
+        (r) => String(r.project_id) === String(p.id),
+      );
+      if (!list.length) return null;
+      return {
+        orderId: String(p.id),
+        invoiceNumber: null,
+        orderedAt: String(p.created_at),
+        productName: String(p.title),
+        productCode: "CUSTOM",
+        kind: list.length > 1 ? ("pack" as const) : ("video" as const),
+        videos: list.map((d) => {
+          const status = d.status as DeliverableStatus;
+          return {
+            id: String(d.id),
+            title: String(d.title),
+            code: (d.catalog_code as string | null) ?? null,
+            category: (d.category as string | null) ?? null,
+            groupLabel: (d.group_label as string | null) ?? null,
+            status,
+            revisionRound: Number(d.revision_round),
+            canReview: canReview(status),
+            canRequestChanges: canRequestChanges(status, Number(d.revision_round)),
+            revisionsIncluded: REVISIONS_INCLUDED,
+            revisionsUsed: Number(d.revision_round),
+            videoUrl: isWatchable(status) ? ((d.video_url as string | null) ?? null) : null,
+            readyAt: (d.ready_at as string | null) ?? null,
+            approvedAt: (d.approved_at as string | null) ?? null,
+            due: describeDue(
+              {
+                dueAt: (d.due_at as string | null) ?? null,
+                status,
+                /* a custom job needs no brief before work starts: the brief
+                 * was the conversation that sold it */
+                briefLandedAt: String(p.created_at),
+              },
+              Date.now(),
+              "client",
+            ),
+          };
+        }),
+      };
+    })
+    .filter((g): g is NonNullable<typeof g> => g !== null);
+
+  return NextResponse.json({ groups: [...groups, ...projectGroups] });
 }

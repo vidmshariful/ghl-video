@@ -78,6 +78,8 @@ export function InvoicesScreen() {
   const [notes, setNotes] = useState("");
   const [rows, setRows] = useState<Row[]>([{ description: "", amount: "" }]);
   const [parentOrderId, setParentOrderId] = useState("");
+  const [projectId, setProjectId] = useState("");
+  const [projects, setProjects] = useState<{ id: string; title: string; customerEmail: string }[]>([]);
   const [orders, setOrders] = useState<
     { id: string; customer_email: string; created_at: string; product: { name: string } | null }[]
   >([]);
@@ -108,6 +110,25 @@ export function InvoicesScreen() {
     load();
   }, [load]);
 
+  /* the open jobs an invoice can be billed to. Closed and cancelled ones are
+   * left out: billing a job nobody is working on is almost always a mistake. */
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch("/api/admin/projects", { headers: await authHeader() });
+        const j = await r.json();
+        if (!r.ok) return;
+        setProjects(
+          (j.projects as { id: string; title: string; customerEmail: string; status: string }[])
+            .filter((p) => p.status !== "closed" && p.status !== "cancelled")
+            .map((p) => ({ id: p.id, title: p.title, customerEmail: p.customerEmail })),
+        );
+      } catch {
+        /* the picker just stays empty; an invoice does not need a job */
+      }
+    })();
+  }, []);
+
   const previewTotal = rows.reduce((s, r) => {
     const n = Number(r.amount);
     return s + (Number.isFinite(n) && n > 0 ? Math.round(n * 100) : 0);
@@ -132,6 +153,7 @@ export function InvoicesScreen() {
         notes,
         lineItems,
         parentOrderId: parentOrderId || null,
+        projectId: projectId || null,
       }),
     });
     const j = await res.json();
@@ -260,6 +282,26 @@ export function InvoicesScreen() {
             <input value={notes} onChange={(e) => setNotes(e.target.value)} className={fField} />
           </label>
         </div>
+
+        <label className="mt-4 block">
+          <span className={fLab}>Bill this to a custom job (optional)</span>
+          <select
+            value={projectId}
+            onChange={(e) => setProjectId(e.target.value)}
+            className={fField}
+          >
+            <option value="">Not part of a job</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.title} - {p.customerEmail}
+              </option>
+            ))}
+          </select>
+          <span className="mt-1 block text-body-sm text-dim">
+            Ties the invoice to the work, so a job with a deposit and a balance
+            shows both against one agreed price.
+          </span>
+        </label>
 
         <label className="mt-4 block">
           <span className={fLab}>Attach to an existing order (optional)</span>

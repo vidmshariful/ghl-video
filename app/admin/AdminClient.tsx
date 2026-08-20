@@ -37,6 +37,7 @@ import {
   Search,
   Settings,
   ShoppingCart,
+  Sparkles,
   Megaphone,
   Ticket,
   Users,
@@ -50,6 +51,7 @@ import { CampaignsScreen } from "./CampaignsScreen";
 import { CouponsScreen } from "./CouponsScreen";
 import { LinksScreen } from "./LinksScreen";
 import { InvoicesScreen } from "./InvoicesScreen";
+import { CustomVideoScreen } from "./CustomVideoScreen";
 import { CustomersScreen } from "./CustomersScreen";
 import { PartnersScreen } from "./PartnersScreen";
 import { StudioScreen } from "./StudioScreen";
@@ -442,6 +444,7 @@ export function AdminClient({
     {
       title: "Production",
       items: [
+        { key: "custom", label: "Custom video", icon: <Sparkles /> },
         { key: "production", label: "Production", icon: <Clapperboard /> },
         { key: "messages", label: "Messages", icon: <MessageSquare />, badge: msgUnread || undefined },
       ],
@@ -562,6 +565,8 @@ export function AdminClient({
             <LinksScreen />
           ) : view === "invoices" ? (
             <InvoicesScreen />
+          ) : view === "custom" ? (
+            <CustomVideoScreen />
           ) : view === "customers" ? (
             <CustomersScreen openId={customerId} onOpen={openCustomer} />
           ) : view === "partners" ? (

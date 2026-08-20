@@ -49,6 +49,34 @@ export async function POST(req: Request) {
   lines.push("", details);
   const note = lines.join("\n");
 
+  /*
+   * Keep the enquiry before doing anything that can fail.
+   *
+   * Until now a quote request went to HighLevel and into a confirmation
+   * email, and nothing was written here, so there was no pipeline to work, no
+   * history, and no way to know how many enquiries became jobs. Worse, when
+   * the CRM sync threw, the enquiry was lost outright and the person got an
+   * error asking them to email us instead.
+   *
+   * So it is recorded first and fail-soft: a database hiccup must not cost us
+   * the lead either, which is why nothing here is awaited into the response
+   * path beyond its own try.
+   */
+  const { supabaseAdmin: sbAdmin } = await import("@/lib/checkout/supabase-admin");
+  const db = sbAdmin();
+  try {
+    await db.from("project_requests").insert({
+      name: name || null,
+      email,
+      company: company || null,
+      phone: phone || null,
+      brief: [type ? `Video type: ${type}` : "", details].filter(Boolean).join("\n\n"),
+      source: "website",
+    });
+  } catch (err) {
+    console.error("quote request not stored:", (err as Error).message);
+  }
+
   try {
     await syncLeadToHighLevel({
       email,
@@ -60,11 +88,8 @@ export async function POST(req: Request) {
       opportunityName: `Quote: ${company || name}`,
     });
     // confirmation to the lead; fail-soft, never blocks the response
-    const [{ supabaseAdmin }, { sendQuoteReceivedEmail }] = await Promise.all([
-      import("@/lib/checkout/supabase-admin"),
-      import("@/lib/email/notify"),
-    ]);
-    await sendQuoteReceivedEmail(supabaseAdmin(), email, name);
+    const { sendQuoteReceivedEmail } = await import("@/lib/email/notify");
+    await sendQuoteReceivedEmail(db, email, name);
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("quote lead sync failed:", (err as Error).message);
