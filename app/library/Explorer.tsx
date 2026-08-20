@@ -258,8 +258,9 @@ export function LibraryExplorer({
       </div>
 
       {/* one line: which library on the left, what kind of thing on the
-          right, a separator keeping videos and collections apart */}
-      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+          right, a separator keeping videos and collections apart. Ruled top
+          and bottom so the bar reads as the instrument panel it is. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-y border-hair py-3.5">
         <div className="flex flex-wrap items-center gap-1.5">
           {SCOPES.map((s) => (
             <Pill key={s.key} active={scope === s.key} onClick={() => setScope(s.key)} tip={s.tip}>
@@ -303,21 +304,12 @@ export function LibraryExplorer({
       </div>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[13rem_1fr] lg:items-start">
-        <aside className="lg:sticky lg:top-20">
-          <p className="hidden px-3 pb-1.5 font-mono text-label font-bold uppercase tracking-[0.12em] text-dim lg:block">
-            Filter by features
-          </p>
+        {/* the rail wears the portal menu's own chrome, and the column keeps
+            a rule running the full height, so the filters read as a panel
+            rather than as loose text floating beside the grid */}
+        <aside className="lg:self-stretch lg:border-r lg:border-hair lg:pr-6">
+          <div className="rounded-[12px] border border-chrome-line bg-chrome p-2.5 lg:sticky lg:top-20">
           <div className="flex gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] lg:block lg:space-y-0.5 lg:overflow-visible lg:pb-0 [&::-webkit-scrollbar]:hidden">
-            <button
-              type="button"
-              onClick={() => setSel(null)}
-              aria-pressed={sel === null}
-              className={`tap shrink-0 whitespace-nowrap rounded-[8px] px-3 py-2 text-left text-body-sm transition-colors lg:block lg:w-full ${
-                sel === null ? "bg-card font-semibold text-gold" : "text-muted hover:bg-card/70 hover:text-ink"
-              }`}
-            >
-              All videos
-            </button>
             {RANKED.map((f) => (
               <button
                 key={f.key}
@@ -326,15 +318,15 @@ export function LibraryExplorer({
                 aria-pressed={sel?.kind === "ranked" && sel.value === f.key}
                 className={`tap shrink-0 whitespace-nowrap rounded-[8px] px-3 py-2 text-left text-body-sm transition-colors lg:block lg:w-full ${
                   sel?.kind === "ranked" && sel.value === f.key
-                    ? "bg-card font-semibold text-gold"
-                    : "text-muted hover:bg-card/70 hover:text-ink"
+                    ? "bg-chrome-2 font-semibold text-gold"
+                    : "text-chrome-muted hover:bg-chrome-2/70 hover:text-chrome-text"
                 }`}
               >
                 {f.label}
               </button>
             ))}
 
-            <p className="hidden px-3 pb-1.5 pt-5 font-mono text-label font-bold uppercase tracking-[0.12em] text-dim lg:block">
+            <p className="hidden px-3 pb-1.5 pt-5 font-mono text-label font-bold uppercase tracking-[0.12em] text-chrome-dim lg:block">
               Filter by feature
             </p>
             {(allFeatures ? hlFeatures : hlFeatures.slice(0, 10)).map((f) => (
@@ -345,23 +337,24 @@ export function LibraryExplorer({
                 aria-pressed={sel?.kind === "hl" && sel.value === f.key}
                 className={`tap flex shrink-0 items-center justify-between gap-3 whitespace-nowrap rounded-[8px] px-3 py-2 text-left text-body-sm transition-colors lg:flex lg:w-full ${
                   sel?.kind === "hl" && sel.value === f.key
-                    ? "bg-card font-semibold text-gold"
-                    : "text-muted hover:bg-card/70 hover:text-ink"
+                    ? "bg-chrome-2 font-semibold text-gold"
+                    : "text-chrome-muted hover:bg-chrome-2/70 hover:text-chrome-text"
                 }`}
               >
                 <span className="min-w-0 truncate">{f.label}</span>
-                <span className="font-mono text-label tabular-nums text-dim">{f.count}</span>
+                <span className="font-mono text-label tabular-nums text-chrome-dim">{f.count}</span>
               </button>
             ))}
             {hlFeatures.length > 10 && (
               <button
                 type="button"
                 onClick={() => setAllFeatures((v) => !v)}
-                className="tap shrink-0 whitespace-nowrap rounded-[8px] px-3 py-2 text-left font-mono text-label uppercase text-dim transition-colors hover:text-gold lg:block lg:w-full"
+                className="tap shrink-0 whitespace-nowrap rounded-[8px] px-3 py-2 text-left font-mono text-label uppercase text-chrome-dim transition-colors hover:text-gold lg:block lg:w-full"
               >
                 {allFeatures ? "Fewer features" : `All ${hlFeatures.length} features`}
               </button>
             )}
+          </div>
           </div>
         </aside>
 
