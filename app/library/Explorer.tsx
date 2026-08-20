@@ -5,6 +5,7 @@ import { Button, Tabs } from "@/components/portal/ui";
 import { LibraryCard, PreviewLightbox } from "@/components/library/cards";
 import { PickTray } from "@/components/library/tray";
 import type { BrowseVideo, Version } from "@/components/library/catalog";
+import { featureFilters, matchesFeature } from "@/components/library/catalog";
 
 /*
  * The public library, laid out like the portal's: kind tabs with counts,
@@ -47,6 +48,9 @@ export function LibraryExplorer({
   const [kind, setKind] = useState<Kind>("all");
   const [category, setCategory] = useState<string>("all");
   const [feature, setFeature] = useState<Feature>("all");
+  /* one HighLevel feature, e.g. "reputation". Empty = not filtering by one */
+  const [hlFeature, setHlFeature] = useState("");
+  const [allFeatures, setAllFeatures] = useState(false);
   const [preview, setPreview] = useState<{ video: BrowseVideo; version: Version } | null>(null);
 
   /* counters, optimistic on top of what the server rendered */
@@ -109,6 +113,9 @@ export function LibraryExplorer({
     react(video.code ?? video.slug, "play");
   };
 
+  /* the platform features that actually have videos, biggest first */
+  const hlFeatures = useMemo(() => featureFilters(videos), [videos]);
+
   const categories = useMemo(() => {
     const set = new Map<string, number>();
     for (const v of videos) set.set(v.typeTag, (set.get(v.typeTag) ?? 0) + 1);
@@ -116,13 +123,15 @@ export function LibraryExplorer({
   }, [videos]);
 
   const term = q.trim().toLowerCase();
-  const filtering = Boolean(term) || kind !== "all" || category !== "all" || feature !== "all";
+  const filtering =
+    Boolean(term) || kind !== "all" || category !== "all" || feature !== "all" || Boolean(hlFeature);
 
   const shown = useMemo(() => {
     const base = videos.filter((v) => {
       if (kind !== "all" && kindOf(v) !== kind) return false;
       if (category !== "all" && v.typeTag !== category) return false;
       if (feature === "featured" && !v.featured) return false;
+      if (hlFeature && !matchesFeature(v, hlFeature)) return false;
       if (
         term &&
         ![v.title, v.code, v.subtitle, v.typeTag, v.subTag]
@@ -138,7 +147,7 @@ export function LibraryExplorer({
     if (feature === "loved")
       return [...base].sort((a, b) => (of(b)?.loves ?? 0) - (of(a)?.loves ?? 0));
     return base;
-  }, [videos, kind, category, feature, term, stats]);
+  }, [videos, kind, category, feature, hlFeature, term, stats]);
 
   const kindCount = (k: Kind) =>
     k === "all" ? videos.length : videos.filter((v) => kindOf(v) === k).length;
@@ -218,7 +227,7 @@ export function LibraryExplorer({
               className="tap w-full rounded-[8px] border border-hair bg-surface py-2.5 pl-10 pr-3 text-body-sm text-ink placeholder:text-dim focus:border-gold focus:outline-none"
             />
           </div>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-1.5 sm:ml-auto sm:justify-end">
             <Button
               size="sm"
               variant={category === "all" ? "primary" : "secondary"}
@@ -262,6 +271,38 @@ export function LibraryExplorer({
                 {f.label}
               </button>
             ))}
+
+            {/* the platform's own features, from the titles, so somebody who
+                came for "reputation" finds every video that covers it. Only
+                features with videos behind them ever appear. */}
+            <p className="hidden px-3 pb-1.5 pt-5 font-mono text-label font-bold uppercase tracking-[0.12em] text-dim lg:block">
+              Filter by feature
+            </p>
+            {(allFeatures ? hlFeatures : hlFeatures.slice(0, 10)).map((f) => (
+              <button
+                key={f.key}
+                type="button"
+                onClick={() => setHlFeature(hlFeature === f.key ? "" : f.key)}
+                aria-pressed={hlFeature === f.key}
+                className={`tap flex shrink-0 items-center justify-between gap-3 whitespace-nowrap rounded-[8px] px-3 py-2 text-left text-body-sm transition-colors lg:flex lg:w-full ${
+                  hlFeature === f.key
+                    ? "bg-card font-semibold text-gold"
+                    : "text-muted hover:bg-card/70 hover:text-ink"
+                }`}
+              >
+                <span className="min-w-0 truncate">{f.label}</span>
+                <span className="font-mono text-label tabular-nums text-dim">{f.count}</span>
+              </button>
+            ))}
+            {hlFeatures.length > 10 && (
+              <button
+                type="button"
+                onClick={() => setAllFeatures((v) => !v)}
+                className="tap shrink-0 whitespace-nowrap rounded-[8px] px-3 py-2 text-left font-mono text-label uppercase text-dim transition-colors hover:text-gold lg:block lg:w-full"
+              >
+                {allFeatures ? "Fewer features" : `All ${hlFeatures.length} features`}
+              </button>
+            )}
           </div>
         </aside>
 
@@ -280,6 +321,7 @@ export function LibraryExplorer({
                   setKind("all");
                   setCategory("all");
                   setFeature("all");
+                  setHlFeature("");
                 }}
                 className="tap font-mono text-label uppercase text-muted transition-colors hover:text-gold"
               >
