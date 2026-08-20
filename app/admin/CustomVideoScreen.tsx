@@ -391,7 +391,7 @@ export function CustomVideoScreen() {
 
       {tab === "projects" ? (
         <>
-          {live.length === 0 ? (
+          {projects.length === 0 ? (
             <EmptyState
               title="No custom projects open"
               description="Most projects start on a call or a referral. Create one and it appears on the board."
@@ -425,6 +425,49 @@ export function CustomVideoScreen() {
               onOpen={setOpen}
               onMove={moveTo}
             />
+          )}
+
+          {/* closing a job must never make it vanish: the finished live
+              here, readable and one click from coming back */}
+          {projects.some((p) => !isOpen(p.status)) && (
+            <div className="mt-6">
+              <p className="font-mono text-label uppercase tracking-[0.1em] text-dim">
+                Finished
+              </p>
+              <div className="mt-2 grid gap-2">
+                {projects
+                  .filter((p) => !isOpen(p.status))
+                  .map((p) => (
+                    <div
+                      key={p.id}
+                      className="flex flex-wrap items-center justify-between gap-3 rounded-[8px] border border-hair bg-surface px-4 py-2.5"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setOpen(p.id)}
+                        className="tap min-w-0 flex-1 text-left"
+                      >
+                        <span className="block truncate text-body-sm font-semibold text-ink">
+                          {p.title}
+                        </span>
+                        <span className="mt-0.5 block truncate font-mono text-label uppercase text-dim">
+                          {p.customerEmail} / {money(p.money.valueCents)}
+                        </span>
+                      </button>
+                      <span className="flex shrink-0 items-center gap-2">
+                        <Chip tone="neutral">{STUDIO_LABEL[p.status]}</Chip>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => void moveTo(p.id, "scoped")}
+                        >
+                          Reopen
+                        </Button>
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            </div>
           )}
         </>
       ) : enquiries.length === 0 ? (
@@ -526,6 +569,14 @@ function ProjectDrawer({
   const [linkFor, setLinkFor] = useState<string | null>(null);
   const [link, setLink] = useState("");
   const [busy, setBusy] = useState(false);
+  /* closing hides a job from the board, so the button asks twice: the first
+     click arms it, the second does it, and it disarms itself after a moment */
+  const [confirming, setConfirming] = useState<ProjectStatus | null>(null);
+  useEffect(() => {
+    if (!confirming) return;
+    const t = setTimeout(() => setConfirming(null), 4000);
+    return () => clearTimeout(t);
+  }, [confirming]);
 
   return (
     <div className="grid gap-4">
@@ -536,18 +587,42 @@ function ProjectDrawer({
           <span className="font-mono text-label uppercase text-dim">{p.customerEmail}</span>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
-          {(["closed", "cancelled"] as ProjectStatus[]).map((st) => (
-            <Button
-              key={st}
-              size="sm"
-              variant={st === "cancelled" ? "danger" : "secondary"}
-              onClick={() => onStatus(st)}
-            >
-              {STUDIO_LABEL[st]}
+          {!isOpen(p.status) ? (
+            <Button size="sm" variant="secondary" onClick={() => onStatus("scoped")}>
+              Reopen
             </Button>
-          ))}
+          ) : (
+            (["closed", "cancelled"] as ProjectStatus[]).map((st) => (
+              <Button
+                key={st}
+                size="sm"
+                variant={st === "cancelled" ? "danger" : "secondary"}
+                onClick={() => {
+                  if (confirming === st) {
+                    setConfirming(null);
+                    onStatus(st);
+                  } else {
+                    setConfirming(st);
+                  }
+                }}
+              >
+                {confirming === st
+                  ? st === "cancelled"
+                    ? "Click again to cancel it"
+                    : "Click again to close it"
+                  : STUDIO_LABEL[st]}
+              </Button>
+            ))
+          )}
         </div>
       </div>
+      {confirming && (
+        <p className="text-body-sm text-muted">
+          {confirming === "cancelled" ? "Cancelling" : "Closing"} moves this
+          job off the board into Finished below it, where Reopen brings it
+          back. Nothing is deleted.
+        </p>
+      )}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {(
