@@ -14,6 +14,7 @@ export type View =
   | "coupons"
   | "campaigns"
   | "custom"
+  | "editing"
   | "links"
   | "invoices"
   | "customers"
@@ -42,6 +43,7 @@ export const ALL_VIEWS: View[] = [
   "coupons",
   "campaigns",
   "custom",
+  "editing",
   "links",
   "invoices",
   "customers",

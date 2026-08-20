@@ -26,7 +26,9 @@
     "check:portal-ui": "tsx scripts/check-portal-ui.ts",
     "backfill:deliverables": "tsx scripts/backfill-deliverables.ts",
     "seed:pack-rows": "tsx scripts/seed-pack-rows.ts",
-    "backfill:subscription-payments": "tsx scripts/backfill-subscription-payments.ts"
+    "backfill:subscription-payments": "tsx scripts/backfill-subscription-payments.ts",
+    "seed:demo": "tsx scripts/seed-demo-client.ts",
+    "check:demo": "node scripts/check-demo-client.mjs"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",

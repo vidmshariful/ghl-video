@@ -35,6 +35,7 @@ import {
   MessageSquare,
   Package,
   Repeat,
+  Scissors,
   Search,
   Settings,
   ShoppingCart,
@@ -44,6 +45,7 @@ import {
   Users,
 } from "lucide-react";
 import { DashboardScreen } from "./DashboardScreen";
+import { EditingScreen } from "./EditingScreen";
 import { OrdersScreen } from "./OrdersScreen";
 import { MessagesScreen } from "./MessagesScreen";
 import { SubscriptionsScreen } from "./SubscriptionsScreen";
@@ -417,15 +419,16 @@ export function AdminClient({
       </div>
     );
 
-  /* The menu, restructured (owner decision, August 2026): the daily pair
-     on top, then Sales (money), Production (fulfillment), Affiliate,
-     Products & Packs (what we sell), and CMS (the website). Emails and the
-     site code live inside Settings. */
+  /* The menu, restructured (owner decision, August 2026): the daily screens
+     on top, then Sales (money), Production (the three service lines: Premade,
+     Custom, Editing), Affiliate, Products & Packs (what we sell), and CMS
+     (the website). Emails and the site code live inside Settings. */
   const groups: { title: string; items: { key: View; label: string; icon: React.ReactNode; badge?: number }[] }[] = [
     {
       title: "",
       items: [
         { key: "dashboard", label: "Dashboard", icon: <LayoutDashboard /> },
+        { key: "messages", label: "Messages", icon: <MessageSquare />, badge: msgUnread || undefined },
         { key: "journal", label: "Journal", icon: <BookOpen /> },
         { key: "reference", label: "Reference", icon: <KeyRound /> },
         { key: "health", label: "Health", icon: <HeartPulse />, badge: alarmCount || undefined },
@@ -445,11 +448,14 @@ export function AdminClient({
       ],
     },
     {
+      /* The three service lines, named after what we sell rather than after
+         how the code is arranged. Premade is the order board, Custom is
+         bespoke work, Editing is the monthly plans. */
       title: "Production",
       items: [
-        { key: "custom", label: "Custom video", icon: <Sparkles /> },
-        { key: "production", label: "Production", icon: <Clapperboard /> },
-        { key: "messages", label: "Messages", icon: <MessageSquare />, badge: msgUnread || undefined },
+        { key: "production", label: "Premade", icon: <Clapperboard /> },
+        { key: "custom", label: "Custom", icon: <Sparkles /> },
+        { key: "editing", label: "Editing", icon: <Scissors /> },
       ],
     },
     {
@@ -594,6 +600,8 @@ export function AdminClient({
             <ProductsHub />
           ) : view === "production" ? (
             <ProductionScreen onNavigate={go} />
+          ) : view === "editing" ? (
+            <EditingScreen />
           ) : view === "emails" || view === "code" ? (
             me ? (
               <SettingsScreen me={me} onMeChanged={loadMe} initialTab={view} />

@@ -5,7 +5,6 @@ import { supabase, money, when } from "./client";
 import { authHeader } from "./client";
 import { ProductionJob } from "./ProductionJob";
 import { StudioQueue } from "./StudioQueue";
-import { EditingBoard, EditingClients } from "./EditingBoard";
 import type { View } from "./nav";
 
 /*
@@ -65,9 +64,7 @@ export function ProductionScreen({ onNavigate }: { onNavigate: (v: View) => void
   const [busyId, setBusyId] = useState<string | null>(null);
   const [err, setErr] = useState("");
   const [openJob, setOpenJob] = useState<string | null>(null);
-  const [view, setView] = useState<"queue" | "board" | "editing">("queue");
-  /* which editing client is open, if any */
-  const [openClient, setOpenClient] = useState<string | null>(null);
+  const [view, setView] = useState<"queue" | "board">("queue");
   const [q, setQ] = useState("");
   const [mine, setMine] = useState(false);
   const [me, setMe] = useState("");
@@ -179,11 +176,12 @@ export function ProductionScreen({ onNavigate }: { onNavigate: (v: View) => void
     <div className="w-full">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-h2 text-ink">Production</h1>
+          <h1 className="font-display text-h2 text-ink">Premade</h1>
           <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
             Every paid order that needs work. Open a job to set each video and
             post updates. Stages follow the videos on their own; delivering is
-            the one step somebody presses.
+            the one step somebody presses. Custom and Editing have boards of
+            their own.
           </p>
         </div>
         <button
@@ -200,10 +198,6 @@ export function ProductionScreen({ onNavigate }: { onNavigate: (v: View) => void
           [
             { key: "queue", label: "What needs us" },
             { key: "board", label: "The board" },
-            /* editing plan work. It counts against a billing month rather
-               than an order, so it cannot sit on the order board, but it is
-               production all the same and belongs on this screen. */
-            { key: "editing", label: "Editing" },
           ] as const
         ).map((t) => (
           <button
@@ -221,15 +215,7 @@ export function ProductionScreen({ onNavigate }: { onNavigate: (v: View) => void
         ))}
       </div>
 
-      {view === "editing" ? (
-        <div className="mt-6">
-          {openClient ? (
-            <EditingBoard id={openClient} onBack={() => setOpenClient(null)} />
-          ) : (
-            <EditingClients onOpen={setOpenClient} />
-          )}
-        </div>
-      ) : view === "queue" ? (
+      {view === "queue" ? (
         <div className="mt-6">
           <StudioQueue onOpenJob={setOpenJob} />
         </div>

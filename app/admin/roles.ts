@@ -25,7 +25,26 @@ export const ROLE_BLURB: Record<Role, string> = {
 /* The menu items that can be granted or removed per user. 'dashboard',
  * 'settings', and 'help' are always visible; inside Settings, the Team and
  * Integrations tabs are admin-only and never a per-user toggle. */
+/*
+ * The order the grant checkboxes are grouped in, mirroring the sidebar.
+ *
+ * It lives beside TOGGLEABLE_VIEWS rather than in the screen that draws it,
+ * because a view whose group is missing from this list silently loses its
+ * checkbox and then nobody can grant or revoke it. A unit test holds the two
+ * together.
+ */
+export const VIEW_GROUPS = [
+  "Daily",
+  "Sales",
+  "Production",
+  "Affiliate",
+  "Products & Packs",
+  "CMS",
+  "Settings",
+] as const;
+
 export const TOGGLEABLE_VIEWS: { key: View; label: string; group: string }[] = [
+  { key: "messages", label: "Messages", group: "Daily" },
   { key: "sales", label: "Sales Dashboard", group: "Sales" },
   { key: "orders", label: "Orders", group: "Sales" },
   { key: "invoices", label: "Invoices", group: "Sales" },
@@ -34,9 +53,9 @@ export const TOGGLEABLE_VIEWS: { key: View; label: string; group: string }[] = [
   { key: "coupons", label: "Coupons", group: "Sales" },
   { key: "campaigns", label: "Offers", group: "Sales" },
   { key: "customers", label: "Customers", group: "Sales" },
-  { key: "custom", label: "Custom video", group: "Production" },
-  { key: "production", label: "Production", group: "Production" },
-  { key: "messages", label: "Messages", group: "Production" },
+  { key: "production", label: "Premade", group: "Production" },
+  { key: "custom", label: "Custom", group: "Production" },
+  { key: "editing", label: "Editing", group: "Production" },
   { key: "partners", label: "Partners", group: "Affiliate" },
   { key: "catalog", label: "Products, packs and bundles", group: "Products & Packs" },
   { key: "journal", label: "Journal", group: "CMS" },
@@ -51,7 +70,7 @@ export const TOGGLEABLE_VIEWS: { key: View; label: string; group: string }[] = [
    * orders and orders that did not reach the studio, which is the owner's and
    * the manager's problem. A sales rep seeing it would be alarmed by something
    * they cannot act on, so the sales_rep default below leaves it out. */
-  { key: "health", label: "Health", group: "System" },
+  { key: "health", label: "Health", group: "Daily" },
 ];
 
 const ALL_TOGGLEABLE = TOGGLEABLE_VIEWS.map((v) => v.key);

@@ -11,6 +11,7 @@ import {
   ROLE_BLURB,
   ROLE_DEFAULT_FEATURES,
   TOGGLEABLE_VIEWS,
+  VIEW_GROUPS,
   effectiveFeatures,
   type Role,
 } from "./roles";
@@ -23,7 +24,7 @@ type TeamRow = {
   created_at: string;
 };
 
-const GROUPS = ["Sales", "Production", "Affiliate", "Products & Packs", "CMS", "Settings"] as const;
+const GROUPS = VIEW_GROUPS;
 
 
 function RoleBadge({ role }: { role: Role }) {

@@ -14,6 +14,7 @@ import type { View } from "./nav";
  */
 export const HANDBOOK_FOR: Partial<Record<View, { slug: string; label: string }>> = {
   production: { slug: "the-studio-day", label: "How the studio day works" },
+  editing: { slug: "the-studio-day", label: "How the studio day works" },
   orders: { slug: "how-an-order-flows", label: "How an order flows" },
   products: { slug: "products-and-prices", label: "How products and prices work" },
   catalog: { slug: "products-and-prices", label: "How products and prices work" },
