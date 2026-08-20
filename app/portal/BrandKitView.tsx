@@ -143,24 +143,44 @@ export function BrandKitView({
         }
       />
 
-      {/* The one nag in the portal, and it earns its place: an incomplete kit
-          is the actual reason an order sits still. */}
-      {!c.ready && (
-        <div className="mb-4">
-          <Card
-            tone="dark"
-            title="We cannot start without these"
-            description={c.missing.join(", ")}
-          >
-            <p className="text-body-sm text-chrome-muted">
-              Fill these in and every order you place from now on uses them
-              automatically. You will not be asked again.
-            </p>
-          </Card>
-        </div>
-      )}
+      {/* The status lives in one slim strip rather than a rail card and a
+          separate nag: the bar, the number, and what is still owed, in a
+          single line the eye crosses once. */}
+      <div className="mb-3">
+        <Card tone={c.ready ? undefined : "dark"}>
+          <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
+            <div className="w-full max-w-72 sm:w-64">
+              <Progress
+                percent={c.percent}
+                label={c.ready ? "Ready to work from" : "We cannot start yet"}
+              />
+            </div>
+            {c.ready ? (
+              <p className="flex min-w-0 flex-1 items-start gap-2 text-body-sm text-muted">
+                <CheckCircle2 size={15} className="mt-0.5 shrink-0 text-green" aria-hidden="true" />
+                <span>
+                  We have what we need.
+                  {c.couldAdd.length > 0 && (
+                    <span className="text-dim">
+                      {" "}
+                      Worth adding: {c.couldAdd.join(", ").toLowerCase()}.
+                    </span>
+                  )}
+                </span>
+              </p>
+            ) : (
+              <p className="min-w-0 flex-1 text-body-sm text-chrome-muted">
+                <span className="font-semibold text-chrome-text">
+                  Still needed: {c.missing.join(", ").toLowerCase()}.
+                </span>{" "}
+                Give these once and every order after uses them automatically.
+              </p>
+            )}
+          </div>
+        </Card>
+      </div>
 
-      <div className="grid gap-3 lg:grid-cols-[1fr_20rem] lg:items-start">
+      <div className="grid gap-3 lg:grid-cols-2 lg:items-start">
         <Card title="Your brand">
           <div className="grid gap-4">
             <Field
@@ -231,30 +251,6 @@ export function BrandKitView({
         </Card>
 
         <div className="grid gap-3">
-          <Card title="How complete it is">
-            <Progress percent={c.percent} label={c.ready ? "Ready to work from" : "Still needed"} />
-            {c.ready ? (
-              <p className="mt-3 flex items-start gap-2 text-body-sm text-muted">
-                <CheckCircle2 size={15} className="mt-0.5 shrink-0 text-green" aria-hidden="true" />
-                We have what we need. Anything you add below only makes the
-                videos better.
-              </p>
-            ) : (
-              <ul className="mt-3 grid gap-1.5">
-                {c.missing.map((m) => (
-                  <li key={m} className="text-body-sm text-ink">
-                    {m}
-                  </li>
-                ))}
-              </ul>
-            )}
-            {c.couldAdd.length > 0 && (
-              <p className="mt-3 text-body-sm text-dim">
-                Optional, and worth adding: {c.couldAdd.join(", ").toLowerCase()}.
-              </p>
-            )}
-          </Card>
-
           <Card
             title="Your logos"
             description="Both faces of your mark, each shown on the ground it is made for."
@@ -400,7 +396,7 @@ function LogoSlot({
   return (
     <div className="rounded-[8px] border border-hair">
       <div
-        className={`flex h-24 items-center justify-center rounded-t-[8px] p-3 ${
+        className={`flex h-32 items-center justify-center rounded-t-[8px] p-4 ${
           ground === "light" ? "bg-white" : "bg-[#08090D]"
         }`}
       >
