@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Inbox, Plus } from "lucide-react";
 import {
   Button,
@@ -585,6 +585,9 @@ export function CustomVideoScreen() {
             p={opened}
             team={team}
             onStatus={(status) => setStatus(opened, status)}
+            onStage={async (status) => {
+              await moveTo(opened.id, status);
+            }}
             onSaveVideo={(id, body) => saveVideo(opened.id, id, body)}
             onAddVideo={(title, provided) => addVideo(opened.id, title, provided)}
           />
@@ -603,12 +606,14 @@ function ProjectDrawer({
   p,
   team,
   onStatus,
+  onStage,
   onSaveVideo,
   onAddVideo,
 }: {
   p: Project;
   team: { email: string; name: string }[];
   onStatus: (s: ProjectStatus) => void;
+  onStage: (s: ProjectStatus) => Promise<void>;
   onSaveVideo: (id: string, body: Record<string, unknown>) => Promise<void>;
   onAddVideo: (title: string, provided: { script: boolean; voiceover: boolean }) => Promise<void>;
 }) {
@@ -616,11 +621,21 @@ function ProjectDrawer({
   const [newProvided, setNewProvided] = useState({ script: false, voiceover: false });
   const [linkFor, setLinkFor] = useState<string | null>(null);
   const [lineFor, setLineFor] = useState<string | null>(null);
+  /* one video means one line, so it opens itself; once somebody closes it
+     by hand we stop insisting */
+  const autoOpened = useRef(false);
+  useEffect(() => {
+    if (!autoOpened.current && p.videos.length === 1) {
+      setLineFor(p.videos[0].id);
+      autoOpened.current = true;
+    }
+  }, [p.videos]);
   const [link, setLink] = useState("");
   const [busy, setBusy] = useState(false);
   /* closing hides a job from the board, so the button asks twice: the first
      click arms it, the second does it, and it disarms itself after a moment */
   const [confirming, setConfirming] = useState<ProjectStatus | null>(null);
+  const [stageBusy, setStageBusy] = useState(false);
   useEffect(() => {
     if (!confirming) return;
     const t = setTimeout(() => setConfirming(null), 4000);
@@ -673,6 +688,36 @@ function ProjectDrawer({
         </p>
       )}
 
+      {/* the stage, movable from right here: dragging the card is the fast
+          way, but a drawer that can only LOOK at the stage sends people
+          hunting for where to change it */}
+      {isOpen(p.status) && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-mono text-label uppercase text-dim">Stage</span>
+          <span className="flex overflow-hidden rounded-[6px] border border-hair">
+            {PROJECT_BOARD.map((st) => (
+              <button
+                key={st}
+                type="button"
+                disabled={stageBusy || st === p.status}
+                onClick={async () => {
+                  setStageBusy(true);
+                  await onStage(st);
+                  setStageBusy(false);
+                }}
+                className={`tap px-2.5 py-1 font-mono text-label uppercase transition-colors ${
+                  st === p.status
+                    ? "bg-gold text-[#08090D]"
+                    : "text-dim hover:text-ink"
+                }`}
+              >
+                {STUDIO_LABEL[st]}
+              </button>
+            ))}
+          </span>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {(
           [
@@ -691,7 +736,11 @@ function ProjectDrawer({
 
       <Card title="Videos" description="Each one, where it is, and who is cutting it.">
         {p.videos.length === 0 ? (
-          <p className="text-body-sm text-dim">Nothing added yet.</p>
+          <p className="text-body-sm text-muted">
+            Add the first video below and its production line appears: script,
+            voiceover, design, animation, sound, delivery. Files, approvals
+            and expected dates all live on that line, per video.
+          </p>
         ) : (
           <ul className="grid gap-2">
             {p.videos.map((v) => (
