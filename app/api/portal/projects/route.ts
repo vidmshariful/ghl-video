@@ -105,6 +105,7 @@ export async function GET(req: Request) {
                     gated: Boolean(line[k].gate) && !line[k].provided,
                     url: STATIONS[k].clientFile ? (line[k].url ?? null) : null,
                     at: line[k].at ?? null,
+                    eta: line[k].eta ?? null,
                   })),
                 };
               })(),

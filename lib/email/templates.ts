@@ -60,6 +60,8 @@ export const TEMPLATE_VARIABLES: Record<string, string[]> = {
   team_invite: ["member_name", "member_email", "owner_name", "portal_label", "portal_url"],
   portal_welcome: ["customer_name", "customer_email", "portal_url"],
   approval_request: ["customer_name", "video_title", "stage_label", "portal_url"],
+  approval_reminder: ["customer_name", "video_title", "stage_label", "days_waiting", "portal_url"],
+  project_digest: ["customer_name", "digest_lines", "portal_url"],
   admin_new_order: ["customer_name", "customer_email", "product_name", "order_code", "amount", "admin_url"],
   admin_new_application: ["name", "email", "channel", "audience", "admin_url"],
   admin_dispute: ["customer_email", "product_name", "order_code", "amount", "reason", "admin_url"],
@@ -246,6 +248,29 @@ ${btn("{{partners_url}}", "Open your portal")}
 <p style="${P}">Hi {{customer_name}}, the <strong style="${STRONG}">{{stage_label}}</strong> for <strong style="${STRONG}">{{video_title}}</strong> is waiting on your approval. Nothing moves until you have had your say, so it is worth a look today.</p>
 ${btn("{{portal_url}}", "Review it now")}
 <p style="${SMALL}margin-top:22px;">Open the project in your portal, watch or read it, and approve it or tell us what to change.</p>`,
+  },
+  {
+    key: "approval_reminder",
+    name: "Approval reminder",
+    description:
+      "Sent automatically when a piece of a custom video has been waiting on the client for a few days. At most two per piece, three days apart.",
+    subject: "Still with you: {{stage_label}} for {{video_title}}",
+    body: `<h1 style="${H}">Your video is paused on your say.</h1>
+<p style="${P}">Hi {{customer_name}}, the <strong style="${STRONG}">{{stage_label}}</strong> for <strong style="${STRONG}">{{video_title}}</strong> has been waiting on you for {{days_waiting}} days. Nothing moves until you have had your look, and a quick yes today keeps your delivery date honest.</p>
+${btn("{{portal_url}}", "Review it now")}
+<p style="${SMALL}margin-top:22px;">Two minutes does it: approve it, or tell us what to change.</p>`,
+  },
+  {
+    key: "project_digest",
+    name: "Weekly project digest",
+    description:
+      "Sent on Mondays to clients with a custom project in motion: where every video stands, in one email.",
+    subject: "Where your videos stand this week",
+    body: `<h1 style="${H}">Your week at the studio.</h1>
+<p style="${P}">Hi {{customer_name}}, here is where every video in your custom work stands right now.</p>
+<div style="${BOX}margin-bottom:26px;">{{digest_lines}}</div>
+${btn("{{portal_url}}", "Open your portal")}
+<p style="${SMALL}margin-top:22px;">Anything marked waiting on you is holding its video in place. You can switch these emails off in your portal settings.</p>`,
   },
   {
     key: "portal_welcome",

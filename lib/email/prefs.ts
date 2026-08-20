@@ -41,6 +41,7 @@ export const EMAIL_CATEGORIES: {
  * us rather than to them.
  */
 export const CATEGORY_FOR: Record<string, EmailCategory> = {
+  project_digest: "progress",
   video_ready: "progress",
   video_reply: "progress",
   order_delivered: "progress",

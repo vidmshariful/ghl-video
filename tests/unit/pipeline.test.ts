@@ -2,6 +2,8 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import {
   approveStation,
+  daysWaiting,
+  needsChase,
   ballInCourt,
   clientStationWord,
   currentStation,
@@ -136,5 +138,30 @@ describe("gate transitions", () => {
     });
     p = approveStation(p, "delivery", at);
     assert.equal(statusForPipeline(p, 1), "approved");
+  });
+});
+
+describe("the chase policy", () => {
+  const d0 = "2026-08-01T09:00:00.000Z";
+  const day = (n: number) => new Date(Date.parse(d0) + n * 86_400_000).toISOString();
+
+  test("nothing happens for the first three days", () => {
+    assert.equal(needsChase(d0, { count: 0, lastAtIso: null }, day(2.9)), false);
+    assert.equal(needsChase(d0, { count: 0, lastAtIso: null }, day(3.1)), true);
+  });
+
+  test("a second reminder waits three more days, then it is over", () => {
+    assert.equal(needsChase(d0, { count: 1, lastAtIso: day(3) }, day(4)), false);
+    assert.equal(needsChase(d0, { count: 1, lastAtIso: day(3) }, day(6.5)), true);
+    assert.equal(needsChase(d0, { count: 2, lastAtIso: day(6) }, day(30)), false);
+  });
+
+  test("no start date means no chase, never a crash", () => {
+    assert.equal(needsChase(null, { count: 0, lastAtIso: null }, day(9)), false);
+  });
+
+  test("days waiting is honest and never zero", () => {
+    assert.equal(daysWaiting(d0, day(4.7)), 4);
+    assert.equal(daysWaiting(d0, day(0.2)), 1);
   });
 });

@@ -54,12 +54,18 @@ export async function POST(req: Request) {
     .limit(1)
     .maybeSingle();
 
+  /* what the client already gave us is done before the work begins */
+  const provided: Record<string, unknown> = {};
+  if (b.scriptProvided === true) provided.script = { state: "done", provided: true };
+  if (b.voiceoverProvided === true) provided.voiceover = { state: "done", provided: true };
+
   const { error } = await db.from("order_deliverables").insert({
     project_id: projectId,
     title,
     status: "queued",
     position: last ? Number(last.position) + 1 : 0,
     due_at: str(b.dueAt, 40) ? new Date(String(b.dueAt)).toISOString() : null,
+    pipeline: provided,
   });
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ ok: true });
@@ -111,6 +117,9 @@ export async function PATCH(req: Request) {
       nextStation.url = typeof st.url === "string" && st.url.trim() ? st.url.trim() : null;
     if ("provided" in st && STATIONS[key].providable) nextStation.provided = Boolean(st.provided);
     if ("gate" in st) nextStation.gate = Boolean(st.gate);
+    if ("eta" in st)
+      nextStation.eta =
+        typeof st.eta === "string" && st.eta ? new Date(st.eta).toISOString() : null;
 
     const line2 = normalizePipeline({ ...line, [key]: nextStation });
     const derived = statusForPipeline(line2, Number(full?.revision_round ?? 0));

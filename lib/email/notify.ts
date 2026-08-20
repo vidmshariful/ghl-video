@@ -36,6 +36,9 @@ async function sendTemplate(
   to: string,
   toName: string | null,
   vars: Record<string, string>,
+  /* extra facts for the log row, e.g. which deliverable a chase was about,
+     so the log can double as the chase ledger */
+  meta?: Record<string, unknown>,
 ): Promise<boolean> {
   try {
     if (!to) return false;
@@ -85,7 +88,7 @@ async function sendTemplate(
       toName,
       subject: renderTemplate(tpl.subject, vars),
       html: wrapEmail(renderTemplate(tpl.body, vars)),
-      log: { source: "template", templateKey: key },
+      log: { source: "template", templateKey: key, meta },
     });
     if (!result.ok) console.error(`[email] ${key} not sent to ${to}:`, result.error);
     return result.ok;
@@ -538,6 +541,58 @@ export async function sendPortalWelcomeEmail(
     customer_email: escapeHtml(input.email),
     portal_url: `${SITE_URL}/portal`,
   });
+}
+
+/**
+ * The automatic nudge when a piece has sat with the client. At most two per
+ * piece, spaced out; the policy lives in lib/pipeline and the ledger is the
+ * email log itself, keyed by the meta written here.
+ */
+export async function sendApprovalReminderEmail(
+  db: SupabaseClient,
+  input: {
+    email: string;
+    name: string | null;
+    videoTitle: string;
+    stageLabel: string;
+    daysWaiting: number;
+    deliverableId: string;
+    station: string;
+  },
+): Promise<boolean> {
+  return sendTemplate(
+    db,
+    "approval_reminder",
+    input.email,
+    input.name,
+    {
+      customer_name: escapeHtml(input.name || "there"),
+      video_title: escapeHtml(input.videoTitle),
+      stage_label: escapeHtml(input.stageLabel),
+      days_waiting: String(input.daysWaiting),
+      portal_url: `${SITE_URL}/portal`,
+    },
+    { chase: true, deliverableId: input.deliverableId, station: input.station },
+  );
+}
+
+/** Monday's one-email answer to "where are my videos". */
+export async function sendProjectDigestEmail(
+  db: SupabaseClient,
+  input: { email: string; name: string | null; linesHtml: string },
+): Promise<boolean> {
+  return sendTemplate(
+    db,
+    "project_digest",
+    input.email,
+    input.name,
+    {
+      customer_name: escapeHtml(input.name || "there"),
+      digest_lines: input.linesHtml,
+      portal_url: `${SITE_URL}/portal`,
+    },
+    { digest: true },
+  );
 }
 
 export async function sendTeamInviteEmail(

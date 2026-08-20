@@ -105,6 +105,11 @@ export const LITERAL_ALLOWLIST: { path: string; why: string; only?: string[] }[]
     why: "Colours inside a generated offer email. Mail clients do not support custom properties, so a literal is the only thing that renders. Same reason as the other two email routes above.",
   },
   {
+    path: "app/api/cron/chase/route.ts",
+    only: ["#eef0f6"],
+    why: "The weekly digest builds its per-video lines as email HTML, and mail clients do not support custom properties. Same reason as the campaign send route.",
+  },
+  {
     path: "app/portal/BrandKitView.tsx",
     only: ["#F25C1A", "#1F7A4D", "#08090D", "#9096A8"],
     why: "Two kinds of deliberate literal. #F25C1A and #1F7A4D are example hex codes in a hint and two placeholders: illustrative text, not styling. #08090D and #9096A8 paint the logo preview tiles, which simulate video frames: the dark mark is judged on true white and the white mark on the brand near-black whatever skin the portal wears, so these must not follow a reskin. Scoped rather than pardoning the whole file, so a real leak here would still be caught.",

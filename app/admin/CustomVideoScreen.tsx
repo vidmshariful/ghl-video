@@ -79,6 +79,7 @@ type StationShape = {
   gate?: boolean;
   url?: string | null;
   at?: string | null;
+  eta?: string | null;
 };
 type PipelineShape = Record<
   "script" | "voiceover" | "design" | "animation" | "sfx" | "delivery",
@@ -276,11 +277,20 @@ export function CustomVideoScreen() {
     await load();
   }
 
-  async function addVideo(projectId: string, title: string) {
+  async function addVideo(
+    projectId: string,
+    title: string,
+    provided?: { script: boolean; voiceover: boolean },
+  ) {
     const r = await fetch("/api/admin/projects/videos", {
       method: "POST",
       headers: { ...(await authHeader()), "Content-Type": "application/json" },
-      body: JSON.stringify({ projectId, title }),
+      body: JSON.stringify({
+        projectId,
+        title,
+        scriptProvided: provided?.script ?? false,
+        voiceoverProvided: provided?.voiceover ?? false,
+      }),
     });
     if (r.ok) await load();
   }
@@ -576,7 +586,7 @@ export function CustomVideoScreen() {
             team={team}
             onStatus={(status) => setStatus(opened, status)}
             onSaveVideo={(id, body) => saveVideo(opened.id, id, body)}
-            onAddVideo={(title) => addVideo(opened.id, title)}
+            onAddVideo={(title, provided) => addVideo(opened.id, title, provided)}
           />
         )}
       </Drawer>
@@ -600,9 +610,10 @@ function ProjectDrawer({
   team: { email: string; name: string }[];
   onStatus: (s: ProjectStatus) => void;
   onSaveVideo: (id: string, body: Record<string, unknown>) => Promise<void>;
-  onAddVideo: (title: string) => Promise<void>;
+  onAddVideo: (title: string, provided: { script: boolean; voiceover: boolean }) => Promise<void>;
 }) {
   const [newTitle, setNewTitle] = useState("");
+  const [newProvided, setNewProvided] = useState({ script: false, voiceover: false });
   const [linkFor, setLinkFor] = useState<string | null>(null);
   const [lineFor, setLineFor] = useState<string | null>(null);
   const [link, setLink] = useState("");
@@ -765,26 +776,49 @@ function ProjectDrawer({
             ))}
           </ul>
         )}
-        <div className="mt-3 flex gap-2">
-          <Input
-            value={newTitle}
-            onChange={(e) => setNewTitle(e.target.value)}
-            placeholder="Brand film, master cut"
-            aria-label="New video title"
-          />
-          <Button
-            size="sm"
-            variant="secondary"
-            disabled={busy || !newTitle.trim()}
-            onClick={async () => {
-              setBusy(true);
-              await onAddVideo(newTitle.trim());
-              setBusy(false);
-              setNewTitle("");
-            }}
-          >
-            Add
-          </Button>
+        <div className="mt-3 grid gap-2">
+          <div className="flex gap-2">
+            <Input
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+              placeholder="Brand film, master cut"
+              aria-label="New video title"
+            />
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={busy || !newTitle.trim()}
+              onClick={async () => {
+                setBusy(true);
+                await onAddVideo(newTitle.trim(), newProvided);
+                setBusy(false);
+                setNewTitle("");
+                setNewProvided({ script: false, voiceover: false });
+              }}
+            >
+              Add
+            </Button>
+          </div>
+          {/* known at creation, so the line starts honest: what the client
+              already gave us never gates and never nags */}
+          <div className="flex flex-wrap gap-4">
+            {(
+              [
+                ["script", "They provide the script"],
+                ["voiceover", "They provide the voiceover"],
+              ] as const
+            ).map(([k, label]) => (
+              <label key={k} className="flex items-center gap-1.5 text-body-sm text-muted">
+                <input
+                  type="checkbox"
+                  checked={newProvided[k]}
+                  onChange={(e) => setNewProvided({ ...newProvided, [k]: e.target.checked })}
+                  className="accent-[var(--gold)]"
+                />
+                {label}
+              </label>
+            ))}
+          </div>
         </div>
       </Card>
 
@@ -938,6 +972,18 @@ function PipelinePanel({
                         </option>
                       ))}
                     </Select>
+                    {!st.provided && st.state !== "done" && (
+                      <Input
+                        type="date"
+                        value={st.eta ? st.eta.slice(0, 10) : ""}
+                        onChange={(e) =>
+                          void run(m.key, () => onStation(m.key, { eta: e.target.value || null }))
+                        }
+                        aria-label={`${m.label} expected date`}
+                        title="When you expect this station to land. The client sees it."
+                        className="w-[8.5rem]"
+                      />
+                    )}
                   </span>
                 </div>
 

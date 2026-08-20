@@ -32,6 +32,8 @@ export type Station = {
   url?: string | null;
   /* when it last moved, ISO */
   at?: string | null;
+  /* when the studio expects this station to land, ISO date */
+  eta?: string | null;
 };
 
 export type Pipeline = Record<StationKey, Station>;
@@ -89,6 +91,7 @@ export function normalizePipeline(raw: unknown): Pipeline {
       gate: typeof s.gate === "boolean" ? s.gate : STATIONS[k].defaultGate,
       url: typeof s.url === "string" && s.url.trim() ? s.url.trim() : null,
       at: typeof s.at === "string" ? s.at : null,
+      eta: typeof s.eta === "string" && s.eta ? s.eta : null,
     };
     /* a piece the client provided is done by definition and never gated */
     if (base[k].provided) {
@@ -161,4 +164,38 @@ export function approveStation(p: Pipeline, key: StationKey, atIso: string): Pip
 /** Changes requested at a gate: the station comes back to us. */
 export function returnStation(p: Pipeline, key: StationKey, atIso: string): Pipeline {
   return { ...p, [key]: { ...p[key], state: "with_us", at: atIso } };
+}
+
+/* ---------------- the chase policy ---------------- */
+
+/*
+ * When a piece sits with the client, we remind them: once after three full
+ * days, once more three days later, then we stop. A third nag is how a
+ * studio email address ends up in a spam filter, and by then it is a phone
+ * call anyway. The ledger of what was already sent lives in the email log,
+ * so the policy here stays pure arithmetic.
+ */
+export const CHASE_AFTER_DAYS = 3;
+export const CHASE_GAP_DAYS = 3;
+export const CHASE_MAX = 2;
+
+const DAY_MS = 86_400_000;
+
+export function needsChase(
+  withClientSinceIso: string | null,
+  priorChases: { count: number; lastAtIso: string | null },
+  nowIso: string,
+): boolean {
+  if (!withClientSinceIso) return false;
+  if (priorChases.count >= CHASE_MAX) return false;
+  const now = Date.parse(nowIso);
+  if (now - Date.parse(withClientSinceIso) < CHASE_AFTER_DAYS * DAY_MS) return false;
+  if (priorChases.lastAtIso && now - Date.parse(priorChases.lastAtIso) < CHASE_GAP_DAYS * DAY_MS)
+    return false;
+  return true;
+}
+
+/** Whole days a station has been waiting, for the reminder's wording. */
+export function daysWaiting(sinceIso: string, nowIso: string): number {
+  return Math.max(1, Math.floor((Date.parse(nowIso) - Date.parse(sinceIso)) / DAY_MS));
 }

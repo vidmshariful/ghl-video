@@ -28,6 +28,7 @@ type PipelineStation = {
   gated: boolean;
   url: string | null;
   at: string | null;
+  eta: string | null;
 };
 
 type Video = {
@@ -541,6 +542,11 @@ function ProductionLine({
                   <span className={`font-mono text-label uppercase ${mine ? "text-gold" : "text-dim"}`}>
                     {st.word}
                   </span>
+                  {st.eta && st.state !== "done" && (
+                    <span className="font-mono text-label uppercase text-dim">
+                      expected {day(st.eta)}
+                    </span>
+                  )}
                 </span>
                 <span className="flex shrink-0 items-center gap-2">
                   {st.url && !playerGate && (
