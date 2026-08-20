@@ -259,8 +259,14 @@ export function LibraryExplorer({
 
       {/* one line: which library on the left, what kind of thing on the
           right, a separator keeping videos and collections apart. Ruled top
-          and bottom so the bar reads as the instrument panel it is. */}
-      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-y border-hair py-3.5">
+          and bottom so the bar reads as the instrument panel it is.
+
+          Sticky under the chrome bar from md up, so the filters travel with
+          the scroll. Not on phones: there the bar wraps to three or four
+          rows and pinning that would eat half the screen. The translucent
+          canvas plus blur is what the premade tab bar already does when it
+          sticks, so the two read as one behaviour. */}
+      <div className="z-30 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-y border-hair bg-canvas/95 py-3.5 backdrop-blur-sm md:sticky md:top-[3.55rem]">
         <div className="flex flex-wrap items-center gap-1.5">
           {SCOPES.map((s) => (
             <Pill key={s.key} active={scope === s.key} onClick={() => setScope(s.key)} tip={s.tip}>
@@ -312,7 +318,7 @@ export function LibraryExplorer({
               darker than the canvas, which made the panel read as a stray
               border instead of a surface. Active entries press into the
               base, so selection reads as depth rather than as a repaint. */}
-          <div className="rounded-[12px] border border-chrome-line bg-chrome-2 p-2.5 shadow-[0_10px_30px_-18px_rgba(0,0,0,0.9)] lg:sticky lg:top-20">
+          <div className="rounded-[12px] border border-chrome-line bg-chrome-2 p-2.5 shadow-[0_10px_30px_-18px_rgba(0,0,0,0.9)] lg:sticky lg:top-[11.25rem] xl:top-[8.75rem]">
           <div className="flex gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] lg:block lg:space-y-0.5 lg:overflow-visible lg:pb-0 [&::-webkit-scrollbar]:hidden">
             {RANKED.map((f) => (
               <button
