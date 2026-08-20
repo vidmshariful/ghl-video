@@ -30,6 +30,7 @@ export async function GET(req: Request) {
         id: conv.id,
         orderId: conv.order_id,
         title: threadTitle(conv.order_id, order),
+        customerId: (c as { customer_id?: string | null }).customer_id ?? null,
         customerName: customer?.name || conv.customer_email,
         customerEmail: conv.customer_email,
         company: customer?.company ?? null,

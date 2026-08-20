@@ -552,7 +552,12 @@ export function AdminClient({
           ) : view === "orders" ? (
             <OrdersScreen onNavigate={go} />
           ) : view === "messages" ? (
-            <MessagesScreen />
+            <MessagesScreen
+              onOpenCustomer={(id) => {
+                go("customers");
+                openCustomer(id);
+              }}
+            />
           ) : view === "subscriptions" ? (
             <SubscriptionsScreen />
           ) : view === "products" ? (
