@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Check, PlayCircle, Search, ShoppingCart } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  ListChecks,
+  PlayCircle,
+  Search,
+  Share2,
+  ShoppingCart,
+} from "lucide-react";
 import {
   Button,
   Card,
@@ -176,17 +184,31 @@ function VideoCard({
   item,
   reduced,
   onOpen,
+  picking = false,
+  picked = false,
 }: {
   item: Item;
   reduced: boolean;
   onOpen: (code: string) => void;
+  /* while picking, the card toggles instead of opening */
+  picking?: boolean;
+  picked?: boolean;
 }) {
   const [hover, setHover] = useState(false);
   const isCollection = item.kind !== "video";
+  /* while picking, the whole card is a toggle, so it says so */
+  const openLabel = picking
+    ? picked
+      ? `Remove ${item.title} from your list`
+      : `Add ${item.title} to your list`
+    : `Open ${item.title}`;
 
   return (
     <div
-      className="group relative flex h-full flex-col overflow-hidden rounded-[12px] border border-hair bg-surface transition-all duration-200 hover:-translate-y-0.5 hover:border-gold/50 hover:shadow-[0_14px_34px_-16px_rgba(0,0,0,0.55)] focus-within:border-gold/50 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+      data-picking={picking ? "true" : undefined}
+      className={`group relative flex h-full flex-col overflow-hidden rounded-[12px] border bg-surface transition-all duration-200 hover:-translate-y-0.5 hover:border-gold/50 hover:shadow-[0_14px_34px_-16px_rgba(0,0,0,0.55)] focus-within:border-gold/50 motion-reduce:transition-none motion-reduce:hover:translate-y-0 ${
+        picked ? "border-gold" : "border-hair"
+      }`}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >
@@ -262,7 +284,7 @@ function VideoCard({
       {/* the stretched link: the whole card opens the detail, as a real URL */}
       <a
         href={`/portal/library/${item.code}/`}
-        aria-label={`Open ${item.title}`}
+        aria-label={openLabel}
         className="absolute inset-0 z-[5] rounded-[12px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-gold"
         onClick={(e) => {
           /* modified clicks keep native behaviour: new tab, window, download */
@@ -466,7 +488,7 @@ export function LibraryView({
   openCode,
   onOpenItem,
 }: {
-  authedFetch: (path: string) => Promise<Record<string, unknown>>;
+  authedFetch: (path: string, init?: RequestInit) => Promise<Record<string, unknown>>;
   /** the item open at /portal/library/<code>/, or null for the shelf */
   openCode: string | null;
   onOpenItem: (code: string | null) => void;
@@ -476,6 +498,33 @@ export function LibraryView({
   const [kind, setKind] = useState<"all" | "video" | "pack" | "bundle">("all");
   const [category, setCategory] = useState<string>("all");
   const reduced = useReducedMotion();
+
+  /* picking a few to send somebody */
+  const [picking, setPicking] = useState(false);
+  const [picked, setPicked] = useState<string[]>([]);
+  const [shareHref, setShareHref] = useState("");
+  const [sharing, setSharing] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const pickedTotal = (items ?? [])
+    .filter((i) => picked.includes(i.code))
+    .reduce((sum, i) => sum + i.priceCents, 0);
+
+  async function share() {
+    setSharing(true);
+    setCopied(false);
+    try {
+      const j = (await authedFetch("/api/portal/lists", {
+        method: "POST",
+        body: JSON.stringify({ codes: picked }),
+      })) as { href?: string };
+      if (j.href) setShareHref(`${window.location.origin}${j.href}`);
+    } catch {
+      /* the button simply does not resolve into a link */
+    } finally {
+      setSharing(false);
+    }
+  }
 
   useEffect(() => {
     authedFetch("/api/portal/library/")
@@ -592,6 +641,70 @@ export function LibraryView({
         </div>
       </Toolbar>
 
+      {/*
+        * Picking, and sending the picks to whoever has to agree.
+        *
+        * A founder choosing six videos is very often not the only person
+        * deciding, and until now the only way to show a cofounder was a
+        * screenshot. Turning picking on is deliberately a choice rather than
+        * always-on: somebody browsing for one video should not have to think
+        * about a list.
+        */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <Button
+          variant={picking ? "primary" : "secondary"}
+          size="sm"
+          icon={<ListChecks />}
+          onClick={() => {
+            setPicking((v) => !v);
+            if (picking) setPicked([]);
+          }}
+        >
+          {picking ? "Done picking" : "Pick a few to share"}
+        </Button>
+        {picking && (
+          <>
+            <span className="font-mono text-label uppercase text-dim">
+              {picked.length === 0
+                ? "Tap the videos you are considering"
+                : `${picked.length} picked, ${money(pickedTotal)}`}
+            </span>
+            {picked.length > 0 && (
+              <Button variant="brand" size="sm" icon={<Share2 />} onClick={share} disabled={sharing}>
+                {sharing ? "Making the link..." : "Share the list"}
+              </Button>
+            )}
+          </>
+        )}
+      </div>
+
+      {shareHref && (
+        <div className="mb-4">
+          <Card tone="dark" title="Send them this link">
+            <p className="text-body-sm text-chrome-muted">
+              It shows what you picked and what it comes to, and nothing else.
+              They do not need an account. Either of you can order from it, or
+              ask us to invoice the set.
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <code className="min-w-0 flex-1 truncate rounded-[8px] border border-chrome-line bg-chrome-2 px-3 py-2 font-mono text-body-sm text-chrome-text">
+                {shareHref}
+              </code>
+              <Button
+                variant="brand"
+                size="sm"
+                onClick={() => {
+                  void navigator.clipboard?.writeText(shareHref);
+                  setCopied(true);
+                }}
+              >
+                {copied ? "Copied" : "Copy"}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
       {shown.length === 0 ? (
         <EmptyState
           icon={<Search />}
@@ -613,7 +726,21 @@ export function LibraryView({
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {shown.map((i) => (
-            <VideoCard key={i.code} item={i} reduced={reduced} onOpen={onOpenItem} />
+            <VideoCard
+              key={i.code}
+              item={i}
+              reduced={reduced}
+              picking={picking}
+              picked={picked.includes(i.code)}
+              onOpen={
+                picking
+                  ? (code) =>
+                      setPicked((p) =>
+                        p.includes(code) ? p.filter((c) => c !== code) : [...p, code],
+                      )
+                  : onOpenItem
+              }
+            />
           ))}
         </div>
       )}

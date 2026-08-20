@@ -31,6 +31,7 @@ export const sitePages: readonly SitePage[] = [
   { name: "Studio Insights", path: "/studio-insights/", inNav: true },
   { name: "Free Resources", path: "/resources/", inNav: true, noindex: true, note: "stub" },
   { name: "AI First SaaS Pack Launch", path: "/ai-first-launch/", inNav: false, noindex: true, note: "unlisted campaign, email only" },
+  { name: "Shared shortlist", path: "/list/", inNav: false, noindex: true, note: "opened by an unguessable token, one per shared list" },
   { name: "Privacy Policy", path: "/legal/privacy/", inNav: false, note: "footer" },
   { name: "Terms", path: "/legal/terms/", inNav: false, note: "footer" },
   { name: "Refund Policy", path: "/legal/refund/", inNav: false, note: "footer" },
