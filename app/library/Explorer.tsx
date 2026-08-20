@@ -1,43 +1,100 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Button, Tabs } from "@/components/portal/ui";
 import { LibraryCard, PreviewLightbox } from "@/components/library/cards";
 import { PickTray } from "@/components/library/tray";
 import type { BrowseVideo, Version } from "@/components/library/catalog";
 import { featureCounts, matchFeature, type LibraryFeature } from "@/lib/library-features";
 
 /*
- * The public library, laid out like the portal's: kind tabs with counts,
- * search beside the category chips, and down the left the one rail that
- * earns its column, Filter by features. Featured is the flag admin curates;
- * Most popular is preview plays; Most loved is hearts. Both counters start
- * from zero and stay honest, because a catalogue that invents its own
- * popularity teaches people to ignore the shelf.
+ * The public library's filters, as one rule: a SCOPE and a SELECTION.
  *
- * Picking has no mode. Every card carries an add button, the tray appears
- * once it holds something, and browsing never stops.
+ * The scope is which library you are in, All, New or Classic, and it
+ * persists while everything else changes. The selection is exactly one of
+ * everything else: a video type, a collection, one of the ranked shelves
+ * (Featured, Most popular, Most loved), or one HighLevel feature. Picking
+ * any selection replaces the previous one, whatever group it came from.
+ *
+ * That rule exists because the composed version shipped first and read as
+ * broken: Featured plus Feature Explainer quietly showed featured feature
+ * explainers, and the owner's honest reading was "where did my featured
+ * videos go". One selection at a time is what the page's own controls
+ * suggest, so it is what they do.
+ *
+ * The search box is gone by the same reasoning: it did not earn its row
+ * against filters that already cover how people actually look.
  */
 
 type Stats = Record<string, { loves: number; plays: number }>;
 
-type Kind = "all" | "video" | "pack" | "bundle";
-type Feature = "all" | "featured" | "popular" | "loved";
+type Scope = "all" | "new" | "classic";
 
-const FEATURES: { key: Feature; label: string; blurb: string }[] = [
-  { key: "all", label: "All videos", blurb: "newest first, then the classics" },
+type Selection =
+  | { kind: "type"; value: string }
+  | { kind: "collection"; value: "pack" | "bundle" }
+  | { kind: "ranked"; value: "featured" | "popular" | "loved" }
+  | { kind: "hl"; value: string }
+  | null;
+
+const RANKED: { key: "featured" | "popular" | "loved"; label: string; blurb: string }[] = [
   { key: "featured", label: "Featured videos", blurb: "what the studio puts forward" },
   { key: "popular", label: "Most popular", blurb: "watched the most, right here" },
   { key: "loved", label: "Most loved", blurb: "ranked by the hearts" },
 ];
 
+/* the types row keeps the shop's own order, then anything new the catalogue
+ * grows gets appended rather than lost */
+const VIDEO_TYPE_ORDER = ["Full Explainer", "Demo", "Feature Explainer", "Marketing", "Feature Animation"];
+
+const SCOPES: { key: Scope; label: string; tip: string | null }[] = [
+  { key: "all", label: "All", tip: null },
+  { key: "new", label: "New Videos", tip: "The current library, made for today's HighLevel." },
+  { key: "classic", label: "Classic Videos", tip: "The earlier library, proven and still brandable." },
+];
+
 const LOVED_KEY = "ghlv-loved";
 
-function kindOf(v: BrowseVideo): Exclude<Kind, "all"> {
-  return (v.kind ?? "video") as Exclude<Kind, "all">;
-}
-
+const kindOf = (v: BrowseVideo) => (v.kind ?? "video") as "video" | "pack" | "bundle";
 const featureText = (v: BrowseVideo) => `${v.title} ${v.subtitle ?? ""} ${v.typeTag ?? ""}`;
+
+/* one filter chip. Selected is flat gold, deliberately: on a dark canvas the
+ * old dark-on-dark active state was the thing nobody could find. */
+function Pill({
+  active,
+  onClick,
+  children,
+  tip,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+  tip?: string | null;
+}) {
+  return (
+    <span className="group relative inline-flex">
+      <button
+        type="button"
+        onClick={onClick}
+        aria-pressed={active}
+        className={`tap whitespace-nowrap rounded-[8px] border px-3 py-1.5 text-body-sm transition-colors ${
+          active
+            ? "border-gold bg-gold font-semibold text-canvas"
+            : "border-hair bg-surface text-muted hover:border-gold/50 hover:text-ink"
+        }`}
+      >
+        {children}
+      </button>
+      {tip && (
+        <span
+          role="tooltip"
+          className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-2 hidden -translate-x-1/2 whitespace-nowrap rounded-[6px] border border-chrome-line bg-chrome px-2.5 py-1.5 font-mono text-label text-chrome-text shadow-lg group-focus-within:block group-hover:block"
+        >
+          {tip}
+        </span>
+      )}
+    </span>
+  );
+}
 
 export function LibraryExplorer({
   videos,
@@ -49,12 +106,8 @@ export function LibraryExplorer({
   /* the Filter by feature vocabulary, from admin's table */
   features: LibraryFeature[];
 }) {
-  const [q, setQ] = useState("");
-  const [kind, setKind] = useState<Kind>("all");
-  const [category, setCategory] = useState<string>("all");
-  const [feature, setFeature] = useState<Feature>("all");
-  /* one HighLevel feature, e.g. "reputation". Empty = not filtering by one */
-  const [hlFeature, setHlFeature] = useState("");
+  const [scope, setScope] = useState<Scope>("all");
+  const [sel, setSel] = useState<Selection>(null);
   const [allFeatures, setAllFeatures] = useState(false);
   const [preview, setPreview] = useState<{ video: BrowseVideo; version: Version } | null>(null);
 
@@ -63,8 +116,6 @@ export function LibraryExplorer({
   const [loved, setLoved] = useState<Set<string>>(new Set());
   const [picked, setPicked] = useState<string[]>([]);
 
-  /* this browser's own hearts, so the button toggles honestly on a return
-     visit without any account existing */
   useEffect(() => {
     try {
       const kept = JSON.parse(localStorage.getItem(LOVED_KEY) ?? "[]");
@@ -101,7 +152,6 @@ export function LibraryExplorer({
     } catch {
       /* private mode: the heart still counts, it just will not be remembered */
     }
-    /* optimistic, corrected by the response */
     setStats((s) => ({
       ...s,
       [code]: {
@@ -114,51 +164,58 @@ export function LibraryExplorer({
 
   const openPreview = (video: BrowseVideo, version: Version) => {
     setPreview({ video, version });
-    /* a preview open is the popularity signal */
     react(video.code ?? video.slug, "play");
   };
 
-  /* the platform features that actually have videos, biggest first */
-  const hlFeatures = useMemo(() => featureCounts(videos, featureText, features), [videos, features]);
+  /* the scope narrows everything, including which filters offer themselves */
+  const inScope = useMemo(
+    () =>
+      videos.filter((v) =>
+        scope === "all" ? true : v.subTag === (scope === "new" ? "New" : "Classic"),
+      ),
+    [videos, scope],
+  );
 
-  const categories = useMemo(() => {
-    const set = new Map<string, number>();
-    for (const v of videos) set.set(v.typeTag, (set.get(v.typeTag) ?? 0) + 1);
-    return [...set.entries()].sort((a, b) => b[1] - a[1]).map(([c]) => c);
-  }, [videos]);
+  const videoTypes = useMemo(() => {
+    const present = new Set(inScope.filter((v) => kindOf(v) === "video").map((v) => v.typeTag));
+    return [
+      ...VIDEO_TYPE_ORDER.filter((t) => present.has(t)),
+      ...[...present].filter((t) => !VIDEO_TYPE_ORDER.includes(t)).sort(),
+    ];
+  }, [inScope]);
 
-  const term = q.trim().toLowerCase();
-  const filtering =
-    Boolean(term) || kind !== "all" || category !== "all" || feature !== "all" || Boolean(hlFeature);
+  const hlFeatures = useMemo(
+    () => featureCounts(inScope, featureText, features),
+    [inScope, features],
+  );
 
   const shown = useMemo(() => {
-    const base = videos.filter((v) => {
-      if (kind !== "all" && kindOf(v) !== kind) return false;
-      if (category !== "all" && v.typeTag !== category) return false;
-      if (feature === "featured" && !v.featured) return false;
-      if (hlFeature) {
-        const f = features.find((x) => x.key === hlFeature);
-        if (f && !matchFeature(featureText(v), f.aliases)) return false;
-      }
-      if (
-        term &&
-        ![v.title, v.code, v.subtitle, v.typeTag, v.subTag]
-          .filter(Boolean)
-          .some((f) => String(f).toLowerCase().includes(term))
-      )
-        return false;
-      return true;
+    const base = inScope.filter((v) => {
+      if (!sel) return true;
+      if (sel.kind === "type") return kindOf(v) === "video" && v.typeTag === sel.value;
+      if (sel.kind === "collection") return kindOf(v) === sel.value;
+      if (sel.kind === "ranked") return sel.value === "featured" ? Boolean(v.featured) : true;
+      const f = features.find((x) => x.key === sel.value);
+      return f ? matchFeature(featureText(v), f.aliases) : true;
     });
     const of = (v: BrowseVideo) => stats[v.code ?? v.slug];
-    if (feature === "popular")
+    if (sel?.kind === "ranked" && sel.value === "popular")
       return [...base].sort((a, b) => (of(b)?.plays ?? 0) - (of(a)?.plays ?? 0));
-    if (feature === "loved")
+    if (sel?.kind === "ranked" && sel.value === "loved")
       return [...base].sort((a, b) => (of(b)?.loves ?? 0) - (of(a)?.loves ?? 0));
     return base;
-  }, [videos, kind, category, feature, hlFeature, term, stats, features]);
+  }, [inScope, sel, features, stats]);
 
-  const kindCount = (k: Kind) =>
-    k === "all" ? videos.length : videos.filter((v) => kindOf(v) === k).length;
+  const filtering = sel !== null || scope !== "all";
+
+  const scopeCount = (k: Scope) =>
+    k === "all"
+      ? videos.length
+      : videos.filter((v) => v.subTag === (k === "new" ? "New" : "Classic")).length;
+
+  /* one selection at a time: choosing anything replaces whatever was there */
+  const choose = (next: Selection) =>
+    setSel((cur) => (JSON.stringify(cur) === JSON.stringify(next) ? null : next));
 
   const pickedItems = picked
     .map((slug) => videos.find((v) => v.slug === slug))
@@ -181,7 +238,10 @@ export function LibraryExplorer({
     }
   };
 
-  const active = FEATURES.find((f) => f.key === feature)!;
+  const headerBlurb =
+    sel?.kind === "ranked"
+      ? RANKED.find((r) => r.key === sel.value)?.blurb
+      : "newest first, then the classics";
 
   return (
     <div className="mx-auto w-full max-w-[100rem] px-4 pb-28 md:px-8">
@@ -197,81 +257,75 @@ export function LibraryExplorer({
         </p>
       </div>
 
-      {/* the portal library's own header, deliberately: kind tabs with
-          counts, then search beside the category chips */}
-      <div className="grid gap-4">
-        <Tabs
-          tabs={[
-            { key: "all" as Kind, label: "Everything", count: kindCount("all") },
-            { key: "video" as Kind, label: "Videos", count: kindCount("video") },
-            { key: "pack" as Kind, label: "Packs", count: kindCount("pack") },
-            { key: "bundle" as Kind, label: "Bundles", count: kindCount("bundle") },
-          ]}
-          active={kind}
-          onChange={(k) => {
-            setKind(k);
-            setCategory("all");
-          }}
-        />
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative min-w-[16rem] max-w-md flex-1">
-            <svg
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-              className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-dim"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <circle cx="11" cy="11" r="7" />
-              <path d="m20 20-3.5-3.5" />
-            </svg>
-            <input
-              type="search"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Search by name, code or type"
-              aria-label="Search the library"
-              className="tap w-full rounded-[8px] border border-hair bg-surface py-2.5 pl-10 pr-3 text-body-sm text-ink placeholder:text-dim focus:border-gold focus:outline-none"
-            />
-          </div>
-          <div className="flex flex-wrap gap-1.5 sm:ml-auto sm:justify-end">
-            <Button
-              size="sm"
-              variant={category === "all" ? "primary" : "secondary"}
-              onClick={() => setCategory("all")}
-            >
-              All types
-            </Button>
-            {categories.map((c) => (
-              <Button
-                key={c}
-                size="sm"
-                variant={category === c ? "primary" : "secondary"}
-                onClick={() => setCategory(category === c ? "all" : c)}
+      {/* one line: which library on the left, what kind of thing on the
+          right, a separator keeping videos and collections apart */}
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+        <div className="flex flex-wrap items-center gap-1.5">
+          {SCOPES.map((s) => (
+            <Pill key={s.key} active={scope === s.key} onClick={() => setScope(s.key)} tip={s.tip}>
+              {s.label}
+              <span
+                className={`ml-1.5 font-mono text-label tabular-nums ${scope === s.key ? "text-canvas/70" : "text-dim"}`}
               >
-                {c}
-              </Button>
-            ))}
-          </div>
+                {scopeCount(s.key)}
+              </span>
+            </Pill>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Pill active={sel === null} onClick={() => setSel(null)}>
+            All types
+          </Pill>
+          {videoTypes.map((t) => (
+            <Pill
+              key={t}
+              active={sel?.kind === "type" && sel.value === t}
+              onClick={() => choose({ kind: "type", value: t })}
+            >
+              {t}
+            </Pill>
+          ))}
+          <span aria-hidden="true" className="mx-1 hidden h-6 w-px bg-hair sm:block" />
+          <Pill
+            active={sel?.kind === "collection" && sel.value === "pack"}
+            onClick={() => choose({ kind: "collection", value: "pack" })}
+          >
+            Video Pack
+          </Pill>
+          <Pill
+            active={sel?.kind === "collection" && sel.value === "bundle"}
+            onClick={() => choose({ kind: "collection", value: "bundle" })}
+          >
+            Bundle Offer
+          </Pill>
         </div>
       </div>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[13rem_1fr] lg:items-start">
-        {/* the one rail: how the shelf is ranked */}
         <aside className="lg:sticky lg:top-20">
           <p className="hidden px-3 pb-1.5 font-mono text-label font-bold uppercase tracking-[0.12em] text-dim lg:block">
             Filter by features
           </p>
           <div className="flex gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] lg:block lg:space-y-0.5 lg:overflow-visible lg:pb-0 [&::-webkit-scrollbar]:hidden">
-            {FEATURES.map((f) => (
+            <button
+              type="button"
+              onClick={() => setSel(null)}
+              aria-pressed={sel === null}
+              className={`tap shrink-0 whitespace-nowrap rounded-[8px] px-3 py-2 text-left text-body-sm transition-colors lg:block lg:w-full ${
+                sel === null ? "bg-card font-semibold text-gold" : "text-muted hover:bg-card/70 hover:text-ink"
+              }`}
+            >
+              All videos
+            </button>
+            {RANKED.map((f) => (
               <button
                 key={f.key}
                 type="button"
-                onClick={() => setFeature(f.key)}
-                aria-pressed={feature === f.key}
+                onClick={() => choose({ kind: "ranked", value: f.key })}
+                aria-pressed={sel?.kind === "ranked" && sel.value === f.key}
                 className={`tap shrink-0 whitespace-nowrap rounded-[8px] px-3 py-2 text-left text-body-sm transition-colors lg:block lg:w-full ${
-                  feature === f.key
+                  sel?.kind === "ranked" && sel.value === f.key
                     ? "bg-card font-semibold text-gold"
                     : "text-muted hover:bg-card/70 hover:text-ink"
                 }`}
@@ -280,9 +334,6 @@ export function LibraryExplorer({
               </button>
             ))}
 
-            {/* the platform's own features, from the titles, so somebody who
-                came for "reputation" finds every video that covers it. Only
-                features with videos behind them ever appear. */}
             <p className="hidden px-3 pb-1.5 pt-5 font-mono text-label font-bold uppercase tracking-[0.12em] text-dim lg:block">
               Filter by feature
             </p>
@@ -290,10 +341,10 @@ export function LibraryExplorer({
               <button
                 key={f.key}
                 type="button"
-                onClick={() => setHlFeature(hlFeature === f.key ? "" : f.key)}
-                aria-pressed={hlFeature === f.key}
+                onClick={() => choose({ kind: "hl", value: f.key })}
+                aria-pressed={sel?.kind === "hl" && sel.value === f.key}
                 className={`tap flex shrink-0 items-center justify-between gap-3 whitespace-nowrap rounded-[8px] px-3 py-2 text-left text-body-sm transition-colors lg:flex lg:w-full ${
-                  hlFeature === f.key
+                  sel?.kind === "hl" && sel.value === f.key
                     ? "bg-card font-semibold text-gold"
                     : "text-muted hover:bg-card/70 hover:text-ink"
                 }`}
@@ -325,24 +376,21 @@ export function LibraryExplorer({
               <button
                 type="button"
                 onClick={() => {
-                  setQ("");
-                  setKind("all");
-                  setCategory("all");
-                  setFeature("all");
-                  setHlFeature("");
+                  setScope("all");
+                  setSel(null);
                 }}
                 className="tap font-mono text-label uppercase text-muted transition-colors hover:text-gold"
               >
                 Clear filters
               </button>
             ) : (
-              <p className="font-mono text-label uppercase text-dim">{active.blurb}</p>
+              <p className="font-mono text-label uppercase text-dim">{headerBlurb}</p>
             )}
           </div>
 
           {shown.length === 0 ? (
             <p className="py-14 text-center text-body text-muted">
-              Nothing matches that. Try another word, or clear the filters.
+              Nothing here in this library. Try another filter, or clear them.
             </p>
           ) : (
             <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
