@@ -1,16 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import {
-  ArrowLeft,
-  CalendarClock,
-  Check,
-  ChevronRight,
-  Play,
-  Plus,
-  Scissors,
-  Trash2,
-} from "lucide-react";
+import { CalendarClock, Check, ChevronRight, Play, Plus, Scissors, Trash2 } from "lucide-react";
 import {
   Button,
   Card,
@@ -27,6 +18,7 @@ import { VideoReview } from "./VideoReview";
 import { StyleGuideView } from "./StyleGuideView";
 import { DownloadAll } from "@/components/portal/DownloadAll";
 import { stageFor } from "@/lib/editing-sop";
+import { Drawer, StageTimeline, WorkCard } from "@/components/portal/board";
 
 /*
  * An editing client's own screen.
@@ -130,6 +122,19 @@ const ROW: Record<string, string> = {
 };
 
 type Tab = "month" | "guide" | "plan";
+
+/* the line a request travels, in the client's words. Revisions is not a
+ * station of its own: a line that doubles back reads as a mistake, so
+ * changes-in-hand shows as the editing station wearing its own label. */
+const JOURNEY = [
+  { key: "queued", label: "Requested", tone: "neutral" as const },
+  { key: "in_production", label: "Being edited", tone: "info" as const },
+  { key: "ready", label: "Your review", tone: "warn" as const },
+  { key: "approved", label: "Done", tone: "good" as const },
+];
+
+const journeyKey = (column: string) =>
+  column === "waiting" ? "queued" : column === "revisions" ? "in_production" : column;
 
 /** A slot counter that reads at a glance, per form. */
 function Slots({ label, used, allowed }: { label: string; used: number; allowed: number }) {
@@ -321,23 +326,8 @@ export function EditingView({
   const live = plan.videos.filter((v) => !v.cancelledAt);
   const parents = live.filter((v) => !v.parentId);
 
-  /* one request, opened */
+  /* one request, opened over the list rather than instead of it */
   const opened = openRequest ? plan.videos.find((v) => v.id === openRequest) : null;
-  if (opened) {
-    return (
-      <RequestDetail
-        v={opened}
-        cuts={live.filter((c) => c.parentId === opened.id)}
-        busy={busy}
-        onBack={() => setOpenRequest(null)}
-        onReview={(x) => (x.canReview && x.videoUrl ? setReviewing(x) : setOpenRequest(x.id))}
-        onCancel={async (x) => {
-          await cancelRequest(x);
-          setOpenRequest(null);
-        }}
-      />
-    );
-  }
 
   return (
     <div>
@@ -626,26 +616,59 @@ export function EditingView({
                 </p>
               ) : (
                 <ul className="grid gap-2">
-                  {parents.map((v) => (
-                    <li key={v.id}>
-                      <VideoRow
-                        v={v}
-                        cuts={live.filter((c) => c.parentId === v.id).length}
-                        onOpen={(x) => setOpenRequest(x.id)}
-                      />
-                      {live.filter((c) => c.parentId === v.id).length > 0 && (
-                        <ul className="mt-1.5 grid gap-1.5 border-l border-hair pl-4">
-                          {live
-                            .filter((c) => c.parentId === v.id)
-                            .map((c) => (
+                  {parents.map((v) => {
+                    const cuts = live.filter((c) => c.parentId === v.id);
+                    return (
+                      <li key={v.id}>
+                        <WorkCard
+                          item={{
+                            id: v.id,
+                            column: v.column,
+                            title: v.title,
+                            meta: [v.form === "long" ? "long form" : "short form", v.aspect]
+                              .filter(Boolean)
+                              .join(" / "),
+                            warn: v.column === "waiting" ? "we need your footage" : null,
+                            due: v.dueAt
+                              ? `due ${day(v.dueAt)}`
+                              : v.requestedDueAt
+                                ? `you asked ${day(v.requestedDueAt)}`
+                                : null,
+                            dueTone: v.dueAt ? "neutral" : "warn",
+                            progress: cuts.length
+                              ? `${cuts.filter((c) => c.status === "approved").length + (v.status === "approved" ? 1 : 0)}/${cuts.length + 1}`
+                              : null,
+                            progressPct: cuts.length
+                              ? ((cuts.filter((c) => c.status === "approved").length +
+                                  (v.status === "approved" ? 1 : 0)) /
+                                  (cuts.length + 1)) *
+                                100
+                              : null,
+                          }}
+                          tone={stageFor(v.column).tone}
+                          onOpen={() => setOpenRequest(v.id)}
+                        />
+                        {cuts.length > 0 && (
+                          <ul className="mt-1.5 grid gap-1.5 border-l border-hair pl-4">
+                            {cuts.map((c) => (
                               <li key={c.id}>
-                                <VideoRow v={c} onOpen={(x) => setOpenRequest(x.id)} />
+                                <WorkCard
+                                  item={{
+                                    id: c.id,
+                                    column: c.column,
+                                    title: c.title,
+                                    meta: ["cut", c.aspect].filter(Boolean).join(" / "),
+                                  }}
+                                  tone={stageFor(c.column).tone}
+                                  onOpen={() => setOpenRequest(c.id)}
+                                />
                               </li>
                             ))}
-                        </ul>
-                      )}
-                    </li>
-                  ))}
+                          </ul>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </Card>
@@ -704,6 +727,34 @@ export function EditingView({
           </div>
         </div>
       )}
+
+      <Drawer open={!!opened} onClose={() => setOpenRequest(null)} title={opened?.title ?? ""}>
+        {opened && (
+          <div className="grid gap-5">
+            <StageTimeline
+              steps={JOURNEY}
+              currentKey={journeyKey(opened.column)}
+              currentLabel={
+                opened.column === "revisions"
+                  ? "Changes in hand"
+                  : opened.column === "waiting"
+                    ? "Needs your footage"
+                    : undefined
+              }
+            />
+            <RequestDetail
+              v={opened}
+              cuts={live.filter((c) => c.parentId === opened.id)}
+              busy={busy}
+              onReview={(x) => (x.canReview && x.videoUrl ? setReviewing(x) : setOpenRequest(x.id))}
+              onCancel={async (x) => {
+                await cancelRequest(x);
+                setOpenRequest(null);
+              }}
+            />
+          </div>
+        )}
+      </Drawer>
     </div>
   );
 }
@@ -766,14 +817,12 @@ function VideoRow({
 function RequestDetail({
   v,
   cuts,
-  onBack,
   onReview,
   onCancel,
   busy,
 }: {
   v: Video;
   cuts: Video[];
-  onBack: () => void;
   onReview: (v: Video) => void;
   onCancel: (v: Video) => void;
   busy: boolean;
@@ -781,15 +830,7 @@ function RequestDetail({
   const stage = stageFor(v.column);
   return (
     <div>
-      <button
-        type="button"
-        onClick={onBack}
-        className="tap inline-flex items-center gap-2 font-mono text-label uppercase text-muted transition-colors hover:text-gold"
-      >
-        <ArrowLeft size={14} aria-hidden="true" /> Back to this month
-      </button>
-
-      <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_19rem] lg:items-start">
+      <div className="grid gap-3">
         <div className="grid min-w-0 gap-3">
           <Card>
             <div className="flex flex-wrap items-center gap-2">

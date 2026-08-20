@@ -48,6 +48,8 @@ export type BoardItem = {
   warn?: string | null;
   /* progress, e.g. "3/9" */
   progress?: string | null;
+  /* 0..100 draws a thin bar along the card's foot in the stripe colour */
+  progressPct?: number | null;
 };
 
 const TONE_STRIPE: Record<BoardColumn["tone"], string> = {
@@ -119,7 +121,9 @@ export function WorkCard({
         <p className="min-w-0 flex-1 text-body-sm font-semibold leading-snug text-ink">
           {item.title}
         </p>
-        <AssigneeDot name={item.assignee} />
+        {/* undefined means the surface has no assignee concept (the client
+            side); null means unassigned and shows the dashed dot */}
+        {item.assignee !== undefined && <AssigneeDot name={item.assignee} />}
       </div>
       {item.meta && (
         <p className="mt-0.5 truncate font-mono text-label uppercase text-dim">{item.meta}</p>
@@ -149,6 +153,21 @@ export function WorkCard({
               {item.progress}
             </span>
           )}
+        </div>
+      )}
+      {typeof item.progressPct === "number" && (
+        <div
+          role="progressbar"
+          aria-valuenow={Math.round(item.progressPct)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="Progress"
+          className="mt-2 h-1 overflow-hidden rounded-full bg-hair/60"
+        >
+          <div
+            className={`h-full ${TONE_STRIPE[tone]} transition-[width]`}
+            style={{ width: `${Math.min(100, Math.max(0, item.progressPct))}%` }}
+          />
         </div>
       )}
     </div>
@@ -443,5 +462,75 @@ export function ItemNotes({
         )}
       </div>
     </div>
+  );
+}
+
+/* ---------------- the stage timeline ---------------- */
+
+/*
+ * Where a piece of work stands, as stations on a line. The client-side
+ * answer to the admin board: same colours, same order, no controls. A
+ * looping stage (revisions) is shown as the current station with its own
+ * word rather than as a station of its own, because a line that doubles
+ * back reads as a mistake.
+ */
+export function StageTimeline({
+  steps,
+  currentKey,
+  currentLabel,
+}: {
+  steps: { key: string; label: string; tone: BoardColumn["tone"] }[];
+  currentKey: string;
+  /* overrides the current station's label, e.g. "Changes in hand" */
+  currentLabel?: string;
+}) {
+  const at = Math.max(
+    0,
+    steps.findIndex((s) => s.key === currentKey),
+  );
+  return (
+    <ol className="flex items-start">
+      {steps.map((s, i) => {
+        const done = i < at;
+        const current = i === at;
+        return (
+          <li key={s.key} className="flex min-w-0 flex-1 flex-col items-center">
+            <span className="flex w-full items-center">
+              <span
+                aria-hidden="true"
+                className={`h-0.5 flex-1 ${i === 0 ? "opacity-0" : done || current ? TONE_STRIPE[s.tone] : "bg-hair"}`}
+              />
+              <span
+                className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border ${
+                  done
+                    ? `border-transparent ${TONE_STRIPE[s.tone]}`
+                    : current
+                      ? `border-2 ${TONE_TEXT[s.tone]} border-current bg-surface`
+                      : "border-hair bg-surface"
+                }`}
+              >
+                {done && (
+                  <svg viewBox="0 0 24 24" className="h-3 w-3 text-canvas" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden="true">
+                    <path d="m5 13 4 4 10-11" />
+                  </svg>
+                )}
+                {current && <span className="h-1.5 w-1.5 rounded-full bg-current" />}
+              </span>
+              <span
+                aria-hidden="true"
+                className={`h-0.5 flex-1 ${i === steps.length - 1 ? "opacity-0" : done ? TONE_STRIPE[steps[i + 1].tone] : "bg-hair"}`}
+              />
+            </span>
+            <span
+              className={`mt-1.5 px-1 text-center font-mono text-label uppercase ${
+                current ? `font-bold ${TONE_TEXT[s.tone]}` : done ? "text-muted" : "text-dim"
+              }`}
+            >
+              {current && currentLabel ? currentLabel : s.label}
+            </span>
+          </li>
+        );
+      })}
+    </ol>
   );
 }

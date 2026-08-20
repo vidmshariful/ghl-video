@@ -24,7 +24,7 @@ import {
 import { AreaChart, BarChart, Donut, Sparkline } from "@/components/portal/charts";
 import { PortalSidebar } from "@/components/portal/Shell";
 import { PortalSearch } from "@/app/portal/PortalSearch";
-import { KanbanBoard, Drawer } from "@/components/portal/board";
+import { KanbanBoard, Drawer, StageTimeline, WorkCard } from "@/components/portal/board";
 import { useState } from "react";
 
 /* the board specimen needs a sliver of state for its drawer */
@@ -94,6 +94,64 @@ export function PortalKitClient() {
       >
         <Spec label="Kanban + drawer" surface="portal" ground="canvas">
           <BoardSpecimen />
+        </Spec>
+      </KitSection>
+
+      <KitSection
+        title="The client's side of the board"
+        note="What the same work looks like to the client: no columns, no dragging, no assignee dots. A card carries the stage stripe and a progress bar, and the timeline says where the piece stands in the client's words. Same colours as the admin board on purpose."
+      >
+        <Spec label="Stage timeline" surface="portal" ground="panel">
+          <div className="grid gap-6">
+            <StageTimeline
+              steps={[
+                { key: "queued", label: "Requested", tone: "neutral" },
+                { key: "in_production", label: "Being edited", tone: "info" },
+                { key: "ready", label: "Your review", tone: "warn" },
+                { key: "approved", label: "Done", tone: "good" },
+              ]}
+              currentKey="ready"
+            />
+            <StageTimeline
+              steps={[
+                { key: "queued", label: "Requested", tone: "neutral" },
+                { key: "in_production", label: "Being edited", tone: "info" },
+                { key: "ready", label: "Your review", tone: "warn" },
+                { key: "approved", label: "Done", tone: "good" },
+              ]}
+              currentKey="in_production"
+              currentLabel="Changes in hand"
+            />
+          </div>
+        </Spec>
+        <Spec label="Client work card" surface="portal" ground="canvas">
+          <div className="grid max-w-md gap-2">
+            <WorkCard
+              item={{
+                id: "c1",
+                column: "in_production",
+                title: "Brand film, September launch",
+                meta: "Being made. 5 videos, 2 approved",
+                due: "due Sep 12",
+                dueTone: "neutral",
+                progressPct: 40,
+              }}
+              tone="info"
+              onOpen={() => {}}
+            />
+            <WorkCard
+              item={{
+                id: "c2",
+                column: "review",
+                title: "Onboarding walkthrough",
+                meta: "Your review. 3 videos, 2 approved",
+                warn: "1 waiting on you",
+                progressPct: 66,
+              }}
+              tone="warn"
+              onOpen={() => {}}
+            />
+          </div>
         </Spec>
       </KitSection>
 

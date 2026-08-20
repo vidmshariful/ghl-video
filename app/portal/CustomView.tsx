@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft, CalendarClock, Check, Play } from "lucide-react";
+import { ArrowLeft, Play } from "lucide-react";
 import { Button, Card, Chip, EmptyState, PageHeader } from "@/components/portal/ui";
+import { StageTimeline, WorkCard } from "@/components/portal/board";
 import { VideoReview } from "./VideoReview";
 import { DownloadAll } from "@/components/portal/DownloadAll";
 
@@ -67,6 +68,17 @@ const TONE: Record<string, "neutral" | "info" | "good" | "warn"> = {
   closed: "good",
 };
 
+/* the line a project travels, in the client's words. Closed projects sit on
+ * the delivered station: to the client, done is done. */
+const JOURNEY = [
+  { key: "scoped", label: "Booked in", tone: "neutral" as const },
+  { key: "in_production", label: "Being made", tone: "info" as const },
+  { key: "review", label: "Your review", tone: "warn" as const },
+  { key: "delivered", label: "Delivered", tone: "good" as const },
+];
+
+const journeyKey = (status: string) => (status === "closed" ? "delivered" : status);
+
 const VIDEO_WORD: Record<string, string> = {
   queued: "In the queue",
   in_production: "Being made",
@@ -81,6 +93,13 @@ const VIDEO_TONE: Record<string, "neutral" | "info" | "good" | "warn"> = {
   ready: "warn",
   revisions: "warn",
   approved: "good",
+};
+
+const STRIPE: Record<"neutral" | "info" | "good" | "warn", string> = {
+  neutral: "bg-hair",
+  info: "bg-blue",
+  good: "bg-green",
+  warn: "bg-gold",
 };
 
 export function CustomView({
@@ -178,6 +197,12 @@ export function CustomView({
           />
         </div>
 
+        <div className="mb-3">
+          <Card>
+            <StageTimeline steps={JOURNEY} currentKey={journeyKey(project.status)} />
+          </Card>
+        </div>
+
         <div className="grid gap-3 lg:grid-cols-[1fr_19rem] lg:items-start">
           <div className="grid min-w-0 gap-3">
             {needsThem.length > 0 && (
@@ -242,12 +267,20 @@ export function CustomView({
                             type="button"
                             onClick={() => setPlaying(v)}
                             aria-label={`${v.canReview ? "Review" : "Watch"} ${v.title}`}
-                            className="tap w-full rounded-[8px] border border-hair bg-surface p-3 text-left transition-colors hover:border-gold/60"
+                            className="tap relative w-full overflow-hidden rounded-[8px] border border-hair bg-surface p-3 pl-4 text-left transition-colors hover:border-gold/60"
                           >
+                            <span
+                              aria-hidden="true"
+                              className={`absolute inset-y-0 left-0 w-1 ${STRIPE[VIDEO_TONE[v.status] ?? "neutral"]}`}
+                            />
                             {body}
                           </button>
                         ) : (
-                          <div className="rounded-[8px] border border-dashed border-hair p-3">
+                          <div className="relative overflow-hidden rounded-[8px] border border-dashed border-hair p-3 pl-4">
+                            <span
+                              aria-hidden="true"
+                              className={`absolute inset-y-0 left-0 w-1 ${STRIPE[VIDEO_TONE[v.status] ?? "neutral"]}`}
+                            />
                             {body}
                           </div>
                         )}
@@ -267,10 +300,7 @@ export function CustomView({
 
           <div className="grid gap-3">
             <Card title="Where it is">
-              <div className="flex items-center gap-2">
-                <Chip tone={TONE[project.status] ?? "neutral"}>{project.statusLabel}</Chip>
-              </div>
-              <dl className="mt-3 grid gap-2 text-body-sm">
+              <dl className="grid gap-2 text-body-sm">
                 <div className="flex items-baseline justify-between gap-3">
                   <dt className="text-muted">Started</dt>
                   <dd className="text-ink">{day(project.createdAt)}</dd>
@@ -376,34 +406,19 @@ function ProjectRow({ p, onOpen }: { p: Project; onOpen: (id: string) => void })
   const needsThem = p.videos.filter((v) => v.status === "ready").length;
   const done = p.videos.filter((v) => v.status === "approved").length;
   return (
-    <button
-      type="button"
-      onClick={() => onOpen(p.id)}
-      className="tap w-full rounded-[12px] border border-hair bg-surface p-5 text-left transition-colors hover:border-gold/50"
-    >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-body font-semibold text-ink">{p.title}</p>
-          <p className="mt-1 font-mono text-label uppercase text-dim">
-            {p.videos.length} {p.videos.length === 1 ? "video" : "videos"}
-            {done > 0 ? `, ${done} approved` : ""}
-          </p>
-          {p.dueAt && p.open && (
-            <p className="mt-1.5 flex items-center gap-1.5 text-body-sm text-muted">
-              <CalendarClock size={13} aria-hidden="true" /> Due {day(p.dueAt)}
-            </p>
-          )}
-          {!p.open && (
-            <p className="mt-1.5 flex items-center gap-1.5 text-body-sm text-green">
-              <Check size={13} aria-hidden="true" /> Finished
-            </p>
-          )}
-        </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          {needsThem > 0 && <Chip tone="warn">{needsThem} waiting on you</Chip>}
-          <Chip tone={TONE[p.status] ?? "neutral"}>{p.statusLabel}</Chip>
-        </div>
-      </div>
-    </button>
+    <WorkCard
+      item={{
+        id: p.id,
+        column: p.status,
+        title: p.title,
+        meta: `${p.statusLabel}. ${p.videos.length} ${p.videos.length === 1 ? "video" : "videos"}${done > 0 ? `, ${done} approved` : ""}`,
+        warn: needsThem > 0 ? `${needsThem} waiting on you` : null,
+        due: p.open ? (p.dueAt ? `due ${day(p.dueAt)}` : null) : "finished",
+        dueTone: "neutral",
+        progressPct: p.videos.length ? (done / p.videos.length) * 100 : null,
+      }}
+      tone={TONE[p.status] ?? "neutral"}
+      onOpen={() => onOpen(p.id)}
+    />
   );
 }
