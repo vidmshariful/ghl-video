@@ -140,6 +140,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       phone: (c.phone as string | null) ?? null,
       tags: (c.tags as string[] | null) ?? [],
       hiddenSections: (c.hidden_sections as string[] | null) ?? [],
+      disabledSections: (c.disabled_sections as string[] | null) ?? [],
       lastSeenAt: (c.last_seen_at as string | null) ?? null,
       createdAt: String(c.created_at),
       highlevelContactId: (c.highlevel_contact_id as string | null) ?? null,
@@ -260,6 +261,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
   if (Array.isArray(b.hiddenSections)) {
     patch.hidden_sections = (b.hiddenSections as unknown[])
+      .filter((t): t is string => typeof t === "string")
+      .slice(0, 30);
+  }
+  if (Array.isArray(b.disabledSections)) {
+    patch.disabled_sections = (b.disabledSections as unknown[])
       .filter((t): t is string => typeof t === "string")
       .slice(0, 30);
   }

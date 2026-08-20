@@ -427,6 +427,12 @@ export type NavItem = {
   label: string;
   icon: ReactNode;
   badge?: number;
+  /* shown but locked: greyed, not clickable, with the note on hover. The
+     third state between visible and hidden (owner request, August 2026):
+     hidden says this does not exist, disabled says it exists and you do
+     not have it, which is a doorway rather than a wall. */
+  disabled?: boolean;
+  disabledTip?: string;
 };
 export type NavGroup = {
   /* empty title = always-visible top-level items (Dashboard, Journal) */
@@ -540,7 +546,26 @@ export function PortalSidebar({
     });
   }
 
-  const Item = ({ it, onNavigated }: { it: NavItem; onNavigated?: () => void }) => (
+  const Item = ({ it, onNavigated }: { it: NavItem; onNavigated?: () => void }) =>
+    it.disabled ? (
+      <span className="group/locked relative block">
+        <span
+          aria-disabled="true"
+          className="flex w-full cursor-not-allowed items-center gap-2.5 rounded-[8px] px-3 py-2 text-left text-body-sm text-chrome-dim opacity-55"
+        >
+          <span className="grid h-5 w-5 shrink-0 place-items-center [&>svg]:h-[16px] [&>svg]:w-[16px]">
+            {it.icon}
+          </span>
+          <span className="min-w-0 flex-1 truncate">{it.label}</span>
+        </span>
+        <span
+          role="tooltip"
+          className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 hidden -translate-y-1/2 whitespace-nowrap rounded-[6px] border border-chrome-line bg-chrome px-2.5 py-1.5 font-mono text-label text-chrome-text shadow-lg group-hover/locked:block"
+        >
+          {it.disabledTip ?? "This is switched off for your account."}
+        </span>
+      </span>
+    ) : (
     <button
       type="button"
       onClick={() => {
@@ -567,7 +592,7 @@ export function PortalSidebar({
         </span>
       ) : null}
     </button>
-  );
+    );
 
   return (
     /* outer nav stretches to the column floor so the rail's background never

@@ -53,7 +53,7 @@ export async function GET(req: Request) {
   if (ctx.isOwner) {
     const { data } = await db
       .from("customers")
-      .select("id, name, company, phone, hidden_sections")
+      .select("id, name, company, phone, hidden_sections, disabled_sections")
       .ilike("email", user.email)
       .maybeSingle();
     if (data?.id) void touchLastSeen(db, String(data.id));
@@ -63,13 +63,14 @@ export async function GET(req: Request) {
       company: (data?.company as string | null) ?? null,
       phone: (data?.phone as string | null) ?? null,
       hiddenSections: (data?.hidden_sections as string[] | null) ?? [],
+      disabledSections: (data?.disabled_sections as string[] | null) ?? [],
       actingFor: null,
     });
   }
 
   const { data: owner } = await db
     .from("customers")
-    .select("id, name, hidden_sections")
+    .select("id, name, hidden_sections, disabled_sections")
     .ilike("email", ctx.ownerEmail)
     .maybeSingle();
   if (owner?.id) void touchLastSeen(db, String(owner.id));
@@ -81,6 +82,7 @@ export async function GET(req: Request) {
     /* the account's restrictions, not the teammate's own: hiding a section
      * from a client hides it from everybody working in that account */
     hiddenSections: (owner?.hidden_sections as string[] | null) ?? [],
+    disabledSections: (owner?.disabled_sections as string[] | null) ?? [],
     actingFor: {
       email: ctx.ownerEmail,
       name: (owner?.name as string | null) ?? null,

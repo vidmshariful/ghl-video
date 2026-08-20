@@ -116,6 +116,7 @@ type MyProfile = {
   isOwner: boolean;
   features: string[] | null;
   hiddenSections?: string[] | null;
+  disabledSections?: string[] | null;
   actingFor: { email: string; name: string | null } | null;
   memberships: { ownerEmail: string; ownerName: string | null; status: string }[];
 };
@@ -1155,6 +1156,9 @@ function Portal({
    */
   const hiddenSections = new Set(profile?.hiddenSections ?? []);
   const shows = (key: string) => !hiddenSections.has(key);
+  /* the third state: in the menu, greyed, locked, with the note on hover */
+  const disabledSections = new Set(profile?.disabledSections ?? []);
+  const isDisabled = (key: string) => disabledSections.has(key);
   /* Typing the URL of a switched-off section lands on the dashboard. Gating
    * only the menu would hide the door and leave the room open. */
   const view: PortalSection = shows(section) ? section : "dashboard";
@@ -1428,7 +1432,21 @@ function Portal({
     /* a teammate with narrow access can empty a whole group, and a heading
      * over nothing looks like something failed to load */
   ]
-    .map((g) => ({ ...g, items: g.items.filter((i) => shows(i.key)) }))
+    .map((g) => ({
+      ...g,
+      items: g.items
+        .filter((i) => shows(i.key))
+        .map((i) =>
+          isDisabled(i.key)
+            ? {
+                ...i,
+                disabled: true,
+                disabledTip: `${i.label} is switched off for your account. Ask us if you need it.`,
+                badge: undefined,
+              }
+            : i,
+        ),
+    }))
     .filter((g) => g.items.length > 0);
 
   /* the account switcher inside the profile menu, shown to anyone on a team */
@@ -1531,7 +1549,26 @@ function Portal({
 
         <section className="min-w-0 flex-1 p-4 md:p-8">
           <div key={section + (openOrder ?? "") + (focusVideo ?? "")} className="portal-view">
-          {view === "dashboard" ? (
+          {view !== "dashboard" && isDisabled(view) ? (
+            /* a bookmark or a typed URL must not walk around the lock the
+               menu shows; the same words, on a full screen */
+            <div className="grid min-h-[50vh] place-items-center">
+              <div className="max-w-md text-center">
+                <p className="font-display text-h3 text-ink">This area is switched off</p>
+                <p className="mt-2 text-body-sm text-muted">
+                  It is not part of your account right now. If you need it,
+                  message us and we will sort it out.
+                </p>
+                {can("messages") && !isDisabled("messages") && (
+                  <div className="mt-4">
+                    <Button variant="primary" onClick={() => go("messages")}>
+                      Message the studio
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : view === "dashboard" ? (
             <DashboardView
               firstName={profile.name?.split(" ")[0] ?? null}
               subtitle={

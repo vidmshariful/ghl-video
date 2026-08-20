@@ -124,7 +124,13 @@ export function PortalKitClient() {
                   items: [
                     { key: "videos", label: "Pre-made", icon: <Clapperboard /> },
                     { key: "projects", label: "Custom", icon: <Sparkles /> },
-                    { key: "subscriptions", label: "Editing", icon: <Scissors /> },
+                    {
+                      key: "subscriptions",
+                      label: "Editing",
+                      icon: <Scissors />,
+                      disabled: true,
+                      disabledTip: "Editing is switched off for your account. Ask us if you need it.",
+                    },
                   ],
                 },
                 {

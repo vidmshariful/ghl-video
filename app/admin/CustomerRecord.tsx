@@ -39,6 +39,7 @@ type Record_ = {
     phone: string | null;
     tags: string[];
     hiddenSections: string[];
+    disabledSections: string[];
     lastSeenAt: string | null;
     createdAt: string;
     highlevelContactId: string | null;
@@ -229,6 +230,7 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
   const v = data.value;
   const title = c.company || c.name || c.email;
   const hidden = new Set(c.hiddenSections);
+  const disabledSet = new Set(c.disabledSections);
 
   return (
     <div className="w-full">
@@ -780,36 +782,58 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
           {/* the access control Shariful asked for */}
           <Card title="What they see">
             <p className="text-body-sm text-muted">
-              Hide the parts of the portal this client will never use. Everything
-              is shown unless you switch it off here.
+              Visible is normal. Disabled stays in their menu but locked, with
+              a note on hover, which says this exists and you do not have it.
+              Hidden removes it entirely.
             </p>
-            <div className="mt-3 grid gap-1.5">
+            <div className="mt-3 grid gap-2">
               {HIDEABLE_SECTIONS.map((s) => {
-                const off = hidden.has(s.key);
+                const state = hidden.has(s.key)
+                  ? "hidden"
+                  : disabledSet.has(s.key)
+                    ? "disabled"
+                    : "visible";
+                /* one home per key: choosing a state clears the other list,
+                   so a section can never be hidden AND disabled at once */
+                const set = (next: "visible" | "disabled" | "hidden") => {
+                  const hiddenNext = c.hiddenSections.filter((k) => k !== s.key);
+                  const disabledNext = c.disabledSections.filter((k) => k !== s.key);
+                  if (next === "hidden") hiddenNext.push(s.key);
+                  if (next === "disabled") disabledNext.push(s.key);
+                  void patch({ hiddenSections: hiddenNext, disabledSections: disabledNext });
+                };
                 return (
-                  <label
-                    key={s.key}
-                    className="flex cursor-pointer items-center justify-between gap-3 text-body-sm text-ink"
-                  >
-                    <span>
-                      {s.label}
-                      <span className="block font-mono text-label uppercase text-dim">
-                        {off ? "hidden" : "visible"}
-                      </span>
+                  <div key={s.key} className="flex items-center justify-between gap-3">
+                    <span className="min-w-0 truncate text-body-sm text-ink">{s.label}</span>
+                    <span className="flex shrink-0 overflow-hidden rounded-[6px] border border-hair">
+                      {(
+                        [
+                          ["visible", "On"],
+                          ["disabled", "Locked"],
+                          ["hidden", "Off"],
+                        ] as const
+                      ).map(([k, label]) => (
+                        <button
+                          key={k}
+                          type="button"
+                          disabled={busy}
+                          onClick={() => set(k)}
+                          aria-pressed={state === k}
+                          className={`tap px-2 py-1 font-mono text-label uppercase transition-colors ${
+                            state === k
+                              ? k === "visible"
+                                ? "bg-green/15 text-green"
+                                : k === "disabled"
+                                  ? "bg-gold/15 text-gold"
+                                  : "bg-hair/60 text-muted"
+                              : "text-dim hover:text-ink"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
                     </span>
-                    <input
-                      type="checkbox"
-                      checked={!off}
-                      disabled={busy}
-                      onChange={() => {
-                        const next = off
-                          ? c.hiddenSections.filter((k) => k !== s.key)
-                          : [...c.hiddenSections, s.key];
-                        void patch({ hiddenSections: next });
-                      }}
-                      className="h-4 w-4 shrink-0 rounded-[3px] border-hair"
-                    />
-                  </label>
+                  </div>
                 );
               })}
             </div>
