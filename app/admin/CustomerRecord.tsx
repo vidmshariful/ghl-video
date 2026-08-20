@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ArrowLeft, ExternalLink, MessageSquare, Plus } from "lucide-react";
-import { Button, Card, Chip, Input, Table, Td, Th } from "@/components/portal/ui";
+import { Button, Card, Chip, Input, Select, Table, Td, Th } from "@/components/portal/ui";
 import { authHeader, money, when } from "./client";
 import { HIDEABLE_SECTIONS } from "./customer-sections";
 
@@ -80,6 +80,14 @@ type Record_ = {
     createdAt: string;
   }[];
   videos: { id: string; orderId: string; title: string; status: string; dueAt: string | null }[];
+  contacts: {
+    id: string;
+    name: string;
+    email: string | null;
+    phone: string | null;
+    role: string;
+    title: string | null;
+  }[];
   team: { id: string; email: string; name: string | null; features: string[] | null; status: string }[];
   notes: { id: string; author: string; body: string; createdAt: string }[];
   conversations: {
@@ -115,6 +123,7 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
   const [err, setErr] = useState("");
   const [note, setNote] = useState("");
   const [tagDraft, setTagDraft] = useState("");
+  const [contact, setContact] = useState<{ name: string; email: string; phone: string; title: string; role: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -141,6 +150,19 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
       body: JSON.stringify(body),
     }).catch(() => null);
     setBusy(false);
+    await load();
+  }
+
+  async function addContact() {
+    if (!contact?.name.trim()) return;
+    setBusy(true);
+    await fetch(`/api/admin/customers/${id}/contacts`, {
+      method: "POST",
+      headers: { ...(await authHeader()), "Content-Type": "application/json" },
+      body: JSON.stringify(contact),
+    }).catch(() => null);
+    setBusy(false);
+    setContact(null);
     await load();
   }
 
@@ -517,7 +539,88 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
             )}
           </Card>
 
-          <Card title="Team">
+          {/* who we actually deal with. Distinct from Team below, which is who
+              can log in: most contacts never sign in at all. */}
+          <Card
+            title="Who we work with"
+            actions={
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<Plus />}
+                onClick={() =>
+                  setContact({ name: "", email: "", phone: "", title: "", role: "production" })
+                }
+              >
+                Add
+              </Button>
+            }
+          >
+            {data.contacts.length === 0 && !contact && (
+              <p className="text-body-sm text-muted">
+                Nobody named yet. Add the person who runs projects with you.
+              </p>
+            )}
+            {data.contacts.length > 0 && (
+              <ul className="grid gap-2.5">
+                {data.contacts.map((c) => (
+                  <li key={c.id} className="text-body-sm">
+                    <span className="flex flex-wrap items-center gap-2">
+                      <span className="text-ink">{c.name}</span>
+                      <Chip tone={c.role === "primary" ? "good" : "info"}>{c.role}</Chip>
+                    </span>
+                    <p className="mt-0.5 font-mono text-label uppercase text-dim">
+                      {[c.title, c.email, c.phone].filter(Boolean).join(" / ") || "no details"}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {contact && (
+              <div className="mt-3 grid gap-2 border-t border-hair pt-3">
+                <Input
+                  value={contact.name}
+                  onChange={(e) => setContact({ ...contact, name: e.target.value })}
+                  placeholder="Name"
+                />
+                <Input
+                  value={contact.title}
+                  onChange={(e) => setContact({ ...contact, title: e.target.value })}
+                  placeholder="What they do, e.g. Head of Content"
+                />
+                <Input
+                  value={contact.email}
+                  onChange={(e) => setContact({ ...contact, email: e.target.value })}
+                  placeholder="Email"
+                />
+                <Input
+                  value={contact.phone}
+                  onChange={(e) => setContact({ ...contact, phone: e.target.value })}
+                  placeholder="Phone"
+                />
+                <Select
+                  value={contact.role}
+                  onChange={(e) => setContact({ ...contact, role: e.target.value })}
+                  aria-label="What this contact is for"
+                >
+                  <option value="primary">Primary, the relationship</option>
+                  <option value="production">Production, the day to day</option>
+                  <option value="billing">Billing</option>
+                  <option value="other">Other</option>
+                </Select>
+                <div className="flex gap-2">
+                  <Button variant="brand" size="sm" disabled={busy || !contact.name.trim()} onClick={addContact}>
+                    Save
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => setContact(null)}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+          </Card>
+
+          <Card title="Portal access">
             {data.team.length === 0 ? (
               <p className="text-body-sm text-muted">Nobody else on this account.</p>
             ) : (

@@ -58,6 +58,14 @@ type Project = {
   videos: { id: string; title: string; status: string }[];
 };
 
+type Client = {
+  id: string;
+  email: string;
+  name: string | null;
+  company: string | null;
+  contacts: { id: string; name: string; email: string | null; role: string; title: string | null }[];
+};
+
 type Enquiry = {
   id: string;
   name: string | null;
@@ -82,6 +90,7 @@ const REQUEST_TONE: Record<RequestStatus, "info" | "warn" | "good" | "neutral"> 
 
 const EMPTY_DRAFT = {
   customerEmail: "",
+  contactId: "",
   title: "",
   brief: "",
   quotedCents: "",
@@ -91,9 +100,10 @@ const EMPTY_DRAFT = {
 };
 
 export function CustomVideoScreen() {
-  const [tab, setTab] = useState<"jobs" | "enquiries">("jobs");
+  const [tab, setTab] = useState<"projects" | "enquiries">("projects");
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [enquiries, setEnquiries] = useState<Enquiry[] | null>(null);
+  const [clients, setClients] = useState<Client[]>([]);
   const [draft, setDraft] = useState<typeof EMPTY_DRAFT | null>(null);
   const [open, setOpen] = useState<Project | null>(null);
   const [busy, setBusy] = useState(false);
@@ -103,13 +113,15 @@ export function CustomVideoScreen() {
     setErr("");
     try {
       const h = await authHeader();
-      const [p, r] = await Promise.all([
+      const [p, r, c] = await Promise.all([
         fetch("/api/admin/projects", { headers: h }).then((x) => x.json()),
         fetch("/api/admin/project-requests", { headers: h }).then((x) => x.json()),
+        fetch("/api/admin/customers", { headers: h }).then((x) => x.json()),
       ]);
       if (p.error || r.error) return setErr(p.error ?? r.error);
       setProjects(p.projects as Project[]);
       setEnquiries(r.requests as Enquiry[]);
+      setClients((c.customers as Client[]) ?? []);
     } catch {
       setErr("Could not load custom video.");
     }
@@ -135,7 +147,7 @@ export function CustomVideoScreen() {
         }),
       });
       const j = await r.json();
-      if (!r.ok) return setErr(j.error ?? "Could not create the job.");
+      if (!r.ok) return setErr(j.error ?? "Could not create the project.");
       setDraft(null);
       await load();
     } finally {
@@ -178,11 +190,11 @@ export function CustomVideoScreen() {
   if (!projects || !enquiries) return <p className="text-body text-muted">Loading...</p>;
 
   const live = projects.filter((p) => isOpen(p.status));
+  /* the client picked in the form, so its contacts can be offered */
+  const chosen = clients.find((c) => c.email === draft?.customerEmail) ?? null;
   const openEnquiries = enquiries.filter((e) => e.status !== "won" && e.status !== "lost");
-  const pipelineCents = live.reduce((s, p) => s + p.money.valueCents, 0);
-  const owedCents = live.reduce((s, p) => s + p.money.outstandingCents, 0);
 
-  /* one job, opened */
+  /* one project, opened */
   if (open) {
     const p = projects.find((x) => x.id === open.id) ?? open;
     return (
@@ -286,13 +298,13 @@ export function CustomVideoScreen() {
         description="Bespoke work, and the enquiries that have not become work yet."
         actions={
           <Button variant="brand" icon={<Plus />} onClick={() => setDraft(EMPTY_DRAFT)}>
-            New job
+            New project
           </Button>
         }
       >
         <Tabs
           tabs={[
-            { key: "jobs" as const, label: "Jobs", count: live.length },
+            { key: "projects" as const, label: "Projects", count: live.length },
             { key: "enquiries" as const, label: "Enquiries", count: openEnquiries.length },
           ]}
           active={tab}
@@ -305,7 +317,7 @@ export function CustomVideoScreen() {
       {draft && (
         <Card
           className="mb-4"
-          title="New job"
+          title="New project"
           actions={
             <div className="flex gap-2">
               <Button variant="ghost" onClick={() => setDraft(null)}>
@@ -319,14 +331,45 @@ export function CustomVideoScreen() {
         >
           <div className="grid gap-4">
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Client email" required hint="Who the work is for.">
-                <Input
+              <Field
+                label="Client"
+                required
+                hint="Add them under Clients first if they are not here yet."
+              >
+                <Select
                   value={draft.customerEmail}
-                  onChange={(e) => setDraft({ ...draft, customerEmail: e.target.value })}
-                  placeholder="keith@speedmobi.com"
-                />
+                  onChange={(e) =>
+                    setDraft({ ...draft, customerEmail: e.target.value, contactId: "" })
+                  }
+                >
+                  <option value="">Pick a client</option>
+                  {clients.map((c) => (
+                    <option key={c.id} value={c.email}>
+                      {c.company || c.name || c.email}
+                    </option>
+                  ))}
+                </Select>
               </Field>
-              <Field label="Job name" required hint="What you would call it out loud.">
+              <Field label="Who we work with" hint="The person at their end running this with us.">
+                <Select
+                  value={draft.contactId}
+                  onChange={(e) => setDraft({ ...draft, contactId: e.target.value })}
+                  disabled={!chosen}
+                >
+                  <option value="">
+                    {chosen?.contacts.length ? "Pick a contact" : "No contacts on this client yet"}
+                  </option>
+                  {(chosen?.contacts ?? []).map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                      {c.title ? `, ${c.title}` : ""} ({c.role})
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Project name" required hint="What you would call it out loud.">
                 <Input
                   value={draft.title}
                   onChange={(e) => setDraft({ ...draft, title: e.target.value })}
@@ -370,36 +413,15 @@ export function CustomVideoScreen() {
         </Card>
       )}
 
-      {tab === "jobs" ? (
+      {tab === "projects" ? (
         <>
-          <div className="mb-3 grid gap-3 sm:grid-cols-3">
-            <Card>
-              <p className="font-mono text-label uppercase text-dim">Live jobs</p>
-              <p className="mt-2 font-display text-h2 tabular-nums text-ink">{live.length}</p>
-            </Card>
-            <Card>
-              <p className="font-mono text-label uppercase text-dim">Agreed, in flight</p>
-              <p className="mt-2 font-display text-h2 tabular-nums text-gold">
-                {money(pipelineCents)}
-              </p>
-            </Card>
-            <Card>
-              <p className="font-mono text-label uppercase text-dim">Still owed</p>
-              <p
-                className={`mt-2 font-display text-h2 tabular-nums ${owedCents ? "text-error" : "text-ink"}`}
-              >
-                {money(owedCents)}
-              </p>
-            </Card>
-          </div>
-
           {live.length === 0 ? (
             <EmptyState
-              title="No custom jobs open"
-              description="Most jobs start on a call or a referral. Create one and it appears on the board."
+              title="No custom projects open"
+              description="Most projects start on a call or a referral. Create one and it appears on the board."
               action={
                 <Button variant="brand" icon={<Plus />} onClick={() => setDraft(EMPTY_DRAFT)}>
-                  New job
+                  New project
                 </Button>
               }
             />
@@ -529,7 +551,7 @@ export function CustomVideoScreen() {
                         })
                       }
                     >
-                      Make it a job
+                      Make it a project
                     </Button>
                   )}
                 </div>

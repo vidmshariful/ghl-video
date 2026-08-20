@@ -23,6 +23,7 @@ import {
   BookOpen,
   KeyRound,
   Newspaper,
+  BadgeDollarSign,
   Clapperboard,
   FileText,
   Globe,
@@ -52,6 +53,7 @@ import { CouponsScreen } from "./CouponsScreen";
 import { LinksScreen } from "./LinksScreen";
 import { InvoicesScreen } from "./InvoicesScreen";
 import { CustomVideoScreen } from "./CustomVideoScreen";
+import { SalesScreen } from "./SalesScreen";
 import { CustomersScreen } from "./CustomersScreen";
 import { PartnersScreen } from "./PartnersScreen";
 import { StudioScreen } from "./StudioScreen";
@@ -432,6 +434,7 @@ export function AdminClient({
     {
       title: "Sales",
       items: [
+        { key: "sales", label: "Sales", icon: <BadgeDollarSign /> },
         { key: "orders", label: "Orders", icon: <ShoppingCart /> },
         { key: "subscriptions", label: "Subscriptions", icon: <Repeat /> },
         { key: "invoices", label: "Invoices", icon: <FileText /> },
@@ -565,6 +568,8 @@ export function AdminClient({
             <LinksScreen />
           ) : view === "invoices" ? (
             <InvoicesScreen />
+          ) : view === "sales" ? (
+            <SalesScreen />
           ) : view === "custom" ? (
             <CustomVideoScreen />
           ) : view === "customers" ? (

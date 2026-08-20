@@ -51,6 +51,11 @@ export async function GET(req: Request) {
     ((paidOrders ?? []) as Row[]).map((o) => String((o.product as { sku?: unknown } | null)?.sku ?? "")),
   );
 
+  const { data: contacts } = await db
+    .from("customer_contacts")
+    .select("id, name, role, email");
+  const contactById = new Map(((contacts ?? []) as Row[]).map((c) => [String(c.id), c]));
+
   const items = ((projects ?? []) as Row[]).map((p) => {
     const id = String(p.id);
     const mine = ((invoices ?? []) as Row[])
@@ -80,6 +85,13 @@ export async function GET(req: Request) {
       agreedCents: p.agreed_cents == null ? null : Number(p.agreed_cents),
       ownerEmail: (p.owner_email as string | null) ?? null,
       dueAt: (p.due_at as string | null) ?? null,
+      contactId: (p.contact_id as string | null) ?? null,
+      contact: p.contact_id
+        ? (() => {
+            const c = contactById.get(String(p.contact_id));
+            return c ? { name: String(c.name), role: String(c.role), email: (c.email as string | null) ?? null } : null;
+          })()
+        : null,
       createdAt: String(p.created_at),
       invoices: mine,
       money,
@@ -123,6 +135,7 @@ export async function POST(req: Request) {
       agreed_cents: cents(b.agreedCents),
       owner_email: str(b.ownerEmail, 200) ?? admin.email,
       due_at: str(b.dueAt, 40),
+      contact_id: str(b.contactId, 64),
     })
     .select("id")
     .single();
@@ -156,6 +169,7 @@ export async function PATCH(req: Request) {
   if ("agreedCents" in b) patch.agreed_cents = cents(b.agreedCents);
   if ("ownerEmail" in b) patch.owner_email = str(b.ownerEmail, 200);
   if ("dueAt" in b) patch.due_at = str(b.dueAt, 40);
+  if ("contactId" in b) patch.contact_id = str(b.contactId, 64);
   if (!Object.keys(patch).length) {
     return NextResponse.json({ error: "Nothing to change." }, { status: 400 });
   }

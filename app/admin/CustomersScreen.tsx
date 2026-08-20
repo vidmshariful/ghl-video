@@ -1,8 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Search } from "lucide-react";
-import { Button, Card, Chip, EmptyState, Input, Table, Td, Th, Toolbar } from "@/components/portal/ui";
+import { Plus, Search } from "lucide-react";
+import {
+  Button,
+  Card,
+  Chip,
+  EmptyState,
+  Field,
+  Input,
+  Table,
+  Td,
+  Th,
+  Toolbar,
+} from "@/components/portal/ui";
 import { authHeader, money, when } from "./client";
 import { CustomerRecord } from "./CustomerRecord";
 
@@ -57,6 +68,11 @@ export function CustomersScreen({
   const [service, setService] = useState<"all" | "premade" | "custom" | "editing">("all");
   const [sort, setSort] = useState<Sort>("value");
   const [err, setErr] = useState("");
+  const [draft, setDraft] = useState<{
+    company: string; name: string; email: string; phone: string;
+    contactName: string; contactTitle: string; contactEmail: string; contactPhone: string;
+  } | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     setErr("");
@@ -92,20 +108,31 @@ export function CustomersScreen({
     });
   }, [rows, q, service, sort]);
 
+  async function createClient() {
+    if (!draft) return;
+    setBusy(true);
+    setErr("");
+    try {
+      const r = await fetch("/api/admin/customers", {
+        method: "POST",
+        headers: { ...(await authHeader()), "Content-Type": "application/json" },
+        body: JSON.stringify(draft),
+      });
+      const j = await r.json();
+      if (!r.ok) return setErr(j.error ?? "Could not add the client.");
+      setDraft(null);
+      await load();
+      if (j.id) onOpen(j.id);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   /* one client, in full */
   if (openId) return <CustomerRecord id={openId} onBack={() => onOpen(null)} />;
 
   if (err) return <p className="text-body text-error">{err}</p>;
   if (!rows) return <p className="text-body text-muted">Loading...</p>;
-
-  const totals = rows.reduce(
-    (a, c) => ({
-      value: a.value + c.value.totalCents,
-      mrr: a.mrr + c.value.monthlyCents,
-      open: a.open + c.value.openInvoicesCents,
-    }),
-    { value: 0, mrr: 0, open: 0 },
-  );
 
   return (
     <div className="w-full">
@@ -113,29 +140,110 @@ export function CustomersScreen({
         <div>
           <h1 className="font-display text-h2 text-ink">Clients</h1>
           <p className="mt-1 text-body text-muted">
-            Everyone who has bought, across all three services.
+            Everyone we work with. Add a client here before starting their first project.
           </p>
         </div>
+        <Button
+          variant="brand"
+          icon={<Plus />}
+          onClick={() =>
+            setDraft({
+              company: "", name: "", email: "", phone: "",
+              contactName: "", contactTitle: "", contactEmail: "", contactPhone: "",
+            })
+          }
+        >
+          Add client
+        </Button>
       </div>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-3">
-        <Card>
-          <p className="font-mono text-label uppercase text-dim">Everything billed</p>
-          <p className="mt-2 font-display text-h2 tabular-nums text-gold">{money(totals.value)}</p>
+      {err && <p className="mt-3 text-body-sm text-error">{err}</p>}
+
+      {draft && (
+        <Card
+          className="mt-4"
+          title="New client"
+          actions={
+            <div className="flex gap-2">
+              <Button variant="ghost" onClick={() => setDraft(null)}>
+                Cancel
+              </Button>
+              <Button variant="brand" disabled={busy} onClick={createClient}>
+                {busy ? "Adding..." : "Add client"}
+              </Button>
+            </div>
+          }
+        >
+          <div className="grid gap-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Company" hint="What you would call them.">
+                <Input
+                  value={draft.company}
+                  onChange={(e) => setDraft({ ...draft, company: e.target.value })}
+                  placeholder="HighLevel"
+                />
+              </Field>
+              <Field label="Account email" required hint="The address their portal is keyed to.">
+                <Input
+                  value={draft.email}
+                  onChange={(e) => setDraft({ ...draft, email: e.target.value })}
+                  placeholder="billing@highlevel.com"
+                />
+              </Field>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Account name" hint="Optional.">
+                <Input
+                  value={draft.name}
+                  onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+                />
+              </Field>
+              <Field label="Phone" hint="Optional.">
+                <Input
+                  value={draft.phone}
+                  onChange={(e) => setDraft({ ...draft, phone: e.target.value })}
+                />
+              </Field>
+            </div>
+
+            <div className="border-t border-hair pt-4">
+              <p className="text-body-sm font-semibold text-ink">Their main contact</p>
+              <p className="mt-0.5 text-body-sm text-muted">
+                The person the relationship runs through. You can add whoever handles
+                production separately once the client exists.
+              </p>
+              <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                <Field label="Name" hint="Who to call first.">
+                  <Input
+                    value={draft.contactName}
+                    onChange={(e) => setDraft({ ...draft, contactName: e.target.value })}
+                    placeholder="Chase Buckner"
+                  />
+                </Field>
+                <Field label="What they do" hint="Optional.">
+                  <Input
+                    value={draft.contactTitle}
+                    onChange={(e) => setDraft({ ...draft, contactTitle: e.target.value })}
+                    placeholder="Head of Marketing"
+                  />
+                </Field>
+                <Field label="Their email" hint="Leave empty to use the account email.">
+                  <Input
+                    value={draft.contactEmail}
+                    onChange={(e) => setDraft({ ...draft, contactEmail: e.target.value })}
+                  />
+                </Field>
+                <Field label="Their phone" hint="Optional.">
+                  <Input
+                    value={draft.contactPhone}
+                    onChange={(e) => setDraft({ ...draft, contactPhone: e.target.value })}
+                  />
+                </Field>
+              </div>
+            </div>
+          </div>
         </Card>
-        <Card>
-          <p className="font-mono text-label uppercase text-dim">Recurring, per month</p>
-          <p className="mt-2 font-display text-h2 tabular-nums text-green">{money(totals.mrr)}</p>
-        </Card>
-        <Card>
-          <p className="font-mono text-label uppercase text-dim">Invoiced, unpaid</p>
-          <p
-            className={`mt-2 font-display text-h2 tabular-nums ${totals.open ? "text-error" : "text-ink"}`}
-          >
-            {money(totals.open)}
-          </p>
-        </Card>
-      </div>
+      )}
 
       <Toolbar
         right={

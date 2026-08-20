@@ -45,6 +45,13 @@ export async function GET(req: Request) {
         .select("customer_email, total_cents, status, product_sku, product_id, parent_order_id"),
     ]);
 
+  /* every client's people, so a picker can show who to talk to rather than
+   * an email address nobody recognises */
+  const { data: contacts } = await db
+    .from("customer_contacts")
+    .select("id, customer_id, name, email, role, title")
+    .order("role");
+
   /* group once, by lowercased email, which is the only key all four share */
   const key = (e: unknown) => String(e ?? "").toLowerCase();
   const byEmail = <T extends Row>(rows: T[] | null, field: string) => {
@@ -124,6 +131,15 @@ export async function GET(req: Request) {
           ["active", "trialing", "past_due"].includes(s.status),
         ).length,
       }),
+      contacts: ((contacts ?? []) as Row[])
+        .filter((x) => String(x.customer_id) === String(c.id))
+        .map((x) => ({
+          id: String(x.id),
+          name: String(x.name),
+          email: (x.email as string | null) ?? null,
+          role: String(x.role),
+          title: (x.title as string | null) ?? null,
+        })),
       counts: {
         orders: mine.orders.filter((o) => o.status === "paid" && o.kind === "premade").length,
         addOns: mine.orders.filter((o) => o.status === "paid" && o.kind === "addon").length,
@@ -135,4 +151,68 @@ export async function GET(req: Request) {
   });
 
   return NextResponse.json({ customers: items });
+}
+
+
+/*
+ * Add a client by hand.
+ *
+ * Until now a customer row only ever appeared when somebody paid, which made
+ * the custom video process backwards: you cannot scope a project for a client
+ * who does not exist yet, and the first real step of that work is agreeing it
+ * with a named person at a company. So a client can be created before any
+ * money moves, and their contacts with them.
+ */
+export async function POST(req: Request) {
+  const admin = await verifyAdmin(req);
+  if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+
+  const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+  const str = (v: unknown, max: number) =>
+    typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null;
+  const email = str(b.email, 200)?.toLowerCase() ?? null;
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return NextResponse.json({ error: "A real email address, please." }, { status: 400 });
+  }
+
+  const db = supabaseAdmin();
+  const { data: existing } = await db
+    .from("customers")
+    .select("id")
+    .ilike("email", email)
+    .maybeSingle();
+  if (existing) {
+    return NextResponse.json(
+      { error: "That email already belongs to a client.", id: existing.id },
+      { status: 409 },
+    );
+  }
+
+  const { data, error } = await db
+    .from("customers")
+    .insert({
+      email,
+      name: str(b.name, 160),
+      company: str(b.company, 160),
+      phone: str(b.phone, 40),
+    })
+    .select("id")
+    .single();
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+  /* the person we actually deal with, created alongside so a new client is
+   * never a bare email nobody can put a name to */
+  const contactName = str(b.contactName, 160);
+  if (contactName) {
+    await db.from("customer_contacts").insert({
+      customer_id: data.id,
+      name: contactName,
+      email: str(b.contactEmail, 200)?.toLowerCase() ?? email,
+      phone: str(b.contactPhone, 40),
+      title: str(b.contactTitle, 120),
+      role: "primary",
+    });
+  }
+
+  return NextResponse.json({ ok: true, id: data.id });
 }

@@ -37,6 +37,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     { data: members },
     { data: notes },
     { data: convos },
+    { data: contacts },
   ] = await Promise.all([
     db
       .from("orders")
@@ -70,6 +71,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       .select("id, order_id, last_message_at, last_message_preview, last_sender_role")
       .ilike("customer_email", email)
       .order("last_message_at", { ascending: false, nullsFirst: false }),
+    db
+      .from("customer_contacts")
+      .select("id, name, email, phone, role, title, notes, created_at")
+      .eq("customer_id", id)
+      .order("role"),
   ]);
 
   const orderIds = ((orders ?? []) as Row[]).map((o) => String(o.id));
@@ -211,6 +217,15 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       lastMessageAt: (v.last_message_at as string | null) ?? null,
       preview: (v.last_message_preview as string | null) ?? null,
       lastSender: (v.last_sender_role as string | null) ?? null,
+    })),
+    contacts: ((contacts ?? []) as Row[]).map((c) => ({
+      id: String(c.id),
+      name: String(c.name),
+      email: (c.email as string | null) ?? null,
+      phone: (c.phone as string | null) ?? null,
+      role: String(c.role),
+      title: (c.title as string | null) ?? null,
+      notes: (c.notes as string | null) ?? null,
     })),
     brandKit: kit ? { kit, completeness: completeness(kit) } : { kit: null, completeness: completeness(null) },
   });
