@@ -128,6 +128,7 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
   const [err, setErr] = useState("");
   const [note, setNote] = useState("");
   const [tagDraft, setTagDraft] = useState("");
+  const [welcomeTo, setWelcomeTo] = useState("");
   const [contact, setContact] = useState<{ name: string; email: string; phone: string; title: string; role: string } | null>(null);
   const [busy, setBusy] = useState(false);
   /* which nudge is in flight: "<orderId>:<kind>" */
@@ -170,6 +171,37 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
       }
     })();
   }, [data?.customer.email]);
+
+  async function sendWelcome(email: string) {
+    setSending(`welcome:${email}`);
+    setNote("");
+    setErr("");
+    try {
+      const r = await fetch(`/api/admin/customers/${id}/welcome-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(await authHeader()) },
+        body: JSON.stringify({ email }),
+      });
+      const j = await r.json();
+      if (!r.ok) setErr(j.error ?? "Not sent.");
+      else
+        setNote(
+          j.asTeammate
+            ? `${email} got the invite${j.granted ? " and a seat on this account, everything switched on" : ""}. The owner can trim their access under Settings, Team.`
+            : `Welcome sent to ${email}.`,
+        );
+      const r2 = await fetch(
+        `/api/admin/email-log?q=${encodeURIComponent(data?.customer.email ?? "")}`,
+        { headers: await authHeader() },
+      );
+      const j2 = await r2.json();
+      if (r2.ok) setEmails(j2.entries ?? []);
+    } catch {
+      setErr("Not sent.");
+    } finally {
+      setSending(null);
+    }
+  }
 
   async function sendNudge(orderId: string, kind: "order_confirmation" | "intake_reminder") {
     setSending(`${orderId}:${kind}`);
@@ -605,6 +637,39 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
           </Card>
 
           <Card title="Emails" description="What this person was sent, and what happened to each.">
+            {/* the welcome, for accounts the studio created by hand: nothing
+                else ever tells these people their portal exists. A contact
+                gets a seat on the account first, then the invite. */}
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <div className="min-w-0 flex-1">
+                <Select
+                  value={welcomeTo || data.customer.email}
+                  onChange={(e) => setWelcomeTo(e.target.value)}
+                  aria-label="Who gets the welcome email"
+                >
+                  <option value={data.customer.email}>{data.customer.email} (account)</option>
+                  {data.contacts
+                    .filter(
+                      (ct) =>
+                        ct.email &&
+                        ct.email.toLowerCase() !== data.customer.email.toLowerCase(),
+                    )
+                    .map((ct) => (
+                      <option key={ct.id} value={ct.email ?? ""}>
+                        {ct.email} ({ct.name})
+                      </option>
+                    ))}
+                </Select>
+              </div>
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={sending?.startsWith("welcome:") ?? false}
+                onClick={() => sendWelcome(welcomeTo || data.customer.email)}
+              >
+                {sending?.startsWith("welcome:") ? "Sending..." : "Send welcome"}
+              </Button>
+            </div>
             {emails === null ? (
               <p className="text-body-sm text-muted">Loading...</p>
             ) : emails.length === 0 ? (

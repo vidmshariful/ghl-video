@@ -507,6 +507,22 @@ export async function sendPartnerInviteEmail(
 
 /** A customer or partner added a teammate: email them the way in, and put
  *  the invite on their bell (personal, never fanned out). */
+/**
+ * The hand-fired welcome for an account the studio created itself: no order,
+ * no checkout, so nothing else would ever tell this person their portal
+ * exists. Sent from the customer's record in admin.
+ */
+export async function sendPortalWelcomeEmail(
+  db: SupabaseClient,
+  input: { email: string; name: string | null },
+): Promise<void> {
+  await sendTemplate(db, "portal_welcome", input.email, input.name, {
+    customer_name: escapeHtml(input.name || "there"),
+    customer_email: escapeHtml(input.email),
+    portal_url: `${SITE_URL}/portal`,
+  });
+}
+
 export async function sendTeamInviteEmail(
   db: SupabaseClient,
   input: {

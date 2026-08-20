@@ -58,6 +58,7 @@ export const TEMPLATE_VARIABLES: Record<string, string[]> = {
   partner_application_received: ["name", "partners_url"],
   partner_invite: ["partner_name", "partner_email", "partners_url"],
   team_invite: ["member_name", "member_email", "owner_name", "portal_label", "portal_url"],
+  portal_welcome: ["customer_name", "customer_email", "portal_url"],
   admin_new_order: ["customer_name", "customer_email", "product_name", "order_code", "amount", "admin_url"],
   admin_new_application: ["name", "email", "channel", "audience", "admin_url"],
   admin_dispute: ["customer_email", "product_name", "order_code", "amount", "reason", "admin_url"],
@@ -233,6 +234,17 @@ ${btn("{{contact_url}}", "Book a call")}`,
 <p style="${P}">Hi {{partner_name}}, your partner account is ready. Your links, promo assets, live stats, and earnings all live in your portal.</p>
 ${btn("{{partners_url}}", "Open your portal")}
 <p style="${SMALL}margin-top:22px;">First time signing in? Use <strong style="color:#9096a8;">{{partner_email}}</strong> and pick "Set it by email" on the sign-in page to create your password.</p>`,
+  },
+  {
+    key: "portal_welcome",
+    name: "Portal welcome",
+    description:
+      "Sent by hand from a customer's record in admin: their portal is ready and how to open it. For accounts created by the studio, which never pass through checkout.",
+    subject: "Your GHL Video portal is ready",
+    body: `<h1 style="${H}">Everything we make for you, in one place.</h1>
+<p style="${P}">Hi {{customer_name}}, your GHL Video portal is set up. Your videos land there for review and approval, your brand kit lives there so you give it once, and messages reach the studio directly.</p>
+${btn("{{portal_url}}", "Open your portal")}
+<p style="${SMALL}margin-top:22px;">Sign in with <strong style="color:#9096a8;">{{customer_email}}</strong>. First time? Pick "Set it by email" on the sign-in page and choose your password.</p>`,
   },
   {
     key: "team_invite",
