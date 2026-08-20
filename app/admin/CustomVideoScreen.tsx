@@ -707,7 +707,7 @@ function ProjectDrawer({
                 }}
                 className={`tap px-2.5 py-1 font-mono text-label uppercase transition-colors ${
                   st === p.status
-                    ? "bg-gold text-[#08090D]"
+                    ? "bg-gold text-canvas"
                     : "text-dim hover:text-ink"
                 }`}
               >
