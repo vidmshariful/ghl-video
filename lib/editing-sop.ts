@@ -156,3 +156,21 @@ export const CLIENT_STATUS_WORD: Record<string, string> = Object.fromEntries(
 
 export const stageFor = (key: string) =>
   CLIENT_STAGES.find((s) => s.key === key) ?? CLIENT_STAGES[1];
+
+/*
+ * What a drag between board columns MEANS, as the patch the API takes.
+ *
+ * A drop is a statement about the work: into "Needs footage" says the files
+ * are not usable, out of it says they arrived. Translating here, in the
+ * same file as the columns, keeps a drag and a button press identical to
+ * the server, whose gates (QC before Review) still get the final word.
+ */
+export function boardMovePatch(
+  from: EditingColumn,
+  to: EditingColumn,
+): Record<string, unknown> {
+  if (to === "waiting") return { assetsReady: false, status: "queued" };
+  const patch: Record<string, unknown> = { status: to };
+  if (from === "waiting") patch.assetsReady = true;
+  return patch;
+}

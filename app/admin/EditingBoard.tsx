@@ -1,16 +1,24 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft, ChevronRight, CornerDownRight } from "lucide-react";
+import { ArrowLeft, ChevronRight } from "lucide-react";
 import { Button, Card, Chip, Input, Select } from "@/components/portal/ui";
 import { authHeader, when } from "./client";
 import {
   EDITING_COLUMNS,
   QC_CHECKS,
   qcRemaining,
+  boardMovePatch,
   type EditingColumn,
   type Qc,
 } from "@/lib/editing-sop";
+import {
+  Drawer,
+  ItemNotes,
+  KanbanBoard,
+  type BoardColumn,
+  type BoardItem,
+} from "@/components/portal/board";
 
 /*
  * Editing plan work, run the way the rest of production is run.
@@ -81,6 +89,22 @@ const COLUMN_TONE: Record<EditingColumn, "neutral" | "warn" | "info" | "good" | 
   ready: "good",
   revisions: "bad",
   approved: "good",
+};
+
+const BOARD_COLUMNS: BoardColumn[] = EDITING_COLUMNS.map((c) => ({
+  key: c.key,
+  label: c.label,
+  tone: COLUMN_TONE[c.key],
+}));
+
+const dueChip = (r: { dueAt: string | null; requestedDueAt: string | null; status: string }) => {
+  if (r.dueAt) {
+    const late = Date.parse(r.dueAt) < Date.now() && !["approved"].includes(r.status);
+    return { due: `due ${when(r.dueAt)}`, dueTone: (late ? "bad" : "neutral") as "bad" | "neutral" };
+  }
+  if (r.requestedDueAt)
+    return { due: `asked ${when(r.requestedDueAt)}`, dueTone: "warn" as const };
+  return { due: null, dueTone: "neutral" as const };
 };
 
 const mins = (s: number | null) => (s ? `${Math.round(s / 60)} min` : null);
@@ -208,11 +232,11 @@ export function EditingBoard({ id, onBack }: { id: string; onBack: () => void })
     <div className="w-full">
       <button
         type="button"
-        onClick={opened ? () => setOpen(null) : onBack}
+        onClick={onBack}
         className="tap inline-flex items-center gap-2 font-mono text-label uppercase text-muted transition-colors hover:text-gold"
       >
         <ArrowLeft size={14} aria-hidden="true" />
-        {opened ? "Back to the board" : "All editing clients"}
+        All editing clients
       </button>
 
       <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
@@ -231,74 +255,63 @@ export function EditingBoard({ id, onBack }: { id: string; onBack: () => void })
 
       {err && <p className="mt-4 text-body-sm text-error">{err}</p>}
 
-      {opened ? (
-        <div className="mt-5">
-          <RequestDetail req={opened} board={b} busy={busy} onSave={save} />
+      {/* the board: drag a card to move the work; the same gates the buttons
+          obey say no by bouncing the card back with the reason */}
+      <div className="mt-5 overflow-x-auto pb-2">
+        <div className="min-w-[72rem]">
+          <KanbanBoard
+            columns={BOARD_COLUMNS}
+            items={live.map(
+              (r): BoardItem => ({
+                id: r.id,
+                column: r.column,
+                title: r.title,
+                meta: [
+                  r.parentId ? "cut" : null,
+                  r.form === "long" ? "long" : "short",
+                  r.aspect,
+                  mins(r.targetSeconds),
+                ]
+                  .filter(Boolean)
+                  .join(" / "),
+                assignee: r.assignedTo,
+                warn: r.column === "waiting" ? "needs footage" : null,
+                ...dueChip(r),
+              }),
+            )}
+            onOpen={setOpen}
+            onMove={async (reqId, to) => {
+              const item = b.requests.find((x) => x.id === reqId);
+              if (!item) return null;
+              const r = await fetch("/api/admin/editing", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json", ...(await authHeader()) },
+                body: JSON.stringify({
+                  id: reqId,
+                  ...boardMovePatch(item.column, to as EditingColumn),
+                }),
+              })
+                .then((x) => x.json().then((j) => ({ ok: x.ok, j })))
+                .catch(() => ({ ok: false, j: { error: "Could not move that." } }));
+              if (!r.ok) return String(r.j.error ?? "Could not move that.");
+              await load();
+              return null;
+            }}
+          />
         </div>
-      ) : (
-        <>
-          <div className="mt-5 grid gap-3 lg:grid-cols-6">
-            {EDITING_COLUMNS.map((col) => {
-              const cards = live.filter((r) => r.column === col.key);
-              return (
-                <div key={col.key} className="min-w-0">
-                  <p className="flex items-baseline justify-between gap-2 font-mono text-label uppercase text-dim">
-                    {col.label}
-                    <span className="tabular-nums">{cards.length}</span>
-                  </p>
-                  <div className="mt-2 grid gap-2">
-                    {cards.map((r) => (
-                      <button
-                        key={r.id}
-                        type="button"
-                        onClick={() => setOpen(r.id)}
-                        className="tap w-full rounded-[8px] border border-hair bg-surface p-3 text-left transition-colors hover:border-gold/50"
-                      >
-                        <p className="flex items-start gap-1.5 text-body-sm font-semibold text-ink">
-                          {r.parentId && (
-                            <CornerDownRight
-                              size={13}
-                              className="mt-1 shrink-0 text-dim"
-                              aria-hidden="true"
-                            />
-                          )}
-                          {r.title}
-                        </p>
-                        <p className="mt-1 font-mono text-label uppercase text-dim">
-                          {r.form === "long" ? "Long" : "Short"}
-                          {r.aspect ? ` / ${r.aspect}` : ""}
-                          {mins(r.targetSeconds) ? ` / ${mins(r.targetSeconds)}` : ""}
-                        </p>
-                        {r.dueAt ? (
-                          <p className="mt-1 font-mono text-label uppercase text-gold">
-                            due {when(r.dueAt)}
-                          </p>
-                        ) : r.requestedDueAt ? (
-                          <p className="mt-1 font-mono text-label uppercase text-muted">
-                            asked for {when(r.requestedDueAt)}
-                          </p>
-                        ) : null}
-                        {r.assignedTo && (
-                          <p className="mt-1 font-mono text-label uppercase text-dim">
-                            {r.assignedTo.split("@")[0]}
-                          </p>
-                        )}
-                      </button>
-                    ))}
-                    {cards.length === 0 && (
-                      <p className="rounded-[8px] border border-dashed border-hair px-3 py-4 text-center text-body-sm text-dim">
-                        nothing
-                      </p>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+      </div>
 
-          <StyleGuideCard guide={b.styleGuide} email={b.client.email} />
-        </>
-      )}
+      <StyleGuideCard guide={b.styleGuide} email={b.client.email} />
+
+      {/* the item, over the board instead of instead of it */}
+      <Drawer open={!!opened} onClose={() => setOpen(null)} title={opened?.title ?? ""}>
+        {opened && (
+          <div className="grid gap-5">
+            <RequestDetail req={opened} board={b} busy={busy} onSave={save} />
+            <ItemNotes target={{ deliverableId: opened.id }} authHeader={authHeader} />
+          </div>
+        )}
+      </Drawer>
     </div>
   );
 }

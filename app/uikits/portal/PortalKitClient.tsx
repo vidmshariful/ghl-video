@@ -24,6 +24,43 @@ import {
 import { AreaChart, BarChart, Donut, Sparkline } from "@/components/portal/charts";
 import { PortalSidebar } from "@/components/portal/Shell";
 import { PortalSearch } from "@/app/portal/PortalSearch";
+import { KanbanBoard, Drawer } from "@/components/portal/board";
+import { useState } from "react";
+
+/* the board specimen needs a sliver of state for its drawer */
+function BoardSpecimen() {
+  const [open, setOpen] = useState<string | null>(null);
+  const [items, setItems] = useState([
+    { id: "a", column: "queued", title: "September webinar, cut for YouTube", meta: "long / 16:9 / 12 min", assignee: null, warn: null, due: "asked Aug 22", dueTone: "warn" as const },
+    { id: "b", column: "in_production", title: "Product update, August", meta: "long / 16:9", assignee: "shariful@vidiosa.com", due: "due Aug 21", dueTone: "bad" as const },
+    { id: "c", column: "ready", title: "Founder interview, full episode", meta: "long / 16:9 / 15 min", assignee: "prince@vidiosa.com", due: null },
+    { id: "d", column: "queued", title: "Founder interview, short cut 1", meta: "cut / short / 9:16", assignee: null, due: null },
+  ]);
+  return (
+    <div className="w-full">
+      <KanbanBoard
+        columns={[
+          { key: "queued", label: "Edit request", tone: "neutral" },
+          { key: "in_production", label: "In progress", tone: "info" },
+          { key: "ready", label: "Review", tone: "good" },
+        ]}
+        items={items}
+        onOpen={setOpen}
+        onMove={async (id, to) => {
+          if (to === "ready") return "Run the QC checks before this goes to the client.";
+          setItems((all) => all.map((i) => (i.id === id ? { ...i, column: to } : i)));
+          return null;
+        }}
+      />
+      <Drawer open={!!open} onClose={() => setOpen(null)} title="Founder interview, full episode">
+        <p className="text-body-sm text-muted">
+          The item opens here, over the board, which stays live behind it.
+          Esc closes.
+        </p>
+      </Drawer>
+    </div>
+  );
+}
 import { Clapperboard, LayoutDashboard, MessageSquare, Palette, Scissors, ShoppingCart, Sparkles } from "lucide-react";
 
 /*
@@ -51,6 +88,15 @@ export function PortalKitClient() {
       title="Portal vocabulary"
       lede="The shared pieces every portal screen composes with. Before these existed, fourteen screens declared their own button and field styles, sixty local constants in total, which is the real reason the portals read as everything inline full width."
     >
+      <KitSection
+        title="The work board"
+        note="The shared board Custom and Editing wear (decision 195). Drag a card between columns to move the work; a refused move bounces back with the reason, here demonstrated by the Review column. Click a card and the drawer opens over the board."
+      >
+        <Spec label="Kanban + drawer" surface="portal" ground="canvas">
+          <BoardSpecimen />
+        </Spec>
+      </KitSection>
+
       <KitSection
         title="Search"
         note="One box across everything a client has with us and everything they could buy. Cmd K opens it, the arrows drive the list, Enter opens. The specimen is fed fixed results rather than a real account."

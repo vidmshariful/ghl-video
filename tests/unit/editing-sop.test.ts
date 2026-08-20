@@ -4,6 +4,7 @@ import {
   CLIENT_STAGES,
   EDITING_COLUMNS,
   QC_CHECKS,
+  boardMovePatch,
   columnFor,
   qcPassed,
   qcRemaining,
@@ -94,5 +95,36 @@ describe("the client's stages and the studio's columns are the same set", () => 
   test("stageFor never returns nothing, whatever it is handed", () => {
     assert.ok(stageFor("approved").label);
     assert.ok(stageFor("something we removed later").label);
+  });
+});
+
+describe("what a drag between columns means", () => {
+  test("into Needs footage says the files are not usable", () => {
+    assert.deepEqual(boardMovePatch("in_production", "waiting"), {
+      assetsReady: false,
+      status: "queued",
+    });
+  });
+
+  test("out of Needs footage says they arrived", () => {
+    assert.deepEqual(boardMovePatch("waiting", "queued"), {
+      status: "queued",
+      assetsReady: true,
+    });
+    assert.deepEqual(boardMovePatch("waiting", "in_production"), {
+      status: "in_production",
+      assetsReady: true,
+    });
+  });
+
+  test("an ordinary move is only a status change", () => {
+    assert.deepEqual(boardMovePatch("queued", "in_production"), { status: "in_production" });
+    assert.deepEqual(boardMovePatch("ready", "revisions"), { status: "revisions" });
+  });
+
+  test("dragging to Review carries no QC bypass: the server still decides", () => {
+    /* the patch says only status; the QC gate lives server-side and a drag
+       must reach it exactly like a button press would */
+    assert.deepEqual(boardMovePatch("in_production", "ready"), { status: "ready" });
   });
 });
