@@ -37,7 +37,16 @@ type Data = {
   };
   plans: { name: string; mrrCents: number; live: number }[];
   months: { key: string; label: string; premade: number; addon: number; custom: number }[];
-  recent: { kind: string; amountCents: number; at: string; email: string; name: string }[];
+  recent: {
+    kind: string;
+    amountCents: number;
+    at: string;
+    email: string;
+    name: string;
+    viaInvoice: boolean;
+    invoiceNumber: string | null;
+    recurring: boolean;
+  }[];
 };
 
 const STREAMS: { key: Stream; label: string }[] = [
@@ -48,10 +57,18 @@ const STREAMS: { key: Stream; label: string }[] = [
   { key: "subscription", label: "Subscriptions" },
 ];
 
-const KIND_TONE: Record<string, "info" | "warn" | "good"> = {
+const KIND_TONE: Record<string, "info" | "warn" | "good" | "neutral"> = {
   premade: "info",
   addon: "warn",
   custom: "good",
+  subscription: "neutral",
+};
+
+const KIND_LABEL: Record<string, string> = {
+  premade: "premade",
+  addon: "add-on",
+  custom: "custom",
+  subscription: "subscription",
 };
 
 export function SalesScreen() {
@@ -105,9 +122,7 @@ export function SalesScreen() {
 
   const max = Math.max(1, ...bars.map((b) => b.cents));
   const recent =
-    stream === "all" || stream === "subscription"
-      ? data.recent
-      : data.recent.filter((r) => r.kind === stream);
+    stream === "all" ? data.recent : data.recent.filter((r) => r.kind === stream);
 
   return (
     <div className="w-full">
@@ -264,7 +279,7 @@ export function SalesScreen() {
                     <Th>What</Th>
                     <Th>Stream</Th>
                     <Th align="right">Amount</Th>
-                    <Th align="right">Paid</Th>
+                    <Th align="right">When</Th>
                   </tr>
                 </thead>
                 <tbody>
@@ -274,12 +289,27 @@ export function SalesScreen() {
                         {r.name}
                         <span className="block font-mono text-label uppercase text-dim">
                           {r.email}
+                          {r.invoiceNumber ? ` / ${r.invoiceNumber}` : ""}
                         </span>
                       </Td>
                       <Td>
-                        <Chip tone={KIND_TONE[r.kind] ?? "neutral"}>{r.kind}</Chip>
+                        <span className="flex flex-wrap gap-1">
+                          <Chip tone={KIND_TONE[r.kind] ?? "neutral"}>
+                            {KIND_LABEL[r.kind] ?? r.kind}
+                          </Chip>
+                          {/* how it was billed, which is a separate question
+                              from what was sold */}
+                          {r.viaInvoice && <Chip tone="neutral">invoice</Chip>}
+                        </span>
                       </Td>
-                      <Td align="right">{money(r.amountCents)}</Td>
+                      <Td align="right">
+                        {money(r.amountCents)}
+                        {r.recurring && (
+                          <span className="block font-mono text-label uppercase text-dim">
+                            per month
+                          </span>
+                        )}
+                      </Td>
                       <Td align="right">{when(r.at)}</Td>
                     </tr>
                   ))}

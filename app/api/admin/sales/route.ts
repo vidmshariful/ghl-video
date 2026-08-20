@@ -38,7 +38,7 @@ export async function GET(req: Request) {
       db
         .from("subscriptions")
         .select("customer_email, amount_cents, status, created_at, current_period_end, plan_name, product:products(name, sku)"),
-      db.from("invoices").select("total_cents, status, product_sku, product_id, parent_order_id"),
+      db.from("invoices").select("number, total_cents, status, product_sku, product_id, parent_order_id"),
       db.from("projects").select("id, status, quoted_cents, agreed_cents"),
     ]);
 
@@ -54,19 +54,38 @@ export async function GET(req: Request) {
   const now = new Date();
 
   /* one-time sales, each labelled and dated by payment */
+  /* which invoice a product belongs to, so a sale can name the one it settled */
+  const invoiceNumberByProduct = new Map(
+    ((invoices ?? []) as Row[])
+      /* both halves must actually exist: String(undefined) is the string
+       * "undefined", which reads as a real invoice number all the way to
+       * the screen */
+      .filter((i) => i.product_id && typeof i.number === "string")
+      .map((i) => [String(i.product_id), i.number as string]),
+  );
+
   const sales = ((orders ?? []) as Row[])
     .filter((o) => String(o.status) === "paid")
-    .map((o) => ({
-      kind: orderKind(
-        (o.product_id as string | null) ?? null,
-        ((o.product as { metadata?: { invoice?: unknown } } | null)?.metadata ?? null),
-        invoiceByProduct,
-      ),
-      amountCents: Number(o.amount_cents),
-      at: String(o.paid_at ?? o.created_at),
-      email: String(o.customer_email),
-      name: (o.product as { name?: string } | null)?.name ?? "Order",
-    }));
+    .map((o) => {
+      const productId = (o.product_id as string | null) ?? null;
+      const invoiceNumber = productId ? (invoiceNumberByProduct.get(productId) ?? null) : null;
+      return {
+        kind: orderKind(
+          productId,
+          ((o.product as { metadata?: { invoice?: unknown } } | null)?.metadata ?? null),
+          invoiceByProduct,
+        ),
+        amountCents: Number(o.amount_cents),
+        at: String(o.paid_at ?? o.created_at),
+        email: String(o.customer_email),
+        name: (o.product as { name?: string } | null)?.name ?? "Order",
+        /* how it was billed, which is a different question from what it was:
+         * an add-on and a bespoke job are both invoiced, a shelf purchase is not */
+        viaInvoice: Boolean(invoiceNumber),
+        invoiceNumber,
+        recurring: false,
+      };
+    });
 
   const refundedCents = ((orders ?? []) as Row[])
     .filter((o) => String(o.status) === "refunded")
@@ -74,6 +93,8 @@ export async function GET(req: Request) {
 
   /* recurring, all time and right now */
   const BILLING = new Set(["active", "trialing", "past_due"]);
+  /* a plan that never completed its first payment took no money */
+  const NEVER_PAID = new Set(["incomplete", "incomplete_expired"]);
   let subscriptionCents = 0;
   let mrrCents = 0;
   const planRows: { name: string; mrrCents: number; live: number }[] = [];
@@ -141,6 +162,31 @@ export async function GET(req: Request) {
   const sum = (kind: string) =>
     sales.filter((s) => s.kind === kind).reduce((a, s) => a + s.amountCents, 0);
 
+  /*
+   * Subscriptions in the same list.
+   *
+   * Dated by when the plan started and shown at its monthly price, marked
+   * recurring so it never reads as a one-off. We do not hold Stripe's
+   * individual monthly invoices, and inventing a row per month would be
+   * making up records; this says the true thing, which is that this plan
+   * began here and bills this much.
+   */
+  const subscriptionSales = ((subs ?? []) as Row[])
+    .filter((x) => !NEVER_PAID.has(String(x.status)))
+    .map((x) => ({
+      kind: "subscription" as const,
+      amountCents: x.amount_cents == null ? 0 : Number(x.amount_cents),
+      at: String(x.created_at),
+      email: String(x.customer_email),
+      name:
+        (x.plan_name as string | null) ??
+        (x.product as { name?: string } | null)?.name ??
+        "Editing plan",
+      viaInvoice: false,
+      invoiceNumber: null,
+      recurring: true,
+    }));
+
   return NextResponse.json({
     totals: {
       allTimeCents: sum("premade") + sum("addon") + sum("custom") + subscriptionCents,
@@ -162,9 +208,8 @@ export async function GET(req: Request) {
     },
     plans: planRows.sort((a, b) => b.mrrCents - a.mrrCents),
     months,
-    recent: sales
+    recent: [...sales, ...subscriptionSales]
       .sort((a, b) => b.at.localeCompare(a.at))
-      .slice(0, 12)
-      .map((s) => ({ kind: s.kind, amountCents: s.amountCents, at: s.at, email: s.email, name: s.name })),
+      .slice(0, 15),
   });
 }
