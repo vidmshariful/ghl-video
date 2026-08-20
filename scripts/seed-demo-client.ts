@@ -132,6 +132,8 @@ async function wipe() {
   await db.from("editing_style_guides").delete().ilike("customer_email", EMAIL);
   if (customer) await db.from("brand_kits").delete().eq("customer_id", customer.id);
   await db.from("customers").delete().ilike("email", EMAIL);
+  /* the demo's own throwaway invoice products, never a real one */
+  await db.from("products").delete().like("sku", "inv-demo-%");
 
   /* The login is deliberately left alone. Deleting and remaking it would
    * throw away the password whoever is testing has already set. */
@@ -139,6 +141,20 @@ async function wipe() {
 }
 
 /* --------------------------------------------------------------- build --- */
+
+/* An invoice carries its own throwaway product, the way the real ones do.
+ * Made if it is missing so the seed does not depend on one existing. */
+async function ensureInvoiceProduct(sku: string, name: string): Promise<string> {
+  const { data: existing } = await db.from("products").select("id").eq("sku", sku).maybeSingle();
+  if (existing) return String(existing.id);
+  const { data, error } = await db
+    .from("products")
+    .insert({ sku, name, price_cents: 0, active: false, metadata: { invoice: true, ...DEMO } })
+    .select("id")
+    .single();
+  if (error) throw new Error(`products ${sku}: ${error.message}`);
+  return String(data.id);
+}
 
 async function productBySku(sku: string) {
   const { data } = await db
@@ -316,7 +332,35 @@ async function build() {
     created_at: days(60),
     sent_at: days(60),
   });
-  say("  add-on invoice against the delivered order");
+
+  /*
+   * And the order that settles it.
+   *
+   * An invoice is paid when an order exists against its throwaway sku, which
+   * is the same test the portal and admin both make. Seeding one settled and
+   * one outstanding means Orders and Invoices exercises both halves: the
+   * thing they still owe at the top, and the paid add-on in the record below.
+   */
+  const addOnProduct = await ensureInvoiceProduct(
+    "inv-demo-addon",
+    "Niche customisation on the delivered walkthrough",
+  );
+  await insertOne("orders", {
+    product_id: addOnProduct,
+    customer_id: customerId,
+    customer_email: EMAIL,
+    amount_cents: 0,
+    currency: "usd",
+    status: "paid",
+    fulfillment_stage: "delivered",
+    intake_completed: true,
+    invoice_number: "DEMO-INV-01",
+    created_at: days(59),
+    paid_at: days(59),
+    stage_changed_at: days(59),
+    metadata: { ...DEMO, sku: "inv-demo-addon", add_on_for: delivered },
+  });
+  say("  add-on invoice, paid, plus an unpaid one below");
 
   /* a custom project, with its own videos and its own invoice */
   const { data: project } = await db

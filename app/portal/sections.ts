@@ -12,6 +12,7 @@ export const PORTAL_SECTIONS = [
   "coming-soon",
   "messages",
   "subscriptions",
+  "billing",
   "book",
   "affiliate",
   "whitelabel",

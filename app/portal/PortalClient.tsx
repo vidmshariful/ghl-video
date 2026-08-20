@@ -47,6 +47,7 @@ import {
   Megaphone,
   MessageSquare,
   PhoneCall,
+  Repeat,
   Scissors,
   Settings,
   Sparkles,
@@ -580,6 +581,89 @@ function OrderDetailView({
  * internal stage name. It is the one row state the client can act on, and
  * naming it in their words is what turns a list into something useful.
  */
+type Invoice = {
+  id: string;
+  number: string | null;
+  payUrl: string | null;
+  lineItems: { label: string; amountCents: number }[];
+  totalCents: number;
+  currency: string;
+  notes: string | null;
+  dueDate: string | null;
+  overdue: boolean;
+  settled: boolean;
+  voided: boolean;
+  createdAt: string;
+};
+
+/*
+ * What they still owe, above everything they have paid.
+ *
+ * An open invoice used to be visible to us and invisible to them, so the only
+ * way a client learned they owed us something was an email they may or may
+ * not still have had. It is the one thing on this screen that needs an
+ * action, so it goes first and it carries the button.
+ */
+function OpenInvoices() {
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+
+  useEffect(() => {
+    authedFetch("/api/portal/invoices")
+      .then((j) => setInvoices((j.invoices as Invoice[]) ?? []))
+      .catch(() => setInvoices([]));
+  }, []);
+
+  const owing = invoices.filter((i) => !i.settled && !i.voided);
+  if (owing.length === 0) return null;
+
+  const total = owing.reduce((sum, i) => sum + i.totalCents, 0);
+
+  return (
+    <div className="mb-3">
+      <Card
+        tone="dark"
+        title={owing.length === 1 ? "One invoice to pay" : `${owing.length} invoices to pay`}
+      >
+        <p className="text-body-sm text-chrome-muted">
+          {money(total, owing[0].currency)} outstanding.
+        </p>
+        <ul className="mt-4 grid gap-3">
+          {owing.map((i) => (
+            <li
+              key={i.id}
+              className="flex flex-wrap items-start justify-between gap-3 border-t border-white/10 pt-3 first:border-t-0 first:pt-0"
+            >
+              <div className="min-w-0">
+                <p className="text-body-sm font-semibold text-chrome-text">
+                  {i.lineItems[0]?.label ?? "Invoice"}
+                  {i.lineItems.length > 1 ? ` and ${i.lineItems.length - 1} more` : ""}
+                </p>
+                <p className="mt-0.5 font-mono text-label uppercase text-chrome-muted">
+                  {i.number ?? "invoice"}
+                  {i.dueDate ? ` / due ${day(i.dueDate)}` : ""}
+                </p>
+                {i.overdue && (
+                  <p className="mt-1 text-body-sm text-error">This one is past its date.</p>
+                )}
+              </div>
+              <div className="flex shrink-0 items-center gap-3">
+                <span className="font-mono text-price font-bold tabular-nums text-chrome-text">
+                  {money(i.totalCents, i.currency)}
+                </span>
+                {i.payUrl && (
+                  <Button variant="brand" size="sm" href={i.payUrl}>
+                    Pay it
+                  </Button>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </Card>
+    </div>
+  );
+}
+
 function OrdersList({ onOpen }: { onOpen: (id: string) => void }) {
   const [orders, setOrders] = useState<OrderSummary[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -613,8 +697,8 @@ function OrdersList({ onOpen }: { onOpen: (id: string) => void }) {
   if (orders.length === 0)
     return (
       <EmptyState
-        title="No orders yet"
-        description="When you order a video it appears here, with its invoice and everything you need to follow it."
+        title="Nothing paid yet"
+        description="Everything you buy shows up here, whether you ordered it from the library or paid an invoice for it, with its receipt and where it is up to."
       />
     );
 
@@ -624,7 +708,7 @@ function OrdersList({ onOpen }: { onOpen: (id: string) => void }) {
         <Table>
           <thead>
             <tr>
-              <Th>Order</Th>
+              <Th>What it was</Th>
               <Th>Where it is up to</Th>
               <Th>Invoice</Th>
               <Th align="right">Amount</Th>
@@ -1218,6 +1302,18 @@ function Portal({
       title: "",
       items: [
         { key: "dashboard", label: "Dashboard", icon: <LayoutDashboard /> },
+        ...(can("orders")
+          ? [
+              {
+                key: "brand",
+                label: "Brand Kit",
+                icon: <Palette />,
+                /* the portal's one nag, and it only appears when an order is
+                   genuinely stuck for want of these */
+                badge: brandIncomplete ? 1 : undefined,
+              },
+            ]
+          : []),
         ...(can("messages")
           ? [
               {
@@ -1258,23 +1354,27 @@ function Portal({
       ],
     },
     {
-      title: "My account",
+      /*
+       * Everything they pay, in two items rather than three.
+       *
+       * Orders and Invoices are one screen because they are the same money
+       * seen from two sides: paying an invoice creates an order, so listing
+       * both separately shows a client the same $450 twice and invites them
+       * to wonder whether they were charged for it twice. What they still owe
+       * sits at the top of it, because that is the only part that needs
+       * them to do something.
+       *
+       * Subscriptions is separate because it is the opposite kind of money:
+       * nothing to do, until the once a year when there is.
+       */
+      title: "Billings",
       defaultOpen: true,
       items: [
         ...(can("orders")
-          ? [
-              {
-                key: "brand",
-                label: "Brand Kit",
-                icon: <Palette />,
-                /* the portal's one nag, and it only appears when an order is
-                   genuinely stuck for want of these */
-                badge: brandIncomplete ? 1 : undefined,
-              },
-            ]
-          : []),
-        ...(can("orders")
           ? [{ key: "orders", label: "Orders and Invoices", icon: <ShoppingCart /> }]
+          : []),
+        ...(can("subscriptions")
+          ? [{ key: "billing", label: "Subscriptions", icon: <Repeat /> }]
           : []),
       ],
     },
@@ -1403,24 +1503,13 @@ function Portal({
               <div>
                 <PageHeader
                   title="Orders and Invoices"
-                  subtitle="Everything you have bought, and everything you pay."
+                  subtitle="Everything you have paid for, and anything still to pay."
                 />
                 <div className="mt-6">
+                  {/* what needs them first, then the record */}
+                  <OpenInvoices />
                   <OrdersList onOpen={openOrderById} />
                 </div>
-                {/* Plan billing lives here with the rest of the money, not on
-                    the Editing screen. Editing is for managing the work. */}
-                {can("subscriptions") && (
-                  <div className="mt-8 border-t border-hair pt-8">
-                    <PageHeader
-                      title="Your plan"
-                      subtitle="Payments, renewals and plan changes."
-                    />
-                    <div className="mt-4">
-                      <SubscriptionsView canBilling={can("billing")} />
-                    </div>
-                  </div>
-                )}
               </div>
             )
           ) : view === "videos" && can("orders") ? (
@@ -1478,6 +1567,16 @@ function Portal({
               authedFetch={authedFetch}
               onMessageStudio={can("messages") ? () => go("messages") : undefined}
             />
+          ) : view === "billing" && can("subscriptions") ? (
+            <div>
+              <PageHeader
+                title="Subscriptions"
+                subtitle="Your recurring plans, what they cost, and when they renew."
+              />
+              <div className="mt-6">
+                <SubscriptionsView canBilling={can("billing")} />
+              </div>
+            </div>
           ) : view === "projects" && can("orders") ? (
             <CustomView
               authedFetch={authedFetch}

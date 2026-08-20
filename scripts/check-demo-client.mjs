@@ -38,7 +38,9 @@ console.log("\nWHAT THE PREMADE BOARD SEES");
 const { data: board } = await db.from("orders")
   .select("invoice_number, fulfillment_stage, products(name)").eq("customer_email",E).eq("status","paid");
 board.forEach(o=>console.log(`         ${o.invoice_number} ${o.products?.name} -> ${o.fulfillment_stage}`));
-need(board.length===3, `3 orders on the board`);
+/* four: three bought outright plus the add-on invoice somebody paid, which
+   becomes an order like every other settled invoice does */
+need(board.length===4, `4 paid orders on the board`);
 
 console.log("\nWHAT MY VIDEOS SEES");
 const { data: orders } = await db.from("orders").select("id").eq("customer_email",E);
@@ -84,5 +86,19 @@ for (const [t, col2] of [["editing_style_guides","customer_email"],["brand_kits"
   const { count } = await db.from(t).select("id",{count:"exact",head:true}).eq(col2,E);
   need(count>=1, t.replace(/_/g," "));
 }
+console.log("\nWHAT BILLINGS SEES");
+const { data: allInv } = await db.from("invoices").select("number, token, product_sku, total_cents, status").ilike("customer_email", E);
+const invSkus = allInv.map(i=>i.product_sku).filter(Boolean);
+const { data: settling } = invSkus.length ? await db.from("orders")
+  .select("id, product:products!inner(sku)").eq("customer_email",E).eq("status","paid").in("product.sku", invSkus) : { data: [] };
+const settledSkus = new Set(settling.map(o=>o.product?.sku));
+const outstanding = allInv.filter(i=>!settledSkus.has(i.product_sku) && i.status!=="void");
+console.log(`         ${allInv.length} invoices, ${outstanding.length} still to pay`);
+need(outstanding.length >= 1, "something outstanding, so the pay block has a case to render");
+need(allInv.some(i=>settledSkus.has(i.product_sku)), "something settled, so the paid branch is exercised too");
+need(outstanding.every(i=>i.token), "every outstanding invoice has a working pay link");
+const { data: liveSubs } = await db.from("subscriptions").select("id").ilike("customer_email",E).eq("status","active");
+need(liveSubs.length >= 1, "a live plan for the Subscriptions screen");
+
 console.log(bad ? `\n--- ${bad} CHECK(S) FAILED ---` : "\n--- EVERYTHING THE SCREENS READ IS THERE ---");
 process.exitCode = bad ? 1 : 0;

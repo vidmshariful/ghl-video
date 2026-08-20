@@ -465,16 +465,21 @@ export function PortalSidebar({
     } catch {
       /* fresh start */
     }
-    if (stored) {
-      setOpen(stored);
-      return;
-    }
     const initial: Record<string, boolean> = {};
     for (const g of groups) {
       if (!g.title) continue;
       initial[g.title] = (g.defaultOpen ?? false) || g.items.some((it) => it.key === active);
     }
-    setOpen(initial);
+    /*
+     * Stored choices win where they exist, and only there.
+     *
+     * This used to replace the defaults wholesale, which meant any group
+     * added or renamed after somebody's last visit had no stored entry, read
+     * as false, and arrived collapsed. A menu that hides its newest section
+     * from exactly the people who have used the product longest is the wrong
+     * way round.
+     */
+    setOpen(stored ? { ...initial, ...stored } : initial);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- initial mount only
   }, []);
 
