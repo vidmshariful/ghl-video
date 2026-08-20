@@ -3,6 +3,7 @@ import { verifyAdmin } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { lifetimeValue, serviceTags, type MoneySource } from "@/lib/customer-record";
 import { completeness, getBrandKit } from "@/lib/brand-kit";
+import { orderKind, type InvoiceLink } from "@/lib/order-kind";
 
 export const runtime = "nodejs";
 
@@ -40,7 +41,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     db
       .from("orders")
       .select(
-        "id, amount_cents, currency, status, fulfillment_stage, invoice_number, created_at, paid_at, intake_completed, product:products(name, sku, metadata)",
+        "id, product_id, amount_cents, currency, status, fulfillment_stage, invoice_number, created_at, paid_at, intake_completed, product:products(name, sku, metadata)",
       )
       .ilike("customer_email", email)
       .order("created_at", { ascending: false }),
@@ -51,7 +52,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       .order("created_at", { ascending: false }),
     db
       .from("invoices")
-      .select("id, number, token, total_cents, status, due_date, sent_at, created_at, product_sku, line_items")
+      .select("id, number, token, total_cents, status, due_date, sent_at, created_at, product_sku, product_id, parent_order_id, line_items")
       .ilike("customer_email", email)
       .order("created_at", { ascending: false }),
     db
@@ -87,14 +88,30 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       .filter((o) => String(o.status) === "paid")
       .map((o) => String((o.product as { sku?: unknown } | null)?.sku ?? "")),
   );
-  const viaInvoice = (o: Row) =>
-    Boolean(((o.product as { metadata?: { invoice?: unknown } } | null)?.metadata ?? {}).invoice);
+  /* which product each invoice bills through, so an order can say what it was */
+  const invoiceByProduct = new Map<string, InvoiceLink>(
+    ((invoices ?? []) as Row[])
+      .filter((i) => i.product_id)
+      .map((i) => [
+        String(i.product_id),
+        {
+          productId: String(i.product_id),
+          parentOrderId: (i.parent_order_id as string | null) ?? null,
+        },
+      ]),
+  );
+  const kindOf = (o: Row) =>
+    orderKind(
+      (o.product_id as string | null) ?? null,
+      ((o.product as { metadata?: { invoice?: unknown } } | null)?.metadata ?? null),
+      invoiceByProduct,
+    );
 
   const money: MoneySource = {
     orders: ((orders ?? []) as Row[]).map((o) => ({
       amountCents: Number(o.amount_cents),
       status: String(o.status),
-      viaInvoice: viaInvoice(o),
+      kind: kindOf(o),
     })),
     subscriptions: ((subs ?? []) as Row[]).map((s) => ({
       amountCents: s.amount_cents == null ? null : Number(s.amount_cents),
@@ -123,8 +140,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     },
     value,
     services: serviceTags({
-      paidOrders: money.orders.filter((o) => o.status === "paid" && !o.viaInvoice).length,
-      projects: money.orders.filter((o) => o.status === "paid" && o.viaInvoice).length,
+      paidOrders: money.orders.filter((o) => o.status === "paid" && o.kind !== "custom").length,
+      /* an add-on never makes somebody a custom client */
+      projects: money.orders.filter((o) => o.status === "paid" && o.kind === "custom").length,
       liveSubscriptions: money.subscriptions.filter((s) =>
         ["active", "trialing", "past_due"].includes(s.status),
       ).length,
@@ -133,7 +151,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       id: String(o.id),
       productName: (o.product as { name?: string } | null)?.name ?? null,
       productSku: (o.product as { sku?: string } | null)?.sku ?? null,
-      viaInvoice: viaInvoice(o),
+      kind: kindOf(o),
+      /* an add-on hangs under the order it topped up */
+      parentOrderId:
+        ((invoices ?? []) as Row[]).find((i) => i.product_id === o.product_id)?.parent_order_id ??
+        null,
       amountCents: Number(o.amount_cents),
       status: String(o.status),
       stage: String(o.fulfillment_stage),
@@ -158,6 +180,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       totalCents: Number(i.total_cents),
       status: String(i.status),
       paid: paidSkus.has(String(i.product_sku)),
+      parentOrderId: (i.parent_order_id as string | null) ?? null,
       dueDate: (i.due_date as string | null) ?? null,
       sentAt: (i.sent_at as string | null) ?? null,
       createdAt: String(i.created_at),

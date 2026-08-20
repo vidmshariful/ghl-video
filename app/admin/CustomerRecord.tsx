@@ -22,6 +22,7 @@ import { HIDEABLE_SECTIONS } from "./customer-sections";
 type Value = {
   totalCents: number;
   premadeCents: number;
+  addOnCents: number;
   customCents: number;
   subscriptionsCents: number;
   monthlyCents: number;
@@ -48,7 +49,8 @@ type Record_ = {
     id: string;
     productName: string | null;
     productSku: string | null;
-    viaInvoice: boolean;
+    kind: "premade" | "addon" | "custom";
+    parentOrderId: string | null;
     amountCents: number;
     status: string;
     stage: string;
@@ -73,6 +75,7 @@ type Record_ = {
     totalCents: number;
     status: string;
     paid: boolean;
+    parentOrderId: string | null;
     dueDate: string | null;
     createdAt: string;
   }[];
@@ -220,6 +223,10 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
               <span className="tabular-nums text-ink">{money(v.premadeCents)}</span>
             </span>
             <span className="flex justify-between">
+              <span className="text-muted">Add-ons</span>
+              <span className="tabular-nums text-ink">{money(v.addOnCents)}</span>
+            </span>
+            <span className="flex justify-between">
               <span className="text-muted">Custom</span>
               <span className="tabular-nums text-ink">{money(v.customCents)}</span>
             </span>
@@ -260,11 +267,13 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
                     </tr>
                   </thead>
                   <tbody>
-                    {data.orders.map((o) => (
+                    {data.orders
+                      .filter((o) => o.kind !== "addon")
+                      .map((o) => (
                       <tr key={o.id}>
                         <Td strong>
                           {o.productName ?? "Order"}
-                          {o.viaInvoice && (
+                          {o.kind === "custom" && (
                             <span className="ml-2">
                               <Chip tone="warn">custom</Chip>
                             </span>
@@ -274,6 +283,24 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
                               {o.invoiceNumber}
                             </span>
                           )}
+                          {/* extra work billed against this order. It made no
+                              new video, so it belongs here rather than
+                              standing on its own as if it were a project. */}
+                          {data.orders
+                            .filter((a) => a.kind === "addon" && a.parentOrderId === o.id)
+                            .map((a) => (
+                              <span
+                                key={a.id}
+                                className="mt-1 flex items-center gap-2 font-normal text-body-sm text-muted"
+                              >
+                                <span aria-hidden="true" className="text-dim">
+                                  &#8627;
+                                </span>
+                                {a.productName ?? "Extra work"}
+                                <Chip tone="info">add-on</Chip>
+                                <span className="tabular-nums">{money(a.amountCents)}</span>
+                              </span>
+                            ))}
                         </Td>
                         <Td>
                           <Chip tone={PAY_TONE[o.status] ?? "neutral"}>

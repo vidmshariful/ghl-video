@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { verifyAdmin } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { lifetimeValue, serviceTags, type MoneySource } from "@/lib/customer-record";
+import { orderKind, type InvoiceLink } from "@/lib/order-kind";
 
 export const runtime = "nodejs";
 
@@ -30,14 +31,18 @@ export async function GET(req: Request) {
         .order("created_at", { ascending: false }),
       db
         .from("orders")
-        .select("customer_email, amount_cents, status, created_at, product:products(sku, metadata)"),
+        .select(
+          "customer_email, product_id, amount_cents, status, created_at, product:products(sku, metadata)",
+        ),
       db
         .from("subscriptions")
         .select("customer_email, amount_cents, status, created_at, current_period_end"),
       /* Only the unpaid ones. A paid invoice already appears as an order,
        * because invoices are settled through the ordinary checkout, so
        * carrying them here as well would count that money twice. */
-      db.from("invoices").select("customer_email, total_cents, status, product_sku"),
+      db
+        .from("invoices")
+        .select("customer_email, total_cents, status, product_sku, product_id, parent_order_id"),
     ]);
 
   /* group once, by lowercased email, which is the only key all four share */
@@ -63,6 +68,20 @@ export async function GET(req: Request) {
       .map((o) => String((o.product as { sku?: unknown } | null)?.sku ?? "")),
   );
 
+  /* which product each invoice bills through, so an order can say whether it
+   * was a shelf purchase, an add-on to earlier work, or bespoke */
+  const invoiceByProduct = new Map<string, InvoiceLink>(
+    ((invoices ?? []) as Row[])
+      .filter((i) => i.product_id)
+      .map((i) => [
+        String(i.product_id),
+        {
+          productId: String(i.product_id),
+          parentOrderId: (i.parent_order_id as string | null) ?? null,
+        },
+      ]),
+  );
+
   const now = new Date();
   const items = ((customers ?? []) as Row[]).map((c) => {
     const k = key(c.email);
@@ -70,9 +89,10 @@ export async function GET(req: Request) {
       orders: (ordersBy.get(k) ?? []).map((o) => ({
         amountCents: Number(o.amount_cents),
         status: String(o.status),
-        /* invoice-backed products are how custom work is billed today */
-        viaInvoice: Boolean(
-          ((o.product as { metadata?: { invoice?: unknown } } | null)?.metadata ?? {}).invoice,
+        kind: orderKind(
+          (o.product_id as string | null) ?? null,
+          ((o.product as { metadata?: { invoice?: unknown } } | null)?.metadata ?? null),
+          invoiceByProduct,
         ),
       })),
       subscriptions: (subsBy.get(k) ?? []).map((s) => ({
@@ -97,17 +117,17 @@ export async function GET(req: Request) {
       createdAt: String(c.created_at),
       value,
       services: serviceTags({
-        paidOrders: mine.orders.filter((o) => o.status === "paid" && !o.viaInvoice).length,
-        /* today custom work shows up as an invoice-backed order; phase 3
-         * gives it a project of its own and this reads that instead */
-        projects: mine.orders.filter((o) => o.status === "paid" && o.viaInvoice).length,
+        paidOrders: mine.orders.filter((o) => o.status === "paid" && o.kind !== "custom").length,
+        /* an add-on tops up existing work, so it never makes a client custom */
+        projects: mine.orders.filter((o) => o.status === "paid" && o.kind === "custom").length,
         liveSubscriptions: mine.subscriptions.filter((s) =>
           ["active", "trialing", "past_due"].includes(s.status),
         ).length,
       }),
       counts: {
-        orders: mine.orders.filter((o) => o.status === "paid" && !o.viaInvoice).length,
-        projects: mine.orders.filter((o) => o.status === "paid" && o.viaInvoice).length,
+        orders: mine.orders.filter((o) => o.status === "paid" && o.kind === "premade").length,
+        addOns: mine.orders.filter((o) => o.status === "paid" && o.kind === "addon").length,
+        projects: mine.orders.filter((o) => o.status === "paid" && o.kind === "custom").length,
         subscriptions: mine.subscriptions.length,
         openInvoices: mine.openInvoices.length,
       },

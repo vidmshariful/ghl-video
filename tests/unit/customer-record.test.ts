@@ -68,10 +68,11 @@ describe("counting subscription months", () => {
 describe("the three streams stay separate", () => {
   const src: MoneySource = {
     orders: [
-      { amountCents: 49500, status: "paid", viaInvoice: false },
-      { amountCents: 199500, status: "paid", viaInvoice: true },
-      { amountCents: 99500, status: "refunded", viaInvoice: false },
-      { amountCents: 19900, status: "pending", viaInvoice: false },
+      { amountCents: 49500, status: "paid", kind: "premade" as const },
+      { amountCents: 199500, status: "paid", kind: "custom" as const },
+      { amountCents: 45000, status: "paid", kind: "addon" as const },
+      { amountCents: 99500, status: "refunded", kind: "premade" as const },
+      { amountCents: 19900, status: "pending", kind: "premade" as const },
     ],
     subscriptions: [
       { amountCents: 99500, status: "active", createdAt: "2026-06-20T00:00:00Z", currentPeriodEnd: null },
@@ -79,15 +80,20 @@ describe("the three streams stay separate", () => {
     openInvoices: [{ totalCents: 45000 }],
   };
 
-  test("shelf purchases and invoiced custom work are told apart", () => {
+  test("shelf, add-on and bespoke are each counted separately", () => {
     const v = lifetimeValue(src, NOW);
     assert.equal(v.premadeCents, 49500);
+    assert.equal(v.addOnCents, 45000);
     assert.equal(v.customCents, 199500);
   });
 
   test("only paid orders count", () => {
     const v = lifetimeValue(src, NOW);
-    assert.equal(v.premadeCents + v.customCents, 249000, "pending is not revenue");
+    assert.equal(
+      v.premadeCents + v.addOnCents + v.customCents,
+      294000,
+      "pending is not revenue",
+    );
   });
 
   test("a refund is reported, not netted away silently", () => {
@@ -100,7 +106,10 @@ describe("the three streams stay separate", () => {
      * double it. Only unpaid invoices are carried, and never in the total. */
     const v = lifetimeValue(src, NOW);
     assert.equal(v.openInvoicesCents, 45000);
-    assert.equal(v.totalCents, v.premadeCents + v.customCents + v.subscriptionsCents);
+    assert.equal(
+      v.totalCents,
+      v.premadeCents + v.addOnCents + v.customCents + v.subscriptionsCents,
+    );
     assert.ok(!String(v.totalCents).startsWith("64"), "199500 must not appear twice");
   });
 
@@ -114,6 +123,39 @@ describe("the three streams stay separate", () => {
     const v = lifetimeValue(empty, NOW);
     assert.equal(v.totalCents, 0);
     assert.equal(v.monthlyCents, 0);
+  });
+});
+
+describe("an add-on is not a project", () => {
+  /*
+   * The real case that corrected this. SpeedMobi bought the AI First SaaS
+   * Pack for $1,397, then paid $450 to have those same videos customised for
+   * their niche. No new video exists because of that $450: it is extra work
+   * on an order already delivered, invoiced against it. Reading it as bespoke
+   * work made them look like a custom-video client, which they are not.
+   */
+  const speedmobi: MoneySource = {
+    orders: [
+      { amountCents: 139700, status: "paid", kind: "premade" },
+      { amountCents: 45000, status: "paid", kind: "addon" },
+    ],
+    subscriptions: [],
+    openInvoices: [],
+  };
+
+  test("the top-up counts as an add-on, not as bespoke work", () => {
+    const v = lifetimeValue(speedmobi, NOW);
+    assert.equal(v.premadeCents, 139700);
+    assert.equal(v.addOnCents, 45000);
+    assert.equal(v.customCents, 0, "no project was ever created for this");
+    assert.equal(v.totalCents, 184700);
+  });
+
+  test("and it does not make them a custom client", () => {
+    assert.deepEqual(
+      serviceTags({ paidOrders: 2, projects: 0, liveSubscriptions: 0 }),
+      ["premade"],
+    );
   });
 });
 

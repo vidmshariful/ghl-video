@@ -8,17 +8,29 @@
  * tests around it rather than a reduce buried in a component.
  */
 
+export type OrderKind = "premade" | "addon" | "custom";
+
 export type MoneySource = {
   /*
-   * Every one-time order, including invoice payments.
+   * Every one-time order, including invoice payments, each labelled by what
+   * it actually was.
    *
    * An invoice does NOT hold its own money. It is backed by a one_time
    * product and paid through the ordinary checkout, so paying one creates an
    * order like any other purchase. Adding invoice totals to order totals
-   * would therefore count the same money twice, which is why invoices are
-   * split here by `viaInvoice` rather than summed as a third stream.
+   * would count the same money twice, which is why they are labelled here
+   * rather than summed as a separate stream.
+   *
+   * The three kinds are genuinely different things, and calling the last two
+   * both "custom" was wrong:
+   *
+   *   premade  bought off the shelf
+   *   addon    extra work on videos an order already delivered, invoiced
+   *            against that parent order. No new videos exist because of it,
+   *            so it is not a project, it is an upsell on existing work.
+   *   custom   bespoke work standing on its own, which becomes a project
    */
-  orders: { amountCents: number; status: string; viaInvoice: boolean }[];
+  orders: { amountCents: number; status: string; kind: OrderKind }[];
   /** every subscription we have ever opened for them */
   subscriptions: {
     amountCents: number | null;
@@ -35,7 +47,9 @@ export type Lifetime = {
   totalCents: number;
   /** bought off the shelf */
   premadeCents: number;
-  /** paid against an invoice we raised, which is how custom work is billed */
+  /** extra work invoiced against an order we had already delivered */
+  addOnCents: number;
+  /** bespoke work standing on its own */
   customCents: number;
   subscriptionsCents: number;
   /** what they pay us every month right now */
@@ -81,12 +95,11 @@ export function billedMonths(
 
 export function lifetimeValue(src: MoneySource, now: Date): Lifetime {
   const paid = src.orders.filter((o) => o.status === "paid");
-  const premadeCents = paid
-    .filter((o) => !o.viaInvoice)
-    .reduce((s, o) => s + o.amountCents, 0);
-  const customCents = paid
-    .filter((o) => o.viaInvoice)
-    .reduce((s, o) => s + o.amountCents, 0);
+  const sumOf = (kind: OrderKind) =>
+    paid.filter((o) => o.kind === kind).reduce((s, o) => s + o.amountCents, 0);
+  const premadeCents = sumOf("premade");
+  const addOnCents = sumOf("addon");
+  const customCents = sumOf("custom");
 
   const refundedCents = src.orders
     .filter((o) => o.status === "refunded")
@@ -109,8 +122,9 @@ export function lifetimeValue(src: MoneySource, now: Date): Lifetime {
   const openInvoicesCents = src.openInvoices.reduce((s, i) => s + i.totalCents, 0);
 
   return {
-    totalCents: premadeCents + customCents + subscriptionsCents,
+    totalCents: premadeCents + addOnCents + customCents + subscriptionsCents,
     premadeCents,
+    addOnCents,
     customCents,
     subscriptionsCents,
     monthlyCents,
@@ -127,6 +141,10 @@ export type ServiceTag = "premade" | "custom" | "editing";
  * Derived, never stored. A stored tag is wrong the moment somebody buys
  * something new, and the whole reason the old screen showed none is that
  * tags only ever lived in HighLevel.
+ *
+ * An add-on does NOT make somebody a custom client. Paying for a tweak to a
+ * pack you already bought makes you a premade client who bought an extra,
+ * and tagging that as custom would misread the whole relationship.
  */
 export function serviceTags(counts: {
   paidOrders: number;
