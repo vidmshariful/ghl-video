@@ -81,9 +81,6 @@ export function MessagesScreen() {
                         {t.unread ? <span className="h-2 w-2 rounded-full bg-gold" /> : null}
                       </span>
                     </span>
-                    <span className="truncate font-mono text-label uppercase text-gold/70">
-                      {t.title}
-                    </span>
                     <span className="truncate text-body-sm text-muted">
                       {t.preview || "No messages yet."}
                     </span>
@@ -114,7 +111,7 @@ export function MessagesScreen() {
                 <p className="text-body font-semibold text-ink">{selected.customerName}</p>
                 <p className="font-mono text-label uppercase text-dim">
                   {selected.customerEmail}
-                  {selected.company ? ` / ${selected.company}` : ""} / {selected.title}
+                  {selected.company ? ` / ${selected.company}` : ""}
                 </p>
               </div>
               <div className="mt-3 min-h-0 flex-1">

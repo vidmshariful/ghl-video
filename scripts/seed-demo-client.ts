@@ -651,21 +651,30 @@ async function build() {
   });
   say("  editing style guide, filled in");
 
-  /* a conversation, so Messages is not empty either */
+  /* ONE conversation, the client's inbox (one per client since Aug 2026),
+   * holding the whole exchange; the order updates below merge into the
+   * same timeline at read time on the admin side */
   const { data: convo } = await db
     .from("conversations")
     .insert({
       customer_email: EMAIL,
       customer_id: customerId,
-      order_id: delivered,
-      last_message_at: days(2),
-      last_message_preview: "Looks great, thank you.",
+      order_id: null,
+      last_message_at: days(1),
+      last_message_preview: "Quick question about bundles.",
       last_sender_role: "customer",
     })
     .select("id")
     .single();
 
   await insertAll("messages", [
+    {
+      conversation_id: convo!.id,
+      sender_role: "studio",
+      sender_name: "The studio",
+      body: "Kicking off your pack this week.",
+      created_at: days(15),
+    },
     {
       conversation_id: convo!.id,
       sender_role: "studio",
@@ -680,57 +689,21 @@ async function build() {
       body: "Looks great, thank you.",
       created_at: days(2),
     },
+    {
+      conversation_id: convo!.id,
+      sender_role: "customer",
+      sender_name: NAME,
+      body: "Quick question about bundles.",
+      created_at: days(1),
+    },
   ]);
-  say("  one conversation with two messages");
-
-  /* a general thread too, plus updates on the pack order, so the unified
-   * inbox has every kind of thing to merge: chat, emails, and updates */
-  const { data: general } = await db
-    .from("conversations")
-    .insert({
-      customer_email: EMAIL,
-      customer_id: customerId,
-      order_id: null,
-      last_message_at: days(1),
-      last_message_preview: "Quick question about bundles.",
-      last_sender_role: "customer",
-    })
-    .select("id")
-    .single();
-  await insertOne("messages", {
-    conversation_id: general!.id,
-    sender_role: "customer",
-    sender_name: NAME,
-    body: "Quick question about bundles.",
-    created_at: days(1),
-  });
+  say("  one inbox with four messages");
 
   const { data: packOrder } = await db
     .from("orders")
     .select("id")
     .eq("invoice_number", "DEMO-0002")
     .single();
-  /* the updates need a thread to merge into: the unified inbox shows an
-     order's updates inside that order's conversation */
-  const { data: packThread } = await db
-    .from("conversations")
-    .insert({
-      customer_email: EMAIL,
-      customer_id: customerId,
-      order_id: packOrder!.id,
-      last_message_at: days(6),
-      last_message_preview: "Kicking off your pack this week.",
-      last_sender_role: "studio",
-    })
-    .select("id")
-    .single();
-  await insertOne("messages", {
-    conversation_id: packThread!.id,
-    sender_role: "studio",
-    sender_name: "The studio",
-    body: "Kicking off your pack this week.",
-    created_at: days(15),
-  });
   await insertAll("order_updates", [
     {
       order_id: packOrder!.id,
@@ -743,7 +716,7 @@ async function build() {
       created_at: days(6),
     },
   ]);
-  say("  a general thread and two order updates, for the unified inbox");
+  say("  two order updates, which merge into the inbox on the admin side");
 
   say("");
   say(`Done. ${EMAIL} now has 3 orders, 1 custom project, 1 editing plan with`);

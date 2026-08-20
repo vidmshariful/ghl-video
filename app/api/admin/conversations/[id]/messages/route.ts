@@ -57,57 +57,68 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   );
 
   /*
-   * The unified part: what the platform did around this conversation,
-   * merged in at read time, HighLevel-inbox style.
+   * The unified part: what the platform did around this client, merged in
+   * at read time, HighLevel-inbox style. One inbox per client now, so it
+   * all lands here: their emails, and every order's posted updates, each
+   * update naming the order it was on.
    *
    * Read-time on purpose. Writing system rows into messages would mean
    * every email hook also writes chat, two records of one event, and the
    * day they disagree nobody knows which lied. The log and the updates
    * table already hold the truth; this route just deals one timeline.
-   *
-   * An order thread carries its order's updates. The general thread
-   * carries the emails, because emails belong to the person, not to one
-   * order. The client's own portal thread gets none of this: "your email
-   * failed" is our operational laundry, not their conversation.
+   * The client's own portal thread gets none of this: "your email failed"
+   * is our operational laundry, not their conversation.
    */
   const events: { id: string; body: string; createdAt: string }[] = [];
 
-  if (conv.order_id) {
+  /* every order this client has, so an update can say which one it is on */
+  const { data: theirOrders } = await db
+    .from("orders")
+    .select("id, invoice_number, product:products(name)")
+    .ilike("customer_email", conv.customer_email);
+  const orderIds = ((theirOrders ?? []) as Record<string, unknown>[]).map((o) => String(o.id));
+  const orderName = (oid: string) => {
+    const o = ((theirOrders ?? []) as Record<string, unknown>[]).find((x) => String(x.id) === oid);
+    const product = (o?.product as { name?: string } | null)?.name;
+    return product ?? (o?.invoice_number as string | null) ?? "an order";
+  };
+
+  if (orderIds.length) {
     const { data: updates } = await db
       .from("order_updates")
-      .select("id, body, created_at")
-      .eq("order_id", conv.order_id)
+      .select("id, order_id, body, created_at")
+      .in("order_id", orderIds)
       .order("created_at", { ascending: true });
     for (const u of updates ?? []) {
       events.push({
         id: `update-${u.id}`,
-        body: `Order update posted: ${String(u.body).slice(0, 200)}`,
+        body: `Order update on ${orderName(String(u.order_id))}: ${String(u.body).slice(0, 200)}`,
         createdAt: String(u.created_at),
       });
     }
-  } else {
-    const { data: mails } = await db
-      .from("email_log")
-      .select("id, subject, status, error, template_key, source, created_at")
-      .ilike("to_email", conv.customer_email)
-      .order("created_at", { ascending: true })
-      .limit(100);
-    for (const e of mails ?? []) {
-      const what = String(e.template_key ?? e.source);
-      const word =
-        e.status === "sent"
-          ? "Email sent"
-          : e.status === "failed"
-            ? "EMAIL FAILED"
-            : e.status === "skipped"
-              ? "Email skipped"
-              : "Email held by their preferences";
-      events.push({
-        id: `mail-${e.id}`,
-        body: `${word}: ${String(e.subject)} (${what})${e.status === "failed" && e.error ? `. ${String(e.error).slice(0, 160)}` : ""}`,
-        createdAt: String(e.created_at),
-      });
-    }
+  }
+
+  const { data: mails } = await db
+    .from("email_log")
+    .select("id, subject, status, error, template_key, source, created_at")
+    .ilike("to_email", conv.customer_email)
+    .order("created_at", { ascending: true })
+    .limit(100);
+  for (const e of mails ?? []) {
+    const what = String(e.template_key ?? e.source);
+    const word =
+      e.status === "sent"
+        ? "Email sent"
+        : e.status === "failed"
+          ? "EMAIL FAILED"
+          : e.status === "skipped"
+            ? "Email skipped"
+            : "Email held by their preferences";
+    events.push({
+      id: `mail-${e.id}`,
+      body: `${word}: ${String(e.subject)} (${what})${e.status === "failed" && e.error ? `. ${String(e.error).slice(0, 160)}` : ""}`,
+      createdAt: String(e.created_at),
+    });
   }
 
   const messages = [

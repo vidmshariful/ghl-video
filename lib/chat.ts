@@ -122,19 +122,25 @@ export async function uploadChatFiles(
 /* Find or create the general (orderId null) or per-order thread for an email. */
 export async function ensureConversation(
   db: DB,
-  args: { email: string; customerId: string | null; orderId: string | null },
+  args: { email: string; customerId: string | null; orderId?: string | null },
 ): Promise<ConversationRow> {
-  const { email, customerId, orderId } = args;
-  const find = () => {
-    const q = db.from("conversations").select("*").eq("customer_email", email);
-    return orderId ? q.eq("order_id", orderId) : q.is("order_id", null);
-  };
+  /*
+   * One inbox per client (owner decision, August 2026). orderId is still
+   * accepted so old callers keep compiling, and deliberately ignored: chat
+   * used to open a thread per order plus a general one, which made a single
+   * client read as three inboxes and let their reply land in whichever tab
+   * was open. Migration 0066 merged what existed; this is what stops it
+   * coming back.
+   */
+  const { email, customerId } = args;
+  const find = () =>
+    db.from("conversations").select("*").eq("customer_email", email).is("order_id", null);
   const { data: existing } = await find().maybeSingle();
   if (existing) return existing as ConversationRow;
 
   const { data, error } = await db
     .from("conversations")
-    .insert({ customer_email: email, customer_id: customerId, order_id: orderId })
+    .insert({ customer_email: email, customer_id: customerId, order_id: null })
     .select("*")
     .single();
   if (!error && data) return data as ConversationRow;
@@ -197,7 +203,9 @@ export function orderCode(order: OrderJoin): string | null {
 }
 
 export function threadTitle(orderId: string | null, order: OrderJoin): string {
-  if (!orderId) return "General";
+  /* one inbox per client now, so the title is simply what it is. The order
+     branch survives only for anything unmigrated in flight. */
+  if (!orderId) return "Inbox";
   const code = orderCode(order);
   return `${code ? code + " " : ""}${order?.product?.name ?? "Your project"}`;
 }
