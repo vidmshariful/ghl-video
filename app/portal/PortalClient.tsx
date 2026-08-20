@@ -26,6 +26,7 @@ import { ComingSoonView } from "./ComingSoonView";
 import { LibraryView } from "./LibraryView";
 import { CustomView } from "./CustomView";
 import { EmailPrefsView } from "./EmailPrefsView";
+import { PortalSearch } from "./PortalSearch";
 import { EditingView } from "./EditingView";
 import { Button, Card, Chip, EmptyState, Table, Td, Th } from "@/components/portal/ui";
 import {
@@ -1471,6 +1472,29 @@ function Portal({
         area="Portal"
         right={
           <>
+            {/* one search across everything they have with us, and everything
+                they could buy. The portal is eleven screens now and finding a
+                thing meant knowing which one it was filed under. */}
+            <PortalSearch
+              authedFetch={authedFetch}
+              onOpen={(hit) => {
+                if (hit.kind === "order" && hit.focus && can("orders")) {
+                  openOrderById(hit.focus);
+                  return;
+                }
+                if (hit.kind === "video" && hit.line && hit.focus) {
+                  openVideo(hit.line, hit.focus);
+                  return;
+                }
+                if (hit.section === "library" && hit.focus) {
+                  setSection("library");
+                  setOpenItem(hit.focus);
+                  pushUrl("library", hit.focus);
+                  return;
+                }
+                go(hit.section as PortalSection);
+              }}
+            />
             {can("messages") ? (
               <TopIconButton label="Messages" badge={msgUnread} onClick={() => go("messages")}>
                 <MessageSquare size={16} />

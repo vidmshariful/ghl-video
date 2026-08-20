@@ -23,6 +23,7 @@ import {
 } from "@/components/portal/ui";
 import { AreaChart, BarChart, Donut, Sparkline } from "@/components/portal/charts";
 import { PortalSidebar } from "@/components/portal/Shell";
+import { PortalSearch } from "@/app/portal/PortalSearch";
 import { Clapperboard, LayoutDashboard, MessageSquare, Palette, Scissors, ShoppingCart, Sparkles } from "lucide-react";
 
 /*
@@ -50,6 +51,54 @@ export function PortalKitClient() {
       title="Portal vocabulary"
       lede="The shared pieces every portal screen composes with. Before these existed, fourteen screens declared their own button and field styles, sixty local constants in total, which is the real reason the portals read as everything inline full width."
     >
+      <KitSection
+        title="Search"
+        note="One box across everything a client has with us and everything they could buy. Cmd K opens it, the arrows drive the list, Enter opens. The specimen is fed fixed results rather than a real account."
+      >
+        <Spec label="Command palette" surface="portal" ground="panel">
+          <div className="flex w-full justify-end">
+            <PortalSearch
+              authedFetch={async () => ({
+                hits: [
+                  {
+                    id: "1",
+                    kind: "video",
+                    title: "Founder interview, full episode",
+                    meta: "Editing / Ready to review",
+                    section: "subscriptions",
+                    focus: "1",
+                    line: "editing",
+                  },
+                  {
+                    id: "2",
+                    kind: "project",
+                    title: "Demo brand film, 90 seconds",
+                    meta: "Custom project / Ready for you",
+                    section: "projects",
+                  },
+                  {
+                    id: "3",
+                    kind: "invoice",
+                    title: "Demo brand film, 90 seconds",
+                    meta: "Invoice DEMO-INV-02",
+                    section: "orders",
+                  },
+                  {
+                    id: "4",
+                    kind: "library",
+                    title: "Unified Inbox",
+                    meta: "In the library / Feature Explainer",
+                    section: "library",
+                    focus: "fexp-005",
+                  },
+                ],
+              })}
+              onOpen={() => {}}
+            />
+          </div>
+        </Spec>
+      </KitSection>
+
       <KitSection
         title="Navigation"
         note="The rail on desktop, and on a narrow window the bar that opens the menu sheet. Resize this page to check the second one: below 768px the rail is replaced, and the count of things needing somebody sits on the bar rather than hiding inside it."
