@@ -303,12 +303,16 @@ export function LibraryExplorer({
         </div>
       </div>
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-[13rem_1fr] lg:items-start">
+      <div className="mt-8 grid gap-8 lg:grid-cols-[16rem_1fr] lg:items-start">
         {/* the rail wears the portal menu's own chrome, and the column keeps
             a rule running the full height, so the filters read as a panel
             rather than as loose text floating beside the grid */}
         <aside className="lg:self-stretch lg:border-r lg:border-hair lg:pr-6">
-          <div className="rounded-[12px] border border-chrome-line bg-chrome p-2.5 lg:sticky lg:top-20">
+          {/* chrome-2, the raised chrome, not the base: the base is a hair
+              darker than the canvas, which made the panel read as a stray
+              border instead of a surface. Active entries press into the
+              base, so selection reads as depth rather than as a repaint. */}
+          <div className="rounded-[12px] border border-chrome-line bg-chrome-2 p-2.5 shadow-[0_10px_30px_-18px_rgba(0,0,0,0.9)] lg:sticky lg:top-20">
           <div className="flex gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] lg:block lg:space-y-0.5 lg:overflow-visible lg:pb-0 [&::-webkit-scrollbar]:hidden">
             {RANKED.map((f) => (
               <button
@@ -318,8 +322,8 @@ export function LibraryExplorer({
                 aria-pressed={sel?.kind === "ranked" && sel.value === f.key}
                 className={`tap shrink-0 whitespace-nowrap rounded-[8px] px-3 py-2 text-left text-body-sm transition-colors lg:block lg:w-full ${
                   sel?.kind === "ranked" && sel.value === f.key
-                    ? "bg-chrome-2 font-semibold text-gold"
-                    : "text-chrome-muted hover:bg-chrome-2/70 hover:text-chrome-text"
+                    ? "bg-chrome font-semibold text-gold"
+                    : "text-chrome-muted hover:bg-chrome/60 hover:text-chrome-text"
                 }`}
               >
                 {f.label}
@@ -337,9 +341,10 @@ export function LibraryExplorer({
                 aria-pressed={sel?.kind === "hl" && sel.value === f.key}
                 className={`tap flex shrink-0 items-center justify-between gap-3 whitespace-nowrap rounded-[8px] px-3 py-2 text-left text-body-sm transition-colors lg:flex lg:w-full ${
                   sel?.kind === "hl" && sel.value === f.key
-                    ? "bg-chrome-2 font-semibold text-gold"
-                    : "text-chrome-muted hover:bg-chrome-2/70 hover:text-chrome-text"
+                    ? "bg-chrome font-semibold text-gold"
+                    : "text-chrome-muted hover:bg-chrome/60 hover:text-chrome-text"
                 }`}
+                title={f.label}
               >
                 <span className="min-w-0 truncate">{f.label}</span>
                 <span className="font-mono text-label tabular-nums text-chrome-dim">{f.count}</span>
