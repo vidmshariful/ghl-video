@@ -38,8 +38,9 @@ export async function GET(req: Request) {
       .not("project_id", "is", null),
     db
       .from("order_deliverables")
-      .select("id, project_id, title, status")
-      .not("project_id", "is", null),
+      .select("id, project_id, title, status, assigned_admin_email, video_url, due_at, position")
+      .not("project_id", "is", null)
+      .order("position", { ascending: true }),
   ]);
 
   /* an invoice is paid when a paid order exists for its backing product */
@@ -54,6 +55,7 @@ export async function GET(req: Request) {
   const { data: contacts } = await db
     .from("customer_contacts")
     .select("id, name, role, email");
+  const { data: team } = await db.from("admins").select("email, name");
   const contactById = new Map(((contacts ?? []) as Row[]).map((c) => [String(c.id), c]));
 
   const items = ((projects ?? []) as Row[]).map((p) => {
@@ -97,11 +99,24 @@ export async function GET(req: Request) {
       money,
       videos: ((videos ?? []) as Row[])
         .filter((v) => String(v.project_id) === id)
-        .map((v) => ({ id: String(v.id), title: String(v.title), status: String(v.status) })),
+        .map((v) => ({
+          id: String(v.id),
+          title: String(v.title),
+          status: String(v.status),
+          assignedTo: (v.assigned_admin_email as string | null) ?? null,
+          videoUrl: (v.video_url as string | null) ?? null,
+          dueAt: (v.due_at as string | null) ?? null,
+        })),
     };
   });
 
-  return NextResponse.json({ projects: items });
+  return NextResponse.json({
+    projects: items,
+    team: ((team ?? []) as Row[]).map((t) => ({
+      email: String(t.email),
+      name: (t.name as string | null) ?? String(t.email),
+    })),
+  });
 }
 
 export async function POST(req: Request) {

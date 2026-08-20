@@ -259,7 +259,12 @@
   }
 }
 .portal-view {
-  animation: portal-view-in 0.22s ease both;
+  /* fills backwards only: once the entrance ends the element returns to its
+     natural, transform-free state. A retained transform, even the identity
+     one, makes this wrapper the containing block for position: fixed, which
+     trapped the work drawer inside the content column instead of letting it
+     cover the screen. */
+  animation: portal-view-in 0.22s ease backwards;
 }
 /* The mobile menu sheet. Rises from the floor because that is where the
    thumb is, and honours reduced motion like everything else here. */

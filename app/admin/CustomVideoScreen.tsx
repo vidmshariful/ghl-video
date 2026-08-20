@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft, ArrowRight, Inbox, Plus } from "lucide-react";
+import { Inbox, Plus } from "lucide-react";
 import {
   Button,
   Card,
@@ -15,6 +15,12 @@ import {
   Textarea,
 } from "@/components/portal/ui";
 import { authHeader, money, when } from "./client";
+import {
+  Drawer,
+  ItemNotes,
+  KanbanBoard,
+  type BoardColumn,
+} from "@/components/portal/board";
 import {
   PROJECT_BOARD,
   REQUEST_LABEL,
@@ -55,7 +61,14 @@ type Project = {
   createdAt: string;
   invoices: { id: string; number: string; totalCents: number; paid: boolean }[];
   money: Money;
-  videos: { id: string; title: string; status: string }[];
+  videos: {
+    id: string;
+    title: string;
+    status: string;
+    assignedTo: string | null;
+    videoUrl: string | null;
+    dueAt: string | null;
+  }[];
 };
 
 type Client = {
@@ -78,6 +91,38 @@ type Enquiry = {
   lostReason: string | null;
   projectId: string | null;
   createdAt: string;
+};
+
+/* same colours the client's side wears for the same stages */
+const COLUMN_TONE: Record<string, BoardColumn["tone"]> = {
+  scoped: "neutral",
+  in_production: "info",
+  review: "warn",
+  delivered: "good",
+};
+
+const VIDEO_STATUSES = ["queued", "in_production", "ready", "revisions", "approved"] as const;
+
+const VIDEO_WORD: Record<string, string> = {
+  queued: "queued",
+  in_production: "being made",
+  ready: "with client",
+  revisions: "changes in hand",
+  approved: "approved",
+};
+
+const VIDEO_STRIPE: Record<string, string> = {
+  queued: "bg-hair",
+  in_production: "bg-blue",
+  ready: "bg-gold",
+  revisions: "bg-error",
+  approved: "bg-green",
+};
+
+const dueChip = (p: { dueAt: string | null; status: ProjectStatus }) => {
+  if (!p.dueAt) return { due: null, dueTone: "neutral" as const };
+  const late = Date.parse(p.dueAt) < Date.now() && isOpen(p.status);
+  return { due: `due ${when(p.dueAt)}`, dueTone: (late ? "bad" : "neutral") as "bad" | "neutral" };
 };
 
 const REQUEST_TONE: Record<RequestStatus, "info" | "warn" | "good" | "neutral"> = {
@@ -105,7 +150,8 @@ export function CustomVideoScreen() {
   const [enquiries, setEnquiries] = useState<Enquiry[] | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [draft, setDraft] = useState<typeof EMPTY_DRAFT | null>(null);
-  const [open, setOpen] = useState<Project | null>(null);
+  const [open, setOpen] = useState<string | null>(null);
+  const [team, setTeam] = useState<{ email: string; name: string }[]>([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
@@ -120,6 +166,7 @@ export function CustomVideoScreen() {
       ]);
       if (p.error || r.error) return setErr(p.error ?? r.error);
       setProjects(p.projects as Project[]);
+      setTeam((p.team as { email: string; name: string }[]) ?? []);
       setEnquiries(r.requests as Enquiry[]);
       setClients((c.customers as Client[]) ?? []);
     } catch {
@@ -155,16 +202,22 @@ export function CustomVideoScreen() {
     }
   }
 
-  async function move(p: Project, dir: 1 | -1) {
-    const i = PROJECT_BOARD.indexOf(p.status);
-    const next = PROJECT_BOARD[i + dir];
-    if (!next) return;
-    await fetch("/api/admin/projects", {
-      method: "PATCH",
-      headers: { ...(await authHeader()), "Content-Type": "application/json" },
-      body: JSON.stringify({ id: p.id, status: next }),
-    });
-    await load();
+  async function moveTo(id: string, status: string): Promise<string | null> {
+    try {
+      const r = await fetch("/api/admin/projects", {
+        method: "PATCH",
+        headers: { ...(await authHeader()), "Content-Type": "application/json" },
+        body: JSON.stringify({ id, status }),
+      });
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}));
+        return (j as { error?: string }).error ?? "Could not move it.";
+      }
+      await load();
+      return null;
+    } catch {
+      return "Could not move it.";
+    }
   }
 
   async function setStatus(p: Project, status: ProjectStatus) {
@@ -175,6 +228,24 @@ export function CustomVideoScreen() {
     });
     setOpen(null);
     await load();
+  }
+
+  async function saveVideo(projectId: string, id: string, body: Record<string, unknown>) {
+    await fetch("/api/admin/projects/videos", {
+      method: "PATCH",
+      headers: { ...(await authHeader()), "Content-Type": "application/json" },
+      body: JSON.stringify({ projectId, id, ...body }),
+    });
+    await load();
+  }
+
+  async function addVideo(projectId: string, title: string) {
+    const r = await fetch("/api/admin/projects/videos", {
+      method: "POST",
+      headers: { ...(await authHeader()), "Content-Type": "application/json" },
+      body: JSON.stringify({ projectId, title }),
+    });
+    if (r.ok) await load();
   }
 
   async function markEnquiry(e: Enquiry, status: RequestStatus) {
@@ -194,102 +265,7 @@ export function CustomVideoScreen() {
   const chosen = clients.find((c) => c.email === draft?.customerEmail) ?? null;
   const openEnquiries = enquiries.filter((e) => e.status !== "won" && e.status !== "lost");
 
-  /* one project, opened */
-  if (open) {
-    const p = projects.find((x) => x.id === open.id) ?? open;
-    return (
-      <div className="w-full">
-        <Button variant="ghost" size="sm" icon={<ArrowLeft />} onClick={() => setOpen(null)}>
-          All custom video
-        </Button>
-        <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0">
-            <h1 className="font-display text-h3 text-ink">{p.title}</h1>
-            <p className="mt-0.5 text-body-sm text-muted">{p.customerEmail}</p>
-            <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              <Chip tone={isOpen(p.status) ? "info" : "neutral"}>{STUDIO_LABEL[p.status]}</Chip>
-              {p.dueAt && <Chip tone="warn">due {when(p.dueAt)}</Chip>}
-              <span className="font-mono text-label uppercase text-dim">
-                opened {when(p.createdAt)}
-                {p.ownerEmail ? ` / ${p.ownerEmail}` : ""}
-              </span>
-            </div>
-          </div>
-          <div className="flex shrink-0 flex-wrap gap-2">
-            {(["delivered", "closed", "cancelled"] as ProjectStatus[]).map((s) => (
-              <Button
-                key={s}
-                size="sm"
-                variant={s === "cancelled" ? "danger" : "secondary"}
-                onClick={() => setStatus(p, s)}
-              >
-                {STUDIO_LABEL[s]}
-              </Button>
-            ))}
-          </div>
-        </div>
-
-        <div className="mt-6 grid gap-3 sm:grid-cols-4">
-          <Card>
-            <p className="font-mono text-label uppercase text-dim">Agreed</p>
-            <p className="mt-2 font-display text-h2 tabular-nums text-gold">
-              {money(p.money.valueCents)}
-            </p>
-            {p.agreedCents == null && p.quotedCents != null && (
-              <p className="mt-1 text-body-sm text-muted">quoted, not yet agreed</p>
-            )}
-          </Card>
-          <Card>
-            <p className="font-mono text-label uppercase text-dim">Paid</p>
-            <p className="mt-2 font-display text-h2 tabular-nums text-green">
-              {money(p.money.paidCents)}
-            </p>
-          </Card>
-          <Card>
-            <p className="font-mono text-label uppercase text-dim">Still owed</p>
-            <p
-              className={`mt-2 font-display text-h2 tabular-nums ${p.money.outstandingCents ? "text-error" : "text-ink"}`}
-            >
-              {money(p.money.outstandingCents)}
-            </p>
-          </Card>
-          <Card>
-            <p className="font-mono text-label uppercase text-dim">Videos</p>
-            <p className="mt-2 font-display text-h2 tabular-nums text-ink">{p.videos.length}</p>
-          </Card>
-        </div>
-
-        <div className="mt-3 grid gap-3 lg:grid-cols-2">
-          <Card title="The brief">
-            {p.brief ? (
-              <p className="whitespace-pre-wrap text-body-sm text-muted">{p.brief}</p>
-            ) : (
-              <p className="text-body-sm text-dim">No brief written down yet.</p>
-            )}
-          </Card>
-          <Card title="Invoices">
-            {p.invoices.length === 0 ? (
-              <p className="text-body-sm text-muted">
-                None raised. Send one from Invoices and pick this job.
-              </p>
-            ) : (
-              <ul className="grid gap-2">
-                {p.invoices.map((i) => (
-                  <li key={i.id} className="flex items-center justify-between gap-3 text-body-sm">
-                    <span className="text-ink">{i.number}</span>
-                    <span className="flex items-center gap-2">
-                      <Chip tone={i.paid ? "good" : "warn"}>{i.paid ? "paid" : "open"}</Chip>
-                      <span className="tabular-nums text-ink">{money(i.totalCents)}</span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Card>
-        </div>
-      </div>
-    );
-  }
+  const opened = open ? projects.find((x) => x.id === open) ?? null : null;
 
   return (
     <div className="w-full">
@@ -426,77 +402,29 @@ export function CustomVideoScreen() {
               }
             />
           ) : (
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              {PROJECT_BOARD.map((col) => {
-                const inCol = live.filter((p) => p.status === col);
-                return (
-                  <div key={col} className="rounded-[12px] border border-hair bg-sunken/40 p-3">
-                    <div className="mb-2.5 flex items-baseline justify-between">
-                      <h2 className="font-mono text-label uppercase text-dim">
-                        {STUDIO_LABEL[col]}
-                      </h2>
-                      <span className="font-mono text-label tabular-nums text-dim">
-                        {inCol.length}
-                      </span>
-                    </div>
-                    <div className="grid gap-2">
-                      {inCol.length === 0 && (
-                        <p className="px-1 py-2 text-body-sm text-dim">Nothing here.</p>
-                      )}
-                      {inCol.map((p) => (
-                        <div
-                          key={p.id}
-                          className="rounded-[8px] border border-hair bg-surface p-3"
-                        >
-                          <button
-                            type="button"
-                            onClick={() => setOpen(p)}
-                            className="tap block w-full text-left"
-                          >
-                            <p className="text-body-sm font-semibold text-ink">{p.title}</p>
-                            <p className="mt-0.5 truncate font-mono text-label uppercase text-dim">
-                              {p.customerEmail}
-                            </p>
-                          </button>
-                          <div className="mt-2 flex items-center justify-between gap-2">
-                            <span className="font-mono text-body-sm tabular-nums text-ink">
-                              {money(p.money.valueCents)}
-                            </span>
-                            {p.money.outstandingCents > 0 && (
-                              <Chip tone="warn">{money(p.money.outstandingCents)} owed</Chip>
-                            )}
-                          </div>
-                          <div className="mt-2 flex gap-1.5">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              icon={<ArrowLeft />}
-                              disabled={PROJECT_BOARD.indexOf(p.status) === 0}
-                              onClick={() => move(p, -1)}
-                              aria-label="Move back a stage"
-                            >
-                              Back
-                            </Button>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              icon={<ArrowRight />}
-                              disabled={
-                                PROJECT_BOARD.indexOf(p.status) === PROJECT_BOARD.length - 1
-                              }
-                              onClick={() => move(p, 1)}
-                              aria-label="Move forward a stage"
-                            >
-                              Next
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
+            <KanbanBoard
+              columns={PROJECT_BOARD.map((col) => ({
+                key: col,
+                label: STUDIO_LABEL[col],
+                tone: COLUMN_TONE[col] ?? "neutral",
+              }))}
+              items={live.map((p) => {
+                const done = p.videos.filter((v) => v.status === "approved").length;
+                return {
+                  id: p.id,
+                  column: p.status,
+                  title: p.title,
+                  meta: `${p.customerEmail} / ${money(p.money.valueCents)}`,
+                  assignee: p.ownerEmail,
+                  ...dueChip(p),
+                  warn: p.money.outstandingCents > 0 ? `${money(p.money.outstandingCents)} owed` : null,
+                  progress: p.videos.length ? `${done}/${p.videos.length}` : null,
+                  progressPct: p.videos.length ? (done / p.videos.length) * 100 : null,
+                };
               })}
-            </div>
+              onOpen={setOpen}
+              onMove={moveTo}
+            />
           )}
         </>
       ) : enquiries.length === 0 ? (
@@ -560,6 +488,213 @@ export function CustomVideoScreen() {
           ))}
         </div>
       )}
+
+      <Drawer open={!!opened} onClose={() => setOpen(null)} title={opened?.title ?? ""}>
+        {opened && (
+          <ProjectDrawer
+            p={opened}
+            team={team}
+            onStatus={(status) => setStatus(opened, status)}
+            onSaveVideo={(id, body) => saveVideo(opened.id, id, body)}
+            onAddVideo={(title) => addVideo(opened.id, title)}
+          />
+        )}
+      </Drawer>
+    </div>
+  );
+}
+
+/*
+ * One job, opened over the board. Everything the studio needs while a
+ * client is on the phone: the money, the videos and who is cutting each,
+ * the brief, the invoices, and the notes the client never sees.
+ */
+function ProjectDrawer({
+  p,
+  team,
+  onStatus,
+  onSaveVideo,
+  onAddVideo,
+}: {
+  p: Project;
+  team: { email: string; name: string }[];
+  onStatus: (s: ProjectStatus) => void;
+  onSaveVideo: (id: string, body: Record<string, unknown>) => Promise<void>;
+  onAddVideo: (title: string) => Promise<void>;
+}) {
+  const [newTitle, setNewTitle] = useState("");
+  const [linkFor, setLinkFor] = useState<string | null>(null);
+  const [link, setLink] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  return (
+    <div className="grid gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Chip tone={isOpen(p.status) ? "info" : "neutral"}>{STUDIO_LABEL[p.status]}</Chip>
+          {p.dueAt && <Chip tone="warn">due {when(p.dueAt)}</Chip>}
+          <span className="font-mono text-label uppercase text-dim">{p.customerEmail}</span>
+        </div>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          {(["closed", "cancelled"] as ProjectStatus[]).map((st) => (
+            <Button
+              key={st}
+              size="sm"
+              variant={st === "cancelled" ? "danger" : "secondary"}
+              onClick={() => onStatus(st)}
+            >
+              {STUDIO_LABEL[st]}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {(
+          [
+            ["Agreed", money(p.money.valueCents), "text-gold"],
+            ["Paid", money(p.money.paidCents), "text-green"],
+            ["Still owed", money(p.money.outstandingCents), p.money.outstandingCents ? "text-error" : "text-ink"],
+            ["Videos", String(p.videos.length), "text-ink"],
+          ] as const
+        ).map(([label, value, tone]) => (
+          <div key={label} className="rounded-[8px] border border-hair bg-surface p-3">
+            <p className="font-mono text-label uppercase text-dim">{label}</p>
+            <p className={`mt-1 font-display text-h4 tabular-nums ${tone}`}>{value}</p>
+          </div>
+        ))}
+      </div>
+
+      <Card title="Videos" description="Each one, where it is, and who is cutting it.">
+        {p.videos.length === 0 ? (
+          <p className="text-body-sm text-dim">Nothing added yet.</p>
+        ) : (
+          <ul className="grid gap-2">
+            {p.videos.map((v) => (
+              <li
+                key={v.id}
+                className="relative overflow-hidden rounded-[8px] border border-hair bg-surface p-3 pl-4"
+              >
+                <span
+                  aria-hidden="true"
+                  className={`absolute inset-y-0 left-0 w-1 ${VIDEO_STRIPE[v.status] ?? "bg-hair"}`}
+                />
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="min-w-0 flex-1 text-body-sm font-semibold text-ink">{v.title}</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLinkFor(linkFor === v.id ? null : v.id);
+                      setLink(v.videoUrl ?? "");
+                    }}
+                    className="tap font-mono text-label uppercase text-dim transition-colors hover:text-gold"
+                  >
+                    {v.videoUrl ? "the cut" : "no cut yet"}
+                  </button>
+                </div>
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                  <Select
+                    value={v.status}
+                    onChange={(e) => void onSaveVideo(v.id, { status: e.target.value })}
+                    aria-label={`Status for ${v.title}`}
+                  >
+                    {VIDEO_STATUSES.map((st) => (
+                      <option key={st} value={st}>
+                        {VIDEO_WORD[st]}
+                      </option>
+                    ))}
+                  </Select>
+                  <Select
+                    value={v.assignedTo ?? ""}
+                    onChange={(e) => void onSaveVideo(v.id, { assignedTo: e.target.value })}
+                    aria-label={`Editor for ${v.title}`}
+                  >
+                    <option value="">Nobody yet</option>
+                    {team.map((t) => (
+                      <option key={t.email} value={t.email}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                {linkFor === v.id && (
+                  <div className="mt-2 flex gap-2">
+                    <Input
+                      value={link}
+                      onChange={(e) => setLink(e.target.value)}
+                      placeholder="Link to the cut"
+                    />
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={busy}
+                      onClick={async () => {
+                        setBusy(true);
+                        await onSaveVideo(v.id, { videoUrl: link });
+                        setBusy(false);
+                        setLinkFor(null);
+                      }}
+                    >
+                      Save
+                    </Button>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="mt-3 flex gap-2">
+          <Input
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+            placeholder="Brand film, master cut"
+            aria-label="New video title"
+          />
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={busy || !newTitle.trim()}
+            onClick={async () => {
+              setBusy(true);
+              await onAddVideo(newTitle.trim());
+              setBusy(false);
+              setNewTitle("");
+            }}
+          >
+            Add
+          </Button>
+        </div>
+      </Card>
+
+      <Card title="The brief">
+        {p.brief ? (
+          <p className="whitespace-pre-wrap text-body-sm text-muted">{p.brief}</p>
+        ) : (
+          <p className="text-body-sm text-dim">No brief written down yet.</p>
+        )}
+      </Card>
+
+      <Card title="Invoices">
+        {p.invoices.length === 0 ? (
+          <p className="text-body-sm text-muted">
+            None raised. Send one from Invoices and pick this job.
+          </p>
+        ) : (
+          <ul className="grid gap-2">
+            {p.invoices.map((i) => (
+              <li key={i.id} className="flex items-center justify-between gap-3 text-body-sm">
+                <span className="text-ink">{i.number}</span>
+                <span className="flex items-center gap-2">
+                  <Chip tone={i.paid ? "good" : "warn"}>{i.paid ? "paid" : "open"}</Chip>
+                  <span className="tabular-nums text-ink">{money(i.totalCents)}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
+      <ItemNotes target={{ projectId: p.id }} authHeader={authHeader} />
     </div>
   );
 }
