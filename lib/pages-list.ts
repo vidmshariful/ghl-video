@@ -19,6 +19,7 @@ export type SitePage = {
 export const sitePages: readonly SitePage[] = [
   { name: "Homepage", path: "/", inNav: true },
   { name: "Premade Videos", path: "/premade/", inNav: true },
+  { name: "The Video Library", path: "/library/", inNav: false, note: "the full catalogue, public, linked from /premade" },
   { name: "Custom Video Production", path: "/custom-video/", inNav: true },
   { name: "Video Editing", path: "/editing/", inNav: true },
   { name: "HighLevel Demo Video (SEO page)", path: "/highlevel-demo-video/", inNav: false, note: "direct link only" },

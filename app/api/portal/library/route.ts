@@ -201,8 +201,19 @@ export async function GET(req: Request) {
       };
     })
     .filter((x): x is NonNullable<typeof x> => x !== null)
-    /* owned last, featured first, then the catalogue's own order */
-    .sort((a, b) => Number(a.owned) - Number(b.owned) || Number(b.featured) - Number(a.featured));
+    /*
+     * What they have NOT bought yet (owner decision, August 2026).
+     *
+     * This screen used to show everything with the owned ones marked and
+     * pushed to the end, on the reasoning that somebody owning nine of a pack
+     * wants to see the three they are missing beside the nine they have. That
+     * held while this was the only place a client saw the catalogue. It is
+     * not any more: what they own has its own screen under My Videos, and the
+     * full catalogue is public at /library/ for anybody. So in here the
+     * question is only what is left to buy.
+     */
+    .filter((i) => !i.owned)
+    .sort((a, b) => Number(b.featured) - Number(a.featured));
 
   return NextResponse.json({
     items,

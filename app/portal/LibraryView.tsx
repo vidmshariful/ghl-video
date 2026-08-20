@@ -581,7 +581,7 @@ export function LibraryView({
         title="Video Library"
         description={
           ownedCount
-            ? `Everything we make. You already own ${ownedCount}, marked and moved to the end.`
+            ? `What you have not bought yet. The ${ownedCount} you own are in My Videos.`
             : "Every video, pack and bundle we make. Your brand goes on whichever you choose."
         }
       >

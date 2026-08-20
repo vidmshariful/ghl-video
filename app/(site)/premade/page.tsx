@@ -8,15 +8,10 @@ import { DrawnIcon, type IconName } from "@/components/DrawnIcon";
 import { FaqList } from "@/components/FaqList";
 import { CtaBand } from "@/components/CtaBand";
 import { JsonLd } from "@/components/JsonLd";
-import { PremadeLibrary } from "@/components/PremadeLibrary";
+import { VideoBrowser } from "@/components/premade/browser";
 import { PremadeExplainer } from "@/components/premade/PremadeExplainer";
-import {
-  featuredBrowse,
-  libraryBrowse,
-  libraryGroups,
-  recentBrowse,
-} from "@/components/premade/catalog";
-import { getCatalog, recentCutoff } from "@/lib/catalog-db";
+import { featuredBrowse, libraryBrowse } from "@/components/premade/catalog";
+import { getCatalog } from "@/lib/catalog-db";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { RuleList } from "@/components/RuleList";
 import { RuledSection } from "@/components/RuledSection";
@@ -44,20 +39,15 @@ export async function generateMetadata(): Promise<Metadata> {
 
 const howIcons: IconName[] = ["mouse-click", "palette", "package-check"];
 
-/* the Recent Launch window: releases from the last N days roll through */
-const RECENT_DAYS = 120;
-
 export default async function PremadePage() {
   const p = pages.premade;
 
   /* the admin-managed catalog, with a complete code fallback if the backend
      is unreachable. Feeds the three grid tabs; the two packs stay in code. */
   const rows = await getCatalog();
-  const cutoff = recentCutoff(RECENT_DAYS);
   const featured = featuredBrowse(rows);
-  const recent = recentBrowse(rows, cutoff);
+  /* full is still counted, to say honestly how much more there is */
   const full = libraryBrowse(rows);
-  const fullGroups = libraryGroups(full);
 
   /* every purchasable one-time SKU, machine-readable: singles, packs, the
      stack, and all bundle tiers, each pointing at its on-domain checkout.
@@ -135,14 +125,30 @@ export default async function PremadePage() {
             intro={p.grid.intro}
             center
           />
+          {/*
+            * A taster, not the catalogue.
+            *
+            * The whole library used to sit here, which meant a page whose job
+            * is arguing why premade video is worth buying was also asking
+            * somebody to browse eighty things. Browsing fought selling and
+            * both lost. The library has a page of its own now; this is the
+            * handful that makes the case, each one buyable on the spot.
+            */}
           <div className="mt-12">
-            <PremadeLibrary
-              featured={featured}
-              recent={recent}
-              full={full}
-              fullGroups={fullGroups}
-            />
+            <VideoBrowser videos={featured} groups={[]} />
           </div>
+
+          <Reveal>
+            <div className="mt-10 flex flex-col items-center gap-4 border-t border-hair pt-10 text-center">
+              <p className="max-w-[var(--measure-body)] text-body text-muted">
+                That is {featured.length} of {full.length}. The rest live in the
+                library, where you can watch anything before you buy it.
+              </p>
+              <Button href="/library/" variant="primary">
+                See the full library
+              </Button>
+            </div>
+          </Reveal>
         </div>
       </section>
 

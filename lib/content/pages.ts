@@ -19,12 +19,15 @@ export const pages = {
       accent: "ready when you are.",
       lede: "Browse the full library. Order any video on its own, or take a pack and save. Every one is white-labeled to your SaaS.",
     },
+    /* A taster now, not the catalogue. The full library moved to its own
+       page in August 2026 because browsing eighty videos fought the job this
+       page is here to do, and both lost. */
     grid: {
       chip: "The library",
-      headline: "Every video",
-      accent: "and pack, in one place.",
+      headline: "A few of them",
+      accent: "to show you what you get.",
       intro:
-        `${clients}+ HighLevel clients order from this library. Filter it on the left, open a pack to browse it as a playlist, and preview anything before you order.`,
+        `${clients}+ HighLevel clients order from our library. Here are a handful you can buy right now, and the whole thing is one click away.`,
     },
     /* intro explainer before the library: what the service is, what every order
        includes, and a walkthrough video. Also earns the page real indexable
