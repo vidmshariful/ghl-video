@@ -36,7 +36,14 @@ type Data = {
     openProjects: number;
   };
   plans: { name: string; mrrCents: number; live: number }[];
-  months: { key: string; label: string; premade: number; addon: number; custom: number }[];
+  months: {
+    key: string;
+    label: string;
+    premade: number;
+    addon: number;
+    custom: number;
+    subscription: number;
+  }[];
   recent: {
     kind: string;
     amountCents: number;
@@ -98,10 +105,8 @@ export function SalesScreen() {
       label: m.label,
       cents:
         stream === "all"
-          ? m.premade + m.addon + m.custom
-          : stream === "subscription"
-            ? 0
-            : (m[stream as "premade" | "addon" | "custom"] ?? 0),
+          ? m.premade + m.addon + m.custom + m.subscription
+          : (m[stream] ?? 0),
     }));
   }, [data, stream]);
 
@@ -127,7 +132,7 @@ export function SalesScreen() {
   return (
     <div className="w-full">
       <PageHeader
-        title="Sales"
+        title="Sales Dashboard"
         description="What the business has made, and what it is still owed. The only screen that keeps these."
       />
 
@@ -197,9 +202,7 @@ export function SalesScreen() {
         <Card title="Twelve months">
           {bars.every((b) => b.cents === 0) ? (
             <p className="text-body-sm text-muted">
-              {stream === "subscription"
-                ? "Subscription revenue is recurring, so it is not charted by month here. The figures above cover it."
-                : "Nothing billed in this stream yet."}
+              Nothing billed in this stream yet.
             </p>
           ) : (
             <>
@@ -268,10 +271,10 @@ export function SalesScreen() {
       </div>
 
       <div className="mt-3">
-        <Card title="Recent sales" padded={false}>
+        <Card title="Transactions history" padded={false}>
           <div className="px-5 pb-5">
             {recent.length === 0 ? (
-              <p className="py-3 text-body-sm text-muted">Nothing in this stream yet.</p>
+              <p className="py-3 text-body-sm text-muted">No payments in this stream yet.</p>
             ) : (
               <Table>
                 <thead>

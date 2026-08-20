@@ -45,6 +45,15 @@ export const TEMPLATE_VARIABLES: Record<string, string[]> = {
   order_refunded: ["customer_name", "product_name", "order_code", "amount", "portal_url"],
   subscription_started: ["customer_name", "plan_name", "amount", "portal_url"],
   subscription_canceled: ["customer_name", "plan_name", "portal_url"],
+  subscription_price_changed: [
+    "customer_name",
+    "plan_name",
+    "old_amount",
+    "new_amount",
+    "effective_date",
+    "reason",
+    "portal_url",
+  ],
   quote_received: ["name", "contact_url"],
   partner_application_received: ["name", "partners_url"],
   partner_invite: ["partner_name", "partner_email", "partners_url"],
@@ -162,6 +171,18 @@ ${btn("{{portal_url}}", "Open your videos")}
 <p style="${P}">Next step: send your footage and brand notes, and we will set up your editing workflow. Watch for a note from your producer.</p>
 ${btn("{{portal_url}}", "Open your portal")}
 <p style="${SMALL}margin-top:22px;">Manage or cancel your plan any time from the portal. No contracts.</p>`,
+  },
+  {
+    key: "subscription_price_changed",
+    name: "Editing plan price changed",
+    description: "Sent when the monthly price on a plan is adjusted.",
+    subject: "A change to your {{plan_name}} plan",
+    body: `<h1 style="${H}">Your plan price is changing.</h1>
+<p style="${P}">Hi {{customer_name}}, we have adjusted your <strong style="${STRONG}">{{plan_name}}</strong> plan from <strong style="${STRONG}">{{old_amount}}</strong> to <strong style="${STRONG}">{{new_amount}}</strong> per month.</p>
+<div style="${BOX}">{{reason}}</div>
+<p style="${P}margin-top:20px;">Nothing changes on your current month. The new amount applies from <strong style="${STRONG}">{{effective_date}}</strong>, your next renewal, and your card is charged then as usual.</p>
+${btn("{{portal_url}}", "See your plan")}
+<p style="${SMALL}margin-top:22px;">If this is not what you agreed, reply to this email and we will put it right before anything is charged.</p>`,
   },
   {
     key: "subscription_canceled",

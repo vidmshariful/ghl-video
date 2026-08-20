@@ -15,11 +15,16 @@ import { PASSWORD_MIN_LENGTH } from "@/lib/checkout/password-rules";
 
 /*
  * On-domain checkout, a two-step accordion inside one card. The buyer fills
- * their details, presses Next, and the Payment step unfolds. For one-time
- * purchases the PaymentIntent is created on load, so payment appears the
- * instant Next is pressed and /finalize writes the order at pay time. For
- * subscriptions, Next creates the plan (the plan needs the email). Card data
- * goes straight to Stripe, never our server.
+ * their details, presses Next, and the Payment step unfolds.
+ *
+ * For one-time purchases the PaymentIntent is created on the buyer's FIRST
+ * KEYSTROKE, not on page load. Creating it on load meant every visit, every
+ * crawler and every back-button bounce minted one, which buried the real
+ * payments in the Stripe dashboard. Filling in a name, email, company, phone
+ * and password takes several seconds, so the intent is still ready long
+ * before Next is pressed and nothing feels slower. For subscriptions, Next
+ * creates the plan (the plan needs the email). Card data goes straight to
+ * Stripe, never our server.
  */
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "",
@@ -262,6 +267,17 @@ function OneTimeCheckout({
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
   const [initError, setInitError] = useState<string | null>(null);
+  /*
+   * Whether this visitor has shown any sign of buying.
+   *
+   * The intent used to be created on page load, which meant every visit,
+   * every bot and every back-button bounce minted a PaymentIntent: 192 of
+   * them against 12 real payments, drowning the Stripe dashboard in noise.
+   * Creating it on the first keystroke instead costs nothing in speed,
+   * because filling in a name, email, company, phone and password takes
+   * several seconds and the intent is ready long before Next is pressed.
+   */
+  const [intending, setIntending] = useState(false);
   const [coupon, setCoupon] = useState<AppliedCoupon | null>(null);
   const [couponErr, setCouponErr] = useState<string | null>(null);
   const [couponBusy, setCouponBusy] = useState(false);
@@ -301,6 +317,8 @@ function OneTimeCheckout({
   }, [initialCouponCode, applyCoupon]);
 
   useEffect(() => {
+    /* nothing is created for somebody who only looked */
+    if (!intending) return;
     let active = true;
     (async () => {
       try {
@@ -328,7 +346,7 @@ function OneTimeCheckout({
     return () => {
       active = false;
     };
-  }, [sku]);
+  }, [sku, intending]);
 
   const chosen = bumps.filter((b) => selected.includes(b.id));
   const bumpsCents = chosen.reduce((s, b) => s + b.priceCents, 0);
@@ -337,12 +355,20 @@ function OneTimeCheckout({
   const totalLabel = money(totalCents, currency);
 
   const set =
-    (k: keyof Details) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+    (k: keyof Details) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+      /* the first sign of a real buyer: start preparing payment */
+      setIntending(true);
       setDetails((d) => ({ ...d, [k]: e.target.value }));
-  const toggleBump = (id: string) =>
+    };
+  const toggleBump = (id: string) => {
+    setIntending(true);
     setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+  };
 
   function next() {
+    /* a safety net: somebody who autofilled the whole form in one go may not
+     * have fired a change we saw, and must not reach payment with no intent */
+    setIntending(true);
     if (!details.name.trim()) return setDetailErr("Your name is required.");
     if (!EMAIL_RE.test(details.email)) return setDetailErr("A valid email is required.");
     if (!details.company.trim()) return setDetailErr("Your SaaS or company name is required.");

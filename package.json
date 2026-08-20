@@ -25,7 +25,8 @@
     "check:leaks": "tsx scripts/check-leaks.ts",
     "check:portal-ui": "tsx scripts/check-portal-ui.ts",
     "backfill:deliverables": "tsx scripts/backfill-deliverables.ts",
-    "seed:pack-rows": "tsx scripts/seed-pack-rows.ts"
+    "seed:pack-rows": "tsx scripts/seed-pack-rows.ts",
+    "backfill:subscription-payments": "tsx scripts/backfill-subscription-payments.ts"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",

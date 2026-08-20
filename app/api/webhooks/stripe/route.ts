@@ -127,7 +127,7 @@ async function handleSucceeded(
      * own these payments.
      */
     if (await isSubscriptionBilling(db, pi)) {
-      console.info(`[webhook] ${pi.id} is subscription billing, not an orphan`);
+      await recordSubscriptionPayment(db, pi);
     } else {
       const recovered = await recoverOrphanPaidIntent(db, pi);
       if (recovered) {
@@ -186,6 +186,57 @@ async function isSubscriptionBilling(
     .limit(1)
     .maybeSingle();
   return Boolean(data);
+}
+
+/*
+ * Keep the recurring charge, now that we know what it is.
+ *
+ * The transactions list showed a plan once, when it started, and never again,
+ * so the one stream that repeats every month was the one you could not see.
+ * The intent id is unique on the table, so Stripe re-delivering an event is
+ * a no-op rather than revenue counted twice.
+ *
+ * Fail-soft on purpose: a bookkeeping row must never be the reason a webhook
+ * returns non-2xx and Stripe starts retrying a payment that already worked.
+ */
+async function recordSubscriptionPayment(
+  db: ReturnType<typeof supabaseAdmin>,
+  pi: Stripe.PaymentIntent,
+): Promise<void> {
+  try {
+    const customerId = typeof pi.customer === "string" ? pi.customer : pi.customer?.id;
+    const { data: sub } = customerId
+      ? await db
+          .from("subscriptions")
+          .select("id, customer_email, plan_name, product:products(name)")
+          .eq("stripe_customer_id", customerId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      : { data: null };
+    if (!sub) {
+      console.info(`[webhook] ${pi.id} looks like subscription billing but no plan matched`);
+      return;
+    }
+    const { error } = await db.from("subscription_payments").upsert(
+      {
+        subscription_id: sub.id as string,
+        customer_email: String(sub.customer_email),
+        amount_cents: pi.amount_received || pi.amount,
+        currency: pi.currency,
+        stripe_payment_intent_id: pi.id,
+        plan_name:
+          (sub.plan_name as string | null) ??
+          (sub.product as { name?: string } | null)?.name ??
+          null,
+        paid_at: new Date((pi.created ?? Math.floor(Date.now() / 1000)) * 1000).toISOString(),
+      },
+      { onConflict: "stripe_payment_intent_id", ignoreDuplicates: true },
+    );
+    if (error) console.error(`[webhook] recurring payment not stored:`, error.message);
+  } catch (e) {
+    console.error("[webhook] recordSubscriptionPayment failed:", e instanceof Error ? e.message : e);
+  }
 }
 
 async function recoverOrphanPaidIntent(

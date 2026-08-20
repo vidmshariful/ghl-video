@@ -434,7 +434,7 @@ export function AdminClient({
     {
       title: "Sales",
       items: [
-        { key: "sales", label: "Sales", icon: <BadgeDollarSign /> },
+        { key: "sales", label: "Sales Dashboard", icon: <BadgeDollarSign /> },
         { key: "orders", label: "Orders", icon: <ShoppingCart /> },
         { key: "subscriptions", label: "Subscriptions", icon: <Repeat /> },
         { key: "invoices", label: "Invoices", icon: <FileText /> },

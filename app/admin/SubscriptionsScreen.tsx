@@ -30,6 +30,7 @@ export function SubscriptionsScreen() {
   const [rows, setRows] = useState<SubRow[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [err, setErr] = useState("");
+  const [note, setNote] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
 
   async function load() {
@@ -45,6 +46,51 @@ export function SubscriptionsScreen() {
   useEffect(() => {
     load();
   }, []);
+
+  /*
+   * Change what a plan bills from its next renewal.
+   *
+   * Nothing is prorated, so the month the client is inside stays exactly as
+   * they agreed to it, and they get an email saying what changed and why
+   * before any money moves.
+   */
+  async function reprice(r: SubRow) {
+    const current = (r.amount_cents / 100).toFixed(2);
+    const entered = window.prompt(
+      `New monthly price for ${r.customer_email}, in dollars.\n\nThey pay $${current} today. The new amount starts at their next renewal; this month is untouched.`,
+      current,
+    );
+    if (entered === null) return;
+    const dollars = Number(entered);
+    if (!Number.isFinite(dollars) || dollars < 0) {
+      return setErr("That is not an amount.");
+    }
+    const reason = window.prompt(
+      "Why is it changing? The client sees this line in their email.",
+      "We applied the discount you were promised.",
+    );
+    if (reason === null) return;
+
+    setBusy(r.id);
+    setErr("");
+    try {
+      const res = await fetch(`/api/admin/subscriptions/${r.id}/price`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...(await authHeader()) },
+        body: JSON.stringify({ amountCents: Math.round(dollars * 100), reason }),
+      });
+      const j = await res.json();
+      if (!res.ok) setErr(j.error ?? "Could not change the price.");
+      else {
+        setNote(`Now $${(j.newCents / 100).toFixed(2)} a month from ${j.effective}. ${r.customer_email} has been emailed.`);
+        await load();
+      }
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  }
 
   async function act(id: string, action: string, confirmMsg?: string) {
     if (confirmMsg && !window.confirm(confirmMsg)) return;
@@ -92,6 +138,7 @@ export function SubscriptionsScreen() {
       </div>
 
       {err && <p className="mt-4 text-body-sm text-error">{err}</p>}
+      {note && <p className="mt-4 text-body-sm text-green">{note}</p>}
 
       {rows.length === 0 ? (
         <p className="mt-8 text-body text-muted">No subscriptions yet.</p>
@@ -139,6 +186,9 @@ export function SubscriptionsScreen() {
                       Cancel at period end
                     </Button>
                   )}
+                  <Button variant="secondary" disabled={busy === r.id} onClick={() => reprice(r)}>
+                    Change price
+                  </Button>
                   <Button
                     variant="danger"
                     disabled={busy === r.id}

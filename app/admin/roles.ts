@@ -26,7 +26,7 @@ export const ROLE_BLURB: Record<Role, string> = {
  * 'settings', and 'help' are always visible; inside Settings, the Team and
  * Integrations tabs are admin-only and never a per-user toggle. */
 export const TOGGLEABLE_VIEWS: { key: View; label: string; group: string }[] = [
-  { key: "sales", label: "Sales insight", group: "Sales" },
+  { key: "sales", label: "Sales Dashboard", group: "Sales" },
   { key: "orders", label: "Orders", group: "Sales" },
   { key: "invoices", label: "Invoices", group: "Sales" },
   { key: "subscriptions", label: "Subscriptions", group: "Sales" },

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyAdmin } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
-import { billedMonths } from "@/lib/customer-record";
 import { orderKind, type InvoiceLink } from "@/lib/order-kind";
 
 export const runtime = "nodejs";
@@ -41,6 +40,12 @@ export async function GET(req: Request) {
       db.from("invoices").select("number, total_cents, status, product_sku, product_id, parent_order_id"),
       db.from("projects").select("id, status, quoted_cents, agreed_cents"),
     ]);
+
+  /* every recurring charge that actually succeeded */
+  const { data: recurring } = await db
+    .from("subscription_payments")
+    .select("amount_cents, paid_at, customer_email, plan_name")
+    .order("paid_at", { ascending: false });
 
   const invoiceByProduct = new Map<string, InvoiceLink>(
     ((invoices ?? []) as Row[])
@@ -93,21 +98,16 @@ export async function GET(req: Request) {
 
   /* recurring, all time and right now */
   const BILLING = new Set(["active", "trialing", "past_due"]);
-  /* a plan that never completed its first payment took no money */
-  const NEVER_PAID = new Set(["incomplete", "incomplete_expired"]);
-  let subscriptionCents = 0;
+  /* what recurring has actually brought in, counted from real charges rather
+   * than estimated from elapsed months */
+  const subscriptionCents = ((recurring ?? []) as Row[]).reduce(
+    (a, x) => a + Number(x.amount_cents),
+    0,
+  );
   let mrrCents = 0;
   const planRows: { name: string; mrrCents: number; live: number }[] = [];
   for (const s of (subs ?? []) as Row[]) {
     const amount = s.amount_cents == null ? 0 : Number(s.amount_cents);
-    subscriptionCents +=
-      amount *
-      billedMonths(
-        String(s.created_at),
-        String(s.status),
-        (s.current_period_end as string | null) ?? null,
-        now,
-      );
     if (BILLING.has(String(s.status))) {
       mrrCents += amount;
       const name =
@@ -140,8 +140,32 @@ export async function GET(req: Request) {
       0,
     );
 
+  /*
+   * Recurring charges as timeline entries.
+   *
+   * One row per payment that actually happened, so a plan billing every month
+   * appears every month instead of only on the day it started.
+   */
+  const subscriptionSales = ((recurring ?? []) as Row[]).map((x) => ({
+    kind: "subscription" as const,
+    amountCents: Number(x.amount_cents),
+    at: String(x.paid_at),
+    email: String(x.customer_email),
+    name: (x.plan_name as string | null) ?? "Editing plan",
+    viaInvoice: false,
+    invoiceNumber: null,
+    recurring: true,
+  }));
+
   /* the last 12 months, by stream, so a filter has something to show */
-  const months: { key: string; label: string; premade: number; addon: number; custom: number }[] = [];
+  const months: {
+    key: string;
+    label: string;
+    premade: number;
+    addon: number;
+    custom: number;
+    subscription: number;
+  }[] = [];
   for (let i = 11; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     months.push({
@@ -150,9 +174,10 @@ export async function GET(req: Request) {
       premade: 0,
       addon: 0,
       custom: 0,
+      subscription: 0,
     });
   }
-  for (const s of sales) {
+  for (const s of [...sales, ...subscriptionSales]) {
     const d = new Date(s.at);
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     const slot = months.find((m) => m.key === key);
@@ -162,30 +187,6 @@ export async function GET(req: Request) {
   const sum = (kind: string) =>
     sales.filter((s) => s.kind === kind).reduce((a, s) => a + s.amountCents, 0);
 
-  /*
-   * Subscriptions in the same list.
-   *
-   * Dated by when the plan started and shown at its monthly price, marked
-   * recurring so it never reads as a one-off. We do not hold Stripe's
-   * individual monthly invoices, and inventing a row per month would be
-   * making up records; this says the true thing, which is that this plan
-   * began here and bills this much.
-   */
-  const subscriptionSales = ((subs ?? []) as Row[])
-    .filter((x) => !NEVER_PAID.has(String(x.status)))
-    .map((x) => ({
-      kind: "subscription" as const,
-      amountCents: x.amount_cents == null ? 0 : Number(x.amount_cents),
-      at: String(x.created_at),
-      email: String(x.customer_email),
-      name:
-        (x.plan_name as string | null) ??
-        (x.product as { name?: string } | null)?.name ??
-        "Editing plan",
-      viaInvoice: false,
-      invoiceNumber: null,
-      recurring: true,
-    }));
 
   return NextResponse.json({
     totals: {
@@ -210,6 +211,6 @@ export async function GET(req: Request) {
     months,
     recent: [...sales, ...subscriptionSales]
       .sort((a, b) => b.at.localeCompare(a.at))
-      .slice(0, 15),
+      .slice(0, 25),
   });
 }

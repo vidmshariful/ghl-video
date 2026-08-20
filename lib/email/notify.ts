@@ -289,6 +289,42 @@ export async function sendSubscriptionStartedEmail(db: SupabaseClient, rowId: st
   });
 }
 
+/**
+ * The monthly price on a plan changed.
+ *
+ * Sent because a client must never discover a different amount by looking at
+ * their bank statement. It says what it was, what it is, when it starts, and
+ * why, and it invites them to push back before any money moves, which is the
+ * only version of this email that is fair to send.
+ */
+export async function sendSubscriptionPriceChangedEmail(
+  db: SupabaseClient,
+  rowId: string,
+  opts: { oldCents: number; newCents: number; effective: string; reason: string },
+): Promise<void> {
+  const s = await subscriptionFor(db, rowId);
+  if (!s) return;
+  const newAmount = money(opts.newCents, s.currency);
+  await sendTemplate(db, "subscription_price_changed", s.email, s.name, {
+    customer_name: escapeHtml(s.name || "there"),
+    plan_name: escapeHtml(s.planName),
+    old_amount: money(opts.oldCents, s.currency),
+    new_amount: newAmount,
+    effective_date: escapeHtml(opts.effective),
+    reason: escapeHtml(opts.reason),
+    portal_url: `${SITE_URL}/portal`,
+  });
+  await pushNotification(db, {
+    audience: "customer",
+    email: s.email,
+    kind: "subscription_price_changed",
+    title: "Your plan price is changing",
+    body: `${s.planName} moves to ${newAmount} a month from ${opts.effective}.`,
+    href: "subscriptions",
+    feature: "subscriptions",
+  });
+}
+
 /** The plan actually ended (Stripe subscription deleted). */
 export async function sendSubscriptionCanceledEmail(db: SupabaseClient, rowId: string): Promise<void> {
   const s = await subscriptionFor(db, rowId);
