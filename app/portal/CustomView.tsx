@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ArrowLeft, CalendarClock, Check, Play } from "lucide-react";
 import { Button, Card, Chip, EmptyState, PageHeader } from "@/components/portal/ui";
 import { VideoReview } from "./VideoReview";
+import { DownloadAll } from "@/components/portal/DownloadAll";
 
 /*
  * The client's custom work, project by project.
@@ -191,42 +192,68 @@ export function CustomView({
               </Card>
             )}
 
-            <Card title="Videos" description="Everything this project owes you.">
+            <Card
+              title="Videos"
+              description="Everything this project owes you."
+              actions={
+                <DownloadAll
+                  videoIds={project.videos
+                    .filter((v) => v.videoUrl && v.status === "approved")
+                    .map((v) => v.id)}
+                />
+              }
+            >
               {project.videos.length === 0 ? (
                 <p className="text-body-sm text-muted">
                   Nothing to show yet. Your producer will add videos here as
                   they are made.
                 </p>
               ) : (
-                <ul className="grid gap-2.5">
-                  {project.videos.map((v) => (
-                    <li
-                      key={v.id}
-                      className="flex flex-wrap items-start justify-between gap-3 border-t border-hair pt-2.5 first:border-t-0 first:pt-0"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-body-sm font-semibold text-ink">{v.title}</p>
-                        <p className="mt-0.5 font-mono text-label uppercase text-dim">
-                          {v.dueAt ? `due ${day(v.dueAt)}` : "no date yet"}
-                        </p>
+                <ul className="grid gap-2">
+                  {/* the whole row opens it, the same gesture Pre-made and
+                      Editing use. Three ways to do one thing taught nobody
+                      anything they could carry between screens. */}
+                  {project.videos.map((v) => {
+                    const body = (
+                      <div className="flex w-full flex-wrap items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-body-sm font-semibold text-ink">{v.title}</p>
+                          <p className="mt-0.5 font-mono text-label uppercase text-dim">
+                            {v.dueAt ? `due ${day(v.dueAt)}` : "no date yet"}
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <Chip tone={VIDEO_TONE[v.status] ?? "neutral"}>
+                            {VIDEO_WORD[v.status] ?? v.status}
+                          </Chip>
+                          {v.videoUrl && (
+                            <span className="inline-flex items-center gap-1 font-mono text-label uppercase text-gold">
+                              <Play size={13} aria-hidden="true" />
+                              {v.canReview ? "Review" : "Watch"}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex shrink-0 items-center gap-2">
-                        <Chip tone={VIDEO_TONE[v.status] ?? "neutral"}>
-                          {VIDEO_WORD[v.status] ?? v.status}
-                        </Chip>
-                        {v.videoUrl && (
-                          <Button
-                            variant={v.canReview ? "brand" : "secondary"}
-                            size="sm"
-                            icon={<Play />}
+                    );
+                    return (
+                      <li key={v.id}>
+                        {v.videoUrl ? (
+                          <button
+                            type="button"
                             onClick={() => setPlaying(v)}
+                            aria-label={`${v.canReview ? "Review" : "Watch"} ${v.title}`}
+                            className="tap w-full rounded-[8px] border border-hair bg-surface p-3 text-left transition-colors hover:border-gold/60"
                           >
-                            {v.canReview ? "Review it" : "Watch"}
-                          </Button>
+                            {body}
+                          </button>
+                        ) : (
+                          <div className="rounded-[8px] border border-dashed border-hair p-3">
+                            {body}
+                          </div>
                         )}
-                      </div>
-                    </li>
-                  ))}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </Card>

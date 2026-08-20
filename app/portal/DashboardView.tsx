@@ -457,6 +457,16 @@ export function DashboardView({
   const needsBrief = list.filter((o) => o.status === "paid" && !o.intakeCompleted);
   /* an editing request we cannot open the footage for is the same kind of
    * blocked as an order with no brief: ours to chase, theirs to fix */
+  /* Anything with a real date on it, soonest first. Approved work has no
+   * date worth showing and blocked work has no date at all. */
+  const week = allVideos
+    .filter((v) => v.due?.text && ["late", "today", "soon"].includes(v.due.tone))
+    .sort((a, b) => {
+      const rank = (t: string) => (t === "late" ? 0 : t === "today" ? 1 : 2);
+      return rank(a.due!.tone) - rank(b.due!.tone);
+    })
+    .slice(0, 6);
+
   const needsFootage = allVideos.filter(
     (v) => v.line === "editing" && v.due?.tone === "waiting",
   );
@@ -711,6 +721,44 @@ export function DashboardView({
       {!loading && !onboarding && offer && (
         <div className="mt-3">
           <OfferSlot offer={offer} />
+        </div>
+      )}
+
+      {/* What is coming, with dates on it.
+          Individual videos have always carried a promised date. Nothing put
+          them together, so nobody could answer "what am I getting this
+          week", which on a monthly plan is the most useful sentence on the
+          screen. */}
+      {!loading && canOrders && week.length > 0 && (
+        <div className="mt-3">
+          <Card
+            title="Coming up"
+            description={
+              week.length === 1
+                ? "One video has a date on it."
+                : `${week.length} videos have dates on them.`
+            }
+          >
+            <ul className="grid gap-2.5">
+              {week.map((v) => (
+                <li
+                  key={v.id}
+                  className="flex flex-wrap items-center justify-between gap-3 border-t border-hair pt-2.5 first:border-t-0 first:pt-0"
+                >
+                  <div className="min-w-0">
+                    <p className="text-body-sm font-semibold text-ink">{v.title}</p>
+                    <p className="mt-0.5 font-mono text-label uppercase text-dim">
+                      {LINE_WORD[v.line]}
+                      {v.groupName ? ` / ${v.groupName}` : ""}
+                    </p>
+                  </div>
+                  <Chip tone={v.due?.tone === "late" ? "bad" : v.due?.tone === "today" ? "warn" : "info"}>
+                    {v.due?.text}
+                  </Chip>
+                </li>
+              ))}
+            </ul>
+          </Card>
         </div>
       )}
 

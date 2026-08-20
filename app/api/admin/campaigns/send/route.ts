@@ -112,7 +112,7 @@ export async function POST(req: Request) {
   }
 
   /* every buyer we know, then the campaign's own audience rules decide */
-  const { data: customers } = await db.from("customers").select("email, name");
+  const { data: customers } = await db.from("customers").select("email, name, email_prefs");
   const { data: already } = await db
     .from("campaign_sends")
     .select("customer_email")
@@ -124,8 +124,20 @@ export async function POST(req: Request) {
   const now = new Date();
   const matched: { email: string; name: string | null }[] = [];
   let alreadyCount = 0;
-  for (const c of (customers ?? []) as { email: string; name: string | null }[]) {
+  let optedOut = 0;
+  for (const c of (customers ?? []) as {
+    email: string;
+    name: string | null;
+    email_prefs?: Record<string, boolean> | null;
+  }[]) {
     const email = c.email.toLowerCase();
+    /* somebody who switched offers off is not an audience, whatever the
+     * targeting says. Checked before the sent-before list so an opt-out
+     * never quietly consumes their one-and-only send. */
+    if (c.email_prefs?.offers === false) {
+      optedOut += 1;
+      continue;
+    }
     const viewer = await viewerFor(db, email);
     if (!matchesAudience(campaign, viewer, now)) continue;
     if (sentBefore.has(email)) {
@@ -136,10 +148,15 @@ export async function POST(req: Request) {
   }
 
   if (dryRun) {
-    return NextResponse.json({ ok: true, matched: matched.length, alreadySent: alreadyCount });
+    return NextResponse.json({
+      ok: true,
+      matched: matched.length,
+      alreadySent: alreadyCount,
+      optedOut,
+    });
   }
   if (!matched.length) {
-    return NextResponse.json({ ok: true, sent: 0, alreadySent: alreadyCount });
+    return NextResponse.json({ ok: true, sent: 0, alreadySent: alreadyCount, optedOut });
   }
 
   const href = campaignHref(campaign);

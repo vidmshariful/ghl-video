@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendEmail } from "./send";
 import { DEFAULT_TEMPLATES, P, SITE_URL, emailButton, escapeHtml, renderTemplate, wrapEmail } from "./templates";
 import { pushNotification, pushAdminNotifications } from "@/lib/notifications";
+import { mayEmail, type EmailPrefs } from "./prefs";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -39,6 +40,22 @@ async function sendTemplate(
     if (!to) return false;
     const tpl = await loadTemplate(db, key);
     if (!tpl || !tpl.enabled) return false;
+
+    /*
+     * What this person has chosen. One gate for every client email, here
+     * rather than in each helper, because a preference honoured in eleven
+     * places out of twelve is not a preference.
+     *
+     * Money and access carry no category, so they are never held back.
+     */
+    const { data: who } = await db
+      .from("customers")
+      .select("email_prefs")
+      .ilike("email", to)
+      .maybeSingle();
+    if (!mayEmail(key, (who?.email_prefs as EmailPrefs | null) ?? null)) {
+      return false;
+    }
     const result = await sendEmail({
       to,
       toName,

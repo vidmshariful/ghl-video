@@ -25,6 +25,7 @@ import { BrandKitView } from "./BrandKitView";
 import { ComingSoonView } from "./ComingSoonView";
 import { LibraryView } from "./LibraryView";
 import { CustomView } from "./CustomView";
+import { EmailPrefsView } from "./EmailPrefsView";
 import { EditingView } from "./EditingView";
 import { Button, Card, Chip, EmptyState, Table, Td, Th } from "@/components/portal/ui";
 import {
@@ -893,7 +894,7 @@ function SubscriptionsView({ canBilling = true }: { canBilling?: boolean }) {
 }
 
 /* ---- settings: Profile / Account / Team tabs ---- */
-type SettingsTab = "profile" | "account" | "team";
+type SettingsTab = "profile" | "account" | "emails" | "team";
 
 function SettingsView({
   profile,
@@ -914,6 +915,7 @@ function SettingsView({
   const tabs: { key: SettingsTab; label: string }[] = [
     { key: "profile", label: "Profile" },
     { key: "account", label: "Account" },
+    { key: "emails", label: "Emails" },
     ...(isOwner ? [{ key: "team" as SettingsTab, label: "Team" }] : []),
   ];
 
@@ -1021,6 +1023,8 @@ function SettingsView({
               {saveBtn}
             </form>
           </div>
+        ) : tab === "emails" ? (
+          <EmailPrefsView authedFetch={authedFetch} canEdit={isOwner} />
         ) : tab === "account" ? (
           <div className="grid gap-6">
             <div className="rounded-[12px] border border-hair bg-surface p-6">
@@ -1407,8 +1411,11 @@ function Portal({
     ...(profile.isOwner
       ? [
           {
+            /* Closed by default. These are offers aimed at an owner, not
+               places somebody navigates to, and three of them open under a
+               heading pushes the client's actual work off a short screen. */
             title: "More from us",
-            defaultOpen: true,
+            defaultOpen: false,
             items: [
               { key: "affiliate", label: "Affiliate program", icon: <Handshake /> },
               { key: "whitelabel", label: "White-label", icon: <Layers /> },

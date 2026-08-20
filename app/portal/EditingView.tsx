@@ -25,6 +25,7 @@ import {
 } from "@/components/portal/ui";
 import { VideoReview } from "./VideoReview";
 import { StyleGuideView } from "./StyleGuideView";
+import { DownloadAll } from "@/components/portal/DownloadAll";
 import { stageFor } from "@/lib/editing-sop";
 
 /*
@@ -609,6 +610,13 @@ export function EditingView({
             <Card
               title="This month"
               description={`${day(plan.cycle.startsAt)} to ${day(plan.cycle.endsAt)}`}
+              actions={
+                <DownloadAll
+                  videoIds={live
+                    .filter((v) => v.videoUrl && v.status === "approved")
+                    .map((v) => v.id)}
+                />
+              }
             >
               {parents.length === 0 ? (
                 <p className="text-body-sm text-muted">

@@ -2,9 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { STATUS_LABEL, type DeliverableStatus } from "@/lib/deliverable-status";
-import { PlayCircle } from "lucide-react";
+import {
+  REVISIONS_INCLUDED,
+  STATUS_LABEL,
+  type DeliverableStatus,
+} from "@/lib/deliverable-status";
+import { PlayCircle, Search } from "lucide-react";
 import { Card, Chip, EmptyState, Tabs } from "@/components/portal/ui";
+import { DownloadAll } from "@/components/portal/DownloadAll";
 import { VideoReview } from "./VideoReview";
 
 /*
@@ -105,6 +110,10 @@ export function MyVideosView({
   const [groups, setGroups] = useState<Group[] | null>(null);
   const [tab, setTab] = useState<"videos" | "packs">("videos");
   const [openPack, setOpenPack] = useState<string | null>(null);
+  /* search over what they own. The Library has had this since day one, for
+   * somebody shopping; the screen where they actually work had none, and it
+   * matters more the longer somebody has been a client. */
+  const [q, setQ] = useState("");
   const [playing, setPlaying] = useState<Owned | null>(null);
 
   const load = useCallback(async () => {
@@ -153,6 +162,20 @@ export function MyVideosView({
 
   const waiting = all.filter((v) => v.status === "ready").length;
 
+  /* what a search actually has to match: somebody remembers the name, the
+     pack it came in, or the code on the invoice */
+  const term = q.trim().toLowerCase();
+  const shown = term
+    ? all.filter((v) =>
+        [v.title, v.packName, v.code, v.category, v.groupLabel]
+          .filter(Boolean)
+          .some((x) => String(x).toLowerCase().includes(term)),
+      )
+    : all;
+
+  /* only finished videos can be taken away */
+  const downloadable = all.filter((v) => v.videoUrl && v.status === "approved").map((v) => v.id);
+
   if (!all.length) {
     return (
       <EmptyState
@@ -179,8 +202,10 @@ export function MyVideosView({
             description="Watch it, leave notes on anything you want changed, then approve."
           >
             <p className="text-body-sm text-chrome-muted">
-              One round of changes is included on every video. Nothing is
-              delivered until you say so.
+              {REVISIONS_INCLUDED === 1
+                ? "One round of changes is included on every video."
+                : `${REVISIONS_INCLUDED} rounds of changes are included on every video.`}{" "}
+              Nothing is delivered until you say so.
             </p>
           </Card>
         </div>
@@ -203,11 +228,43 @@ export function MyVideosView({
 
       {tab === "videos" || packs.length === 0 ? (
         <div className={packs.length > 0 ? "mt-6" : ""}>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {all.map((v) => (
-              <VideoCard key={v.id} video={v} onPlay={setPlaying} showPack />
-            ))}
-          </div>
+          {/* Search, and taking the lot away. Both only appear once there is
+              enough here to want them: a control over four videos is
+              furniture. */}
+          {(all.length > 5 || downloadable.length > 1) && (
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              {all.length > 5 && (
+                <div className="relative min-w-[14rem] flex-1">
+                  <Search
+                    size={15}
+                    aria-hidden="true"
+                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-dim"
+                  />
+                  <input
+                    type="search"
+                    value={q}
+                    onChange={(e) => setQ(e.target.value)}
+                    placeholder="Find one of your videos"
+                    aria-label="Search your videos"
+                    className="tap w-full rounded-[8px] border border-hair bg-canvas py-2 pl-9 pr-3 text-body-sm text-ink placeholder:text-dim focus:border-gold focus:outline-none"
+                  />
+                </div>
+              )}
+              <DownloadAll videoIds={downloadable} />
+            </div>
+          )}
+
+          {shown.length === 0 ? (
+            <p className="py-6 text-body-sm text-muted">
+              Nothing matches {`"${q}"`}. Try the video name, or the pack it came in.
+            </p>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {shown.map((v) => (
+                <VideoCard key={v.id} video={v} onPlay={setPlaying} showPack />
+              ))}
+            </div>
+          )}
         </div>
       ) : pack ? (
         <div className="mt-6">
