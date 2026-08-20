@@ -87,6 +87,24 @@ export async function planDeliverables(db: DB, sku: string): Promise<Deliverable
       .eq("sku", sku)
       .maybeSingle();
     if (!product) return [];
+
+    /*
+     * An add-on owes no video.
+     *
+     * Extra work invoiced against an order we already delivered, a niche
+     * customisation, a re-cut, a language pass, changes videos that exist
+     * rather than creating one. Expanding it made a phantom row that sat in
+     * the client's list as a video queued forever and showed on the studio
+     * board as work nobody could finish. The invoice naming a parent order is
+     * exactly what says "this is extra work on that", so it is what we check.
+     */
+    const { data: invoice } = await db
+      .from("invoices")
+      .select("parent_order_id")
+      .eq("product_sku", sku)
+      .maybeSingle();
+    if (invoice?.parent_order_id) return [];
+
     return [
       { catalog_code: null, title: product.name as string, category: null, group_label: null, position: 0 },
     ];
