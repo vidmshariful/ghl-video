@@ -582,6 +582,31 @@ export function EditingView({
                 </ul>
               )}
             </Card>
+
+            {/* Cancelled requests stay visible with the reason on them. A
+                request that quietly disappears is the thing a client emails
+                about, and if we cancelled it they are owed the why. */}
+            {plan.videos.some((v) => v.cancelledAt && !v.parentId) && (
+              <Card title="Cancelled this month" description="Their slots went back to your month.">
+                <ul className="grid gap-2">
+                  {plan.videos
+                    .filter((v) => v.cancelledAt && !v.parentId)
+                    .map((v) => (
+                      <li
+                        key={v.id}
+                        className="border-t border-hair pt-2 first:border-t-0 first:pt-0"
+                      >
+                        <p className="text-body-sm font-semibold text-dim line-through">
+                          {v.title}
+                        </p>
+                        <p className="mt-0.5 text-body-sm text-muted">
+                          {v.cancelledReason || "Cancelled."}
+                        </p>
+                      </li>
+                    ))}
+                </ul>
+              </Card>
+            )}
           </div>
 
           <div className="grid gap-3">
