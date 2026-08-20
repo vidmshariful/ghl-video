@@ -261,6 +261,19 @@
 .portal-view {
   animation: portal-view-in 0.22s ease both;
 }
+/* The mobile menu sheet. Rises from the floor because that is where the
+   thumb is, and honours reduced motion like everything else here. */
+@keyframes portal-sheet-in {
+  from { transform: translateY(12%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.portal-sheet {
+  animation: portal-sheet-in 200ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .portal-sheet { animation: none; }
+}
+
 .portal-group {
   display: grid;
   grid-template-rows: 1fr;

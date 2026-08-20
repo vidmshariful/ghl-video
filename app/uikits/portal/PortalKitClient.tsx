@@ -22,6 +22,8 @@ import {
   Toolbar,
 } from "@/components/portal/ui";
 import { AreaChart, BarChart, Donut, Sparkline } from "@/components/portal/charts";
+import { PortalSidebar } from "@/components/portal/Shell";
+import { Clapperboard, LayoutDashboard, MessageSquare, Palette, Scissors, ShoppingCart, Sparkles } from "lucide-react";
 
 /*
  * The portal vocabulary, on the portal surface.
@@ -48,6 +50,47 @@ export function PortalKitClient() {
       title="Portal vocabulary"
       lede="The shared pieces every portal screen composes with. Before these existed, fourteen screens declared their own button and field styles, sixty local constants in total, which is the real reason the portals read as everything inline full width."
     >
+      <KitSection
+        title="Navigation"
+        note="The rail on desktop, and on a narrow window the bar that opens the menu sheet. Resize this page to check the second one: below 768px the rail is replaced, and the count of things needing somebody sits on the bar rather than hiding inside it."
+      >
+        <Spec label="Sidebar, real component" surface="portal" ground="panel">
+          <div className="w-full">
+            <PortalSidebar
+              storageKey="uikit-nav-demo"
+              active="videos"
+              onSelect={() => {}}
+              groups={[
+                {
+                  title: "",
+                  items: [
+                    { key: "dashboard", label: "Dashboard", icon: <LayoutDashboard /> },
+                    { key: "brand", label: "Brand Kit", icon: <Palette />, badge: 1 },
+                    { key: "messages", label: "Messages", icon: <MessageSquare />, badge: 2 },
+                  ],
+                },
+                {
+                  title: "My Videos",
+                  defaultOpen: true,
+                  items: [
+                    { key: "videos", label: "Pre-made", icon: <Clapperboard /> },
+                    { key: "projects", label: "Custom", icon: <Sparkles /> },
+                    { key: "subscriptions", label: "Editing", icon: <Scissors /> },
+                  ],
+                },
+                {
+                  title: "Billings",
+                  defaultOpen: true,
+                  items: [
+                    { key: "orders", label: "Orders and Invoices", icon: <ShoppingCart /> },
+                  ],
+                },
+              ]}
+            />
+          </div>
+        </Spec>
+      </KitSection>
+
       <KitSection
         title="Page header"
         note="The top of every screen. The description is not decoration: a screen whose purpose has to be inferred from its table headers is a screen people avoid."

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
-import { Bell, ChevronDown, LifeBuoy, LogOut, Moon, Settings, Sun } from "lucide-react";
+import { Bell, ChevronDown, LifeBuoy, LogOut, Menu, Moon, Settings, Sun } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { THEME_KEY } from "@/components/portal/theme-init";
 
@@ -456,6 +456,39 @@ export function PortalSidebar({
   /* Which titled groups are open. Default: only the group holding the
    * active item, so the rail starts compact; choices persist per portal. */
   const [open, setOpen] = useState<Record<string, boolean> | null>(null);
+  /* the mobile menu sheet */
+  const [sheet, setSheet] = useState(false);
+
+  /*
+   * What the bar says when it is closed.
+   *
+   * The label answers where am I, and the badge answers the only question
+   * this product exists for: is anything waiting on me. Both used to be
+   * invisible until somebody opened a native select.
+   */
+  const allItems = groups.flatMap((g) => g.items).concat(bottom ?? []);
+  const activeLabel = allItems.find((it) => it.key === active)?.label ?? "Menu";
+  const totalBadge = allItems.reduce((sum, it) => sum + (it.badge ?? 0), 0);
+
+  /* a sheet over the page must not leave the page scrolling behind it */
+  useEffect(() => {
+    if (!sheet) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [sheet]);
+
+  /* escape closes it, the way every sheet on the web should */
+  useEffect(() => {
+    if (!sheet) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSheet(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [sheet]);
 
   useEffect(() => {
     let stored: Record<string, boolean> | null = null;
@@ -507,10 +540,13 @@ export function PortalSidebar({
     });
   }
 
-  const Item = ({ it }: { it: NavItem }) => (
+  const Item = ({ it, onNavigated }: { it: NavItem; onNavigated?: () => void }) => (
     <button
       type="button"
-      onClick={() => onSelect(it.key)}
+      onClick={() => {
+        onSelect(it.key);
+        onNavigated?.();
+      }}
       className={`tap group flex w-full items-center gap-2.5 rounded-[8px] px-3 py-2 text-left text-body-sm transition-colors ${
         active === it.key
           ? "bg-chrome-2 font-semibold text-chrome-text"
@@ -539,39 +575,76 @@ export function PortalSidebar({
        pinned block (Settings) always sits on the rail's floor */
     <nav className="border-b border-chrome-line bg-chrome md:w-60 md:shrink-0 md:border-b-0 md:border-r">
       <div className="p-3 md:sticky md:top-[3.55rem] md:flex md:h-[calc(100vh-3.55rem)] md:flex-col md:p-4">
-      {/* mobile: one compact dropdown */}
-      <select
-        value={active}
-        onChange={(e) => onSelect(e.target.value)}
-        className="w-full rounded-[8px] border border-chrome-line bg-chrome-2 px-3 py-2.5 text-body text-chrome-text focus:border-gold focus:outline-none md:hidden"
-      >
-        {groups.map((g) => {
-          const opts = g.items.map((it) => (
-            <option key={it.key} value={it.key}>
-              {it.label}
-              {it.badge ? ` (${it.badge})` : ""}
-            </option>
-          ));
-          return g.title ? (
-            <optgroup key={g.title} label={g.title}>
-              {opts}
-            </optgroup>
+      {/*
+        * Mobile: a button that says what needs you, opening a real menu.
+        *
+        * This replaced a native select holding sixteen destinations. The
+        * portal exists to answer one question, is anything waiting on me,
+        * and on the device most clients check from that answer was hidden
+        * inside an unlabelled control nobody opens unless they already know
+        * to. The count now sits on the bar itself, so the answer is visible
+        * without opening anything.
+        */}
+      <div className="md:hidden">
+        <button
+          type="button"
+          onClick={() => setSheet(true)}
+          aria-expanded={sheet}
+          className="tap flex w-full items-center justify-between rounded-[8px] border border-chrome-line bg-chrome-2 px-3 py-2.5 text-left transition-colors hover:border-gold/50"
+        >
+          <span className="inline-flex min-w-0 items-center gap-2">
+            <Menu size={16} className="shrink-0 text-chrome-dim" aria-hidden="true" />
+            <span className="truncate text-body text-chrome-text">{activeLabel}</span>
+          </span>
+          {totalBadge > 0 ? (
+            <span className="ml-2 shrink-0 rounded-full bg-gold px-2 py-0.5 font-mono text-label font-bold leading-none text-canvas">
+              {totalBadge} needs you
+            </span>
           ) : (
-            opts
-          );
-        })}
-        {bottom && bottom.length > 0 ? (
-          <optgroup label="General">
-            {bottom.map((it) => (
-              <option key={it.key} value={it.key}>
-                {it.label}
-              </option>
-            ))}
-          </optgroup>
-        ) : null}
-      </select>
+            <ChevronDown size={15} className="shrink-0 text-chrome-dim" aria-hidden="true" />
+          )}
+        </button>
+      </div>
 
-      {/* desktop: grouped, collapsible rail */}
+      {sheet && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <button
+            type="button"
+            aria-label="Close the menu"
+            onClick={() => setSheet(false)}
+            className="absolute inset-0 bg-canvas/80"
+          />
+          <div className="portal-sheet absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-[16px] border-t border-chrome-line bg-chrome p-4 pb-8">
+            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-chrome-line" aria-hidden="true" />
+            {groups.map((g) => (
+              <div key={g.title || "top"} className="mb-4 last:mb-0">
+                {g.title && (
+                  <p className="px-1 pb-1.5 font-mono text-label font-bold uppercase tracking-[0.12em] text-chrome-dim">
+                    {g.title}
+                  </p>
+                )}
+                <ul className="flex flex-col gap-0.5">
+                  {g.items.map((it) => (
+                    <li key={it.key}>
+                      <Item it={it} onNavigated={() => setSheet(false)} />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+            {bottom && bottom.length > 0 && (
+              <ul className="flex flex-col gap-0.5 border-t border-chrome-line pt-3">
+                {bottom.map((it) => (
+                  <li key={it.key}>
+                    <Item it={it} onNavigated={() => setSheet(false)} />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="hidden flex-col gap-1 md:flex md:min-h-0 md:flex-1 md:overflow-y-auto">
         {groups.map((g) => {
           /* a closed group must not swallow its items' badges (an unread
