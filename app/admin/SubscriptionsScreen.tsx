@@ -1,8 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Button } from "@/components/portal/ui";
+import { useCallback, useEffect, useState } from "react";
+import { Button, Card, Chip, Input, Select } from "@/components/portal/ui";
 import { authHeader, money, supabase, when } from "./client";
+
+type EditRequest = {
+  id: string;
+  title: string;
+  brief: string | null;
+  status: string;
+  form: string | null;
+  dueAt: string | null;
+  requestedDueAt: string | null;
+  customerEmail: string | null;
+  planName: string | null;
+  month: { startsAt: string; endsAt: string } | null;
+};
 
 type SubRow = {
   id: string;
@@ -31,6 +44,7 @@ export function SubscriptionsScreen() {
   const [loaded, setLoaded] = useState(false);
   const [err, setErr] = useState("");
   const [note, setNote] = useState("");
+  const [requests, setRequests] = useState<EditRequest[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
 
   async function load() {
@@ -46,6 +60,34 @@ export function SubscriptionsScreen() {
   useEffect(() => {
     load();
   }, []);
+
+  /* work asked for on a plan. It hangs off a billing month rather than an
+   * order, so the production board cannot see it yet and this is where the
+   * studio picks it up. */
+  const loadRequests = useCallback(async () => {
+    try {
+      const r = await fetch("/api/admin/edit-requests", {
+        headers: await authHeader(),
+      });
+      const j = await r.json();
+      if (r.ok) setRequests(j.requests as EditRequest[]);
+    } catch {
+      /* the panel just stays empty */
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadRequests();
+  }, [loadRequests]);
+
+  async function moveRequest(id: string, patch: Record<string, unknown>) {
+    await fetch("/api/admin/edit-requests", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...(await authHeader()) },
+      body: JSON.stringify({ id, ...patch }),
+    }).catch(() => null);
+    await loadRequests();
+  }
 
   /*
    * Change what a plan bills from its next renewal.
@@ -76,13 +118,21 @@ export function SubscriptionsScreen() {
     try {
       const res = await fetch(`/api/admin/subscriptions/${r.id}/price`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...(await authHeader()) },
-        body: JSON.stringify({ amountCents: Math.round(dollars * 100), reason }),
+        headers: {
+          "Content-Type": "application/json",
+          ...(await authHeader()),
+        },
+        body: JSON.stringify({
+          amountCents: Math.round(dollars * 100),
+          reason,
+        }),
       });
       const j = await res.json();
       if (!res.ok) setErr(j.error ?? "Could not change the price.");
       else {
-        setNote(`Now $${(j.newCents / 100).toFixed(2)} a month from ${j.effective}. ${r.customer_email} has been emailed.`);
+        setNote(
+          `Now $${(j.newCents / 100).toFixed(2)} a month from ${j.effective}. ${r.customer_email} has been emailed.`,
+        );
         await load();
       }
     } catch (e) {
@@ -99,7 +149,10 @@ export function SubscriptionsScreen() {
     try {
       const r = await fetch(`/api/admin/subscriptions/${id}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(await authHeader()) },
+        headers: {
+          "Content-Type": "application/json",
+          ...(await authHeader()),
+        },
         body: JSON.stringify({ action }),
       });
       const j = await r.json();
@@ -112,8 +165,8 @@ export function SubscriptionsScreen() {
     }
   }
 
-    
-  if (!loaded) return <p className="text-body text-muted">Loading subscriptions...</p>;
+  if (!loaded)
+    return <p className="text-body text-muted">Loading subscriptions...</p>;
 
   const active = rows.filter((r) => r.status === "active");
   const mrr = active.reduce((s, r) => s + r.amount_cents, 0);
@@ -123,16 +176,27 @@ export function SubscriptionsScreen() {
     ["Total", String(rows.length), "text-muted"],
   ];
 
+  const openRequests = requests.filter((r) => r.status !== "approved");
+
   return (
     <div className="w-full">
       <h1 className="font-display text-h2 text-ink">Subscriptions</h1>
-      <p className="mt-2 text-body text-muted">Editing plans, newest first. {rows.length} total.</p>
+      <p className="mt-2 text-body text-muted">
+        Editing plans, newest first. {rows.length} total.
+      </p>
 
       <div className="mt-6 grid grid-cols-3 gap-4">
         {summary.map(([label, val, cls]) => (
-          <div key={label} className="rounded-[12px] border border-hair bg-surface p-6">
+          <div
+            key={label}
+            className="rounded-[12px] border border-hair bg-surface p-6"
+          >
             <p className="font-mono text-label uppercase text-dim">{label}</p>
-            <p className={`mt-1 font-display text-h3 [font-variant-numeric:tabular-nums] ${cls}`}>{val}</p>
+            <p
+              className={`mt-1 font-display text-h3 [font-variant-numeric:tabular-nums] ${cls}`}
+            >
+              {val}
+            </p>
           </div>
         ))}
       </div>
@@ -152,7 +216,9 @@ export function SubscriptionsScreen() {
               <div className="min-w-0">
                 <p className="text-body font-semibold text-ink">
                   {r.customer?.name || r.customer_email}
-                  <span className="ml-3 font-mono text-body-sm text-muted">{r.plan_name}</span>
+                  <span className="ml-3 font-mono text-body-sm text-muted">
+                    {r.plan_name}
+                  </span>
                 </p>
                 <p className="mt-0.5 font-mono text-label uppercase text-dim">
                   {r.customer_email}
@@ -174,30 +240,52 @@ export function SubscriptionsScreen() {
               {r.status !== "canceled" && r.status !== "incomplete" ? (
                 <div className="flex w-full flex-wrap items-center gap-2 pt-1">
                   {r.cancel_at_period_end ? (
-                    <Button variant="secondary" disabled={busy === r.id} onClick={() => act(r.id, "resume")}>
+                    <Button
+                      variant="secondary"
+                      disabled={busy === r.id}
+                      onClick={() => act(r.id, "resume")}
+                    >
                       Resume
                     </Button>
                   ) : (
                     <Button
                       variant="secondary"
                       disabled={busy === r.id}
-                      onClick={() => act(r.id, "cancel_period_end", `Cancel ${r.customer_email}'s plan at the end of the period?`)}
+                      onClick={() =>
+                        act(
+                          r.id,
+                          "cancel_period_end",
+                          `Cancel ${r.customer_email}'s plan at the end of the period?`,
+                        )
+                      }
                     >
                       Cancel at period end
                     </Button>
                   )}
-                  <Button variant="secondary" disabled={busy === r.id} onClick={() => reprice(r)}>
+                  <Button
+                    variant="secondary"
+                    disabled={busy === r.id}
+                    onClick={() => reprice(r)}
+                  >
                     Change price
                   </Button>
                   <Button
                     variant="danger"
                     disabled={busy === r.id}
-                    onClick={() => act(r.id, "cancel_now", `Cancel ${r.customer_email}'s plan IMMEDIATELY? They lose access now.`)}
+                    onClick={() =>
+                      act(
+                        r.id,
+                        "cancel_now",
+                        `Cancel ${r.customer_email}'s plan IMMEDIATELY? They lose access now.`,
+                      )
+                    }
                   >
                     Cancel now
                   </Button>
                   {busy === r.id ? (
-                    <span className="font-mono text-label uppercase text-dim">working...</span>
+                    <span className="font-mono text-label uppercase text-dim">
+                      working...
+                    </span>
                   ) : null}
                 </div>
               ) : null}
@@ -205,6 +293,88 @@ export function SubscriptionsScreen() {
           ))}
         </ul>
       )}
+
+      {/* Work asked for on a plan. It counts against a billing month rather
+          than an order, so the production board cannot see it yet. */}
+      <div className="mt-8">
+        <h2 className="font-display text-h4 text-ink">Editing requests</h2>
+        <p className="mt-1 text-body-sm text-muted">
+          What plan clients have asked for. The date they wanted is their ask,
+          not a promise: set a real one and they see that instead.
+        </p>
+
+        {openRequests.length === 0 ? (
+          <p className="mt-4 text-body-sm text-dim">Nothing waiting.</p>
+        ) : (
+          <div className="mt-4 grid gap-2.5">
+            {openRequests.map((q) => (
+              <Card key={q.id}>
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-body font-semibold text-ink">
+                        {q.title}
+                      </p>
+                      <Chip tone={q.status === "queued" ? "neutral" : "info"}>
+                        {q.status.replace(/_/g, " ")}
+                      </Chip>
+                      <Chip tone="neutral">
+                        {q.form === "long" ? "long form" : "short form"}
+                      </Chip>
+                    </div>
+                    <p className="mt-0.5 font-mono text-label uppercase text-dim">
+                      {q.customerEmail} / {q.planName}
+                      {q.month ? ` / month of ${when(q.month.startsAt)}` : ""}
+                    </p>
+                    {q.brief && (
+                      <p className="mt-1.5 whitespace-pre-wrap text-body-sm text-muted">
+                        {q.brief}
+                      </p>
+                    )}
+                    {q.requestedDueAt && (
+                      <p className="mt-1.5 text-body-sm text-gold">
+                        They asked for {when(q.requestedDueAt)}
+                        {q.dueAt
+                          ? ` / you promised ${when(q.dueAt)}`
+                          : " / no date promised yet"}
+                      </p>
+                    )}
+                  </div>
+                  {/* the controls carry their own width: the primitives are
+                      w-full, so a wrapper is what actually sizes them */}
+                  <div className="flex shrink-0 flex-wrap items-center gap-2">
+                    <div className="w-[10rem]">
+                      <Input
+                        type="date"
+                        aria-label={`Promised date for ${q.title}`}
+                        defaultValue={q.dueAt ? q.dueAt.slice(0, 10) : ""}
+                        onChange={(e) =>
+                          moveRequest(q.id, { dueAt: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="w-[11rem]">
+                      <Select
+                        value={q.status}
+                        aria-label={`Status for ${q.title}`}
+                        onChange={(e) =>
+                          moveRequest(q.id, { status: e.target.value })
+                        }
+                      >
+                        <option value="queued">Queued</option>
+                        <option value="in_production">In production</option>
+                        <option value="ready">Ready to review</option>
+                        <option value="revisions">Revisions</option>
+                        <option value="approved">Approved</option>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

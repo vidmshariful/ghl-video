@@ -24,6 +24,7 @@ import { DashboardView } from "./DashboardView";
 import { BrandKitView } from "./BrandKitView";
 import { ComingSoonView } from "./ComingSoonView";
 import { LibraryView } from "./LibraryView";
+import { PlanView } from "./PlanView";
 import { Button, Card, Chip, EmptyState, Table, Td, Th } from "@/components/portal/ui";
 import {
   actForHeader,
@@ -1245,7 +1246,7 @@ function Portal({
           ? [{ key: "orders", label: "Orders and Invoices", icon: <ShoppingCart /> }]
           : []),
         ...(can("subscriptions")
-          ? [{ key: "subscriptions", label: "Subscriptions", icon: <Repeat /> }]
+          ? [{ key: "subscriptions", label: "My Plan", icon: <Repeat /> }]
           : []),
         ...(can("messages")
           ? [
@@ -1438,9 +1439,15 @@ function Portal({
             <PortalHelp />
           ) : view === "subscriptions" && can("subscriptions") ? (
             <div>
-              <PageHeader title="Subscriptions" subtitle="Manage your editing plan and billing." />
-              <div className="mt-6">
-                <SubscriptionsView canBilling={can("billing")} />
+              {/* the plan and what is left of it first, because that is what
+                  somebody on a monthly plan actually came to check; billing
+                  sits underneath it */}
+              <PlanView authedFetch={authedFetch} />
+              <div className="mt-6 border-t border-hair pt-6">
+                <PageHeader title="Billing" subtitle="Your payments and plan changes." />
+                <div className="mt-4">
+                  <SubscriptionsView canBilling={can("billing")} />
+                </div>
               </div>
             </div>
           ) : (
