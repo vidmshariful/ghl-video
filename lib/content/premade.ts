@@ -279,7 +279,11 @@ export function checkoutHref(slug: string): string {
  * this is left on. Discount is one-time products only (the checkout
  * refuses codes on subscriptions by design). */
 export const activePromo = {
-  active: true,
+  /* the Aug 2026 newsletter offer ended Aug 11; the flag stayed on for nine
+   * days after, which meant every buy button was handing people a code the
+   * checkout then refused as expired. When the next offer runs, flip this
+   * back with a fresh code AND deadline, and flip it off the day it ends. */
+  active: false,
   code: "NEW20",
   percent: 20,
   label: "20% off every video, pack, and bundle",
