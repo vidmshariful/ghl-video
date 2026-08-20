@@ -100,7 +100,11 @@ async function authedFetch(path: string, init?: RequestInit) {
       ...(init?.headers ?? {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...actForHeader(),
-      ...(init?.body ? { "Content-Type": "application/json" } : {}),
+      /* FormData must set its own multipart boundary; stamping json onto it
+         would corrupt every file upload that passes through here */
+      ...(init?.body && !(init.body instanceof FormData)
+        ? { "Content-Type": "application/json" }
+        : {}),
     },
     cache: "no-store",
   });

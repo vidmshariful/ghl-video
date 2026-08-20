@@ -100,6 +100,10 @@ type Record_ = {
   }[];
   brandKit: {
     kit: { brandName?: string | null; primaryColor?: string | null; accentColor?: string | null; pronunciation?: string | null; notes?: string | null } | null;
+    logoDarkUrl?: string | null;
+    logoLightUrl?: string | null;
+    logoUrl?: string | null;
+    guidelines?: { path: string; name: string; size: number; url: string | null }[];
     completeness: { ready: boolean; percent: number; missing: string[] };
   };
 };
@@ -670,6 +674,45 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
                 <span className="mt-1 font-mono text-label uppercase text-dim">
                   {data.brandKit.completeness.percent}% complete
                 </span>
+                {(data.brandKit.logoDarkUrl || data.brandKit.logoLightUrl || data.brandKit.logoUrl) && (
+                  <span className="mt-1 grid grid-cols-2 gap-2">
+                    {(data.brandKit.logoDarkUrl || (!data.brandKit.logoLightUrl && data.brandKit.logoUrl)) && (
+                      <span className="flex h-14 items-center justify-center rounded-[8px] border border-hair bg-white p-2">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={data.brandKit.logoDarkUrl ?? data.brandKit.logoUrl ?? undefined}
+                          alt="Dark logo on white"
+                          className="max-h-full max-w-full object-contain"
+                        />
+                      </span>
+                    )}
+                    {data.brandKit.logoLightUrl && (
+                      <span className="flex h-14 items-center justify-center rounded-[8px] border border-hair bg-[#08090D] p-2">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={data.brandKit.logoLightUrl}
+                          alt="White logo on dark"
+                          className="max-h-full max-w-full object-contain"
+                        />
+                      </span>
+                    )}
+                  </span>
+                )}
+                {(data.brandKit.guidelines ?? []).length > 0 && (
+                  <span className="mt-1 grid gap-1">
+                    {(data.brandKit.guidelines ?? []).map((g) => (
+                      <a
+                        key={g.path}
+                        href={g.url ?? undefined}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="tap truncate text-body-sm text-muted transition-colors hover:text-gold"
+                      >
+                        {g.name}
+                      </a>
+                    ))}
+                  </span>
+                )}
               </div>
             ) : (
               <p className="text-body-sm text-muted">

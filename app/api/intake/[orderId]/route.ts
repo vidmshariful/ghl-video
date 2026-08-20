@@ -200,7 +200,7 @@ export async function POST(
   let logoPath = prev?.logoPath ?? null;
   if (!logoPath) {
     const kit = await loadKit(db, (order.customer_id as string | null) ?? null);
-    logoPath = kit?.logoPath ?? null;
+    logoPath = kit?.logoPath ?? kit?.logoDarkPath ?? kit?.logoLightPath ?? null;
   }
   let screenshotPaths = prev?.screenshotPaths ?? [];
   try {

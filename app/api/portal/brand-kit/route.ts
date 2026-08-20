@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { contextCan, resolvePortalContext } from "@/lib/account-team";
-import { completeness, getBrandKit, saveBrandKit } from "@/lib/brand-kit";
+import { brandKitPayload, saveBrandKit } from "@/lib/brand-kit";
 
 export const runtime = "nodejs";
 
@@ -28,26 +28,13 @@ export async function GET(req: Request) {
   if ("failStatus" in ctx)
     return NextResponse.json({ error: "Unauthorized." }, { status: ctx.failStatus });
 
-  const customerId = await customerIdFor(db, ctx.ownerEmail);
   /* No customer row means they have never ordered. An empty kit is the
    * honest answer, not an error: there is nothing wrong, there is just
-   * nothing yet. */
-  if (!customerId) {
-    return NextResponse.json({ kit: null, completeness: completeness(null), logoUrl: null });
-  }
-
-  const kit = await getBrandKit(db, customerId);
-
-  /* The logo lives in a private bucket, so it is handed over as a signed URL
-   * that expires. A permanent public link to a client's logo would outlive
-   * their relationship with us. */
-  let logoUrl: string | null = null;
-  if (kit?.logoPath) {
-    const { data } = await db.storage.from("intake").createSignedUrl(kit.logoPath, 3600);
-    logoUrl = data?.signedUrl ?? null;
-  }
-
-  return NextResponse.json({ kit, completeness: completeness(kit), logoUrl });
+   * nothing yet. Files come back as signed URLs that expire, because a
+   * permanent public link to a client's logo would outlive their
+   * relationship with us. */
+  const customerId = await customerIdFor(db, ctx.ownerEmail);
+  return NextResponse.json(await brandKitPayload(db, customerId));
 }
 
 export async function PUT(req: Request) {
@@ -79,6 +66,5 @@ export async function PUT(req: Request) {
   });
   if (error) return NextResponse.json({ error }, { status: 500 });
 
-  const kit = await getBrandKit(db, customerId);
-  return NextResponse.json({ ok: true, kit, completeness: completeness(kit) });
+  return NextResponse.json({ ok: true, ...(await brandKitPayload(db, customerId)) });
 }

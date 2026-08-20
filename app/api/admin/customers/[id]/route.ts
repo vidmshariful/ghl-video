@@ -5,6 +5,13 @@ import { lifetimeValue, serviceTags, type MoneySource } from "@/lib/customer-rec
 import { completeness, getBrandKit } from "@/lib/brand-kit";
 import { orderKind, type InvoiceLink } from "@/lib/order-kind";
 
+/** A short-lived signed URL for a private brand file, or null. */
+async function signBrand(db: ReturnType<typeof supabaseAdmin>, path: string | null) {
+  if (!path) return null;
+  const { data } = await db.storage.from("intake").createSignedUrl(path, 3600);
+  return data?.signedUrl ?? null;
+}
+
 export const runtime = "nodejs";
 
 /*
@@ -228,7 +235,21 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       title: (c.title as string | null) ?? null,
       notes: (c.notes as string | null) ?? null,
     })),
-    brandKit: kit ? { kit, completeness: completeness(kit) } : { kit: null, completeness: completeness(null) },
+    brandKit: kit
+      ? {
+          kit,
+          completeness: completeness(kit),
+          logoDarkUrl: await signBrand(db, kit.logoDarkPath),
+          logoLightUrl: await signBrand(db, kit.logoLightPath),
+          logoUrl: await signBrand(db, kit.logoPath),
+          guidelines: await Promise.all(
+            (kit.guidelineFiles ?? []).map(async (g) => ({
+              ...g,
+              url: await signBrand(db, g.path),
+            })),
+          ),
+        }
+      : { kit: null, completeness: completeness(null) },
   });
 }
 

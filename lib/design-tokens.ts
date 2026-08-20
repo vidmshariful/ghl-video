@@ -74,6 +74,11 @@ export const LITERAL_ALLOWLIST: { path: string; why: string; only?: string[] }[]
     why: "A colour handed to the LeadConnector embed, which renders in an iframe we do not style.",
   },
   {
+    path: "app/admin/CustomerRecord.tsx",
+    why: "The same video-frame preview grounds as the portal Brand Kit, so the studio judges the client's marks on the grounds they will actually sit on.",
+    only: ["#08090D"],
+  },
+  {
     path: "components/sales/SpVideo.tsx",
     why: "Belongs to the --sp-* sales system rather than the main skin.",
   },
@@ -101,8 +106,8 @@ export const LITERAL_ALLOWLIST: { path: string; why: string; only?: string[] }[]
   },
   {
     path: "app/portal/BrandKitView.tsx",
-    only: ["#F25C1A", "#1F7A4D"],
-    why: "Example hex codes shown to the client so they can see what we are asking for, in a hint and two placeholders. They are illustrative text, not styling: nothing on the screen is painted with them. Scoped rather than pardoning the whole file, so a real leak here would still be caught.",
+    only: ["#F25C1A", "#1F7A4D", "#08090D", "#9096A8"],
+    why: "Two kinds of deliberate literal. #F25C1A and #1F7A4D are example hex codes in a hint and two placeholders: illustrative text, not styling. #08090D and #9096A8 paint the logo preview tiles, which simulate video frames: the dark mark is judged on true white and the white mark on the brand near-black whatever skin the portal wears, so these must not follow a reskin. Scoped rather than pardoning the whole file, so a real leak here would still be caught.",
   },
 ];
 
