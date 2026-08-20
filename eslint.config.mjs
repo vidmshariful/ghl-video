@@ -101,6 +101,9 @@ const eslintConfig = defineConfig([
       "app/admin/**/*.{ts,tsx}",
       "app/portal/**/*.{ts,tsx}",
       "app/partners/**/*.{ts,tsx}",
+      /* the public library wears the portal skin, so it keeps the portal's
+         boundaries: shared card lives in components/library, not premade */
+      "app/library/**/*.{ts,tsx}",
       "components/admin/**/*.{ts,tsx}",
     ],
     rules: {

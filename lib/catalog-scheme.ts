@@ -23,6 +23,8 @@ export type CatalogRow = {
   title: string;
   subject: string | null;
   category: CatalogCategory;
+  /* what shape of product this is; drives the Type filter on the library */
+  kind?: "video" | "pack" | "bundle" | null;
   library: "new" | "classic";
   price_cents: number;
   video_url: string | null;

@@ -4,7 +4,7 @@ import { buildCatalogRows, type CatalogRow } from "@/lib/catalog-scheme";
 export type { CatalogRow } from "@/lib/catalog-scheme";
 
 const SELECT =
-  "code,old_code,title,subject,category,library,price_cents,video_url,poster_url,wistia_id,pack_count,featured,release_date,on_site,coming_soon,sort";
+  "code,old_code,title,subject,category,kind,library,price_cents,video_url,poster_url,wistia_id,pack_count,featured,release_date,on_site,coming_soon,sort";
 
 /*
  * The catalog the marketing library renders from. Reads the `catalog` table

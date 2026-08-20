@@ -19,6 +19,10 @@ import {
   Tabs,
   Toolbar,
 } from "@/components/portal/ui";
+/* the same card the public library uses, so the two read as one product
+ * (owner decision, August 2026) */
+import { LibraryCard, PreviewLightbox } from "@/components/library/cards";
+import type { BrowseVideo, Version } from "@/components/library/catalog";
 
 /*
  * The library: everything we sell, inside the portal.
@@ -65,6 +69,30 @@ type Item = {
   featured: boolean;
   owned: boolean;
 };
+
+/* the shared card speaks BrowseVideo; the portal API speaks Item */
+function toBrowse(i: Item): BrowseVideo {
+  return {
+    slug: i.code,
+    code: i.code,
+    kind: "video",
+    title: i.title,
+    typeTag: i.category ?? "Video",
+    subTag: "",
+    price: i.priceCents / 100,
+    preview: i.previewUrl,
+    poster: i.posterUrl,
+    wistiaId: null,
+    subtitle: null,
+    packCount: null,
+    realPreview: null,
+    realPoster: null,
+    previewOnly: false,
+    previewNote: null,
+    previewCtaLabel: null,
+    checkoutSku: null,
+  };
+}
 
 const money = (cents: number) =>
   (cents / 100).toLocaleString("en-US", {
@@ -499,6 +527,9 @@ export function LibraryView({
   const [category, setCategory] = useState<string>("all");
   const reduced = useReducedMotion();
 
+  /* the shared card's lightbox */
+  const [preview, setPreview] = useState<{ video: BrowseVideo; version: Version } | null>(null);
+
   /* picking a few to send somebody */
   const [picking, setPicking] = useState(false);
   const [picked, setPicked] = useState<string[]>([]);
@@ -725,24 +756,45 @@ export function LibraryView({
         />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {shown.map((i) => (
-            <VideoCard
-              key={i.code}
-              item={i}
-              reduced={reduced}
-              picking={picking}
-              picked={picked.includes(i.code)}
-              onOpen={
-                picking
-                  ? (code) =>
-                      setPicked((p) =>
-                        p.includes(code) ? p.filter((c) => c !== code) : [...p, code],
-                      )
-                  : onOpenItem
-              }
-            />
-          ))}
+          {shown.map((i) =>
+            /* Videos wear the same card as the public library, preview
+               lightbox and all, so the shop reads as one product inside and
+               out. Packs and bundles keep the montage cover, which is the
+               argument for buying them, and picking mode keeps the plain
+               toggle card because a toggle should look like one. */
+            i.kind === "video" && !picking ? (
+              <LibraryCard
+                key={i.code}
+                video={toBrowse(i)}
+                onPreview={(video, version) => setPreview({ video, version })}
+              />
+            ) : (
+              <VideoCard
+                key={i.code}
+                item={i}
+                reduced={reduced}
+                picking={picking}
+                picked={picked.includes(i.code)}
+                onOpen={
+                  picking
+                    ? (code) =>
+                        setPicked((p) =>
+                          p.includes(code) ? p.filter((c) => c !== code) : [...p, code],
+                        )
+                    : onOpenItem
+                }
+              />
+            ),
+          )}
         </div>
+      )}
+
+      {preview && (
+        <PreviewLightbox
+          video={preview.video}
+          initialVersion={preview.version}
+          onClose={() => setPreview(null)}
+        />
       )}
 
       <Card className="mt-6" title="Not seeing what you need?">
