@@ -272,6 +272,9 @@ export async function GET(req: Request) {
                 /* the clock starts when their footage lands, never when they
                    asked: that rule is the whole editing SOP in one field */
                 briefLandedAt: (d.assets_ready_at as string | null) ?? null,
+                /* and the sentence says footage, because that is what we are
+                   actually waiting for on an editing request */
+                waitingFor: "footage",
               },
               Date.now(),
               "client",

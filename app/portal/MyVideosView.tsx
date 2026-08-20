@@ -93,9 +93,14 @@ const day = (iso: string) =>
 export function MyVideosView({
   authedFetch,
   onMessageStudio,
+  focusVideoId,
+  onFocused,
 }: {
   authedFetch: (path: string, init?: RequestInit) => Promise<unknown>;
   onMessageStudio?: () => void;
+  /* a video to open on arrival, sent by the dashboard's Watch it */
+  focusVideoId?: string | null;
+  onFocused?: () => void;
 }) {
   const [groups, setGroups] = useState<Group[] | null>(null);
   const [tab, setTab] = useState<"videos" | "packs">("videos");
@@ -122,6 +127,16 @@ export function MyVideosView({
   useEffect(() => {
     load();
   }, [load]);
+
+  /* somebody pressed Watch it on the dashboard: open that video rather than
+   * dropping them on the list to find it again */
+  useEffect(() => {
+    if (!focusVideoId || !groups) return;
+    const g = groups.find((x) => x.videos.some((v) => v.id === focusVideoId));
+    const v = g?.videos.find((x) => x.id === focusVideoId);
+    if (v) setPlaying({ ...v, packName: g!.kind === "pack" ? g!.productName : null, packId: g!.orderId });
+    onFocused?.();
+  }, [focusVideoId, groups, onFocused]);
 
   if (groups === null) return <p className="text-body text-muted">Loading your videos...</p>;
 

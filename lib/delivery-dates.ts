@@ -74,6 +74,9 @@ export function describeDue(
     status: string;
     /** null until the client sends their brief */
     briefLandedAt: string | null;
+    /** what we are blocked on: a premade brief by default, footage on an
+     * editing request */
+    waitingFor?: "brief" | "footage";
   },
   now: number,
   audience: "client" | "studio" = "client",
@@ -94,8 +97,19 @@ export function describeDue(
   }
 
   if (!input.briefLandedAt) {
+    /* An editing request is blocked on footage, a premade order on a brief.
+     * Saying "brief" to somebody we are actually chasing files from sends
+     * them to the wrong screen to fix it. */
+    const footage = input.waitingFor === "footage";
     return {
-      text: audience === "client" ? "Starts when your brief arrives" : "Waiting on brief",
+      text:
+        audience === "client"
+          ? footage
+            ? "Starts when your footage arrives"
+            : "Starts when your brief arrives"
+          : footage
+            ? "Waiting on footage"
+            : "Waiting on brief",
       tone: "waiting",
     };
   }

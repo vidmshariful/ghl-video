@@ -85,9 +85,14 @@ const VIDEO_TONE: Record<string, "neutral" | "info" | "good" | "warn"> = {
 export function CustomView({
   authedFetch,
   onMessageStudio,
+  focusVideoId,
+  onFocused,
 }: {
   authedFetch: (path: string, init?: RequestInit) => Promise<Record<string, unknown>>;
   onMessageStudio?: () => void;
+  /* a video to open on arrival, sent by the dashboard's Watch it */
+  focusVideoId?: string | null;
+  onFocused?: () => void;
 }) {
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [open, setOpen] = useState<string | null>(null);
@@ -101,6 +106,16 @@ export function CustomView({
   useEffect(() => {
     void load();
   }, [load]);
+
+  /* opened from the dashboard: land on the video itself, inside its project */
+  useEffect(() => {
+    if (!focusVideoId || !projects) return;
+    const home = projects.find((p) => p.videos.some((v) => v.id === focusVideoId));
+    const v = home?.videos.find((x) => x.id === focusVideoId);
+    if (home) setOpen(home.id);
+    if (v?.videoUrl) setPlaying(v);
+    onFocused?.();
+  }, [focusVideoId, projects, onFocused]);
 
   if (!projects) return <p className="text-body text-muted">Loading your projects...</p>;
 

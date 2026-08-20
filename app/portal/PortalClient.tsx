@@ -1108,6 +1108,9 @@ function Portal({
   /* the library item open at /portal/library/<code>/, if any */
   const [openItem, setOpenItem] = useState<string | null>(initialItemCode);
   const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
+  /* a video to open on arrival, set when somebody presses Watch it on the
+   * dashboard. The three line screens each know how to honour it. */
+  const [focusVideo, setFocusVideo] = useState<string | null>(null);
   const [msgUnread, setMsgUnread] = useState(0);
   const [brandIncomplete, setBrandIncomplete] = useState(false);
   const [profile, setProfile] = useState<MyProfile | null>(null);
@@ -1227,6 +1230,28 @@ function Portal({
     setSection(s);
     setOpenOrder(null);
     setOpenItem(null);
+    setFocusVideo(null);
+    pushUrl(s);
+  };
+
+  /*
+   * Open one video, on whichever screen it lives.
+   *
+   * Every video knows its line, so the caller never has to. Before this, the
+   * dashboard sent everybody to Pre-made whatever they had pressed, which for
+   * a custom or editing video meant landing on a screen it was not on.
+   */
+  const LINE_SECTION: Record<string, PortalSection> = {
+    premade: "videos",
+    custom: "projects",
+    editing: "subscriptions",
+  };
+  const openVideo = (line: string, videoId: string) => {
+    const s = LINE_SECTION[line] ?? "videos";
+    setSection(s);
+    setOpenOrder(null);
+    setOpenItem(null);
+    setFocusVideo(videoId);
     pushUrl(s);
   };
   const openOrderById = (id: string) => {
@@ -1474,7 +1499,7 @@ function Portal({
         />
 
         <section className="min-w-0 flex-1 p-4 md:p-8">
-          <div key={section + (openOrder ?? "")} className="portal-view">
+          <div key={section + (openOrder ?? "") + (focusVideo ?? "")} className="portal-view">
           {view === "dashboard" ? (
             <DashboardView
               firstName={profile.name?.split(" ")[0] ?? null}
@@ -1486,6 +1511,7 @@ function Portal({
               can={can}
               authedFetch={authedFetch}
               onOpenOrder={openOrderById}
+              onOpenVideo={openVideo}
               onGo={(s) => go(s as PortalSection)}
             />
           ) : view === "orders" && can("orders") ? (
@@ -1521,6 +1547,8 @@ function Portal({
               <div className="mt-6">
                 <MyVideosView
                   authedFetch={authedFetch}
+                  focusVideoId={focusVideo}
+                  onFocused={() => setFocusVideo(null)}
                   onMessageStudio={can("messages") ? () => go("messages") : undefined}
                 />
               </div>
@@ -1565,6 +1593,8 @@ function Portal({
                rest of the money already was (owner decision). */
             <EditingView
               authedFetch={authedFetch}
+              focusVideoId={focusVideo}
+              onFocused={() => setFocusVideo(null)}
               onMessageStudio={can("messages") ? () => go("messages") : undefined}
             />
           ) : view === "billing" && can("subscriptions") ? (
@@ -1580,6 +1610,8 @@ function Portal({
           ) : view === "projects" && can("orders") ? (
             <CustomView
               authedFetch={authedFetch}
+              focusVideoId={focusVideo}
+              onFocused={() => setFocusVideo(null)}
               onMessageStudio={can("messages") ? () => go("messages") : undefined}
             />
           ) : (
@@ -1593,6 +1625,7 @@ function Portal({
               can={can}
               authedFetch={authedFetch}
               onOpenOrder={openOrderById}
+              onOpenVideo={openVideo}
               onGo={(s) => go(s as PortalSection)}
             />
           )}

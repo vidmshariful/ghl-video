@@ -49,6 +49,8 @@ type OrderSummary = {
   intakeCompleted: boolean;
 };
 
+type Line = "premade" | "custom" | "editing";
+
 type Video = {
   id: string;
   title: string;
@@ -57,7 +59,19 @@ type Video = {
   due?: { text: string; tone: string };
 };
 
-type Group = { orderId: string; productName: string; videos: Video[] };
+type Group = {
+  orderId: string;
+  productName: string;
+  /* which of the three service lines this came from. Absent on older
+   * payloads, which were all premade. */
+  line?: Line;
+  orderedAt?: string;
+  videos: Video[];
+};
+
+/* a video plus where it lives, which is what the dashboard needs to send
+ * somebody to the right screen */
+type Placed = Video & { line: Line; groupName: string };
 
 /*
  * Getting started, for somebody whose first order is still finding its feet.
@@ -308,12 +322,57 @@ function OfferSlot({ offer }: { offer: Offer }) {
   );
 }
 
+/*
+ * A counter you can open.
+ *
+ * Wraps Stat rather than replacing it, so a counter with nothing behind it
+ * stays exactly what it was: a number, not a button that does nothing. A
+ * control that looks pressable and is not is worse than plain text.
+ */
+function Counter({
+  label,
+  value,
+  hint,
+  open,
+  onClick,
+}: {
+  label: string;
+  value: string;
+  hint: string;
+  open: boolean;
+  onClick?: () => void;
+}) {
+  if (!onClick) return <Stat label={label} value={value} hint={hint} />;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-expanded={open}
+      className={`tap block w-full rounded-[12px] text-left transition-colors ${
+        open ? "ring-1 ring-gold/60" : "hover:ring-1 hover:ring-gold/40"
+      }`}
+    >
+      <Stat
+        label={label}
+        value={value}
+        hint={open ? "Showing them below" : `${hint}. Tap to see them.`}
+      />
+    </button>
+  );
+}
+
 /** The one thing worth doing next, and where it goes. */
 type NextAction =
   | { kind: "brief"; order: OrderSummary }
-  | { kind: "watch"; video: Video; orderId: string }
+  | { kind: "watch"; video: Placed }
   | { kind: "waiting"; soonest: string | null }
   | { kind: "nothing" };
+
+const LINE_WORD: Record<Line, string> = {
+  premade: "Pre-made",
+  custom: "Custom",
+  editing: "Editing",
+};
 
 export function DashboardView({
   firstName,
@@ -321,6 +380,7 @@ export function DashboardView({
   can,
   authedFetch,
   onOpenOrder,
+  onOpenVideo,
   onGo,
 }: {
   firstName: string | null;
@@ -329,6 +389,8 @@ export function DashboardView({
   can: (key: string) => boolean;
   authedFetch: (path: string, init?: RequestInit) => Promise<Record<string, unknown>>;
   onOpenOrder: (id: string) => void;
+  /** open one video on whichever of the three screens it lives */
+  onOpenVideo: (line: string, videoId: string) => void;
   onGo: (section: string) => void;
 }) {
   const [orders, setOrders] = useState<OrderSummary[] | null>(null);
@@ -337,6 +399,8 @@ export function DashboardView({
   const [brandReady, setBrandReady] = useState<boolean | null>(null);
   const [offer, setOffer] = useState<Offer | null>(null);
   const [feedbackAsk, setFeedbackAsk] = useState<FeedbackAskData | null>(null);
+  /* which counter is expanded, if any */
+  const [lens, setLens] = useState<"ready" | "waiting" | "making" | null>(null);
   const canOrders = can("orders");
 
   useEffect(() => {
@@ -367,14 +431,35 @@ export function DashboardView({
 
   const loading = orders === null || groups === null;
   const list = orders ?? [];
-  const allVideos = (groups ?? []).flatMap((g) =>
-    g.videos.map((v) => ({ ...v, orderId: g.orderId })),
+
+  /*
+   * Every video, carrying the line it came from.
+   *
+   * This is the whole fix for a dashboard that used to assume one service
+   * line. The counters were already right, because they counted this list;
+   * what was wrong was everything that then sent somebody to Pre-made
+   * whatever they had pressed.
+   */
+  const allVideos: Placed[] = (groups ?? []).flatMap((g) =>
+    g.videos.map((v) => ({
+      ...v,
+      line: (g.line ?? "premade") as Line,
+      groupName: g.productName,
+    })),
   );
+
+  /* work of any kind, which is what decides whether this account is empty */
+  const hasWork = list.length > 0 || allVideos.length > 0;
 
   /* Ready for them, waiting on them, being made. Everything on this screen
    * derives from these three, so they are worked out once. */
   const ready = allVideos.filter((v) => v.canReview);
   const needsBrief = list.filter((o) => o.status === "paid" && !o.intakeCompleted);
+  /* an editing request we cannot open the footage for is the same kind of
+   * blocked as an order with no brief: ours to chase, theirs to fix */
+  const needsFootage = allVideos.filter(
+    (v) => v.line === "editing" && v.due?.tone === "waiting",
+  );
   const inProduction = allVideos.filter(
     (v) => !v.canReview && v.status !== "approved" && v.status !== "delivered",
   );
@@ -382,7 +467,7 @@ export function DashboardView({
   const next: NextAction = needsBrief.length
     ? { kind: "brief", order: needsBrief[0] }
     : ready.length
-      ? { kind: "watch", video: ready[0], orderId: ready[0].orderId }
+      ? { kind: "watch", video: ready[0] }
       : inProduction.length
         ? {
             kind: "waiting",
@@ -405,7 +490,9 @@ export function DashboardView({
     brief: needsBrief.length
       ? { label: "Send it", run: () => onOpenOrder(needsBrief[0].id) }
       : undefined,
-    approve: ready.length ? { label: "Watch it", run: () => onGo("videos") } : undefined,
+    approve: ready.length
+      ? { label: "Watch it", run: () => onOpenVideo(ready[0].line, ready[0].id) }
+      : undefined,
   };
   const steps: Step[] = gettingStartedSteps({
     brandReady: !!brandReady,
@@ -417,7 +504,9 @@ export function DashboardView({
     !loading &&
     canOrders &&
     brandReady !== null &&
-    list.length > 0 &&
+    /* work of any kind. Gated on orders, an editing client who pays every
+     * month never saw this at all. */
+    hasWork &&
     onboardingUnfinished(steps);
 
   return (
@@ -434,23 +523,113 @@ export function DashboardView({
       )}
 
       {canOrders && (
-        <CardGrid min="15rem">
-          <Stat
-            label="Ready to watch"
-            value={count(ready.length)}
-            hint={ready.length ? "Waiting for your approval" : "Nothing to review right now"}
-          />
-          <Stat
-            label="Waiting on you"
-            value={count(needsBrief.length)}
-            hint={needsBrief.length ? "We cannot start without these" : "Nothing needed from you"}
-          />
-          <Stat
-            label="Being made"
-            value={count(inProduction.length)}
-            hint={inProduction.length ? "In the studio now" : "Nothing in production"}
-          />
-        </CardGrid>
+        <>
+          {/* The counters were always the only view across all three lines.
+              They were also plain text, so the one screen that knew where
+              everything stood could not take you to any of it. */}
+          <CardGrid min="15rem">
+            <Counter
+              label="Ready to watch"
+              value={count(ready.length)}
+              hint={ready.length ? "Waiting for your approval" : "Nothing to review right now"}
+              open={ready.length > 0 && lens === "ready"}
+              onClick={ready.length ? () => setLens(lens === "ready" ? null : "ready") : undefined}
+            />
+            <Counter
+              label="Waiting on you"
+              value={count(needsBrief.length + needsFootage.length)}
+              hint={
+                needsBrief.length + needsFootage.length
+                  ? "We cannot start without these"
+                  : "Nothing needed from you"
+              }
+              open={needsBrief.length + needsFootage.length > 0 && lens === "waiting"}
+              onClick={
+                needsBrief.length + needsFootage.length
+                  ? () => setLens(lens === "waiting" ? null : "waiting")
+                  : undefined
+              }
+            />
+            <Counter
+              label="Being made"
+              value={count(inProduction.length)}
+              hint={inProduction.length ? "In the studio now" : "Nothing in production"}
+              open={inProduction.length > 0 && lens === "making"}
+              onClick={
+                inProduction.length ? () => setLens(lens === "making" ? null : "making") : undefined
+              }
+            />
+          </CardGrid>
+
+          {lens && (
+            <div className="mt-3">
+              <Card
+                title={
+                  lens === "ready"
+                    ? "Ready to watch"
+                    : lens === "waiting"
+                      ? "Waiting on you"
+                      : "Being made"
+                }
+                description="Across everything you have with us, whichever service it came from."
+                actions={
+                  <Button variant="ghost" size="sm" onClick={() => setLens(null)}>
+                    Hide
+                  </Button>
+                }
+              >
+                <ul className="grid gap-2.5">
+                  {lens === "waiting" &&
+                    needsBrief.map((o) => (
+                      <li
+                        key={o.id}
+                        className="flex flex-wrap items-center justify-between gap-3 border-t border-hair pt-2.5 first:border-t-0 first:pt-0"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-body-sm font-semibold text-ink">
+                            {o.productName ?? "Your order"}
+                          </p>
+                          <p className="mt-0.5 font-mono text-label uppercase text-dim">
+                            Pre-made / needs your brief
+                          </p>
+                        </div>
+                        <Button variant="brand" size="sm" onClick={() => onOpenOrder(o.id)}>
+                          Send the brief
+                        </Button>
+                      </li>
+                    ))}
+                  {(lens === "ready"
+                    ? ready
+                    : lens === "waiting"
+                      ? needsFootage
+                      : inProduction
+                  ).map((v) => (
+                    <li
+                      key={v.id}
+                      className="flex flex-wrap items-center justify-between gap-3 border-t border-hair pt-2.5 first:border-t-0 first:pt-0"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-body-sm font-semibold text-ink">{v.title}</p>
+                        <p className="mt-0.5 font-mono text-label uppercase text-dim">
+                          {LINE_WORD[v.line]}
+                          {v.groupName ? ` / ${v.groupName}` : ""}
+                          {v.due?.text ? ` / ${v.due.text}` : ""}
+                        </p>
+                      </div>
+                      <Button
+                        variant={lens === "making" ? "secondary" : "brand"}
+                        size="sm"
+                        onClick={() => onOpenVideo(v.line, v.id)}
+                      >
+                        {lens === "ready" ? "Watch it" : lens === "waiting" ? "Fix it" : "Follow it"}
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              </Card>
+            </div>
+          )}
+        </>
       )}
 
       {/* The single most useful next thing. One card, one action. Stood down
@@ -485,7 +664,11 @@ export function DashboardView({
               title="A video is ready for you"
               description={next.video.title}
               actions={
-                <Button variant="brand" icon={<PlayCircle />} onClick={() => onGo("videos")}>
+                <Button
+                  variant="brand"
+                  icon={<PlayCircle />}
+                  onClick={() => onOpenVideo(next.video.line, next.video.id)}
+                >
                   Watch it
                 </Button>
               }
@@ -531,22 +714,61 @@ export function DashboardView({
         </div>
       )}
 
-      {/* Recent orders. A short list, not the whole history. */}
+      {/* Recent work, not recent orders: an editing client has no orders at
+          all and used to be told they had bought nothing. A short list. */}
       {canOrders && (
         <div className="mt-6">
           {loading ? (
             <p className="text-body text-muted">Loading...</p>
-          ) : list.length === 0 ? (
+          ) : !hasWork ? (
             <EmptyState
               icon={<PlayCircle />}
-              title="No orders yet"
-              description="When you order a video, it appears here with everything you need to follow it."
+              title="Nothing here yet"
+              description="When you order a video, start a custom project or join an editing plan, it appears here with everything you need to follow it."
               action={
-                <Button variant="brand" onClick={() => onGo("orders")}>
+                <Button variant="brand" onClick={() => onGo("library")}>
                   Browse videos
                 </Button>
               }
             />
+          ) : list.length === 0 ? (
+            /* work, but none of it bought as an order: send them to the
+               screen that actually holds theirs */
+            <Card title="Your work">
+              <ul className="grid gap-2.5">
+                {[...new Map(allVideos.map((v) => [v.groupName, v])).values()]
+                  .slice(0, 5)
+                  .map((v) => (
+                    <li
+                      key={v.groupName}
+                      className="flex flex-wrap items-center justify-between gap-3 border-t border-hair pt-2.5 first:border-t-0 first:pt-0"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-body-sm font-semibold text-ink">{v.groupName}</p>
+                        <p className="mt-0.5 font-mono text-label uppercase text-dim">
+                          {LINE_WORD[v.line]}
+                        </p>
+                      </div>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        icon={<ArrowRight />}
+                        onClick={() =>
+                          onGo(
+                            v.line === "custom"
+                              ? "projects"
+                              : v.line === "editing"
+                                ? "subscriptions"
+                                : "videos",
+                          )
+                        }
+                      >
+                        Open
+                      </Button>
+                    </li>
+                  ))}
+              </ul>
+            </Card>
           ) : (
             <Card
               title="Recent orders"

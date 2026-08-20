@@ -155,9 +155,14 @@ function Slots({ label, used, allowed }: { label: string; used: number; allowed:
 export function EditingView({
   authedFetch,
   onMessageStudio,
+  focusVideoId,
+  onFocused,
 }: {
   authedFetch: (path: string, init?: RequestInit) => Promise<Record<string, unknown>>;
   onMessageStudio?: () => void;
+  /* a video to open on arrival, sent by the dashboard's Watch it */
+  focusVideoId?: string | null;
+  onFocused?: () => void;
 }) {
   const [plan, setPlan] = useState<Plan | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -191,6 +196,18 @@ export function EditingView({
   useEffect(() => {
     void load();
   }, [load]);
+
+  /* opened from the dashboard: straight to the request, and into the player
+   * when there is something to watch */
+  useEffect(() => {
+    if (!focusVideoId || !plan) return;
+    const v = plan.videos.find((x) => x.id === focusVideoId);
+    if (v) {
+      setOpenRequest(v.id);
+      if (v.canReview && v.videoUrl) setReviewing(v);
+    }
+    onFocused?.();
+  }, [focusVideoId, plan, onFocused]);
 
   function resetDraft() {
     setDraft({
