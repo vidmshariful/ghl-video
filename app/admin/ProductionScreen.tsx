@@ -176,8 +176,8 @@ export function ProductionScreen({ onNavigate }: { onNavigate: (v: View) => void
     <div className="w-full">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-h2 text-ink">Premade</h1>
-          <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
+          <h1 className="font-display text-h3 text-ink">Premade</h1>
+          <p className="mt-0.5 max-w-[var(--measure-body)] text-body-sm text-muted">
             Every paid order that needs work. Open a job to set each video and
             post updates. Stages follow the videos on their own; delivering is
             the one step somebody presses. Custom and Editing have boards of

@@ -103,7 +103,7 @@ export function TeamScreen({
     <div>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          {!embedded && <h1 className="font-display text-h2 text-ink">Team</h1>}
+          {!embedded && <h1 className="font-display text-h3 text-ink">Team</h1>}
           <p className={`${embedded ? "" : "mt-1 "}max-w-xl text-body-sm text-muted`}>
             Who can sign in to manage the platform, and what each person can see. New
             teammates get a link to set their own password.

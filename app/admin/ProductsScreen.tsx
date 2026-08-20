@@ -229,7 +229,7 @@ export function ProductsScreen() {
   return (
     <div className="w-full">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="font-display text-h2 text-ink">Products &amp; Pricing</h1>
+        <h1 className="font-display text-h3 text-ink">Products &amp; Pricing</h1>
         {tab === "products" && (
           <div className="flex flex-wrap gap-3">
             <button

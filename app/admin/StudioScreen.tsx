@@ -355,8 +355,8 @@ export function StudioScreen() {
 
   return (
     <div className="w-full">
-      <h1 className="font-display text-h2 text-ink">Studio Insights</h1>
-      <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
+      <h1 className="font-display text-h3 text-ink">Studio Insights</h1>
+      <p className="mt-0.5 max-w-[var(--measure-body)] text-body-sm text-muted">
         What /studio-insights shows. Slots are fully manual: set the total
         and remaining for each line, and set total to 0 to hide that card.
         Visitor video requests queue below; move one to the board to show

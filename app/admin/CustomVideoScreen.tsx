@@ -204,8 +204,8 @@ export function CustomVideoScreen() {
         </Button>
         <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
-            <h1 className="font-display text-h2 text-ink">{p.title}</h1>
-            <p className="mt-1 text-body text-muted">{p.customerEmail}</p>
+            <h1 className="font-display text-h3 text-ink">{p.title}</h1>
+            <p className="mt-0.5 text-body-sm text-muted">{p.customerEmail}</p>
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               <Chip tone={isOpen(p.status) ? "info" : "neutral"}>{STUDIO_LABEL[p.status]}</Chip>
               {p.dueAt && <Chip tone="warn">due {when(p.dueAt)}</Chip>}

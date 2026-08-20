@@ -46,8 +46,8 @@ export function MessagesScreen() {
 
   return (
     <div className="w-full">
-      <h1 className="font-display text-h2 text-ink">Messages</h1>
-      <p className="mt-2 text-body text-muted">Client conversations, newest activity first.</p>
+      <h1 className="font-display text-h3 text-ink">Messages</h1>
+      <p className="mt-0.5 text-body-sm text-muted">Client conversations, newest activity first.</p>
 
       <div className="mt-6 grid gap-4 md:grid-cols-[20rem_1fr]">
         <div

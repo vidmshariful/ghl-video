@@ -198,8 +198,8 @@ function PagesScreen() {
 
   return (
     <div className="w-full">
-      <h1 className="font-display text-h2 text-ink">Pages</h1>
-      <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
+      <h1 className="font-display text-h3 text-ink">Pages</h1>
+      <p className="mt-0.5 max-w-[var(--measure-body)] text-body-sm text-muted">
         Every page the website ships. Pages marked direct link only are not
         in the navigation; this list is where you get their links.
       </p>
@@ -508,7 +508,11 @@ export function AdminClient({
         area="Site Admin"
         right={
           <>
-            <TopIconButton label="Help & guide" mobileHidden onClick={() => go("help")}>
+            <TopIconButton
+              label={handbookFor(view) ? `Guide: ${handbookFor(view)!.label}` : "Help & guide"}
+              mobileHidden
+              onClick={() => go("help", handbookFor(view)?.slug)}
+            >
               <LifeBuoy size={16} />
             </TopIconButton>
             <NotificationsBell
@@ -542,19 +546,6 @@ export function AdminClient({
 
         {/* content: keyed on the view so each screen fades up as it opens */}
         <section className="min-w-0 flex-1 p-4 md:p-8">
-          {/* The handbook link for whatever screen this is. Rendered by the
-              shell rather than inside each screen: one place to maintain, and
-              a new screen cannot forget to add it. Deliberately quiet, since
-              most days most people do not need it. */}
-          {handbookFor(view) && (
-            <button
-              type="button"
-              onClick={() => go("help", handbookFor(view)!.slug)}
-              className="tap mb-4 inline-flex items-center gap-1.5 font-mono text-label uppercase tracking-[0.1em] text-dim transition-colors hover:text-gold"
-            >
-              <span aria-hidden="true">?</span> {handbookFor(view)!.label}
-            </button>
-          )}
           <div key={view} className="portal-view">
           {view === "dashboard" ? (
             <DashboardScreen onNavigate={go} />

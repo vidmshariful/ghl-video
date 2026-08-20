@@ -138,8 +138,8 @@ export function CustomersScreen({
     <div className="w-full">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-h2 text-ink">Clients</h1>
-          <p className="mt-1 text-body text-muted">
+          <h1 className="font-display text-h3 text-ink">Clients</h1>
+          <p className="mt-0.5 text-body-sm text-muted">
             Everyone we work with. Add a client here before starting their first project.
           </p>
         </div>

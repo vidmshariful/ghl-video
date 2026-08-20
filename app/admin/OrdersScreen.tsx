@@ -666,7 +666,7 @@ export function OrdersScreen({ onNavigate }: { onNavigate?: (v: View) => void } 
         </button>
         <div className="mt-4 flex flex-wrap items-start justify-between gap-x-6 gap-y-3 border-b border-hair pb-5">
           <div className="min-w-0">
-            <h1 className="font-display text-h2 text-ink">
+            <h1 className="font-display text-h3 text-ink">
               {openOrder.customer?.name || openOrder.customer_email}
             </h1>
             <p className="mt-1 font-mono text-body-sm text-muted">
@@ -817,8 +817,8 @@ export function OrdersScreen({ onNavigate }: { onNavigate?: (v: View) => void } 
     <div className="w-full">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="font-display text-h2 text-ink">Orders</h1>
-          <p className="mt-2 text-body text-muted">
+          <h1 className="font-display text-h3 text-ink">Orders</h1>
+          <p className="mt-0.5 text-body-sm text-muted">
             {view === "manage"
               ? "Your active pipeline. New and in-production up top."
               : "Every order, for reporting and export."}

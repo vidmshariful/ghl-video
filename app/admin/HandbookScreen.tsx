@@ -170,8 +170,8 @@ export function HandbookScreen({ initialSlug }: { initialSlug?: string | null })
 
   return (
     <div className="w-full">
-      <h1 className="font-display text-h2 text-ink">Handbook</h1>
-      <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
+      <h1 className="font-display text-h3 text-ink">Handbook</h1>
+      <p className="mt-0.5 max-w-[var(--measure-body)] text-body-sm text-muted">
         How the platform works and what to do at each stage. Anything the system
         already knows, like statuses and policies, is read from it live, so those
         parts cannot fall out of date.

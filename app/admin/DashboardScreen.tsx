@@ -139,8 +139,8 @@ export function DashboardScreen({ onNavigate }: { onNavigate: (v: View) => void 
     <div className="w-full">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-h2 text-ink">Dashboard</h1>
-          <p className="mt-1 text-body text-muted">The business at a glance.</p>
+          <h1 className="font-display text-h3 text-ink">Dashboard</h1>
+          <p className="mt-0.5 text-body-sm text-muted">The business at a glance.</p>
         </div>
       </div>
 

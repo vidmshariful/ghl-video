@@ -222,8 +222,8 @@ export function BumpsScreen({ embedded = false }: { embedded?: boolean }) {
     <div className="w-full">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          {!embedded && <h1 className="font-display text-h2 text-ink">Order Bumps</h1>}
-          <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
+          {!embedded && <h1 className="font-display text-h3 text-ink">Order Bumps</h1>}
+          <p className="mt-0.5 max-w-[var(--measure-body)] text-body-sm text-muted">
             Opt-in add-ons offered at checkout. Choose a price, whether it is
             flat or per video, and which products or groups show it. The checkout
             re-derives every price server-side. {rows.length} bump

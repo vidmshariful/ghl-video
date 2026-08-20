@@ -347,7 +347,7 @@ export function JournalScreen({ meEmail }: { meEmail: string }) {
   return (
     <div className="max-w-4xl">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-display text-h2 text-ink">Journal</h1>
+        <h1 className="font-display text-h3 text-ink">Journal</h1>
         <Button variant="brand" onClick={() => setEditing("new")}>
           {tab === "log" ? "Add note" : tab === "decision" ? "Record decision" : "Jot an idea"}
         </Button>

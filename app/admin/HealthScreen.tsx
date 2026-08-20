@@ -95,8 +95,8 @@ export function HealthScreen() {
   return (
     <div className="w-full">
       <div>
-        <h1 className="font-display text-h2 text-ink">Health</h1>
-        <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
+        <h1 className="font-display text-h3 text-ink">Health</h1>
+        <p className="mt-0.5 max-w-[var(--measure-body)] text-body-sm text-muted">
           Anything that broke and has not been handled. Most faults on the payment
           path fix themselves on a retry, so what lands here is what did not.
         </p>

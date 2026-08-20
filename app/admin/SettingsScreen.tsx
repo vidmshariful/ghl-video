@@ -100,8 +100,8 @@ export function SettingsScreen({
 
   return (
     <div className="w-full">
-      <h1 className="font-display text-h2 text-ink">Settings</h1>
-      <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
+      <h1 className="font-display text-h3 text-ink">Settings</h1>
+      <p className="mt-0.5 max-w-[var(--measure-body)] text-body-sm text-muted">
         Your account{isAdmin ? ", the team, and what the platform is connected to." : " and how you appear to clients."}
       </p>
 

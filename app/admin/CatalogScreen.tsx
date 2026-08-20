@@ -166,7 +166,7 @@ export function CatalogScreen({
     <div>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          {!embedded && <h1 className="font-display text-h2 text-ink">Catalog</h1>}
+          {!embedded && <h1 className="font-display text-h3 text-ink">Catalog</h1>}
           <p className={`${embedded ? "" : "mt-1 "}max-w-xl text-body-sm text-muted`}>
             Every video in one place: link, code, price, category, featured, release date, and buy link.
             {" "}

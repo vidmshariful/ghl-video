@@ -422,7 +422,7 @@ function DashboardView({
 
   return (
     <div className="w-full">
-      <h1 className="font-display text-h2 text-ink">Welcome back, {first}.</h1>
+      <h1 className="font-display text-h3 text-ink">Welcome back, {first}.</h1>
       {actingLabel ? (
         <p className="mt-1 font-mono text-label uppercase text-dim">
           Working in {actingLabel}&apos;s partner account
@@ -588,8 +588,8 @@ function PerformanceView() {
 
   return (
     <div className="w-full">
-      <h1 className="font-display text-h2 text-ink">Performance</h1>
-      <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
+      <h1 className="font-display text-h3 text-ink">Performance</h1>
+      <p className="mt-0.5 max-w-[var(--measure-body)] text-body-sm text-muted">
         Every click and sale through your links, synced automatically. Lifetime first,
         then the last 30 days.
       </p>
@@ -694,8 +694,8 @@ function ReferralsView() {
   const rows = data?.referrals ?? [];
   return (
     <div className="w-full">
-      <h1 className="font-display text-h2 text-ink">Referrals</h1>
-      <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
+      <h1 className="font-display text-h3 text-ink">Referrals</h1>
+      <p className="mt-0.5 max-w-[var(--measure-body)] text-body-sm text-muted">
         Everyone who came through your links. Emails are shortened for their privacy.
       </p>
       <FpStateCard data={data} err={err} />
@@ -751,8 +751,8 @@ function EarningsView() {
   const rows = data?.payouts ?? [];
   return (
     <div className="w-full">
-      <h1 className="font-display text-h2 text-ink">Earnings &amp; Payouts</h1>
-      <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
+      <h1 className="font-display text-h3 text-ink">Earnings &amp; Payouts</h1>
+      <p className="mt-0.5 max-w-[var(--measure-body)] text-body-sm text-muted">
         What you have earned and what has been paid. Payouts run on the program
         schedule; this page always shows where things stand.
       </p>
@@ -845,8 +845,8 @@ function AssetsView({ me }: { me: Me }) {
 
   return (
     <div className="w-full">
-      <h1 className="font-display text-h2 text-ink">Links &amp; Assets</h1>
-      <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
+      <h1 className="font-display text-h3 text-ink">Links &amp; Assets</h1>
+      <p className="mt-0.5 max-w-[var(--measure-body)] text-body-sm text-muted">
         Every link below carries your referral, so your discount and your credit apply
         automatically. Assets are yours to use anywhere you promote.
       </p>
@@ -1037,8 +1037,8 @@ function ResourcesView({ me }: { me: Me }) {
 
   return (
     <div className="max-w-4xl">
-      <h1 className="font-display text-h2 text-ink">Resources</h1>
-      <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
+      <h1 className="font-display text-h3 text-ink">Resources</h1>
+      <p className="mt-0.5 max-w-[var(--measure-body)] text-body-sm text-muted">
         How the program works and how to get the most out of it.
       </p>
 
@@ -1155,8 +1155,8 @@ function SettingsView({
 
   return (
     <div className="max-w-3xl">
-      <h1 className="font-display text-h2 text-ink">Settings</h1>
-      <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
+      <h1 className="font-display text-h3 text-ink">Settings</h1>
+      <p className="mt-0.5 max-w-[var(--measure-body)] text-body-sm text-muted">
         {isOwner
           ? "Your profile, your account, and your team."
           : "Your profile and your account."}

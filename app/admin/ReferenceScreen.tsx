@@ -139,8 +139,8 @@ export function ReferenceScreen() {
     <div className="w-full">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-h2 text-ink">Reference</h1>
-          <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
+          <h1 className="font-display text-h3 text-ink">Reference</h1>
+          <p className="mt-0.5 max-w-[var(--measure-body)] text-body-sm text-muted">
             The things you need often, in one place. Anything marked secret stays
             hidden until you ask for it, so this screen is safe to have open.
           </p>

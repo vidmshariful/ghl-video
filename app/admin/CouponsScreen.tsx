@@ -528,7 +528,7 @@ export function CouponsScreen() {
   return (
     <div className="w-full">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-display text-h2 text-ink">Coupons</h1>
+        <h1 className="font-display text-h3 text-ink">Coupons</h1>
         <div className="flex gap-2">
           {tab === "partner" && missingCount > 0 && (
             <Button variant="secondary" onClick={createMissing}>

@@ -239,8 +239,8 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
       {/* who they are, and what they are worth */}
       <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="font-display text-h2 text-ink">{title}</h1>
-          <p className="mt-1 text-body text-muted">
+          <h1 className="font-display text-h3 text-ink">{title}</h1>
+          <p className="mt-0.5 text-body-sm text-muted">
             {c.name && c.company ? `${c.name}, ` : ""}
             {c.email}
             {c.phone ? ` / ${c.phone}` : ""}

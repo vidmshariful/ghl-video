@@ -958,8 +958,8 @@ function SettingsView({
 
   return (
     <div className="max-w-3xl">
-      <h1 className="font-display text-h2 text-ink">Settings</h1>
-      <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
+      <h1 className="font-display text-h3 text-ink">Settings</h1>
+      <p className="mt-0.5 max-w-[var(--measure-body)] text-body-sm text-muted">
         {isOwner
           ? "Your profile, your account, and your team."
           : "Your profile and your account."}
@@ -1089,8 +1089,8 @@ const pathFor = (s: PortalSection, sub?: string | null) =>
 function PageHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <div>
-      <h1 className="font-display text-h2 text-ink">{title}</h1>
-      {subtitle ? <p className="mt-2 text-body text-muted">{subtitle}</p> : null}
+      <h1 className="font-display text-h3 text-ink">{title}</h1>
+      {subtitle ? <p className="mt-0.5 text-body-sm text-muted">{subtitle}</p> : null}
     </div>
   );
 }

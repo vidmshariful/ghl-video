@@ -166,7 +166,7 @@ export function SubscriptionDetail({ id, onBack }: { id: string; onBack: () => v
 
       <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="font-display text-h2 text-ink">{s.name || s.email}</h1>
+          <h1 className="font-display text-h3 text-ink">{s.name || s.email}</h1>
           <p className="mt-1 font-mono text-label uppercase text-dim">
             {s.email}
             {s.company ? ` / ${s.company}` : ""}

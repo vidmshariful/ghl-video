@@ -113,7 +113,7 @@ export function BlogScreen() {
     <div className="w-full">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="font-display text-h2 text-ink">Blog</h1>
+          <h1 className="font-display text-h3 text-ink">Blog</h1>
           <p className="mt-1 max-w-xl text-body-sm text-muted">
             Posts that build SEO and answer objections before the sales call.
             Published posts appear on the site at /blog within a minute.

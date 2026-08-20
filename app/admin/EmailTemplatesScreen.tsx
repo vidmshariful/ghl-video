@@ -115,7 +115,7 @@ export function EmailTemplatesScreen({ embedded = false }: { embedded?: boolean 
     <div>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          {!embedded && <h1 className="font-display text-h2 text-ink">Email Templates</h1>}
+          {!embedded && <h1 className="font-display text-h3 text-ink">Email Templates</h1>}
           <p className={`${embedded ? "" : "mt-1 "}max-w-2xl text-body-sm text-muted`}>
             Emails the site sends to clients. Edit the subject and message, and use the
             variables below in double braces. The GHL Video header, colors, and footer

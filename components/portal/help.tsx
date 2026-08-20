@@ -151,8 +151,8 @@ const CUSTOMER_FAQ: Section[] = [
 export function PortalHelp() {
   return (
     <div className="max-w-4xl">
-      <h1 className="font-display text-h2 text-ink">Help &amp; guide</h1>
-      <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
+      <h1 className="font-display text-h3 text-ink">Help &amp; guide</h1>
+      <p className="mt-0.5 max-w-[var(--measure-body)] text-body-sm text-muted">
         How your portal works. Three services, and the journey each one takes.
       </p>
 

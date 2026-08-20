@@ -65,20 +65,25 @@ export function PageHeader({
   /** filters, tabs, anything that belongs to the header rather than the body */
   children?: ReactNode;
 }) {
+  /* One size down from where this started. Every screen opens with this
+     header, so at text-h2 plus a body-size description the product spent
+     its first two hundred pixels introducing itself on every single page
+     (owner call, August 2026). The title is still unmistakably the title;
+     it just stops being a hero. */
   return (
-    <header className="mb-6">
-      <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
+    <header className="mb-5">
+      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
         <div className="min-w-0">
-          <h1 className="font-display text-h2 text-ink">{title}</h1>
+          <h1 className="font-display text-h3 text-ink">{title}</h1>
           {description && (
-            <p className="mt-1.5 max-w-[var(--measure-body)] text-body text-muted">
+            <p className="mt-0.5 max-w-[var(--measure-body)] text-body-sm text-muted">
               {description}
             </p>
           )}
         </div>
         {actions && <div className="flex shrink-0 flex-wrap gap-2">{actions}</div>}
       </div>
-      {children && <div className="mt-5">{children}</div>}
+      {children && <div className="mt-4">{children}</div>}
     </header>
   );
 }

@@ -76,8 +76,8 @@ export function SeoScreen() {
 
   return (
     <div className="w-full">
-      <h1 className="font-display text-h2 text-ink">SEO</h1>
-      <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
+      <h1 className="font-display text-h3 text-ink">SEO</h1>
+      <p className="mt-0.5 max-w-[var(--measure-body)] text-body-sm text-muted">
         What Google sees, and what to fix. Search is how people find you,
         Traffic is what they do once here, Health checks the live site, Pages
         edits the words in the search result, Redirects keeps a retired URL

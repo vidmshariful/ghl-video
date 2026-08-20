@@ -68,8 +68,8 @@ export function BookACallView() {
 
   return (
     <div className="w-full max-w-5xl">
-      <h1 className="font-display text-h2 text-ink">Book a Call</h1>
-      <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
+      <h1 className="font-display text-h3 text-ink">Book a Call</h1>
+      <p className="mt-0.5 max-w-[var(--measure-body)] text-body-sm text-muted">
         Pick a time right here, no forms, no email chains.
       </p>
 
@@ -147,8 +147,8 @@ const WL_STEPS = [
 export function WhiteLabelView() {
   return (
     <div className="w-full max-w-5xl">
-      <h1 className="font-display text-h2 text-ink">White-label our studio</h1>
-      <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
+      <h1 className="font-display text-h3 text-ink">White-label our studio</h1>
+      <p className="mt-0.5 max-w-[var(--measure-body)] text-body-sm text-muted">
         You run an agency. Your clients keep asking for video production and
         editing. Instead of hiring a team, resell ours under your own brand:
         flat pricing to you, your price to them.
@@ -249,10 +249,10 @@ export function AffiliateApplyView({
   if (done) {
     return (
       <div className="max-w-3xl">
-        <h1 className="font-display text-h2 text-ink">Affiliate program</h1>
+        <h1 className="font-display text-h3 text-ink">Affiliate program</h1>
         <div className="mt-8 rounded-[12px] border border-gold/40 bg-gold/[0.06] px-6 py-8">
           <p className="font-display text-h4 text-ink">You are in.</p>
-          <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">{done}</p>
+          <p className="mt-0.5 max-w-[var(--measure-body)] text-body-sm text-muted">{done}</p>
           <p className="mt-2 max-w-[var(--measure-body)] text-body-sm text-dim">
             Your partner portal is live: your tracked link, live stats, and
             payouts. Check your email for the way in, then sign in with this
@@ -273,8 +273,8 @@ export function AffiliateApplyView({
 
   return (
     <div className="max-w-4xl">
-      <h1 className="font-display text-h2 text-ink">Recommend us. Get paid.</h1>
-      <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
+      <h1 className="font-display text-h3 text-ink">Recommend us. Get paid.</h1>
+      <p className="mt-0.5 max-w-[var(--measure-body)] text-body-sm text-muted">
         You already know what our work does for your SaaS. Other founders in
         your network are still explaining HighLevel with screen recordings.
         Send them our way and earn a commission on every sale they make.
@@ -430,8 +430,8 @@ export function SocialXView({ authedFetch }: {
 
   return (
     <div className="w-full max-w-4xl">
-      <h1 className="font-display text-h2 text-ink">SocialX: your social media, managed</h1>
-      <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
+      <h1 className="font-display text-h3 text-ink">SocialX: your social media, managed</h1>
+      <p className="mt-0.5 max-w-[var(--measure-body)] text-body-sm text-muted">
         The same studio behind your videos also runs social media for SaaS
         brands: content, design, and posting handled end to end, so your
         channels stay alive while you build.

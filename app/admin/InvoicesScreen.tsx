@@ -186,8 +186,8 @@ export function InvoicesScreen() {
 
   return (
     <div className="w-full">
-      <h1 className="font-display text-h2 text-ink">Invoices</h1>
-      <p className="mt-2 text-body text-muted">
+      <h1 className="font-display text-h3 text-ink">Invoices</h1>
+      <p className="mt-0.5 text-body-sm text-muted">
         Itemized invoices for custom videos and one-off deals. Create one, send the link, and it is
         marked paid the moment the client pays, right inside Orders.
       </p>

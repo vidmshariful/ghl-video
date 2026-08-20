@@ -549,7 +549,7 @@ export function PartnersScreen() {
   return (
     <div className="w-full">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-display text-h2 text-ink">Partners</h1>
+        <h1 className="font-display text-h3 text-ink">Partners</h1>
         {tab === "partners" && (
           <Button variant="brand" onClick={() => setEditing("new")}>
             Add partner

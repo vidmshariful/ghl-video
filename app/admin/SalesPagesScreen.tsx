@@ -24,7 +24,7 @@ export function SalesPagesScreen({ embedded = false }: { embedded?: boolean }) {
 
   return (
     <div>
-      {!embedded && <h1 className="font-display text-h2 text-ink">Sales Pages</h1>}
+      {!embedded && <h1 className="font-display text-h3 text-ink">Sales Pages</h1>}
       <p className="mt-1 max-w-xl text-body-sm text-muted">
         Landing pages for cold outreach and campaigns. Copy a link to send it to a prospect.
       </p>

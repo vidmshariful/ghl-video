@@ -54,8 +54,8 @@ export function ProductsHub() {
 
   return (
     <div className="w-full">
-      <h1 className="font-display text-h2 text-ink">Products &amp; Packs</h1>
-      <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
+      <h1 className="font-display text-h3 text-ink">Products &amp; Packs</h1>
+      <p className="mt-0.5 max-w-[var(--measure-body)] text-body-sm text-muted">
         Everything we sell, in one list. A video is sold on its own or inside a
         pack. A pack has contents we choose. A bundle sells a count per
         category and the customer picks the videos at intake.

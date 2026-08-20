@@ -102,7 +102,7 @@ export function LinksScreen() {
 
   return (
     <div className="w-full">
-      <h1 className="font-display text-h2 text-ink">Links</h1>
+      <h1 className="font-display text-h3 text-ink">Links</h1>
 
       {/* every link the team sends: checkout links and landing pages */}
       <div className="mt-6 flex gap-1 border-b border-hair">
