@@ -5,6 +5,7 @@ import { Button, Input, Select } from "@/components/portal/ui";
 import { supabase, money } from "./client";
 import { CatalogScreen } from "./CatalogScreen";
 import { BumpsScreen } from "./BumpsScreen";
+import { LibraryFiltersTab } from "./LibraryFiltersTab";
 import { ProductsScreen } from "./ProductsScreen";
 
 /*
@@ -21,7 +22,7 @@ import { ProductsScreen } from "./ProductsScreen";
  *             on the intake form after checkout
  */
 
-type Tab = "videos" | "packs" | "bundles" | "bumps" | "charges";
+type Tab = "videos" | "packs" | "bundles" | "bumps" | "charges" | "filters";
 
 type Row = {
   id: string;
@@ -70,6 +71,7 @@ export function ProductsHub() {
             ["bundles", "Bundles"],
             ["bumps", "Order bumps"],
             ["charges", "Checkout prices"],
+            ["filters", "Library filters"],
           ] as const
         ).map(([k, label]) => (
           <button
@@ -96,6 +98,8 @@ export function ProductsHub() {
           <CompositionTab kind="bundle" />
         ) : tab === "bumps" ? (
           <BumpsScreen embedded />
+        ) : tab === "filters" ? (
+          <LibraryFiltersTab />
         ) : (
           <ProductsScreen />
         )}

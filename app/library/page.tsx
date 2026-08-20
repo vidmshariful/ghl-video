@@ -7,6 +7,11 @@ import { JsonLd } from "@/components/JsonLd";
 import { productCatalogSchema } from "@/lib/schema";
 import { cta, disclaimer, entityLine } from "@/lib/content/core";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
+import {
+  DEFAULT_LIBRARY_FEATURES,
+  rowsToFeatures,
+  type LibraryFeature,
+} from "@/lib/library-features";
 
 export const runtime = "nodejs";
 /* the catalogue changes from admin, so this page follows within minutes */
@@ -39,6 +44,15 @@ export default async function LibraryPage() {
       db.from("products").select("sku, active"),
       db.from("catalog_stats").select("code, loves, plays"),
     ]);
+
+  /* the Filter by feature vocabulary: admin's table first, the code list
+     when the table is unreachable or empty */
+  const { data: featureRows } = await db
+    .from("library_features")
+    .select("key, label, aliases, active, sort")
+    .order("sort");
+  const dbFeatures = rowsToFeatures(featureRows);
+  const features: LibraryFeature[] = dbFeatures.length ? dbFeatures : DEFAULT_LIBRARY_FEATURES;
   const memberCount = new Map<string, number>();
   for (const i of packItems ?? [])
     memberCount.set(String(i.pack_code), (memberCount.get(String(i.pack_code)) ?? 0) + 1);
@@ -103,7 +117,7 @@ export default async function LibraryPage() {
       />
 
       <div className="flex-1">
-        <LibraryExplorer videos={videos} stats={stats} />
+        <LibraryExplorer videos={videos} stats={stats} features={features} />
       </div>
 
       {/* thin, but a real footer: the entity and the disclaimer go on every

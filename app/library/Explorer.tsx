@@ -5,7 +5,7 @@ import { Button, Tabs } from "@/components/portal/ui";
 import { LibraryCard, PreviewLightbox } from "@/components/library/cards";
 import { PickTray } from "@/components/library/tray";
 import type { BrowseVideo, Version } from "@/components/library/catalog";
-import { featureFilters, matchesFeature } from "@/components/library/catalog";
+import { featureCounts, matchFeature, type LibraryFeature } from "@/lib/library-features";
 
 /*
  * The public library, laid out like the portal's: kind tabs with counts,
@@ -37,12 +37,17 @@ function kindOf(v: BrowseVideo): Exclude<Kind, "all"> {
   return (v.kind ?? "video") as Exclude<Kind, "all">;
 }
 
+const featureText = (v: BrowseVideo) => `${v.title} ${v.subtitle ?? ""} ${v.typeTag ?? ""}`;
+
 export function LibraryExplorer({
   videos,
   stats: initialStats,
+  features,
 }: {
   videos: BrowseVideo[];
   stats: Stats;
+  /* the Filter by feature vocabulary, from admin's table */
+  features: LibraryFeature[];
 }) {
   const [q, setQ] = useState("");
   const [kind, setKind] = useState<Kind>("all");
@@ -114,7 +119,7 @@ export function LibraryExplorer({
   };
 
   /* the platform features that actually have videos, biggest first */
-  const hlFeatures = useMemo(() => featureFilters(videos), [videos]);
+  const hlFeatures = useMemo(() => featureCounts(videos, featureText, features), [videos, features]);
 
   const categories = useMemo(() => {
     const set = new Map<string, number>();
@@ -131,7 +136,10 @@ export function LibraryExplorer({
       if (kind !== "all" && kindOf(v) !== kind) return false;
       if (category !== "all" && v.typeTag !== category) return false;
       if (feature === "featured" && !v.featured) return false;
-      if (hlFeature && !matchesFeature(v, hlFeature)) return false;
+      if (hlFeature) {
+        const f = features.find((x) => x.key === hlFeature);
+        if (f && !matchFeature(featureText(v), f.aliases)) return false;
+      }
       if (
         term &&
         ![v.title, v.code, v.subtitle, v.typeTag, v.subTag]
@@ -147,7 +155,7 @@ export function LibraryExplorer({
     if (feature === "loved")
       return [...base].sort((a, b) => (of(b)?.loves ?? 0) - (of(a)?.loves ?? 0));
     return base;
-  }, [videos, kind, category, feature, hlFeature, term, stats]);
+  }, [videos, kind, category, feature, hlFeature, term, stats, features]);
 
   const kindCount = (k: Kind) =>
     k === "all" ? videos.length : videos.filter((v) => kindOf(v) === k).length;
