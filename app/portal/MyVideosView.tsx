@@ -43,7 +43,10 @@ type Video = {
   due?: { text: string; tone: string } | null;
 };
 
+type Line = "premade" | "custom" | "editing";
+
 type Group = {
+  line?: Line;
   orderId: string;
   invoiceNumber: string | null;
   orderedAt: string;
@@ -103,7 +106,11 @@ export function MyVideosView({
     const j = (await authedFetch("/api/portal/videos").catch(() => null)) as {
       groups?: Group[];
     } | null;
-    const g = j?.groups ?? [];
+    /* Premade only. Custom work and editing plans have screens of their own,
+     * because one mixed list answers "where is my video" by making somebody
+     * read all of it. The route still returns all three so the dashboard can
+     * count the lot. */
+    const g = (j?.groups ?? []).filter((x) => (x.line ?? "premade") === "premade");
     setGroups(g);
     setPlaying((p) => {
       if (!p) return null;

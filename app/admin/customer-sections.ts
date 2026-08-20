@@ -8,13 +8,14 @@
  * restricted account, it is a broken one.
  */
 export const HIDEABLE_SECTIONS: { key: string; label: string }[] = [
-  { key: "videos", label: "My Videos" },
+  { key: "videos", label: "My Videos: Pre-made" },
+  { key: "projects", label: "My Videos: Custom" },
   { key: "library", label: "Video Library" },
   { key: "coming-soon", label: "Coming Soon" },
   { key: "book", label: "Book a Call" },
   { key: "brand", label: "Brand Kit" },
   { key: "orders", label: "Orders and Invoices" },
-  { key: "subscriptions", label: "Editing" },
+  { key: "subscriptions", label: "My Videos: Editing" },
   { key: "messages", label: "Messages" },
   { key: "affiliate", label: "Affiliate program" },
   { key: "whitelabel", label: "White-label" },

@@ -24,6 +24,7 @@ import { DashboardView } from "./DashboardView";
 import { BrandKitView } from "./BrandKitView";
 import { ComingSoonView } from "./ComingSoonView";
 import { LibraryView } from "./LibraryView";
+import { CustomView } from "./CustomView";
 import { EditingView } from "./EditingView";
 import { Button, Card, Chip, EmptyState, Table, Td, Th } from "@/components/portal/ui";
 import {
@@ -46,7 +47,7 @@ import {
   Megaphone,
   MessageSquare,
   PhoneCall,
-  Repeat,
+  Scissors,
   Settings,
   Sparkles,
   ShoppingCart,
@@ -1196,22 +1197,52 @@ function Portal({
    * theirs. Somebody logging in wants their videos. Everything else is either
    * getting more of them, or admin.
    *
-   * So: the two things they came for at the top with no heading on them, then
-   * three named groups. The headings do real work here, because the difference
-   * between "buy something" and "look after the account" is exactly the
-   * distinction a flat list of eleven links destroys.
+   * My Videos is a category rather than a screen, holding the three service
+   * lines the way admin does, because one mixed list of premade, custom and
+   * editing work answers "where is my video" by making you read all of it.
+   * The same three words on both sides also means a call about a video is
+   * about the same screen for both people on it.
    *
-   * Two items from the locked blueprint are deliberately absent, Coming Soon
-   * and Request a Quote, because neither is built. A menu entry that goes
-   * nowhere is worse than a missing one: it teaches people the menu lies.
-   * They get added when the screens exist, not before.
+   * Messages sits with Dashboard. It is the only badged thing in here and the
+   * only one where somebody is waiting on an answer; it used to be filed
+   * under My account next to the Brand Kit, which is where you put a thing
+   * you want ignored.
+   *
+   * Editing used to live under My account too, as though a service line were
+   * account admin. It is work, so it is under My Videos with the other work,
+   * and its billing moved to Orders and Invoices where the rest of the money
+   * already was.
    */
   const groups = [
     {
       title: "",
       items: [
         { key: "dashboard", label: "Dashboard", icon: <LayoutDashboard /> },
-        ...(can("orders") ? [{ key: "videos", label: "My Videos", icon: <Clapperboard /> }] : []),
+        ...(can("messages")
+          ? [
+              {
+                key: "messages",
+                label: "Messages",
+                icon: <MessageSquare />,
+                badge: msgUnread || undefined,
+              },
+            ]
+          : []),
+      ],
+    },
+    {
+      title: "My Videos",
+      defaultOpen: true,
+      items: [
+        ...(can("orders")
+          ? [
+              { key: "videos", label: "Pre-made", icon: <Clapperboard /> },
+              { key: "projects", label: "Custom", icon: <Sparkles /> },
+            ]
+          : []),
+        ...(can("subscriptions")
+          ? [{ key: "subscriptions", label: "Editing", icon: <Scissors /> }]
+          : []),
       ],
     },
     {
@@ -1244,19 +1275,6 @@ function Portal({
           : []),
         ...(can("orders")
           ? [{ key: "orders", label: "Orders and Invoices", icon: <ShoppingCart /> }]
-          : []),
-        ...(can("subscriptions")
-          ? [{ key: "subscriptions", label: "Editing", icon: <Repeat /> }]
-          : []),
-        ...(can("messages")
-          ? [
-              {
-                key: "messages",
-                label: "Messages",
-                icon: <MessageSquare />,
-                badge: msgUnread || undefined,
-              },
-            ]
           : []),
       ],
     },
@@ -1383,17 +1401,33 @@ function Portal({
               />
             ) : (
               <div>
-                <PageHeader title="Orders" subtitle="Your projects, delivery, and invoices." />
+                <PageHeader
+                  title="Orders and Invoices"
+                  subtitle="Everything you have bought, and everything you pay."
+                />
                 <div className="mt-6">
                   <OrdersList onOpen={openOrderById} />
                 </div>
+                {/* Plan billing lives here with the rest of the money, not on
+                    the Editing screen. Editing is for managing the work. */}
+                {can("subscriptions") && (
+                  <div className="mt-8 border-t border-hair pt-8">
+                    <PageHeader
+                      title="Your plan"
+                      subtitle="Payments, renewals and plan changes."
+                    />
+                    <div className="mt-4">
+                      <SubscriptionsView canBilling={can("billing")} />
+                    </div>
+                  </div>
+                )}
               </div>
             )
           ) : view === "videos" && can("orders") ? (
             <div>
               <PageHeader
-                title="My Videos"
-                subtitle="Every video you have ordered, and where each one is."
+                title="Pre-made"
+                subtitle="Videos you ordered from the library, and where each one is."
               />
               <div className="mt-6">
                 <MyVideosView
@@ -1438,18 +1472,17 @@ function Portal({
           ) : view === "help" ? (
             <PortalHelp />
           ) : view === "subscriptions" && can("subscriptions") ? (
-            <div>
-              {/* Their plan and their editing work, which is what somebody on
-                  a monthly plan actually came to check. Billing sits under
-                  it, because it is the thing they look at once a month. */}
-              <EditingView authedFetch={authedFetch} />
-              <div className="mt-6 border-t border-hair pt-6">
-                <PageHeader title="Billing" subtitle="Your payments and plan changes." />
-                <div className="mt-4">
-                  <SubscriptionsView canBilling={can("billing")} />
-                </div>
-              </div>
-            </div>
+            /* Only the work. Billing moved to Orders and Invoices where the
+               rest of the money already was (owner decision). */
+            <EditingView
+              authedFetch={authedFetch}
+              onMessageStudio={can("messages") ? () => go("messages") : undefined}
+            />
+          ) : view === "projects" && can("orders") ? (
+            <CustomView
+              authedFetch={authedFetch}
+              onMessageStudio={can("messages") ? () => go("messages") : undefined}
+            />
           ) : (
             <DashboardView
               firstName={profile.name?.split(" ")[0] ?? null}

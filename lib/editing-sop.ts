@@ -98,12 +98,61 @@ export type Aspect = (typeof ASPECTS)[number]["key"];
  */
 export const EDITING_REVISIONS_UNLIMITED = true;
 
-/** What the client is told a status means. Never the studio's word for it. */
-export const CLIENT_STATUS_WORD: Record<string, string> = {
-  waiting: "We need your footage",
-  queued: "In the queue",
-  in_production: "Being edited",
-  ready: "Ready to watch",
-  revisions: "Your changes are in hand",
-  approved: "Approved",
-};
+/*
+ * The stages, in the client's words, and the colour each one carries.
+ *
+ * A list of requests all painted the same reads as one undifferentiated pile,
+ * which is the thing this exists to stop. The two that need the client to do
+ * something lead in gold, work in hand is blue, and finished is green: the
+ * eye finds "you owe us something" before it reads a word.
+ *
+ * These are the studio's own column names said from the other side. Nobody
+ * should have to translate between the board and the portal on a call.
+ */
+export const CLIENT_STAGES = [
+  {
+    key: "waiting",
+    label: "Needs your footage",
+    tone: "warn",
+    blurb: "We cannot start until we can open your files.",
+  },
+  {
+    key: "queued",
+    label: "Backlog",
+    tone: "neutral",
+    blurb: "In the queue. We work through them in order.",
+  },
+  {
+    key: "in_production",
+    label: "Being edited",
+    tone: "info",
+    blurb: "An editor has it.",
+  },
+  {
+    key: "ready",
+    label: "Needs your approval",
+    tone: "warn",
+    blurb: "Watch it, leave your notes, approve it when it is right.",
+  },
+  {
+    key: "revisions",
+    label: "Under revisions",
+    tone: "bad",
+    blurb: "We are making the changes you asked for.",
+  },
+  {
+    key: "approved",
+    label: "Done",
+    tone: "good",
+    blurb: "Approved and yours.",
+  },
+] as const;
+
+export type ClientStage = (typeof CLIENT_STAGES)[number]["key"];
+
+export const CLIENT_STATUS_WORD: Record<string, string> = Object.fromEntries(
+  CLIENT_STAGES.map((s) => [s.key, s.label]),
+);
+
+export const stageFor = (key: string) =>
+  CLIENT_STAGES.find((s) => s.key === key) ?? CLIENT_STAGES[1];

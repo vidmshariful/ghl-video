@@ -2,6 +2,13 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { resolvePortalContext } from "@/lib/account-team";
 import { CLIENT_LABEL, isOpen, type ProjectStatus } from "@/lib/projects";
+import {
+  canRequestChanges,
+  canReview,
+  isWatchable,
+  REVISIONS_INCLUDED,
+  type DeliverableStatus,
+} from "@/lib/deliverable-status";
 
 export const runtime = "nodejs";
 
@@ -35,7 +42,9 @@ export async function GET(req: Request) {
   const { data: videos } = ids.length
     ? await db
         .from("order_deliverables")
-        .select("id, project_id, title, status, due_at, video_url, thumbnail_url, position")
+        .select(
+          "id, project_id, title, status, due_at, video_url, thumbnail_url, position, note, revision_round, created_at, ready_at, approved_at",
+        )
         .in("project_id", ids)
         .order("position")
     : { data: [] };
@@ -55,16 +64,50 @@ export async function GET(req: Request) {
           open: isOpen(status),
           dueAt: (p.due_at as string | null) ?? null,
           createdAt: String(p.created_at),
-          videos: ((videos ?? []) as Row[])
-            .filter((v) => String(v.project_id) === String(p.id))
-            .map((v) => ({
+          videos: mine(videos, p).map((v) => {
+            const vs = v.status as DeliverableStatus;
+            return {
               id: String(v.id),
               title: String(v.title),
-              status: String(v.status),
+              brief: (v.note as string | null) ?? null,
+              status: vs,
               dueAt: (v.due_at as string | null) ?? null,
               thumbnailUrl: (v.thumbnail_url as string | null) ?? null,
-            })),
+              /* withheld until it is genuinely watchable, the same rule the
+               * rest of the portal follows */
+              videoUrl: isWatchable(vs) ? ((v.video_url as string | null) ?? null) : null,
+              canReview: canReview(vs),
+              canRequestChanges: canRequestChanges(vs, Number(v.revision_round ?? 0)),
+              revisionsIncluded: REVISIONS_INCLUDED,
+              revisionsUsed: Number(v.revision_round ?? 0),
+            };
+          }),
+          /* What has actually happened, built from the timestamps the work
+           * already carries. No separate activity table to fall out of step
+           * with the thing it describes, and nothing in it that did not
+           * really happen. */
+          activity: activityFor(p, mine(videos, p)),
         };
       }),
   });
+}
+
+function mine(videos: Row[] | null, project: Row): Row[] {
+  return ((videos ?? []) as Row[]).filter(
+    (v) => String(v.project_id) === String(project.id),
+  );
+}
+
+function activityFor(project: Row, videos: Row[]) {
+  const events: { at: string; body: string }[] = [
+    { at: String(project.created_at), body: "Project booked in." },
+  ];
+  for (const v of videos) {
+    const title = String(v.title);
+    if (v.ready_at) events.push({ at: String(v.ready_at), body: `${title} is ready for you to watch.` });
+    if (v.approved_at) events.push({ at: String(v.approved_at), body: `You approved ${title}.` });
+    if (v.status === "revisions")
+      events.push({ at: String(v.created_at), body: `Your changes to ${title} are in hand.` });
+  }
+  return events.sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).slice(0, 20);
 }

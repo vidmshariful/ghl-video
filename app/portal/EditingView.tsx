@@ -1,7 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { CalendarClock, Check, Plus, Scissors, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarClock,
+  Check,
+  ChevronRight,
+  Play,
+  Plus,
+  Scissors,
+  Trash2,
+} from "lucide-react";
 import {
   Button,
   Card,
@@ -16,6 +25,7 @@ import {
 } from "@/components/portal/ui";
 import { VideoReview } from "./VideoReview";
 import { StyleGuideView } from "./StyleGuideView";
+import { stageFor } from "@/lib/editing-sop";
 
 /*
  * An editing client's own screen.
@@ -47,6 +57,7 @@ type Video = {
   dueAt: string | null;
   requestedDueAt: string | null;
   assetsReadyAt: string | null;
+  assetsUrl: string | null;
   videoUrl: string | null;
   canReview: boolean;
   revisionsUsed: number;
@@ -100,13 +111,21 @@ const day = (iso: string | null) =>
     ? new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
     : "";
 
-const TONE: Record<string, "neutral" | "info" | "good" | "warn" | "bad"> = {
-  waiting: "warn",
-  queued: "neutral",
-  in_production: "info",
-  ready: "good",
-  revisions: "bad",
-  approved: "good",
+/*
+ * The tint each stage carries on its row.
+ *
+ * A flat list of requests all painted the same is the thing this replaces:
+ * you had to read every line to find the one that needed you. The two stages
+ * that need the client lead in gold, work in hand is blue, finished is green,
+ * and the eye lands on the right row before it reads a word.
+ */
+const ROW: Record<string, string> = {
+  waiting: "border-gold/40 bg-gold/[0.07]",
+  queued: "border-hair bg-surface",
+  in_production: "border-blue/35 bg-blue/[0.06]",
+  ready: "border-gold/50 bg-gold/[0.09]",
+  revisions: "border-error/35 bg-error/[0.06]",
+  approved: "border-green/30 bg-green/[0.05]",
 };
 
 type Tab = "month" | "guide" | "plan";
@@ -135,14 +154,19 @@ function Slots({ label, used, allowed }: { label: string; used: number; allowed:
 
 export function EditingView({
   authedFetch,
+  onMessageStudio,
 }: {
   authedFetch: (path: string, init?: RequestInit) => Promise<Record<string, unknown>>;
+  onMessageStudio?: () => void;
 }) {
   const [plan, setPlan] = useState<Plan | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [tab, setTab] = useState<Tab>("month");
   const [asking, setAsking] = useState(false);
   const [reviewing, setReviewing] = useState<Video | null>(null);
+  /* which request is open. The list is a set of cards you open, not a set of
+   * lines with a small button on the end of each. */
+  const [openRequest, setOpenRequest] = useState<string | null>(null);
   const [draft, setDraft] = useState({
     title: "",
     brief: "",
@@ -263,6 +287,7 @@ export function EditingView({
             revisionsUsed={reviewing.revisionsUsed}
             unlimitedRevisions
             authedFetch={authedFetch}
+            onMessageStudio={onMessageStudio}
             onChanged={() => {
               void load();
               setReviewing(null);
@@ -277,6 +302,24 @@ export function EditingView({
   const warning = draft.form === "long" ? plan.warnings.long : plan.warnings.short;
   const live = plan.videos.filter((v) => !v.cancelledAt);
   const parents = live.filter((v) => !v.parentId);
+
+  /* one request, opened */
+  const opened = openRequest ? plan.videos.find((v) => v.id === openRequest) : null;
+  if (opened) {
+    return (
+      <RequestDetail
+        v={opened}
+        cuts={live.filter((c) => c.parentId === opened.id)}
+        busy={busy}
+        onBack={() => setOpenRequest(null)}
+        onReview={(x) => (x.canReview && x.videoUrl ? setReviewing(x) : setOpenRequest(x.id))}
+        onCancel={async (x) => {
+          await cancelRequest(x);
+          setOpenRequest(null);
+        }}
+      />
+    );
+  }
 
   return (
     <div>
@@ -557,22 +600,21 @@ export function EditingView({
                   worth using them.
                 </p>
               ) : (
-                <ul className="grid gap-3">
+                <ul className="grid gap-2">
                   {parents.map((v) => (
-                    <li key={v.id} className="border-t border-hair pt-3 first:border-t-0 first:pt-0">
-                      <VideoRow v={v} onReview={setReviewing} onCancel={cancelRequest} busy={busy} />
+                    <li key={v.id}>
+                      <VideoRow
+                        v={v}
+                        cuts={live.filter((c) => c.parentId === v.id).length}
+                        onOpen={(x) => setOpenRequest(x.id)}
+                      />
                       {live.filter((c) => c.parentId === v.id).length > 0 && (
-                        <ul className="mt-2 grid gap-2 border-l border-hair pl-4">
+                        <ul className="mt-1.5 grid gap-1.5 border-l border-hair pl-4">
                           {live
                             .filter((c) => c.parentId === v.id)
                             .map((c) => (
                               <li key={c.id}>
-                                <VideoRow
-                                  v={c}
-                                  onReview={setReviewing}
-                                  onCancel={cancelRequest}
-                                  busy={busy}
-                                />
+                                <VideoRow v={c} onOpen={(x) => setOpenRequest(x.id)} />
                               </li>
                             ))}
                         </ul>
@@ -641,50 +683,215 @@ export function EditingView({
   );
 }
 
-/** One video, in the client's words. */
+/*
+ * One request, as a card you can open.
+ *
+ * The whole row is the control. The old version put a small Review button on
+ * the right of a plain line, so the thing worth doing was the smallest thing
+ * on it; now the card carries its stage as a colour, and opening it is how
+ * you get to the video, the brief, and everything we know about it.
+ */
 function VideoRow({
   v,
+  onOpen,
+  cuts = 0,
+}: {
+  v: Video;
+  onOpen: (v: Video) => void;
+  cuts?: number;
+}) {
+  const stage = stageFor(v.column);
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen(v)}
+      className={`tap w-full rounded-[8px] border p-3.5 text-left transition-colors hover:border-gold/60 ${ROW[v.column] ?? ROW.queued}`}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-body-sm font-semibold text-ink">{v.title}</p>
+          <p className="mt-0.5 font-mono text-label uppercase text-dim">
+            {v.form === "long" ? "Long form" : "Short form"}
+            {v.aspect ? ` / ${v.aspect}` : ""}
+            {cuts ? ` / ${cuts} short ${cuts === 1 ? "cut" : "cuts"}` : ""}
+            {v.dueAt
+              ? ` / due ${day(v.dueAt)}`
+              : v.requestedDueAt
+                ? ` / you asked for ${day(v.requestedDueAt)}`
+                : ""}
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <Chip tone={stage.tone}>{stage.label}</Chip>
+          <ChevronRight size={15} className="text-dim" aria-hidden="true" />
+        </div>
+      </div>
+    </button>
+  );
+}
+
+/*
+ * One request, opened.
+ *
+ * Everything we know about it in one place, so the answer to "what is
+ * happening with this" never needs an email. The video is here when there is
+ * one to watch, and reviewing it is the same screen the rest of the portal
+ * uses.
+ */
+function RequestDetail({
+  v,
+  cuts,
+  onBack,
   onReview,
   onCancel,
   busy,
 }: {
   v: Video;
+  cuts: Video[];
+  onBack: () => void;
   onReview: (v: Video) => void;
   onCancel: (v: Video) => void;
   busy: boolean;
 }) {
+  const stage = stageFor(v.column);
   return (
-    <div className="flex flex-wrap items-start justify-between gap-3">
-      <div className="min-w-0">
-        <p className="text-body-sm font-semibold text-ink">{v.title}</p>
-        <p className="mt-0.5 font-mono text-label uppercase text-dim">
-          {v.form === "long" ? "Long form" : "Short form"}
-          {v.aspect ? ` / ${v.aspect}` : ""}
-          {v.dueAt
-            ? ` / due ${day(v.dueAt)}`
-            : v.requestedDueAt
-              ? ` / you asked for ${day(v.requestedDueAt)}`
-              : ""}
-        </p>
-        {v.column === "waiting" && (
-          <p className="mt-1 text-body-sm text-gold">
-            We have not been able to open your footage yet. Nothing is promised
-            until it is in.
-          </p>
-        )}
-      </div>
-      <div className="flex shrink-0 flex-wrap items-center gap-2">
-        <Chip tone={TONE[v.column] ?? "neutral"}>{v.state}</Chip>
-        {v.canReview && v.videoUrl && (
-          <Button variant="brand" size="sm" onClick={() => onReview(v)}>
-            {v.status === "revisions" ? "See it" : "Review it"}
-          </Button>
-        )}
-        {v.canCancel && (
-          <Button variant="ghost" size="sm" disabled={busy} onClick={() => onCancel(v)}>
-            Pull it back
-          </Button>
-        )}
+    <div>
+      <button
+        type="button"
+        onClick={onBack}
+        className="tap inline-flex items-center gap-2 font-mono text-label uppercase text-muted transition-colors hover:text-gold"
+      >
+        <ArrowLeft size={14} aria-hidden="true" /> Back to this month
+      </button>
+
+      <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_19rem] lg:items-start">
+        <div className="grid min-w-0 gap-3">
+          <Card>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-h4 font-semibold text-ink">{v.title}</h2>
+              <Chip tone={stage.tone}>{stage.label}</Chip>
+              <Chip tone="neutral">{v.form === "long" ? "long form" : "short form"}</Chip>
+              {v.aspect && <Chip tone="neutral">{v.aspect}</Chip>}
+            </div>
+            <p className="mt-2 text-body-sm text-muted">{stage.blurb}</p>
+
+            {v.column === "waiting" && (
+              <div className="mt-3 rounded-[8px] border border-gold/40 bg-gold/[0.06] px-4 py-3">
+                <p className="text-body-sm text-ink">
+                  We have not been able to open your footage yet, so nothing is
+                  promised on this one until it is in. Check the link is shared
+                  with us, or send a new one.
+                </p>
+              </div>
+            )}
+
+            {v.brief && (
+              <div className="mt-4">
+                <p className="font-mono text-label uppercase text-dim">What you asked for</p>
+                <p className="mt-1 whitespace-pre-wrap text-body-sm text-muted">{v.brief}</p>
+              </div>
+            )}
+
+            {v.assetsUrl && (
+              <div className="mt-4">
+                <p className="font-mono text-label uppercase text-dim">Your footage</p>
+                <a
+                  href={v.assetsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1 block break-all text-body-sm text-blue underline underline-offset-2"
+                >
+                  {v.assetsUrl}
+                </a>
+              </div>
+            )}
+          </Card>
+
+          {v.videoUrl ? (
+            <Card title="Your video">
+              <video
+                src={v.videoUrl}
+                controls
+                playsInline
+                preload="metadata"
+                className="w-full rounded-[8px] bg-canvas"
+              />
+              {v.canReview && (
+                <div className="mt-3">
+                  <Button variant="brand" icon={<Play />} onClick={() => onReview(v)}>
+                    {v.status === "revisions" ? "See it and add notes" : "Review and approve"}
+                  </Button>
+                </div>
+              )}
+            </Card>
+          ) : (
+            <Card title="Your video">
+              <p className="text-body-sm text-muted">
+                Nothing to watch yet. It appears here the moment it is ready,
+                and we email you when it does.
+              </p>
+            </Card>
+          )}
+
+          {cuts.length > 0 && (
+            <Card
+              title="Short cuts from this one"
+              description="Each is a video of its own, with its own review and approval."
+            >
+              <div className="grid gap-2">
+                {cuts.map((c) => (
+                  <VideoRow key={c.id} v={c} onOpen={onReview} />
+                ))}
+              </div>
+            </Card>
+          )}
+        </div>
+
+        <div className="grid gap-3">
+          <Card title="Dates">
+            <dl className="grid gap-2 text-body-sm">
+              <div className="flex items-baseline justify-between gap-3">
+                <dt className="text-muted">You asked for</dt>
+                <dd className="text-ink">{day(v.requestedDueAt) || "no date"}</dd>
+              </div>
+              <div className="flex items-baseline justify-between gap-3">
+                <dt className="text-muted">We promised</dt>
+                <dd className="text-ink">{day(v.dueAt) || "not set yet"}</dd>
+              </div>
+              <div className="flex items-baseline justify-between gap-3">
+                <dt className="text-muted">Footage in</dt>
+                <dd className="text-ink">{day(v.assetsReadyAt) || "not yet"}</dd>
+              </div>
+            </dl>
+            <p className="mt-3 text-body-sm text-dim">
+              Two to three business days per video, counted from when your
+              footage reaches us.
+            </p>
+          </Card>
+
+          {v.revisionsUsed > 0 && (
+            <Card title="Changes">
+              <p className="text-body-sm text-muted">
+                {v.revisionsUsed} {v.revisionsUsed === 1 ? "round" : "rounds"} so far.
+                Revisions are unlimited on your plan.
+              </p>
+            </Card>
+          )}
+
+          {v.canCancel && (
+            <Card title="Changed your mind?">
+              <p className="text-body-sm text-muted">
+                Nobody has started this one, so you can pull it back and the
+                slot goes straight back to your month.
+              </p>
+              <div className="mt-3">
+                <Button variant="ghost" size="sm" disabled={busy} onClick={() => onCancel(v)}>
+                  Pull it back
+                </Button>
+              </div>
+            </Card>
+          )}
+        </div>
       </div>
     </div>
   );

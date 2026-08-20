@@ -343,6 +343,9 @@ async function build() {
       position: 0,
       status: "ready",
       video_url: "https://cdn.ghlvideo.com/demo/sample.mp4",
+      /* stamped so the project's activity timeline has real movement in it,
+       * not just the day it was booked */
+      ready_at: days(2),
       due_at: forward(10),
     },
     {

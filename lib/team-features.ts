@@ -20,8 +20,8 @@ export const CUSTOMER_TEAM_FEATURES: TeamFeature[] = [
   },
   {
     key: "subscriptions",
-    label: "View plans",
-    blurb: "See your editing plan and its renewal date.",
+    label: "Editing",
+    blurb: "See the editing plan, what is left of it, and ask for videos.",
   },
   {
     key: "billing",

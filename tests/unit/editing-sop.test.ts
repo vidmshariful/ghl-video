@@ -1,11 +1,13 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import {
+  CLIENT_STAGES,
   EDITING_COLUMNS,
   QC_CHECKS,
   columnFor,
   qcPassed,
   qcRemaining,
+  stageFor,
 } from "@/lib/editing-sop";
 
 /*
@@ -68,5 +70,29 @@ describe("the checks that run before a client sees a cut", () => {
     /* a twenty item checklist gets ticked without being read, which is worse
        than none: it manufactures a record of care that did not happen */
     assert.ok(QC_CHECKS.length <= 8);
+  });
+});
+
+describe("the client's stages and the studio's columns are the same set", () => {
+  test("every board column has a word the client is given for it", () => {
+    for (const c of EDITING_COLUMNS) {
+      assert.ok(
+        CLIENT_STAGES.some((s) => s.key === c.key),
+        `the board has a "${c.key}" column with nothing to call it on the client's side`,
+      );
+    }
+  });
+
+  test("and no client stage exists that the board cannot produce", () => {
+    /* a stage a client can see but the studio can never move a card into is
+       a stage that stays empty forever and reads as broken */
+    for (const s of CLIENT_STAGES) {
+      assert.ok(EDITING_COLUMNS.some((c) => c.key === s.key), `"${s.key}" is unreachable`);
+    }
+  });
+
+  test("stageFor never returns nothing, whatever it is handed", () => {
+    assert.ok(stageFor("approved").label);
+    assert.ok(stageFor("something we removed later").label);
   });
 });

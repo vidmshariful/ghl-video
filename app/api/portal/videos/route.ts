@@ -125,6 +125,10 @@ export async function GET(req: Request) {
       } | null;
 
       return {
+        /* which service line this came from. The portal has a screen per
+         * line, so the grouping is decided here rather than guessed in the
+         * browser from a product code. */
+        line: "premade" as const,
         orderId: o.id as string,
         invoiceNumber: o.invoice_number as string | null,
         orderedAt: o.created_at as string,
@@ -178,6 +182,7 @@ export async function GET(req: Request) {
       );
       if (!list.length) return null;
       return {
+        line: "custom" as const,
         orderId: String(p.id),
         invoiceNumber: null,
         orderedAt: String(p.created_at),
@@ -232,6 +237,7 @@ export async function GET(req: Request) {
         year: "numeric",
       });
       return {
+        line: "editing" as const,
         orderId: String(m.id),
         invoiceNumber: null,
         orderedAt: String(m.period_start),
