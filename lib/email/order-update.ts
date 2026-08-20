@@ -61,6 +61,7 @@ export async function sendOrderUpdateEmail(
     };
 
     const result = await sendEmail({
+      log: { source: "order-update" },
       to: o.customer_email,
       toName: o.customers?.name ?? null,
       subject: renderTemplate(tpl.subject, vars),
@@ -76,6 +77,7 @@ export async function sendOrderUpdateEmail(
     for (const memberEmail of team) {
       const memberVars = { ...vars, customer_name: escapeHtml("there") };
       await sendEmail({
+        log: { source: "order-update" },
         to: memberEmail,
         toName: null,
         subject: renderTemplate(tpl.subject, memberVars),

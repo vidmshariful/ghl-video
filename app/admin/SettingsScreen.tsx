@@ -5,6 +5,40 @@ import { Button, Input, Textarea } from "@/components/portal/ui";
 import { authHeader } from "./client";
 import { TeamScreen } from "./TeamScreen";
 import { EmailTemplatesScreen } from "./EmailTemplatesScreen";
+import { EmailLogView } from "./EmailLogView";
+
+/* Templates and the log, side by side: what we send, and what happened when
+ * we sent it. The log tab is the whole point of the pair, because sends are
+ * fail-soft and a failure used to be invisible by design. */
+function EmailTab() {
+  const [tab, setTab] = useState<"templates" | "log">("log");
+  return (
+    <div>
+      <div className="mb-5 flex gap-1 border-b border-hair">
+        {(
+          [
+            ["log", "Log"],
+            ["templates", "Templates"],
+          ] as const
+        ).map(([k, label]) => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => setTab(k)}
+            className={`tap rounded-t-[8px] px-4 py-2.5 text-body-sm transition-colors ${
+              tab === k
+                ? "border border-b-0 border-hair bg-surface font-semibold text-gold"
+                : "text-muted hover:text-ink"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {tab === "log" ? <EmailLogView /> : <EmailTemplatesScreen embedded />}
+    </div>
+  );
+}
 import { HEAD_SCRIPTS, BODY_END_SCRIPTS } from "@/lib/chrome";
 import { AvatarUploader, PasswordCard } from "@/components/portal/account";
 import { effectiveFeatures, type Role } from "./roles";
@@ -92,7 +126,7 @@ export function SettingsScreen({
         ) : tab === "integrations" && isAdmin ? (
           <IntegrationsTab />
         ) : tab === "emails" && granted.includes("emails") ? (
-          <EmailTemplatesScreen embedded />
+          <EmailTab />
         ) : tab === "code" && granted.includes("code") ? (
           <CodeTab />
         ) : (

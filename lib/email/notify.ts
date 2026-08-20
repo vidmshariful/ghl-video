@@ -4,6 +4,7 @@ import { sendEmail } from "./send";
 import { DEFAULT_TEMPLATES, P, SITE_URL, emailButton, escapeHtml, renderTemplate, wrapEmail } from "./templates";
 import { pushNotification, pushAdminNotifications } from "@/lib/notifications";
 import { mayEmail, type EmailPrefs } from "./prefs";
+import { logEmail } from "./log";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -39,7 +40,21 @@ async function sendTemplate(
   try {
     if (!to) return false;
     const tpl = await loadTemplate(db, key);
-    if (!tpl || !tpl.enabled) return false;
+    if (!tpl) return false;
+    if (!tpl.enabled) {
+      /* an admin switched this template off; the log says so, because a
+         silent skip and a failure look identical from the outside */
+      await logEmail({
+        to,
+        toName,
+        subject: renderTemplate(tpl.subject, vars),
+        templateKey: key,
+        source: "template",
+        status: "skipped",
+        error: "The template is switched off in admin",
+      });
+      return false;
+    }
 
     /*
      * What this person has chosen. One gate for every client email, here
@@ -54,6 +69,15 @@ async function sendTemplate(
       .ilike("email", to)
       .maybeSingle();
     if (!mayEmail(key, (who?.email_prefs as EmailPrefs | null) ?? null)) {
+      await logEmail({
+        to,
+        toName,
+        subject: renderTemplate(tpl.subject, vars),
+        templateKey: key,
+        source: "template",
+        status: "held",
+        error: "Held by the client's own email preferences",
+      });
       return false;
     }
     const result = await sendEmail({
@@ -61,6 +85,7 @@ async function sendTemplate(
       toName,
       subject: renderTemplate(tpl.subject, vars),
       html: wrapEmail(renderTemplate(tpl.body, vars)),
+      log: { source: "template", templateKey: key },
     });
     if (!result.ok) console.error(`[email] ${key} not sent to ${to}:`, result.error);
     return result.ok;

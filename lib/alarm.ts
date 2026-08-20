@@ -194,7 +194,7 @@ async function tell(
     `);
 
     for (const to of emails) {
-      await sendEmail({ to, subject: `Action needed: ${humanKind(a.kind)}`, html });
+      await sendEmail({ to, subject: `Action needed: ${humanKind(a.kind)}`, html, log: { source: "alarm" } });
     }
   } catch (e) {
     console.error("[alarm] email failed:", e instanceof Error ? e.message : e);

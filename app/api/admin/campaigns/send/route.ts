@@ -167,6 +167,7 @@ export async function POST(req: Request) {
       to: person.email,
       toName: person.name,
       subject: campaign.title,
+      log: { source: "campaign", meta: { campaign: campaign.id } },
       html: offerEmailHtml({
         title: campaign.title,
         body: campaign.body,

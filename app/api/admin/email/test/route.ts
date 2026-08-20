@@ -27,6 +27,7 @@ export async function POST(req: Request) {
   const html = typeof body.body === "string" ? body.body : "";
 
   const result = await sendEmail({
+      log: { source: "test" },
     to: admin.email,
     subject: `[Test] ${renderTemplate(subject, SAMPLE)}`,
     html: wrapEmail(renderTemplate(html, SAMPLE)),

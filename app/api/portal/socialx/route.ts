@@ -86,6 +86,7 @@ export async function POST(req: Request) {
       import("@/lib/email/templates"),
     ]);
     await sendEmail({
+      log: { source: "socialx" },
       to: process.env.ADMIN_ALERT_EMAIL ?? "hi@ghlvideo.com",
       toName: null,
       subject: `SocialX code request: ${name}`,

@@ -56,6 +56,7 @@ export async function POST(req: Request) {
     import("@/lib/email/templates"),
   ]);
   const result = await sendEmail({
+      log: { source: "test" },
     to: auth.email,
     toName: null,
     subject: "Test email from your admin",
