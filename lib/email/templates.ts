@@ -59,6 +59,7 @@ export const TEMPLATE_VARIABLES: Record<string, string[]> = {
   partner_invite: ["partner_name", "partner_email", "partners_url"],
   team_invite: ["member_name", "member_email", "owner_name", "portal_label", "portal_url"],
   portal_welcome: ["customer_name", "customer_email", "portal_url"],
+  approval_request: ["customer_name", "video_title", "stage_label", "portal_url"],
   admin_new_order: ["customer_name", "customer_email", "product_name", "order_code", "amount", "admin_url"],
   admin_new_application: ["name", "email", "channel", "audience", "admin_url"],
   admin_dispute: ["customer_email", "product_name", "order_code", "amount", "reason", "admin_url"],
@@ -234,6 +235,17 @@ ${btn("{{contact_url}}", "Book a call")}`,
 <p style="${P}">Hi {{partner_name}}, your partner account is ready. Your links, promo assets, live stats, and earnings all live in your portal.</p>
 ${btn("{{partners_url}}", "Open your portal")}
 <p style="${SMALL}margin-top:22px;">First time signing in? Use <strong style="color:#9096a8;">{{partner_email}}</strong> and pick "Set it by email" on the sign-in page to create your password.</p>`,
+  },
+  {
+    key: "approval_request",
+    name: "Approval request",
+    description:
+      "Sent when the studio hands a piece of a custom video to the client for approval: a script, a voiceover, an animation draft or the final delivery.",
+    subject: "Your review: {{stage_label}} for {{video_title}}",
+    body: `<h1 style="${H}">A piece of your video is ready for you.</h1>
+<p style="${P}">Hi {{customer_name}}, the <strong style="${STRONG}">{{stage_label}}</strong> for <strong style="${STRONG}">{{video_title}}</strong> is waiting on your approval. Nothing moves until you have had your say, so it is worth a look today.</p>
+${btn("{{portal_url}}", "Review it now")}
+<p style="${SMALL}margin-top:22px;">Open the project in your portal, watch or read it, and approve it or tell us what to change.</p>`,
   },
   {
     key: "portal_welcome",

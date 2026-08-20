@@ -68,7 +68,44 @@ type Project = {
     assignedTo: string | null;
     videoUrl: string | null;
     dueAt: string | null;
+    revisionRound: number;
+    pipeline: PipelineShape;
   }[];
+};
+
+type StationShape = {
+  state: "todo" | "with_us" | "with_client" | "done";
+  provided?: boolean;
+  gate?: boolean;
+  url?: string | null;
+  at?: string | null;
+};
+type PipelineShape = Record<
+  "script" | "voiceover" | "design" | "animation" | "sfx" | "delivery",
+  StationShape
+>;
+
+const STATION_META: { key: keyof PipelineShape; label: string; providable: boolean; gateable: boolean }[] = [
+  { key: "script", label: "Script", providable: true, gateable: false },
+  { key: "voiceover", label: "Voiceover", providable: true, gateable: false },
+  { key: "design", label: "Design", providable: false, gateable: true },
+  { key: "animation", label: "Animation", providable: false, gateable: false },
+  { key: "sfx", label: "Sound", providable: false, gateable: false },
+  { key: "delivery", label: "Delivery", providable: false, gateable: false },
+];
+
+const STATION_STATE_WORD: Record<StationShape["state"], string> = {
+  todo: "Not started",
+  with_us: "With us",
+  with_client: "With client",
+  done: "Done",
+};
+
+const STATION_DOT: Record<StationShape["state"], string> = {
+  todo: "bg-hair",
+  with_us: "bg-blue",
+  with_client: "bg-gold",
+  done: "bg-green",
 };
 
 type Client = {
@@ -567,6 +604,7 @@ function ProjectDrawer({
 }) {
   const [newTitle, setNewTitle] = useState("");
   const [linkFor, setLinkFor] = useState<string | null>(null);
+  const [lineFor, setLineFor] = useState<string | null>(null);
   const [link, setLink] = useState("");
   const [busy, setBusy] = useState(false);
   /* closing hides a job from the board, so the button asks twice: the first
@@ -714,6 +752,15 @@ function ProjectDrawer({
                     </Button>
                   </div>
                 )}
+                <PipelinePanel
+                  v={v}
+                  open={lineFor === v.id}
+                  onToggle={() => setLineFor(lineFor === v.id ? null : v.id)}
+                  onStation={(key, patch, requestApproval) =>
+                    onSaveVideo(v.id, { station: { key, ...patch, requestApproval } })
+                  }
+                  onAddDraft={(url, note) => onSaveVideo(v.id, { action: "add_draft", url, note })}
+                />
               </li>
             ))}
           </ul>
@@ -770,6 +817,204 @@ function ProjectDrawer({
       </Card>
 
       <ItemNotes target={{ projectId: p.id }} authHeader={authHeader} />
+    </div>
+  );
+}
+
+/*
+ * The production line inside one video, from Tanvir's side. Six stations:
+ * flip who holds each one, keep the file on it, mark what the client
+ * provided, and hand a station to the client for approval, which emails
+ * them and lights their portal. Animation gets its drafts as versions so
+ * a note about 0:12 keeps pointing at the cut it was written on.
+ */
+function PipelinePanel({
+  v,
+  open,
+  onToggle,
+  onStation,
+  onAddDraft,
+}: {
+  v: Project["videos"][number];
+  open: boolean;
+  onToggle: () => void;
+  onStation: (
+    key: keyof PipelineShape,
+    patch: Partial<StationShape>,
+    requestApproval?: boolean,
+  ) => Promise<void>;
+  onAddDraft: (url: string, note: string) => Promise<void>;
+}) {
+  const [urls, setUrls] = useState<Record<string, string>>({});
+  const [draft, setDraft] = useState("");
+  const [busy, setBusy] = useState<string | null>(null);
+  const line = v.pipeline;
+  const doneCount = STATION_META.filter((m) => line[m.key]?.state === "done").length;
+
+  const run = async (tag: string, fn: () => Promise<void>) => {
+    setBusy(tag);
+    await fn();
+    setBusy(null);
+  };
+
+  return (
+    <div className="mt-2">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="tap flex w-full items-center justify-between font-mono text-label uppercase text-dim transition-colors hover:text-gold"
+      >
+        <span>Production line, {doneCount} of 6 done</span>
+        <span className="flex items-center gap-1.5">
+          {STATION_META.map((m) => (
+            <span
+              key={m.key}
+              title={`${m.label}: ${STATION_STATE_WORD[line[m.key]?.state ?? "todo"]}`}
+              className={`h-1.5 w-4 rounded-full ${STATION_DOT[line[m.key]?.state ?? "todo"]}`}
+            />
+          ))}
+          <span aria-hidden="true">{open ? "\u2212" : "+"}</span>
+        </span>
+      </button>
+
+      {open && (
+        <div className="mt-2 grid gap-1.5">
+          {v.revisionRound > 0 && (
+            <p className="font-mono text-label uppercase text-dim">
+              revision round {v.revisionRound}
+            </p>
+          )}
+          {STATION_META.map((m) => {
+            const st = line[m.key] ?? { state: "todo" as const };
+            const gated = Boolean(st.gate) && !st.provided;
+            return (
+              <div key={m.key} className="rounded-[8px] border border-hair bg-canvas p-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="flex items-center gap-2">
+                    <span
+                      aria-hidden="true"
+                      className={`h-2 w-2 rounded-full ${STATION_DOT[st.state]}`}
+                    />
+                    <span className="text-body-sm font-semibold text-ink">{m.label}</span>
+                    {st.provided && <Chip tone="neutral">client provided</Chip>}
+                    {gated && <Chip tone="warn">needs their approval</Chip>}
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    {m.providable && (
+                      <button
+                        type="button"
+                        disabled={busy !== null}
+                        onClick={() =>
+                          void run(m.key, () => onStation(m.key, { provided: !st.provided }))
+                        }
+                        className="tap font-mono text-label uppercase text-dim transition-colors hover:text-gold"
+                      >
+                        {st.provided ? "ours after all" : "theirs"}
+                      </button>
+                    )}
+                    {m.gateable && (
+                      <button
+                        type="button"
+                        disabled={busy !== null}
+                        onClick={() => void run(m.key, () => onStation(m.key, { gate: !st.gate }))}
+                        className="tap font-mono text-label uppercase text-dim transition-colors hover:text-gold"
+                      >
+                        {st.gate ? "no approval" : "ask approval"}
+                      </button>
+                    )}
+                    <Select
+                      value={st.state}
+                      disabled={st.provided}
+                      onChange={(e) =>
+                        void run(m.key, () =>
+                          onStation(m.key, { state: e.target.value as StationShape["state"] }),
+                        )
+                      }
+                      aria-label={`${m.label} state`}
+                    >
+                      {(Object.keys(STATION_STATE_WORD) as StationShape["state"][]).map((k) => (
+                        <option key={k} value={k}>
+                          {STATION_STATE_WORD[k]}
+                        </option>
+                      ))}
+                    </Select>
+                  </span>
+                </div>
+
+                {m.key === "animation" ? (
+                  <div className="mt-2 flex gap-2">
+                    <Input
+                      value={draft}
+                      onChange={(e) => setDraft(e.target.value)}
+                      placeholder="New draft link, becomes the next version"
+                    />
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={busy !== null || !draft.trim()}
+                      onClick={() =>
+                        void run("draft", async () => {
+                          await onAddDraft(draft.trim(), "");
+                          setDraft("");
+                        })
+                      }
+                    >
+                      Add draft
+                    </Button>
+                  </div>
+                ) : (
+                  !st.provided &&
+                  m.key !== "sfx" && (
+                    <div className="mt-2 flex gap-2">
+                      <Input
+                        value={urls[m.key] ?? st.url ?? ""}
+                        onChange={(e) => setUrls({ ...urls, [m.key]: e.target.value })}
+                        placeholder={
+                          m.key === "design" ? "Figma link" : `Link to the ${m.label.toLowerCase()}`
+                        }
+                      />
+                      {(urls[m.key] ?? "") !== (st.url ?? "") && urls[m.key] !== undefined && (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          disabled={busy !== null}
+                          onClick={() =>
+                            void run(m.key, () => onStation(m.key, { url: urls[m.key] ?? "" }))
+                          }
+                        >
+                          Save
+                        </Button>
+                      )}
+                    </div>
+                  )
+                )}
+
+                {gated && st.state !== "done" && st.state !== "with_client" && (
+                  <div className="mt-2">
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      disabled={busy !== null || (!st.url && m.key !== "delivery" && m.key !== "animation") || (m.key === "animation" && !v.videoUrl)}
+                      onClick={() =>
+                        void run(`send-${m.key}`, () =>
+                          onStation(m.key, { state: "with_client" }, true),
+                        )
+                      }
+                    >
+                      Send for their approval
+                    </Button>
+                  </div>
+                )}
+                {st.state === "with_client" && (
+                  <p className="mt-1.5 font-mono text-label uppercase text-gold">
+                    with the client{st.at ? ` since ${when(st.at)}` : ""}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

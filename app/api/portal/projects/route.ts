@@ -9,6 +9,15 @@ import {
   REVISIONS_INCLUDED,
   type DeliverableStatus,
 } from "@/lib/deliverable-status";
+import {
+  ballInCourt,
+  clientStationWord,
+  currentStation,
+  normalizePipeline,
+  pipelinePercent,
+  STATION_ORDER,
+  STATIONS,
+} from "@/lib/pipeline";
 
 export const runtime = "nodejs";
 
@@ -42,9 +51,9 @@ export async function GET(req: Request) {
   const { data: videos } = ids.length
     ? await db
         .from("order_deliverables")
-        .select(
-          "id, project_id, title, status, due_at, video_url, thumbnail_url, position, note, revision_round, created_at, ready_at, approved_at",
-        )
+        /* select * so this runs the same before and after the pipeline
+           column exists; normalizePipeline treats missing as a fresh line */
+        .select("*")
         .in("project_id", ids)
         .order("position")
     : { data: [] };
@@ -80,6 +89,25 @@ export async function GET(req: Request) {
               canRequestChanges: canRequestChanges(vs, Number(v.revision_round ?? 0)),
               revisionsIncluded: REVISIONS_INCLUDED,
               revisionsUsed: Number(v.revision_round ?? 0),
+              /* the six-station production line, in the client's words.
+                 Sound is shown but never handed over as a file. */
+              pipeline: (() => {
+                const line = normalizePipeline(v.pipeline);
+                return {
+                  ball: ballInCourt(line),
+                  percent: pipelinePercent(line),
+                  current: currentStation(line),
+                  stations: STATION_ORDER.map((k) => ({
+                    key: k,
+                    label: STATIONS[k].label,
+                    state: line[k].state,
+                    word: clientStationWord(k, line[k]),
+                    gated: Boolean(line[k].gate) && !line[k].provided,
+                    url: STATIONS[k].clientFile ? (line[k].url ?? null) : null,
+                    at: line[k].at ?? null,
+                  })),
+                };
+              })(),
             };
           }),
           /* What has actually happened, built from the timestamps the work
@@ -108,6 +136,20 @@ function activityFor(project: Row, videos: Row[]) {
     if (v.approved_at) events.push({ at: String(v.approved_at), body: `You approved ${title}.` });
     if (v.status === "revisions")
       events.push({ at: String(v.created_at), body: `Your changes to ${title} are in hand.` });
+    /* the production line writes its own history: every station that has
+       moved carries the date it moved */
+    const line = normalizePipeline(v.pipeline);
+    for (const k of STATION_ORDER) {
+      const st = line[k];
+      if (!st.at) continue;
+      if (st.provided) continue;
+      if (st.state === "done")
+        events.push({ at: st.at, body: `${STATIONS[k].label} finished on ${title}.` });
+      else if (st.state === "with_client")
+        events.push({ at: st.at, body: `${STATIONS[k].label} for ${title} is waiting on you.` });
+      else if (st.state === "with_us")
+        events.push({ at: st.at, body: `${STATIONS[k].label} started on ${title}.` });
+    }
   }
   return events.sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).slice(0, 20);
 }

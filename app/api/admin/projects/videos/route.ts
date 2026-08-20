@@ -1,6 +1,15 @@
 import { NextResponse } from "next/server";
 import { verifyAdmin } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
+import {
+  normalizePipeline,
+  statusForPipeline,
+  STATION_ORDER,
+  STATIONS,
+  type StationKey,
+  type StationState,
+} from "@/lib/pipeline";
+import { addVersion } from "@/lib/versions";
 
 export const runtime = "nodejs";
 
@@ -74,6 +83,110 @@ export async function PATCH(req: Request) {
     .eq("project_id", projectId)
     .maybeSingle();
   if (!current) return NextResponse.json({ error: "Video not found." }, { status: 404 });
+
+  /* ---- the production line ---- */
+  const stationOf = (v: unknown): StationKey | null =>
+    typeof v === "string" && (STATION_ORDER as string[]).includes(v) ? (v as StationKey) : null;
+
+  if (b.station && typeof b.station === "object") {
+    const st = b.station as Record<string, unknown>;
+    const key = stationOf(st.key);
+    if (!key) return NextResponse.json({ error: "Which station?" }, { status: 400 });
+
+    const { data: full } = await db
+      .from("order_deliverables")
+      .select("*")
+      .eq("id", id)
+      .single();
+    const line = normalizePipeline(full?.pipeline);
+    const now = new Date().toISOString();
+
+    const nextStation = { ...line[key] };
+    const state = st.state;
+    if (state === "todo" || state === "with_us" || state === "with_client" || state === "done") {
+      nextStation.state = state as StationState;
+      nextStation.at = now;
+    }
+    if ("url" in st)
+      nextStation.url = typeof st.url === "string" && st.url.trim() ? st.url.trim() : null;
+    if ("provided" in st && STATIONS[key].providable) nextStation.provided = Boolean(st.provided);
+    if ("gate" in st) nextStation.gate = Boolean(st.gate);
+
+    const line2 = normalizePipeline({ ...line, [key]: nextStation });
+    const derived = statusForPipeline(line2, Number(full?.revision_round ?? 0));
+    const write: Record<string, unknown> = { pipeline: line2, status: derived };
+    if (derived === "ready") write.ready_at = now;
+    if (derived === "approved") write.approved_at = now;
+    /* the animation and delivery stations carry the watchable file */
+    if ((key === "animation" || key === "delivery") && nextStation.url)
+      write.video_url = nextStation.url;
+
+    const { error } = await db.from("order_deliverables").update(write).eq("id", id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+    if (st.requestApproval === true) {
+      /* handing it to the client without a thing to look at is a bounce */
+      if (!line2[key].url && key !== "delivery")
+        return NextResponse.json({ ok: true, warning: "No file on that station yet." });
+      const { data: proj } = await db
+        .from("projects")
+        .select("customer_email")
+        .eq("id", projectId)
+        .single();
+      const email = String(proj?.customer_email ?? "");
+      const { data: cust } = await db
+        .from("customers")
+        .select("name")
+        .ilike("email", email)
+        .maybeSingle();
+      const { sendApprovalRequestEmail } = await import("@/lib/email/notify");
+      await sendApprovalRequestEmail(db, {
+        email,
+        name: (cust?.name as string | null) ?? null,
+        videoTitle: String(full?.title ?? "your video"),
+        stageLabel: STATIONS[key].label,
+      });
+      const { pushNotification } = await import("@/lib/notifications");
+      await pushNotification(db, {
+        audience: "customer",
+        email,
+        kind: "approval_request",
+        title: `Your review: ${STATIONS[key].label}`,
+        body: `${String(full?.title ?? "A video")} is waiting on your approval.`,
+        href: "custom",
+      });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
+  if (b.action === "add_draft") {
+    const url = str(b.url, 2000);
+    if (!url) return NextResponse.json({ error: "Paste the draft link first." }, { status: 400 });
+    const v = await addVersion(db, id, url, admin.email, str(b.note, 400));
+    if (!v) return NextResponse.json({ error: "Could not save that draft." }, { status: 400 });
+
+    const { data: full } = await db
+      .from("order_deliverables")
+      .select("*")
+      .eq("id", id)
+      .single();
+    const line = normalizePipeline(full?.pipeline);
+    const now = new Date().toISOString();
+    const line2 = normalizePipeline({
+      ...line,
+      animation: { ...line.animation, url, at: now, state: line.animation.state === "todo" ? "with_us" : line.animation.state },
+    });
+    const { error } = await db
+      .from("order_deliverables")
+      .update({
+        pipeline: line2,
+        video_url: url,
+        status: statusForPipeline(line2, Number(full?.revision_round ?? 0)),
+      })
+      .eq("id", id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json({ ok: true, version: v.version });
+  }
 
   const patch: Record<string, unknown> = {};
   if (STATUSES.includes(b.status as (typeof STATUSES)[number])) {

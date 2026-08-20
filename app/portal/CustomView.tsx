@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ArrowLeft, Play } from "lucide-react";
-import { Button, Card, Chip, EmptyState, PageHeader } from "@/components/portal/ui";
+import { Button, Card, Chip, EmptyState, Input, PageHeader } from "@/components/portal/ui";
 import { StageTimeline, WorkCard } from "@/components/portal/board";
 import { VideoReview } from "./VideoReview";
 import { DownloadAll } from "@/components/portal/DownloadAll";
@@ -20,6 +20,16 @@ import { DownloadAll } from "@/components/portal/DownloadAll";
  * where they left them.
  */
 
+type PipelineStation = {
+  key: string;
+  label: string;
+  state: "todo" | "with_us" | "with_client" | "done";
+  word: string;
+  gated: boolean;
+  url: string | null;
+  at: string | null;
+};
+
 type Video = {
   id: string;
   title: string;
@@ -32,6 +42,12 @@ type Video = {
   canRequestChanges: boolean;
   revisionsIncluded: number;
   revisionsUsed: number;
+  pipeline: {
+    ball: "us" | "client" | null;
+    percent: number;
+    current: string | null;
+    stations: PipelineStation[];
+  };
 };
 
 type Project = {
@@ -284,6 +300,12 @@ export function CustomView({
                             {body}
                           </div>
                         )}
+                        <ProductionLine
+                          v={v}
+                          authedFetch={authedFetch}
+                          onChanged={() => void load()}
+                          onReview={() => setPlaying(v)}
+                        />
                       </li>
                     );
                   })}
@@ -420,5 +442,162 @@ function ProjectRow({ p, onOpen }: { p: Project; onOpen: (id: string) => void })
       tone={TONE[p.status] ?? "neutral"}
       onOpen={() => onOpen(p.id)}
     />
+  );
+}
+
+/*
+ * The production line under one video, in the client's words. Six stations,
+ * the lit one is where the work stands, and anything waiting on them
+ * carries its buttons right there: approve the script or the voiceover in
+ * place, or open the player for animation and the final cut.
+ */
+function ProductionLine({
+  v,
+  authedFetch,
+  onChanged,
+  onReview,
+}: {
+  v: Video;
+  authedFetch: (path: string, init?: RequestInit) => Promise<Record<string, unknown>>;
+  onChanged: () => void;
+  onReview: () => void;
+}) {
+  const line = v.pipeline;
+  const needsThem = line.ball === "client";
+  const [open, setOpen] = useState(needsThem);
+  const [noteFor, setNoteFor] = useState<string | null>(null);
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const touched = line.stations.some((st) => st.state !== "todo");
+  if (!touched) return null;
+
+  async function gate(stage: string, action: "approve" | "changes") {
+    setBusy(true);
+    setErr("");
+    try {
+      const j = await authedFetch(`/api/portal/projects/videos/${v.id}/gate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stage, action, note: action === "changes" ? note : undefined }),
+      });
+      if (j.error) setErr(String(j.error));
+      else {
+        setNoteFor(null);
+        setNote("");
+        onChanged();
+      }
+    } catch {
+      setErr("That did not go through. Please try again.");
+    }
+    setBusy(false);
+  }
+
+  const DOT: Record<PipelineStation["state"], string> = {
+    todo: "bg-hair",
+    with_us: "bg-blue",
+    with_client: "bg-gold",
+    done: "bg-green",
+  };
+
+  return (
+    <div className="mt-1.5 rounded-[8px] border border-hair bg-canvas px-3 py-2">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="tap flex w-full items-center justify-between gap-2 font-mono text-label uppercase text-dim transition-colors hover:text-gold"
+        aria-expanded={open}
+      >
+        <span>
+          {needsThem ? "Waiting on you" : line.ball === null ? "All done" : "In the studio"}
+          {", "}
+          {line.percent}% through
+        </span>
+        <span className="flex items-center gap-1.5">
+          {line.stations.map((st) => (
+            <span
+              key={st.key}
+              title={`${st.label}: ${st.word}`}
+              className={`h-1.5 w-4 rounded-full ${DOT[st.state]}`}
+            />
+          ))}
+          <span aria-hidden="true">{open ? "\u2212" : "+"}</span>
+        </span>
+      </button>
+
+      {open && (
+        <ol className="mt-2 grid gap-1.5">
+          {line.stations.map((st) => {
+            const mine = st.state === "with_client" && st.gated;
+            const playerGate = st.key === "animation" || st.key === "delivery";
+            return (
+              <li key={st.key} className="flex flex-wrap items-center justify-between gap-2">
+                <span className="flex min-w-0 items-center gap-2">
+                  <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${DOT[st.state]}`} />
+                  <span className={`text-body-sm ${st.state === "todo" ? "text-dim" : "text-ink"}`}>
+                    {st.label}
+                  </span>
+                  <span className={`font-mono text-label uppercase ${mine ? "text-gold" : "text-dim"}`}>
+                    {st.word}
+                  </span>
+                </span>
+                <span className="flex shrink-0 items-center gap-2">
+                  {st.url && !playerGate && (
+                    <a
+                      href={st.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="tap font-mono text-label uppercase text-muted transition-colors hover:text-gold"
+                    >
+                      Open it
+                    </a>
+                  )}
+                  {mine && playerGate && (
+                    <Button size="sm" variant="brand" onClick={onReview}>
+                      Review it
+                    </Button>
+                  )}
+                  {mine && !playerGate && (
+                    <>
+                      <Button size="sm" variant="brand" disabled={busy} onClick={() => void gate(st.key, "approve")}>
+                        Approve
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        disabled={busy}
+                        onClick={() => setNoteFor(noteFor === st.key ? null : st.key)}
+                      >
+                        Ask for changes
+                      </Button>
+                    </>
+                  )}
+                </span>
+                {noteFor === st.key && (
+                  <span className="flex w-full gap-2">
+                    <Input
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
+                      placeholder="What should change?"
+                      aria-label={`Changes to the ${st.label.toLowerCase()}`}
+                    />
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={busy || !note.trim()}
+                      onClick={() => void gate(st.key, "changes")}
+                    >
+                      Send
+                    </Button>
+                  </span>
+                )}
+              </li>
+            );
+          })}
+          {err && <li className="text-body-sm text-error">{err}</li>}
+        </ol>
+      )}
+    </div>
   );
 }

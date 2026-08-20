@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { verifyAdmin } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
+import { normalizePipeline } from "@/lib/pipeline";
 import { PROJECT_STATUSES, projectBalance, type ProjectStatus } from "@/lib/projects";
 
 export const runtime = "nodejs";
@@ -38,7 +39,9 @@ export async function GET(req: Request) {
       .not("project_id", "is", null),
     db
       .from("order_deliverables")
-      .select("id, project_id, title, status, assigned_admin_email, video_url, due_at, position")
+      /* select * so this runs the same before and after the pipeline column
+         exists; normalizePipeline treats missing as a fresh line */
+      .select("*")
       .not("project_id", "is", null)
       .order("position", { ascending: true }),
   ]);
@@ -106,6 +109,8 @@ export async function GET(req: Request) {
           assignedTo: (v.assigned_admin_email as string | null) ?? null,
           videoUrl: (v.video_url as string | null) ?? null,
           dueAt: (v.due_at as string | null) ?? null,
+          revisionRound: Number(v.revision_round ?? 0),
+          pipeline: normalizePipeline(v.pipeline),
         })),
     };
   });

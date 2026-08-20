@@ -508,6 +508,23 @@ export async function sendPartnerInviteEmail(
 /** A customer or partner added a teammate: email them the way in, and put
  *  the invite on their bell (personal, never fanned out). */
 /**
+ * A piece of a custom video is ready for the client's say: a script we
+ * wrote, a voiceover we recorded, an animation draft, the final file.
+ * Fired when the studio flips a pipeline station to the client's court.
+ */
+export async function sendApprovalRequestEmail(
+  db: SupabaseClient,
+  input: { email: string; name: string | null; videoTitle: string; stageLabel: string },
+): Promise<void> {
+  await sendTemplate(db, "approval_request", input.email, input.name, {
+    customer_name: escapeHtml(input.name || "there"),
+    video_title: escapeHtml(input.videoTitle),
+    stage_label: escapeHtml(input.stageLabel),
+    portal_url: `${SITE_URL}/portal`,
+  });
+}
+
+/**
  * The hand-fired welcome for an account the studio created itself: no order,
  * no checkout, so nothing else would ever tell this person their portal
  * exists. Sent from the customer's record in admin.

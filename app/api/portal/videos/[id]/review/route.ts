@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { contextCan, resolvePortalContext } from "@/lib/account-team";
 import { isWatchable, type DeliverableStatus } from "@/lib/deliverable-status";
+import {
+  approveStation,
+  normalizePipeline,
+  returnStation,
+  statusForPipeline,
+} from "@/lib/pipeline";
 import { addComment, clientVerdict, listComments, stamp } from "@/lib/review";
 import { listVersions } from "@/lib/versions";
 import { pushOrderOwnerNotification } from "@/lib/notifications";
@@ -25,21 +31,34 @@ async function guard(req: Request, deliverableId: string) {
 
   const { data: d } = await db
     .from("order_deliverables")
-    .select("id, order_id, status, title, revision_round")
+    .select("id, order_id, project_id, status, title, revision_round, pipeline")
     .eq("id", deliverableId)
     .maybeSingle();
   if (!d) return { fail: NextResponse.json({ error: "Not found." }, { status: 404 }) };
 
-  // the video must hang off an order this account actually owns
-  const { data: order } = await db
-    .from("orders")
-    .select("id, customer_email, status")
-    .eq("id", d.order_id)
-    .eq("customer_email", ctx.ownerEmail)
-    .maybeSingle();
-  if (!order) return { fail: NextResponse.json({ error: "Not found." }, { status: 404 }) };
-
-  return { db, ctx, deliverable: d, order };
+  /* the video must hang off work this account actually owns: an order, or
+     a custom project. Being signed in is not on its own permission. */
+  if (d.order_id) {
+    const { data: order } = await db
+      .from("orders")
+      .select("id, customer_email, status")
+      .eq("id", d.order_id)
+      .eq("customer_email", ctx.ownerEmail)
+      .maybeSingle();
+    if (!order) return { fail: NextResponse.json({ error: "Not found." }, { status: 404 }) };
+    return { db, ctx, deliverable: d, order };
+  }
+  if (d.project_id) {
+    const { data: project } = await db
+      .from("projects")
+      .select("id, customer_email")
+      .eq("id", d.project_id)
+      .ilike("customer_email", ctx.ownerEmail)
+      .maybeSingle();
+    if (!project) return { fail: NextResponse.json({ error: "Not found." }, { status: 404 }) };
+    return { db, ctx, deliverable: d, order: null };
+  }
+  return { fail: NextResponse.json({ error: "Not found." }, { status: 404 }) };
 }
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -126,7 +145,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (!res) return NextResponse.json({ error: "Could not post that." }, { status: 400 });
 
     const where = stamp(res.comment.at_seconds);
-    await pushOrderOwnerNotification(g.db, g.order.id as string, {
+    if (g.order) await pushOrderOwnerNotification(g.db, g.order.id as string, {
       kind: "video_feedback",
       title: `Feedback on ${g.deliverable.title}`,
       body: `${name || who}${where ? ` at ${where}` : ""}: ${text.slice(0, 140)}`,
@@ -151,13 +170,40 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const res = await clientVerdict(g.db, id, action, who);
     if (!res.ok) return NextResponse.json({ error: res.error }, { status: 400 });
 
-    await g.db.from("order_events").insert({
-      order_id: g.order.id,
-      event_type: action === "approve" ? "client_approved_video" : "client_requested_changes",
-      payload: { deliverable_id: id, by: who },
-    });
+    /*
+     * A custom project video carries the six-station line, and the review
+     * screen is its animation and delivery gate. Approving the animation
+     * draft closes that station and hands sound to us; only approving the
+     * final delivery finishes the video, whatever clientVerdict just wrote.
+     */
+    if (g.deliverable.project_id) {
+      const line = normalizePipeline(g.deliverable.pipeline);
+      const now = new Date().toISOString();
+      const key = line.delivery.state === "with_client" ? "delivery" : "animation";
+      const { data: fresh } = await g.db
+        .from("order_deliverables")
+        .select("revision_round")
+        .eq("id", id)
+        .single();
+      const round = Number(fresh?.revision_round ?? 0);
+      const line2 =
+        action === "approve" ? approveStation(line, key, now) : returnStation(line, key, now);
+      const derived = statusForPipeline(line2, round);
+      await g.db
+        .from("order_deliverables")
+        .update({ pipeline: line2, status: derived, updated_at: now })
+        .eq("id", id);
+      (res as { status: string }).status = derived;
+    }
 
-    await pushOrderOwnerNotification(g.db, g.order.id as string, {
+    if (g.order)
+      await g.db.from("order_events").insert({
+        order_id: g.order.id,
+        event_type: action === "approve" ? "client_approved_video" : "client_requested_changes",
+        payload: { deliverable_id: id, by: who },
+      });
+
+    if (g.order) await pushOrderOwnerNotification(g.db, g.order.id as string, {
       kind: action === "approve" ? "video_approved" : "video_changes",
       title:
         action === "approve"
