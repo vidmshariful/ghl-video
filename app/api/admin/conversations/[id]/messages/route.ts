@@ -52,9 +52,76 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     .select("id, sender_role, sender_name, body, attachments, created_at")
     .eq("conversation_id", id)
     .order("created_at", { ascending: true });
-  const messages = await Promise.all(
+  const chat = await Promise.all(
     ((data ?? []) as MessageRow[]).map((m) => shapeMessage(db, m)),
   );
+
+  /*
+   * The unified part: what the platform did around this conversation,
+   * merged in at read time, HighLevel-inbox style.
+   *
+   * Read-time on purpose. Writing system rows into messages would mean
+   * every email hook also writes chat, two records of one event, and the
+   * day they disagree nobody knows which lied. The log and the updates
+   * table already hold the truth; this route just deals one timeline.
+   *
+   * An order thread carries its order's updates. The general thread
+   * carries the emails, because emails belong to the person, not to one
+   * order. The client's own portal thread gets none of this: "your email
+   * failed" is our operational laundry, not their conversation.
+   */
+  const events: { id: string; body: string; createdAt: string }[] = [];
+
+  if (conv.order_id) {
+    const { data: updates } = await db
+      .from("order_updates")
+      .select("id, body, created_at")
+      .eq("order_id", conv.order_id)
+      .order("created_at", { ascending: true });
+    for (const u of updates ?? []) {
+      events.push({
+        id: `update-${u.id}`,
+        body: `Order update posted: ${String(u.body).slice(0, 200)}`,
+        createdAt: String(u.created_at),
+      });
+    }
+  } else {
+    const { data: mails } = await db
+      .from("email_log")
+      .select("id, subject, status, error, template_key, source, created_at")
+      .ilike("to_email", conv.customer_email)
+      .order("created_at", { ascending: true })
+      .limit(100);
+    for (const e of mails ?? []) {
+      const what = String(e.template_key ?? e.source);
+      const word =
+        e.status === "sent"
+          ? "Email sent"
+          : e.status === "failed"
+            ? "EMAIL FAILED"
+            : e.status === "skipped"
+              ? "Email skipped"
+              : "Email held by their preferences";
+      events.push({
+        id: `mail-${e.id}`,
+        body: `${word}: ${String(e.subject)} (${what})${e.status === "failed" && e.error ? `. ${String(e.error).slice(0, 160)}` : ""}`,
+        createdAt: String(e.created_at),
+      });
+    }
+  }
+
+  const messages = [
+    ...chat,
+    ...events.map((e) => ({
+      id: e.id,
+      senderRole: "studio" as const,
+      senderName: null,
+      body: e.body,
+      attachments: [],
+      createdAt: e.createdAt,
+      kind: "event" as const,
+    })),
+  ].sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt));
   await db
     .from("conversations")
     .update({ studio_last_read_at: new Date().toISOString() })

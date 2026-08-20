@@ -121,7 +121,10 @@ async function wipe() {
   if (convoIds.length) await db.from("messages").delete().in("conversation_id", convoIds);
   await db.from("conversations").delete().ilike("customer_email", EMAIL);
 
-  if (orderIds.length) await db.from("order_events").delete().in("order_id", orderIds);
+  if (orderIds.length) {
+    await db.from("order_events").delete().in("order_id", orderIds);
+    await db.from("order_updates").delete().in("order_id", orderIds);
+  }
   if (cycleIds.length) await db.from("subscription_cycles").delete().in("id", cycleIds);
 
   await db.from("subscription_payments").delete().ilike("customer_email", EMAIL);
@@ -679,6 +682,68 @@ async function build() {
     },
   ]);
   say("  one conversation with two messages");
+
+  /* a general thread too, plus updates on the pack order, so the unified
+   * inbox has every kind of thing to merge: chat, emails, and updates */
+  const { data: general } = await db
+    .from("conversations")
+    .insert({
+      customer_email: EMAIL,
+      customer_id: customerId,
+      order_id: null,
+      last_message_at: days(1),
+      last_message_preview: "Quick question about bundles.",
+      last_sender_role: "customer",
+    })
+    .select("id")
+    .single();
+  await insertOne("messages", {
+    conversation_id: general!.id,
+    sender_role: "customer",
+    sender_name: NAME,
+    body: "Quick question about bundles.",
+    created_at: days(1),
+  });
+
+  const { data: packOrder } = await db
+    .from("orders")
+    .select("id")
+    .eq("invoice_number", "DEMO-0002")
+    .single();
+  /* the updates need a thread to merge into: the unified inbox shows an
+     order's updates inside that order's conversation */
+  const { data: packThread } = await db
+    .from("conversations")
+    .insert({
+      customer_email: EMAIL,
+      customer_id: customerId,
+      order_id: packOrder!.id,
+      last_message_at: days(6),
+      last_message_preview: "Kicking off your pack this week.",
+      last_sender_role: "studio",
+    })
+    .select("id")
+    .single();
+  await insertOne("messages", {
+    conversation_id: packThread!.id,
+    sender_role: "studio",
+    sender_name: "The studio",
+    body: "Kicking off your pack this week.",
+    created_at: days(15),
+  });
+  await insertAll("order_updates", [
+    {
+      order_id: packOrder!.id,
+      body: "First three videos are in production. The explainer leads.",
+      created_at: days(14),
+    },
+    {
+      order_id: packOrder!.id,
+      body: "The master explainer is ready for your review.",
+      created_at: days(6),
+    },
+  ]);
+  say("  a general thread and two order updates, for the unified inbox");
 
   say("");
   say(`Done. ${EMAIL} now has 3 orders, 1 custom project, 1 editing plan with`);

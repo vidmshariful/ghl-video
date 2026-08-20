@@ -140,6 +140,17 @@ ${btn("{{intake_url}}", "Complete your intake")}
 <p style="${SMALL}margin-top:22px;">Track everything any time in <a href="{{portal_url}}" style="color:#9096a8;">your portal</a>. This email is your receipt.</p>`,
   },
   {
+    key: "intake_reminder",
+    name: "Intake reminder",
+    description:
+      "Sent by hand from a customer's record when their order is paid but stuck waiting on the brief. Not automatic, so a nudge is always a person's call.",
+    subject: "Your videos are waiting on one thing: {{product_name}}",
+    body: `<h1 style="${H}">We are ready when you are.</h1>
+<p style="${P}">Hi {{customer_name}}, your order <strong style="${STRONG}">{{product_name}}</strong> ({{order_code}}) is paid and queued, and nothing can start until your branding arrives. It takes a couple of minutes: your logo, colours, and how your name is said.</p>
+${btn("{{intake_url}}", "Complete your intake")}
+<p style="${SMALL}margin-top:22px;">Once it lands, production starts the same day. Anything unclear, just reply.</p>`,
+  },
+  {
     key: "order_delivered",
     name: "Order complete",
     description:

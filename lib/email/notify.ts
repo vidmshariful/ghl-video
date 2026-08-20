@@ -189,6 +189,34 @@ export async function sendOrderPaidEmails(db: SupabaseClient, orderId: string): 
   });
 }
 
+/**
+ * One email, re-sent by hand from a customer's record.
+ *
+ * Deliberately NOT sendOrderPaidEmails: that fires the admin copy and both
+ * bells too, and a resend is a nudge to the client, not a fresh event for
+ * the team. Returns what the log will also say, so the button that pressed
+ * it can speak the truth immediately.
+ */
+export async function resendOrderEmail(
+  db: SupabaseClient,
+  orderId: string,
+  kind: "order_confirmation" | "intake_reminder",
+): Promise<{ ok: boolean; error?: string }> {
+  const o = await orderFor(db, orderId);
+  if (!o) return { ok: false, error: "Order not found." };
+  const sent = await sendTemplate(db, kind, o.email, o.name, {
+    customer_name: escapeHtml(o.name || "there"),
+    product_name: escapeHtml(o.productName),
+    order_code: escapeHtml(o.code),
+    amount: money(o.amountCents, o.currency),
+    intake_url: `${SITE_URL}/checkout/intake/${orderId}`,
+    portal_url: `${SITE_URL}/portal`,
+  });
+  return sent
+    ? { ok: true }
+    : { ok: false, error: "Not sent. The email log has the reason." };
+}
+
 /** Delivery email, sent when the stage first moves to Delivered. Project
  *  progress also goes to the customer's team members who can see orders;
  *  money emails (confirmation, refunds) stay with the owner alone. */

@@ -19,6 +19,10 @@ export type ChatMessage = {
   body: string;
   attachments: ChatAttachment[];
   createdAt: string;
+  /* "event" rows are the platform speaking, not a person: an email that
+     went (or did not), an order update posted. Admin threads only; the
+     portal API never sends the field, so clients never see the laundry. */
+  kind?: "message" | "event";
 };
 
 async function token(): Promise<string | null> {

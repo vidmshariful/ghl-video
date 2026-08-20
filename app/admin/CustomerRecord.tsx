@@ -125,6 +125,13 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
   const [tagDraft, setTagDraft] = useState("");
   const [contact, setContact] = useState<{ name: string; email: string; phone: string; title: string; role: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  /* which nudge is in flight: "<orderId>:<kind>" */
+  const [sending, setSending] = useState<string | null>(null);
+  /* their email history, straight from the log */
+  const [emails, setEmails] = useState<
+    { id: string; subject: string; status: string; error: string | null; at: string; templateKey: string | null; source: string }[] | null
+  >(null);
+  const [openEmail, setOpenEmail] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setErr("");
@@ -141,6 +148,55 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
   useEffect(() => {
     void load();
   }, [load]);
+
+  /* the log already answers "what did this person get": one query, theirs */
+  useEffect(() => {
+    if (!data?.customer.email) return;
+    (async () => {
+      try {
+        const r = await fetch(
+          `/api/admin/email-log?q=${encodeURIComponent(data.customer.email)}`,
+          { headers: await authHeader() },
+        );
+        const j = await r.json();
+        if (r.ok) setEmails(j.entries ?? []);
+      } catch {
+        setEmails([]);
+      }
+    })();
+  }, [data?.customer.email]);
+
+  async function sendNudge(orderId: string, kind: "order_confirmation" | "intake_reminder") {
+    setSending(`${orderId}:${kind}`);
+    setNote("");
+    setErr("");
+    try {
+      const r = await fetch(`/api/admin/orders/${orderId}/resend-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(await authHeader()) },
+        body: JSON.stringify({ kind }),
+      });
+      const j = await r.json();
+      if (!r.ok) setErr(j.error ?? "Not sent.");
+      else
+        setNote(
+          kind === "intake_reminder"
+            ? `Intake link sent to ${data?.customer.email}.`
+            : `Confirmation re-sent to ${data?.customer.email}.`,
+        );
+      /* the log is the record; refresh it so the send shows up right away */
+      const r2 = await fetch(
+        `/api/admin/email-log?q=${encodeURIComponent(data?.customer.email ?? "")}`,
+        { headers: await authHeader() },
+      );
+      const j2 = await r2.json();
+      if (r2.ok) setEmails(j2.entries ?? []);
+    } catch {
+      setErr("Not sent.");
+    } finally {
+      setSending(null);
+    }
+  }
 
   async function patch(body: Record<string, unknown>) {
     setBusy(true);
@@ -284,6 +340,7 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
                     <tr>
                       <Th>What</Th>
                       <Th>State</Th>
+                      <Th>Send</Th>
                       <Th align="right">Amount</Th>
                       <Th align="right">Placed</Th>
                     </tr>
@@ -328,6 +385,36 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
                           <Chip tone={PAY_TONE[o.status] ?? "neutral"}>
                             {o.status === "paid" ? o.stage.replace(/_/g, " ") : o.status}
                           </Chip>
+                        </Td>
+                        <Td>
+                          {/* the two nudges worth re-firing by hand. Every
+                              other email is tied to an event happening, and
+                              re-firing one without the event tells a client
+                              a video is ready twice. */}
+                          {o.status === "paid" ? (
+                            <span className="flex flex-wrap gap-1.5">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                disabled={sending === `${o.id}:order_confirmation`}
+                                onClick={() => sendNudge(o.id, "order_confirmation")}
+                              >
+                                {sending === `${o.id}:order_confirmation` ? "Sending..." : "Confirmation"}
+                              </Button>
+                              {!o.intakeCompleted && (
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  disabled={sending === `${o.id}:intake_reminder`}
+                                  onClick={() => sendNudge(o.id, "intake_reminder")}
+                                >
+                                  {sending === `${o.id}:intake_reminder` ? "Sending..." : "Intake link"}
+                                </Button>
+                              )}
+                            </span>
+                          ) : (
+                            <span className="font-mono text-label uppercase text-dim">-</span>
+                          )}
                         </Td>
                         <Td align="right">{money(o.amountCents)}</Td>
                         <Td align="right">{when(o.createdAt)}</Td>
@@ -509,6 +596,56 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
                 Open messages
               </Button>
             </div>
+          </Card>
+
+          <Card title="Emails" description="What this person was sent, and what happened to each.">
+            {emails === null ? (
+              <p className="text-body-sm text-muted">Loading...</p>
+            ) : emails.length === 0 ? (
+              <p className="text-body-sm text-muted">
+                Nothing recorded. The log started on 20 August 2026, so older
+                sends are not in it.
+              </p>
+            ) : (
+              <ul className="grid gap-2">
+                {emails.slice(0, 8).map((e) => (
+                  <li key={e.id}>
+                    <button
+                      type="button"
+                      onClick={() => setOpenEmail(openEmail === e.id ? null : e.id)}
+                      className="tap w-full text-left"
+                    >
+                      <span className="flex items-start justify-between gap-2">
+                        <span className="min-w-0 flex-1 truncate text-body-sm text-ink">
+                          {e.subject}
+                        </span>
+                        <Chip
+                          tone={
+                            e.status === "sent"
+                              ? "good"
+                              : e.status === "failed"
+                                ? "bad"
+                                : e.status === "skipped"
+                                  ? "warn"
+                                  : "neutral"
+                          }
+                        >
+                          {e.status}
+                        </Chip>
+                      </span>
+                      <span className="mt-0.5 block font-mono text-label uppercase text-dim">
+                        {e.templateKey ?? e.source} / {when(e.at)}
+                      </span>
+                      {openEmail === e.id && e.error && (
+                        <span className="mt-1 block whitespace-pre-wrap text-body-sm text-error">
+                          {e.error}
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </Card>
 
           <Card title="Brand">

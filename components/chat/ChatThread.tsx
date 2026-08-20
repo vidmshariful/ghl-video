@@ -128,6 +128,25 @@ export function ChatThread({
           messages.map((m) => {
             const mine = m.senderRole === selfRole;
             const studio = m.senderRole === "studio";
+            /* the platform's own line: centred, quiet, no bubble. A failed
+               email keeps its colour so it cannot hide in the scroll. */
+            if (m.kind === "event") {
+              const failed = m.body.startsWith("EMAIL FAILED");
+              return (
+                <div key={m.id} className="flex justify-center">
+                  <span
+                    className={`max-w-[92%] rounded-full border px-3 py-1 text-center font-mono text-label ${
+                      failed
+                        ? "border-error/40 text-error"
+                        : "border-hair text-dim"
+                    }`}
+                  >
+                    {m.body}
+                    <span className="ml-1.5 opacity-70">{timeLabel(m.createdAt)}</span>
+                  </span>
+                </div>
+              );
+            }
             return (
               <div key={m.id} className={`flex flex-col ${mine ? "items-end" : "items-start"}`}>
                 <span className="mb-1 inline-flex items-center gap-1.5 font-mono text-label uppercase text-dim">
