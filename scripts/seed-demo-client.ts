@@ -365,7 +365,9 @@ async function build() {
   });
   say("  add-on invoice, paid, plus an unpaid one below");
 
-  /* a custom project, with its own videos and its own invoice */
+  /* a custom project mid-flight: the six-station line lives on the project
+     (a project IS the video since 21 August 2026), the main carrier holds
+     review state invisibly, and one extra format is already being cut */
   const { data: project } = await db
     .from("projects")
     .insert({
@@ -379,6 +381,15 @@ async function build() {
       agreed_cents: 0,
       due_at: forward(10),
       created_at: days(35),
+      pipeline: {
+        script: { state: "done", gate: true, url: "https://docs.google.com/demo-script", at: days(20) },
+        voiceover: { state: "done", provided: true },
+        design: { state: "done", gate: false, url: "https://figma.com/demo-brand-film", at: days(12) },
+        animation: { state: "with_client", gate: true, url: "https://cdn.ghlvideo.com/demo/sample.mp4", at: days(2) },
+        sfx: { state: "todo" },
+        delivery: { state: "todo", gate: true },
+      },
+      tags: ["demo"],
     })
     .select("id")
     .single();
@@ -386,7 +397,8 @@ async function build() {
   await insertAll("order_deliverables", [
     {
       project_id: project!.id,
-      title: "Brand film, master cut",
+      title: "Demo brand film, 90 seconds",
+      category: "main",
       position: 0,
       status: "ready",
       video_url: "https://cdn.ghlvideo.com/demo/sample.mp4",
@@ -397,7 +409,8 @@ async function build() {
     },
     {
       project_id: project!.id,
-      title: "Brand film, 30 second cutdown",
+      title: "Vertical reel, 30 seconds",
+      category: "format",
       position: 1,
       status: "in_production",
       due_at: forward(14),

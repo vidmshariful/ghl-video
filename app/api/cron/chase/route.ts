@@ -80,16 +80,11 @@ export async function GET(req: Request) {
 
   const chased: string[] = [];
 
-  /* ---- custom project videos: any gated station in the client's court ---- */
-  const { data: projectVideos } = await db
-    .from("order_deliverables")
-    .select("id, title, project_id, pipeline")
-    .not("project_id", "is", null);
-  const projectIds = [...new Set(((projectVideos ?? []) as Row[]).map((v) => String(v.project_id)))];
-  const { data: projects } = projectIds.length
-    ? await db.from("projects").select("id, customer_email, status").in("id", projectIds)
-    : { data: [] };
-  const projectById = new Map(((projects ?? []) as Row[]).map((p) => [String(p.id), p]));
+  /* ---- custom projects: any gated station in the client's court ---- */
+  const { data: projects } = await db
+    .from("projects")
+    .select("*")
+    .not("status", "in", "(closed,cancelled)");
 
   const emails = [
     ...new Set(((projects ?? []) as Row[]).map((p) => String(p.customer_email).toLowerCase())),
@@ -102,26 +97,48 @@ export async function GET(req: Request) {
       (c) => String(c.email).toLowerCase() === email.toLowerCase(),
     )?.name as string | null) ?? null);
 
-  for (const v of (projectVideos ?? []) as Row[]) {
-    const project = projectById.get(String(v.project_id));
-    if (!project || ["closed", "cancelled"].includes(String(project.status))) continue;
-    const line = normalizePipeline(v.pipeline);
+  for (const p of (projects ?? []) as Row[]) {
+    const line = normalizePipeline(p.pipeline);
     for (const k of STATION_ORDER) {
       const st = line[k];
       if (st.state !== "with_client" || !st.gate || st.provided) continue;
-      const prior = chasesFrom(ledger, String(v.id), k);
+      const prior = chasesFrom(ledger, String(p.id), k);
       if (!needsChase(st.at ?? null, prior, now)) continue;
       const sent = await sendApprovalReminderEmail(db, {
-        email: String(project.customer_email),
-        name: nameOf(String(project.customer_email)),
-        videoTitle: String(v.title),
+        email: String(p.customer_email),
+        name: nameOf(String(p.customer_email)),
+        videoTitle: String(p.title),
         stageLabel: STATIONS[k as StationKey].label,
         daysWaiting: daysWaiting(st.at ?? now, now),
-        deliverableId: String(v.id),
+        deliverableId: String(p.id),
         station: k,
       });
-      if (sent) chased.push(`${String(v.title)} / ${k}`);
+      if (sent) chased.push(`${String(p.title)} / ${k}`);
     }
+  }
+
+  /* ---- extra formats sitting in review ---- */
+  const { data: readyFormats } = await db
+    .from("order_deliverables")
+    .select("id, title, status, ready_at, project_id")
+    .eq("category", "format")
+    .eq("status", "ready");
+  for (const f of (readyFormats ?? []) as Row[]) {
+    const project = ((projects ?? []) as Row[]).find((p) => String(p.id) === String(f.project_id));
+    if (!project) continue;
+    const prior = chasesFrom(ledger, String(f.id), "review");
+    if (!needsChase((f.ready_at as string | null) ?? null, prior, now)) continue;
+    const email = String(project.customer_email);
+    const sent = await sendApprovalReminderEmail(db, {
+      email,
+      name: nameOf(email),
+      videoTitle: String(f.title),
+      stageLabel: "Your review",
+      daysWaiting: daysWaiting(String(f.ready_at), now),
+      deliverableId: String(f.id),
+      station: "review",
+    });
+    if (sent) chased.push(`${String(f.title)} / review`);
   }
 
   /* ---- editing plan work sitting unwatched: ready with nobody looking ---- */
@@ -175,34 +192,30 @@ export async function GET(req: Request) {
       .gte("created_at", new Date(Date.now() - 6 * 86_400_000).toISOString());
     const already = new Set(((recent ?? []) as Row[]).map((r) => String(r.to_email).toLowerCase()));
 
-    for (const p of ((projects ?? []) as Row[]).filter(
-      (x) => !["closed", "cancelled"].includes(String(x.status)),
-    )) {
+    for (const p of (projects ?? []) as Row[]) {
       const email = String(p.customer_email).toLowerCase();
       if (already.has(email)) continue;
       already.add(email);
 
-      const theirs = ((projectVideos ?? []) as Row[]).filter(
-        (v) =>
-          String(projectById.get(String(v.project_id))?.customer_email ?? "").toLowerCase() ===
-          email,
+      const theirs = ((projects ?? []) as Row[]).filter(
+        (x) => String(x.customer_email).toLowerCase() === email,
       );
       if (!theirs.length) continue;
       const esc = (t: string) =>
         t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
       const lines = theirs
-        .map((v) => {
-          const line = normalizePipeline(v.pipeline);
+        .map((x) => {
+          const line = normalizePipeline(x.pipeline);
           const currentKey = STATION_ORDER.find((k) => line[k].state !== "done");
           const word = currentKey
             ? `${STATIONS[currentKey].label}: ${clientStationWord(currentKey, line[currentKey]).toLowerCase()}`
             : "finished";
-          return `<p style="margin:0 0 8px;"><strong style="color:#eef0f6;">${esc(String(v.title))}</strong><br/>${esc(word)}</p>`;
+          return `<p style="margin:0 0 8px;"><strong style="color:#eef0f6;">${esc(String(x.title))}</strong><br/>${esc(word)}</p>`;
         })
         .join("");
       const ok = await sendProjectDigestEmail(db, {
         email: String(p.customer_email),
-        name: nameOf(String(p.customer_email)),
+        name: nameOf(email),
         linesHtml: lines,
       });
       if (ok) digested.push(email);

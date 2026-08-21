@@ -31,7 +31,7 @@ async function guard(req: Request, deliverableId: string) {
 
   const { data: d } = await db
     .from("order_deliverables")
-    .select("id, order_id, project_id, status, title, revision_round, pipeline")
+    .select("id, order_id, project_id, category, status, title, revision_round")
     .eq("id", deliverableId)
     .maybeSingle();
   if (!d) return { fail: NextResponse.json({ error: "Not found." }, { status: 404 }) };
@@ -171,13 +171,21 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (!res.ok) return NextResponse.json({ error: res.error }, { status: 400 });
 
     /*
-     * A custom project video carries the six-station line, and the review
-     * screen is its animation and delivery gate. Approving the animation
-     * draft closes that station and hands sound to us; only approving the
-     * final delivery finishes the video, whatever clientVerdict just wrote.
+     * The main video of a custom project carries the six-station line ON
+     * THE PROJECT, and this review screen is its animation and delivery
+     * gate. Approving the draft closes that station and hands sound to us;
+     * only approving delivery finishes the job. The project's list category
+     * follows along on its own, so the list stays honest without anybody
+     * filing it: changes land it in Revision, a finished delivery in
+     * Approved.
      */
-    if (g.deliverable.project_id) {
-      const line = normalizePipeline(g.deliverable.pipeline);
+    if (g.deliverable.project_id && String(g.deliverable.category ?? "") === "main") {
+      const { data: project } = await g.db
+        .from("projects")
+        .select("id, status, pipeline")
+        .eq("id", g.deliverable.project_id)
+        .single();
+      const line = normalizePipeline(project?.pipeline);
       const now = new Date().toISOString();
       const key = line.delivery.state === "with_client" ? "delivery" : "animation";
       const { data: fresh } = await g.db
@@ -189,9 +197,17 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       const line2 =
         action === "approve" ? approveStation(line, key, now) : returnStation(line, key, now);
       const derived = statusForPipeline(line2, round);
+
+      const projectPatch: Record<string, unknown> = { pipeline: line2 };
+      if (project && !["closed", "cancelled"].includes(String(project.status))) {
+        if (action === "changes") projectPatch.status = "revision";
+        else if (key === "delivery") projectPatch.status = "approved";
+        else projectPatch.status = "in_progress";
+      }
+      await g.db.from("projects").update(projectPatch).eq("id", g.deliverable.project_id);
       await g.db
         .from("order_deliverables")
-        .update({ pipeline: line2, status: derived, updated_at: now })
+        .update({ status: derived, updated_at: now })
         .eq("id", id);
       (res as { status: string }).status = derived;
     }

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { verifyAdmin } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
-import { normalizePipeline } from "@/lib/pipeline";
-import { PROJECT_STATUSES, projectBalance, type ProjectStatus } from "@/lib/projects";
+import { ballInCourt, normalizePipeline } from "@/lib/pipeline";
+import { PROJECT_STATUSES, normalizeProjectStatus, projectBalance, type ProjectStatus } from "@/lib/projects";
 
 export const runtime = "nodejs";
 
@@ -79,13 +79,17 @@ export async function GET(req: Request) {
       },
       mine,
     );
+    const line = normalizePipeline(p.pipeline);
     return {
       id,
       customerEmail: String(p.customer_email),
       customerId: (p.customer_id as string | null) ?? null,
       title: String(p.title),
       brief: (p.brief as string | null) ?? null,
-      status: String(p.status) as ProjectStatus,
+      status: normalizeProjectStatus(String(p.status)),
+      tags: ((p.tags as string[] | null) ?? []).slice(0, 12),
+      pipeline: line,
+      ball: ballInCourt(line),
       quotedCents: p.quoted_cents == null ? null : Number(p.quoted_cents),
       agreedCents: p.agreed_cents == null ? null : Number(p.agreed_cents),
       ownerEmail: (p.owner_email as string | null) ?? null,
@@ -100,17 +104,25 @@ export async function GET(req: Request) {
       createdAt: String(p.created_at),
       invoices: mine,
       money,
-      videos: ((videos ?? []) as Row[])
-        .filter((v) => String(v.project_id) === id)
+      mainVideo: (() => {
+        const mv = ((videos ?? []) as Row[]).find(
+          (v) => String(v.project_id) === id && String(v.category ?? "") === "main",
+        );
+        return mv
+          ? {
+              id: String(mv.id),
+              videoUrl: (mv.video_url as string | null) ?? null,
+              revisionRound: Number(mv.revision_round ?? 0),
+            }
+          : null;
+      })(),
+      formats: ((videos ?? []) as Row[])
+        .filter((v) => String(v.project_id) === id && String(v.category ?? "") === "format")
         .map((v) => ({
           id: String(v.id),
           title: String(v.title),
           status: String(v.status),
-          assignedTo: (v.assigned_admin_email as string | null) ?? null,
           videoUrl: (v.video_url as string | null) ?? null,
-          dueAt: (v.due_at as string | null) ?? null,
-          revisionRound: Number(v.revision_round ?? 0),
-          pipeline: normalizePipeline(v.pipeline),
         })),
     };
   });
@@ -181,8 +193,27 @@ export async function PATCH(req: Request) {
   const id = str(b.id, 64);
   if (!id || !UUID_RE.test(id)) return NextResponse.json({ error: "Which job?" }, { status: 400 });
 
+  const db = supabaseAdmin();
+
+  /* ---- the production line, project level ---- */
+  if (b.station && typeof b.station === "object") {
+    const { handleStationOp } = await import("@/lib/project-station");
+    const out = await handleStationOp(db, id, b.station as Record<string, unknown>);
+    return NextResponse.json(out.body, { status: out.status });
+  }
+  if (b.action === "add_draft") {
+    const { handleAddDraft } = await import("@/lib/project-station");
+    const out = await handleAddDraft(db, id, str(b.url, 2000), str(b.note, 400), admin.email);
+    return NextResponse.json(out.body, { status: out.status });
+  }
+
   const patch: Record<string, unknown> = {};
   if (PROJECT_STATUSES.includes(b.status as ProjectStatus)) patch.status = b.status;
+  if (Array.isArray(b.tags))
+    patch.tags = (b.tags as unknown[])
+      .filter((t): t is string => typeof t === "string" && t.trim().length > 0)
+      .map((t) => t.trim().slice(0, 40))
+      .slice(0, 12);
   if ("title" in b) patch.title = str(b.title, 160);
   if ("brief" in b) patch.brief = str(b.brief, 8000);
   if ("quotedCents" in b) patch.quoted_cents = cents(b.quotedCents);
@@ -194,7 +225,7 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Nothing to change." }, { status: 400 });
   }
 
-  const { error } = await supabaseAdmin().from("projects").update(patch).eq("id", id);
+  const { error } = await db.from("projects").update(patch).eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ ok: true });
 }

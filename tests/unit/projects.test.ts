@@ -2,10 +2,11 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import {
   CLIENT_LABEL,
-  PROJECT_BOARD,
+  PROJECT_LIST,
   PROJECT_STATUSES,
   STUDIO_LABEL,
   isOpen,
+  normalizeProjectStatus,
   projectBalance,
   projectValueCents,
 } from "@/lib/projects";
@@ -80,14 +81,58 @@ describe("the two vocabularies", () => {
     assert.notEqual(CLIENT_LABEL.review, STUDIO_LABEL.review);
   });
 
-  test("the board shows live work only", () => {
-    assert.ok(!PROJECT_BOARD.includes("closed"));
-    assert.ok(!PROJECT_BOARD.includes("cancelled"));
-    for (const s of PROJECT_BOARD) assert.equal(isOpen(s), true);
+  test("the list shows live work only", () => {
+    assert.ok(!PROJECT_LIST.includes("closed"));
+    assert.ok(!PROJECT_LIST.includes("cancelled"));
+    for (const s of PROJECT_LIST) assert.equal(isOpen(s), true);
   });
 
   test("finished and abandoned jobs both count as not open", () => {
     assert.equal(isOpen("closed"), false);
     assert.equal(isOpen("cancelled"), false);
+  });
+});
+
+describe("the vocabulary, after the simple-list decision", () => {
+  test("the list carries the studio's own seven categories, in work order", () => {
+    assert.deepEqual(PROJECT_LIST, [
+      "backlog",
+      "planning",
+      "in_progress",
+      "review",
+      "revision",
+      "approved",
+      "cutdowns",
+    ]);
+    for (const k of PROJECT_LIST) {
+      assert.ok(STUDIO_LABEL[k], `${k} needs a studio word`);
+      assert.ok(CLIENT_LABEL[k], `${k} needs a client word`);
+      assert.ok(PROJECT_STATUSES.includes(k));
+    }
+  });
+
+  test("closed and cancelled are terminal, everything else is open", () => {
+    assert.equal(isOpen("closed"), false);
+    assert.equal(isOpen("cancelled"), false);
+    assert.equal(isOpen("cutdowns"), true);
+    assert.equal(isOpen("backlog"), true);
+  });
+
+  test("the pre-rename words still read until the data migrates", () => {
+    assert.equal(normalizeProjectStatus("scoped"), "backlog");
+    assert.equal(normalizeProjectStatus("in_production"), "in_progress");
+    assert.equal(normalizeProjectStatus("delivered"), "approved");
+    assert.equal(normalizeProjectStatus("review"), "review");
+    assert.equal(STUDIO_LABEL["scoped"], "Backlog");
+  });
+
+  test("nonsense in storage lands in backlog rather than crashing a screen", () => {
+    assert.equal(normalizeProjectStatus("garbage"), "backlog");
+  });
+
+  test("the client never reads a studio word", () => {
+    assert.equal(CLIENT_LABEL["review"], "Ready for you");
+    assert.equal(CLIENT_LABEL["cutdowns"], "Extra formats in the works");
+    assert.equal(CLIENT_LABEL["revision"], "Changes in hand");
   });
 });

@@ -9,51 +9,87 @@
  */
 
 export type ProjectStatus =
-  | "scoped"
-  | "in_production"
+  | "backlog"
+  | "planning"
+  | "in_progress"
   | "review"
-  | "delivered"
+  | "revision"
+  | "approved"
+  | "cutdowns"
   | "closed"
   | "cancelled";
 
 export const PROJECT_STATUSES: ProjectStatus[] = [
-  "scoped",
-  "in_production",
+  "backlog",
+  "planning",
+  "in_progress",
   "review",
-  "delivered",
+  "revision",
+  "approved",
+  "cutdowns",
   "closed",
   "cancelled",
 ];
 
-/** The board's columns, in the order work actually moves. */
-export const PROJECT_BOARD: ProjectStatus[] = [
-  "scoped",
-  "in_production",
+/**
+ * The list's categories, in the order work actually moves (owner decision,
+ * 21 August 2026, replacing the four-column board with the studio's own
+ * vocabulary). Cutdowns is the stage after the main video is approved where
+ * the extra formats get made: the reels, the shorts, the square crops.
+ */
+export const PROJECT_LIST: ProjectStatus[] = [
+  "backlog",
+  "planning",
+  "in_progress",
   "review",
-  "delivered",
+  "revision",
+  "approved",
+  "cutdowns",
 ];
 
-export const STUDIO_LABEL: Record<ProjectStatus, string> = {
-  scoped: "Scoped",
-  in_production: "In production",
-  review: "With client",
-  delivered: "Delivered",
+export const STUDIO_LABEL: Record<string, string> = {
+  backlog: "Backlog",
+  planning: "Planning",
+  in_progress: "In progress",
+  review: "Review",
+  revision: "Revision",
+  approved: "Approved",
+  cutdowns: "Cutdowns",
   closed: "Closed",
   cancelled: "Cancelled",
+  /* the pre-rename vocabulary, kept so a screen deployed ahead of the
+     database migration still reads */
+  scoped: "Backlog",
+  in_production: "In progress",
+  delivered: "Approved",
 };
 
 /** What the client is told. Never our internal word for it. */
-export const CLIENT_LABEL: Record<ProjectStatus, string> = {
-  scoped: "Booked in",
-  in_production: "Being made",
+export const CLIENT_LABEL: Record<string, string> = {
+  backlog: "Booked in",
+  planning: "Being planned",
+  in_progress: "Being made",
   review: "Ready for you",
-  delivered: "Delivered",
+  revision: "Changes in hand",
+  approved: "Approved",
+  cutdowns: "Extra formats in the works",
   closed: "Complete",
   cancelled: "Cancelled",
+  scoped: "Booked in",
+  in_production: "Being made",
+  delivered: "Approved",
 };
 
-/** A finished job stops appearing on the board. */
-export function isOpen(status: ProjectStatus): boolean {
+/** Old stored values read as their new names until the data migrates. */
+export function normalizeProjectStatus(raw: string): ProjectStatus {
+  if (raw === "scoped") return "backlog";
+  if (raw === "in_production") return "in_progress";
+  if (raw === "delivered") return "approved";
+  return (PROJECT_STATUSES as string[]).includes(raw) ? (raw as ProjectStatus) : "backlog";
+}
+
+/** A finished job stops appearing on the list. */
+export function isOpen(status: ProjectStatus | string): boolean {
   return status !== "closed" && status !== "cancelled";
 }
 

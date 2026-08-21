@@ -58,11 +58,11 @@ export const STATIONS: Record<
     defaultGate: boolean;
   }
 > = {
-  script: { label: "Script", clientFile: true, providable: true, defaultGate: true },
+  script: { label: "Scripting", clientFile: true, providable: true, defaultGate: true },
   voiceover: { label: "Voiceover", clientFile: true, providable: true, defaultGate: true },
-  design: { label: "Concept and design", clientFile: true, providable: false, defaultGate: false },
+  design: { label: "Concept and Design", clientFile: true, providable: false, defaultGate: false },
   animation: { label: "Animation", clientFile: true, providable: false, defaultGate: true },
-  sfx: { label: "Sound design", clientFile: false, providable: false, defaultGate: false },
+  sfx: { label: "Sound Design", clientFile: false, providable: false, defaultGate: false },
   delivery: { label: "Final delivery", clientFile: true, providable: false, defaultGate: true },
 };
 

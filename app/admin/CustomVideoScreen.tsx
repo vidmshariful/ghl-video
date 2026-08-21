@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Inbox, Plus } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { ArrowLeft, ChevronDown, ChevronRight, Inbox, Plus, X } from "lucide-react";
 import {
   Button,
   Card,
@@ -15,14 +15,9 @@ import {
   Textarea,
 } from "@/components/portal/ui";
 import { authHeader, money, when } from "./client";
+import { ItemNotes } from "@/components/portal/board";
 import {
-  Drawer,
-  ItemNotes,
-  KanbanBoard,
-  type BoardColumn,
-} from "@/components/portal/board";
-import {
-  PROJECT_BOARD,
+  PROJECT_LIST,
   REQUEST_LABEL,
   REQUEST_STATUSES,
   STUDIO_LABEL,
@@ -32,14 +27,28 @@ import {
 } from "@/lib/projects";
 
 /*
- * Custom video, end to end.
+ * Custom video, the simple way (owner decision, 21 August 2026).
  *
- * Two halves that are deliberately not the same thing. Enquiries arrive from
- * the website and most of them are not work yet. Jobs are work, and most are
- * created here by hand, because a deal that closes on a call or a referral
- * never passes through an enquiry at all. Merging them would force every
- * referral through a stage invented to make the funnel look tidy.
+ * A project IS the video. The list carries the studio's own categories,
+ * Backlog through Cutdowns, and opening a project is a full screen, not a
+ * side panel. Inside: the six-station production line, the extra formats
+ * cut after approval, the money, the brief, the notes. Nobody is assigned
+ * here; production lives in ClickUp, and this screen exists to run the
+ * client relationship.
  */
+
+type Station = {
+  state: "todo" | "with_us" | "with_client" | "done";
+  provided?: boolean;
+  gate?: boolean;
+  url?: string | null;
+  at?: string | null;
+  eta?: string | null;
+};
+type Pipeline = Record<
+  "script" | "voiceover" | "design" | "animation" | "sfx" | "delivery",
+  Station
+>;
 
 type Money = {
   valueCents: number;
@@ -54,6 +63,9 @@ type Project = {
   title: string;
   brief: string | null;
   status: ProjectStatus;
+  tags: string[];
+  pipeline: Pipeline;
+  ball: "us" | "client" | null;
   quotedCents: number | null;
   agreedCents: number | null;
   ownerEmail: string | null;
@@ -61,52 +73,8 @@ type Project = {
   createdAt: string;
   invoices: { id: string; number: string; totalCents: number; paid: boolean }[];
   money: Money;
-  videos: {
-    id: string;
-    title: string;
-    status: string;
-    assignedTo: string | null;
-    videoUrl: string | null;
-    dueAt: string | null;
-    revisionRound: number;
-    pipeline: PipelineShape;
-  }[];
-};
-
-type StationShape = {
-  state: "todo" | "with_us" | "with_client" | "done";
-  provided?: boolean;
-  gate?: boolean;
-  url?: string | null;
-  at?: string | null;
-  eta?: string | null;
-};
-type PipelineShape = Record<
-  "script" | "voiceover" | "design" | "animation" | "sfx" | "delivery",
-  StationShape
->;
-
-const STATION_META: { key: keyof PipelineShape; label: string; providable: boolean; gateable: boolean }[] = [
-  { key: "script", label: "Script", providable: true, gateable: false },
-  { key: "voiceover", label: "Voiceover", providable: true, gateable: false },
-  { key: "design", label: "Design", providable: false, gateable: true },
-  { key: "animation", label: "Animation", providable: false, gateable: false },
-  { key: "sfx", label: "Sound", providable: false, gateable: false },
-  { key: "delivery", label: "Delivery", providable: false, gateable: false },
-];
-
-const STATION_STATE_WORD: Record<StationShape["state"], string> = {
-  todo: "Not started",
-  with_us: "With us",
-  with_client: "With client",
-  done: "Done",
-};
-
-const STATION_DOT: Record<StationShape["state"], string> = {
-  todo: "bg-hair",
-  with_us: "bg-blue",
-  with_client: "bg-gold",
-  done: "bg-green",
+  mainVideo: { id: string; videoUrl: string | null; revisionRound: number } | null;
+  formats: { id: string; title: string; status: string; videoUrl: string | null }[];
 };
 
 type Client = {
@@ -131,38 +99,6 @@ type Enquiry = {
   createdAt: string;
 };
 
-/* same colours the client's side wears for the same stages */
-const COLUMN_TONE: Record<string, BoardColumn["tone"]> = {
-  scoped: "neutral",
-  in_production: "info",
-  review: "warn",
-  delivered: "good",
-};
-
-const VIDEO_STATUSES = ["queued", "in_production", "ready", "revisions", "approved"] as const;
-
-const VIDEO_WORD: Record<string, string> = {
-  queued: "queued",
-  in_production: "being made",
-  ready: "with client",
-  revisions: "changes in hand",
-  approved: "approved",
-};
-
-const VIDEO_STRIPE: Record<string, string> = {
-  queued: "bg-hair",
-  in_production: "bg-blue",
-  ready: "bg-gold",
-  revisions: "bg-error",
-  approved: "bg-green",
-};
-
-const dueChip = (p: { dueAt: string | null; status: ProjectStatus }) => {
-  if (!p.dueAt) return { due: null, dueTone: "neutral" as const };
-  const late = Date.parse(p.dueAt) < Date.now() && isOpen(p.status);
-  return { due: `due ${when(p.dueAt)}`, dueTone: (late ? "bad" : "neutral") as "bad" | "neutral" };
-};
-
 const REQUEST_TONE: Record<RequestStatus, "info" | "warn" | "good" | "neutral"> = {
   new: "info",
   contacted: "warn",
@@ -170,6 +106,53 @@ const REQUEST_TONE: Record<RequestStatus, "info" | "warn" | "good" | "neutral"> 
   won: "good",
   lost: "neutral",
 };
+
+/* the list's colour language, one dot per category */
+const STATUS_DOT: Record<string, string> = {
+  backlog: "bg-hair",
+  planning: "bg-blue/60",
+  in_progress: "bg-blue",
+  review: "bg-gold",
+  revision: "bg-error",
+  approved: "bg-green",
+  cutdowns: "bg-gold/60",
+};
+
+const STATION_META: { key: keyof Pipeline; label: string; providable: boolean; gateable: boolean }[] = [
+  { key: "script", label: "Scripting", providable: true, gateable: false },
+  { key: "voiceover", label: "Voiceover", providable: true, gateable: false },
+  { key: "design", label: "Concept and Design", providable: false, gateable: true },
+  { key: "animation", label: "Animation", providable: false, gateable: false },
+  { key: "sfx", label: "Sound Design", providable: false, gateable: false },
+  { key: "delivery", label: "Delivery", providable: false, gateable: false },
+];
+
+const STATION_STATE_WORD: Record<Station["state"], string> = {
+  todo: "Not started",
+  with_us: "With us",
+  with_client: "With client",
+  done: "Done",
+};
+
+const STATION_DOT: Record<Station["state"], string> = {
+  todo: "bg-hair",
+  with_us: "bg-blue",
+  with_client: "bg-gold",
+  done: "bg-green",
+};
+
+const FORMAT_WORD: Record<string, string> = {
+  queued: "Backlog",
+  in_production: "In progress",
+  ready: "Review",
+  revisions: "Revision",
+  approved: "Done",
+};
+
+const day = (iso: string | null) =>
+  iso
+    ? new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+    : null;
 
 const EMPTY_DRAFT = {
   customerEmail: "",
@@ -187,9 +170,10 @@ export function CustomVideoScreen() {
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [enquiries, setEnquiries] = useState<Enquiry[] | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
+  const [team, setTeam] = useState<{ email: string; name: string }[]>([]);
   const [draft, setDraft] = useState<typeof EMPTY_DRAFT | null>(null);
   const [open, setOpen] = useState<string | null>(null);
-  const [team, setTeam] = useState<{ email: string; name: string }[]>([]);
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
@@ -240,59 +224,22 @@ export function CustomVideoScreen() {
     }
   }
 
-  async function moveTo(id: string, status: string): Promise<string | null> {
+  async function patchProject(id: string, body: Record<string, unknown>): Promise<string | null> {
     try {
       const r = await fetch("/api/admin/projects", {
         method: "PATCH",
         headers: { ...(await authHeader()), "Content-Type": "application/json" },
-        body: JSON.stringify({ id, status }),
+        body: JSON.stringify({ id, ...body }),
       });
       if (!r.ok) {
         const j = await r.json().catch(() => ({}));
-        return (j as { error?: string }).error ?? "Could not move it.";
+        return (j as { error?: string }).error ?? "That did not save.";
       }
       await load();
       return null;
     } catch {
-      return "Could not move it.";
+      return "That did not save.";
     }
-  }
-
-  async function setStatus(p: Project, status: ProjectStatus) {
-    await fetch("/api/admin/projects", {
-      method: "PATCH",
-      headers: { ...(await authHeader()), "Content-Type": "application/json" },
-      body: JSON.stringify({ id: p.id, status }),
-    });
-    setOpen(null);
-    await load();
-  }
-
-  async function saveVideo(projectId: string, id: string, body: Record<string, unknown>) {
-    await fetch("/api/admin/projects/videos", {
-      method: "PATCH",
-      headers: { ...(await authHeader()), "Content-Type": "application/json" },
-      body: JSON.stringify({ projectId, id, ...body }),
-    });
-    await load();
-  }
-
-  async function addVideo(
-    projectId: string,
-    title: string,
-    provided?: { script: boolean; voiceover: boolean },
-  ) {
-    const r = await fetch("/api/admin/projects/videos", {
-      method: "POST",
-      headers: { ...(await authHeader()), "Content-Type": "application/json" },
-      body: JSON.stringify({
-        projectId,
-        title,
-        scriptProvided: provided?.script ?? false,
-        voiceoverProvided: provided?.voiceover ?? false,
-      }),
-    });
-    if (r.ok) await load();
   }
 
   async function markEnquiry(e: Enquiry, status: RequestStatus) {
@@ -307,12 +254,23 @@ export function CustomVideoScreen() {
   if (err && !projects) return <p className="text-body text-error">{err}</p>;
   if (!projects || !enquiries) return <p className="text-body text-muted">Loading...</p>;
 
-  const live = projects.filter((p) => isOpen(p.status));
-  /* the client picked in the form, so its contacts can be offered */
   const chosen = clients.find((c) => c.email === draft?.customerEmail) ?? null;
   const openEnquiries = enquiries.filter((e) => e.status !== "won" && e.status !== "lost");
+  const live = projects.filter((p) => isOpen(p.status));
 
+  /* ---- one project, opened as a full screen ---- */
   const opened = open ? projects.find((x) => x.id === open) ?? null : null;
+  if (opened) {
+    return (
+      <ProjectPage
+        p={opened}
+        team={team}
+        onBack={() => setOpen(null)}
+        onPatch={(body) => patchProject(opened.id, body)}
+        onReload={load}
+      />
+    );
+  }
 
   return (
     <div className="w-full">
@@ -441,7 +399,7 @@ export function CustomVideoScreen() {
           {projects.length === 0 ? (
             <EmptyState
               title="No custom projects open"
-              description="Most projects start on a call or a referral. Create one and it appears on the board."
+              description="Most projects start on a call or a referral. Create one and it appears in the list."
               action={
                 <Button variant="brand" icon={<Plus />} onClick={() => setDraft(EMPTY_DRAFT)}>
                   New project
@@ -449,71 +407,134 @@ export function CustomVideoScreen() {
               }
             />
           ) : (
-            <KanbanBoard
-              columns={PROJECT_BOARD.map((col) => ({
-                key: col,
-                label: STUDIO_LABEL[col],
-                tone: COLUMN_TONE[col] ?? "neutral",
-              }))}
-              items={live.map((p) => {
-                const done = p.videos.filter((v) => v.status === "approved").length;
-                return {
-                  id: p.id,
-                  column: p.status,
-                  title: p.title,
-                  meta: `${p.customerEmail} / ${money(p.money.valueCents)}`,
-                  assignee: p.ownerEmail,
-                  ...dueChip(p),
-                  warn: p.money.outstandingCents > 0 ? `${money(p.money.outstandingCents)} owed` : null,
-                  progress: p.videos.length ? `${done}/${p.videos.length}` : null,
-                  progressPct: p.videos.length ? (done / p.videos.length) * 100 : null,
-                };
-              })}
-              onOpen={setOpen}
-              onMove={moveTo}
-            />
-          )}
-
-          {/* closing a job must never make it vanish: the finished live
-              here, readable and one click from coming back */}
-          {projects.some((p) => !isOpen(p.status)) && (
-            <div className="mt-6">
-              <p className="font-mono text-label uppercase tracking-[0.1em] text-dim">
-                Finished
-              </p>
-              <div className="mt-2 grid gap-2">
-                {projects
-                  .filter((p) => !isOpen(p.status))
-                  .map((p) => (
-                    <div
-                      key={p.id}
-                      className="flex flex-wrap items-center justify-between gap-3 rounded-[8px] border border-hair bg-surface px-4 py-2.5"
+            <div className="grid gap-1">
+              {PROJECT_LIST.map((cat) => {
+                const rows = live.filter((p) => p.status === cat);
+                const shut = collapsed.has(cat);
+                return (
+                  <div key={cat}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = new Set(collapsed);
+                        if (shut) next.delete(cat);
+                        else next.add(cat);
+                        setCollapsed(next);
+                      }}
+                      className="tap flex w-full items-center gap-2 rounded-[6px] px-2 py-1.5 text-left transition-colors hover:bg-surface"
+                      aria-expanded={!shut}
                     >
-                      <button
-                        type="button"
-                        onClick={() => setOpen(p.id)}
-                        className="tap min-w-0 flex-1 text-left"
-                      >
-                        <span className="block truncate text-body-sm font-semibold text-ink">
-                          {p.title}
-                        </span>
-                        <span className="mt-0.5 block truncate font-mono text-label uppercase text-dim">
-                          {p.customerEmail} / {money(p.money.valueCents)}
-                        </span>
-                      </button>
-                      <span className="flex shrink-0 items-center gap-2">
-                        <Chip tone="neutral">{STUDIO_LABEL[p.status]}</Chip>
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => void moveTo(p.id, "scoped")}
-                        >
-                          Reopen
-                        </Button>
+                      {shut ? (
+                        <ChevronRight size={14} className="text-dim" aria-hidden="true" />
+                      ) : (
+                        <ChevronDown size={14} className="text-dim" aria-hidden="true" />
+                      )}
+                      <span
+                        aria-hidden="true"
+                        className={`h-2.5 w-2.5 rounded-full ${STATUS_DOT[cat]}`}
+                      />
+                      <span className="font-mono text-label uppercase tracking-[0.08em] text-ink">
+                        {STUDIO_LABEL[cat]}
                       </span>
-                    </div>
-                  ))}
-              </div>
+                      <span className="font-mono text-label tabular-nums text-dim">
+                        {rows.length}
+                      </span>
+                    </button>
+
+                    {!shut && rows.length > 0 && (
+                      <ul className="mb-2 ml-1.5 grid gap-px overflow-hidden rounded-[8px] border border-hair">
+                        {rows.map((p) => (
+                          <li key={p.id}>
+                            <button
+                              type="button"
+                              onClick={() => setOpen(p.id)}
+                              className="tap grid w-full grid-cols-[1fr_auto] items-center gap-3 bg-surface px-3.5 py-2.5 text-left transition-colors hover:bg-card sm:grid-cols-[minmax(0,2.2fr)_minmax(0,1.6fr)_auto]"
+                            >
+                              <span className="min-w-0">
+                                <span className="block truncate text-body-sm font-semibold text-ink">
+                                  {p.title}
+                                </span>
+                                <span className="mt-0.5 block truncate font-mono text-label uppercase text-dim">
+                                  {p.customerEmail}
+                                </span>
+                              </span>
+                              <span className="hidden min-w-0 items-center gap-1.5 sm:flex">
+                                {p.tags.slice(0, 3).map((t) => (
+                                  <span
+                                    key={t}
+                                    className="truncate rounded-full border border-hair px-2 py-0.5 font-mono text-label text-muted"
+                                  >
+                                    {t}
+                                  </span>
+                                ))}
+                              </span>
+                              <span className="flex shrink-0 items-center gap-2.5">
+                                {p.ball === "client" && <Chip tone="warn">with client</Chip>}
+                                {p.money.outstandingCents > 0 && (
+                                  <span className="hidden font-mono text-label uppercase text-dim md:inline">
+                                    {money(p.money.outstandingCents)} owed
+                                  </span>
+                                )}
+                                {p.dueAt && (
+                                  <span
+                                    className={`font-mono text-label uppercase ${
+                                      Date.parse(p.dueAt) < Date.now() ? "text-error" : "text-dim"
+                                    }`}
+                                  >
+                                    {day(p.dueAt)}
+                                  </span>
+                                )}
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* closing a job must never make it vanish */}
+              {projects.some((p) => !isOpen(p.status)) && (
+                <div className="mt-5">
+                  <p className="font-mono text-label uppercase tracking-[0.1em] text-dim">
+                    Finished
+                  </p>
+                  <div className="mt-2 grid gap-2">
+                    {projects
+                      .filter((p) => !isOpen(p.status))
+                      .map((p) => (
+                        <div
+                          key={p.id}
+                          className="flex flex-wrap items-center justify-between gap-3 rounded-[8px] border border-hair bg-surface px-4 py-2.5"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => setOpen(p.id)}
+                            className="tap min-w-0 flex-1 text-left"
+                          >
+                            <span className="block truncate text-body-sm font-semibold text-ink">
+                              {p.title}
+                            </span>
+                            <span className="mt-0.5 block truncate font-mono text-label uppercase text-dim">
+                              {p.customerEmail} / {money(p.money.valueCents)}
+                            </span>
+                          </button>
+                          <span className="flex shrink-0 items-center gap-2">
+                            <Chip tone="neutral">{STUDIO_LABEL[p.status]}</Chip>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => void patchProject(p.id, { status: "backlog" })}
+                            >
+                              Reopen
+                            </Button>
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </>
@@ -578,81 +599,70 @@ export function CustomVideoScreen() {
           ))}
         </div>
       )}
-
-      <Drawer open={!!opened} onClose={() => setOpen(null)} title={opened?.title ?? ""}>
-        {opened && (
-          <ProjectDrawer
-            p={opened}
-            team={team}
-            onStatus={(status) => setStatus(opened, status)}
-            onStage={async (status) => {
-              await moveTo(opened.id, status);
-            }}
-            onSaveVideo={(id, body) => saveVideo(opened.id, id, body)}
-            onAddVideo={(title, provided) => addVideo(opened.id, title, provided)}
-          />
-        )}
-      </Drawer>
     </div>
   );
 }
 
 /*
- * One job, opened over the board. Everything the studio needs while a
- * client is on the phone: the money, the videos and who is cutting each,
- * the brief, the invoices, and the notes the client never sees.
+ * One project, full screen. The stage, the money, the six-station line,
+ * the extra formats, the brief, the invoices, the notes the client never
+ * sees. Everything Tanvir needs while a client is on the phone, on one
+ * page with no side panel.
  */
-function ProjectDrawer({
+function ProjectPage({
   p,
   team,
-  onStatus,
-  onStage,
-  onSaveVideo,
-  onAddVideo,
+  onBack,
+  onPatch,
+  onReload,
 }: {
   p: Project;
   team: { email: string; name: string }[];
-  onStatus: (s: ProjectStatus) => void;
-  onStage: (s: ProjectStatus) => Promise<void>;
-  onSaveVideo: (id: string, body: Record<string, unknown>) => Promise<void>;
-  onAddVideo: (title: string, provided: { script: boolean; voiceover: boolean }) => Promise<void>;
+  onBack: () => void;
+  onPatch: (body: Record<string, unknown>) => Promise<string | null>;
+  onReload: () => Promise<void>;
 }) {
-  const [newTitle, setNewTitle] = useState("");
-  const [newProvided, setNewProvided] = useState({ script: false, voiceover: false });
-  const [linkFor, setLinkFor] = useState<string | null>(null);
-  const [lineFor, setLineFor] = useState<string | null>(null);
-  /* one video means one line, so it opens itself; once somebody closes it
-     by hand we stop insisting */
-  const autoOpened = useRef(false);
-  useEffect(() => {
-    if (!autoOpened.current && p.videos.length === 1) {
-      setLineFor(p.videos[0].id);
-      autoOpened.current = true;
-    }
-  }, [p.videos]);
-  const [link, setLink] = useState("");
-  const [busy, setBusy] = useState(false);
-  /* closing hides a job from the board, so the button asks twice: the first
-     click arms it, the second does it, and it disarms itself after a moment */
+  const [busy, setBusy] = useState<string | null>(null);
+  const [pageErr, setPageErr] = useState("");
   const [confirming, setConfirming] = useState<ProjectStatus | null>(null);
-  const [stageBusy, setStageBusy] = useState(false);
+  const [tagDraft, setTagDraft] = useState("");
   useEffect(() => {
     if (!confirming) return;
     const t = setTimeout(() => setConfirming(null), 4000);
     return () => clearTimeout(t);
   }, [confirming]);
 
+  const run = async (tag: string, body: Record<string, unknown>) => {
+    setBusy(tag);
+    setPageErr("");
+    const e = await onPatch(body);
+    if (e) setPageErr(e);
+    setBusy(null);
+  };
+
   return (
-    <div className="grid gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <Chip tone={isOpen(p.status) ? "info" : "neutral"}>{STUDIO_LABEL[p.status]}</Chip>
-          {p.dueAt && <Chip tone="warn">due {when(p.dueAt)}</Chip>}
-          <span className="font-mono text-label uppercase text-dim">{p.customerEmail}</span>
+    <div className="w-full">
+      <Button variant="ghost" size="sm" icon={<ArrowLeft />} onClick={onBack}>
+        All custom video
+      </Button>
+
+      <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="font-display text-h3 text-ink">{p.title}</h1>
+          <p className="mt-0.5 text-body-sm text-muted">
+            {p.customerEmail}
+            <span className="ml-2 font-mono text-label uppercase text-dim">
+              opened {when(p.createdAt)}
+            </span>
+          </p>
         </div>
-        <div className="flex shrink-0 flex-wrap gap-2">
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
           {!isOpen(p.status) ? (
-            <Button size="sm" variant="secondary" onClick={() => onStatus("scoped")}>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => void run("reopen", { status: "backlog" })}
+            >
               Reopen
             </Button>
           ) : (
@@ -664,10 +674,8 @@ function ProjectDrawer({
                 onClick={() => {
                   if (confirming === st) {
                     setConfirming(null);
-                    onStatus(st);
-                  } else {
-                    setConfirming(st);
-                  }
+                    void run(st, { status: st });
+                  } else setConfirming(st);
                 }}
               >
                 {confirming === st
@@ -681,34 +689,25 @@ function ProjectDrawer({
         </div>
       </div>
       {confirming && (
-        <p className="text-body-sm text-muted">
-          {confirming === "cancelled" ? "Cancelling" : "Closing"} moves this
-          job off the board into Finished below it, where Reopen brings it
-          back. Nothing is deleted.
+        <p className="mt-2 text-body-sm text-muted">
+          {confirming === "cancelled" ? "Cancelling" : "Closing"} moves this job
+          into Finished at the foot of the list, where Reopen brings it back.
+          Nothing is deleted.
         </p>
       )}
 
-      {/* the stage, movable from right here: dragging the card is the fast
-          way, but a drawer that can only LOOK at the stage sends people
-          hunting for where to change it */}
+      {/* the stage, one click per category */}
       {isOpen(p.status) && (
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="font-mono text-label uppercase text-dim">Stage</span>
-          <span className="flex overflow-hidden rounded-[6px] border border-hair">
-            {PROJECT_BOARD.map((st) => (
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <span className="flex flex-wrap overflow-hidden rounded-[6px] border border-hair">
+            {PROJECT_LIST.map((st) => (
               <button
                 key={st}
                 type="button"
-                disabled={stageBusy || st === p.status}
-                onClick={async () => {
-                  setStageBusy(true);
-                  await onStage(st);
-                  setStageBusy(false);
-                }}
-                className={`tap px-2.5 py-1 font-mono text-label uppercase transition-colors ${
-                  st === p.status
-                    ? "bg-gold text-canvas"
-                    : "text-dim hover:text-ink"
+                disabled={busy !== null || st === p.status}
+                onClick={() => void run("stage", { status: st })}
+                className={`tap px-2.5 py-1.5 font-mono text-label uppercase transition-colors ${
+                  st === p.status ? "bg-gold text-canvas" : "text-dim hover:text-ink"
                 }`}
               >
                 {STUDIO_LABEL[st]}
@@ -718,69 +717,61 @@ function ProjectDrawer({
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {(
-          [
-            ["Agreed", money(p.money.valueCents), "text-gold"],
-            ["Paid", money(p.money.paidCents), "text-green"],
-            ["Still owed", money(p.money.outstandingCents), p.money.outstandingCents ? "text-error" : "text-ink"],
-            ["Videos", String(p.videos.length), "text-ink"],
-          ] as const
-        ).map(([label, value, tone]) => (
-          <div key={label} className="rounded-[8px] border border-hair bg-surface p-3">
-            <p className="font-mono text-label uppercase text-dim">{label}</p>
-            <p className={`mt-1 font-display text-h4 tabular-nums ${tone}`}>{value}</p>
-          </div>
-        ))}
-      </div>
+      {pageErr && <p className="mt-3 text-body-sm text-error">{pageErr}</p>}
 
-      <Card title="Videos" description="Each one, where it is, and who is cutting it.">
-        {p.videos.length === 0 ? (
-          <p className="text-body-sm text-muted">
-            Add the first video below and its production line appears: script,
-            voiceover, design, animation, sound, delivery. Files, approvals
-            and expected dates all live on that line, per video.
-          </p>
-        ) : (
-          <ul className="grid gap-2">
-            {p.videos.map((v) => (
-              <li
-                key={v.id}
-                className="relative overflow-hidden rounded-[8px] border border-hair bg-surface p-3 pl-4"
-              >
-                <span
-                  aria-hidden="true"
-                  className={`absolute inset-y-0 left-0 w-1 ${VIDEO_STRIPE[v.status] ?? "bg-hair"}`}
-                />
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="min-w-0 flex-1 text-body-sm font-semibold text-ink">{v.title}</p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLinkFor(linkFor === v.id ? null : v.id);
-                      setLink(v.videoUrl ?? "");
-                    }}
-                    className="tap font-mono text-label uppercase text-dim transition-colors hover:text-gold"
-                  >
-                    {v.videoUrl ? "the cut" : "no cut yet"}
-                  </button>
-                </div>
-                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+      <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] lg:items-start">
+        {/* ---- the work side ---- */}
+        <div className="grid min-w-0 gap-3">
+          <Card
+            title="Production line"
+            description="The six stations of the main video. Files, approvals and expected dates live here."
+          >
+            <StationList p={p} busy={busy} onRun={run} />
+          </Card>
+
+          <Card
+            title="Extra formats"
+            description="Cut after the main video is approved: reels, shorts, square crops. A title, a link when done, one of four states."
+          >
+            <FormatList p={p} onReload={onReload} />
+          </Card>
+
+          <Card title="The brief">
+            {p.brief ? (
+              <p className="whitespace-pre-wrap text-body-sm text-muted">{p.brief}</p>
+            ) : (
+              <p className="text-body-sm text-dim">No brief written down yet.</p>
+            )}
+          </Card>
+        </div>
+
+        {/* ---- the relationship side ---- */}
+        <div className="grid min-w-0 gap-3">
+          <Card title="The job">
+            <dl className="grid gap-2.5 text-body-sm">
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-muted">Deadline</dt>
+                <dd>
+                  <Input
+                    type="date"
+                    value={p.dueAt ? p.dueAt.slice(0, 10) : ""}
+                    onChange={(e) =>
+                      void run("due", {
+                        dueAt: e.target.value ? new Date(e.target.value).toISOString() : null,
+                      })
+                    }
+                    aria-label="Deadline"
+                    className="w-[9.5rem]"
+                  />
+                </dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-muted">Project manager</dt>
+                <dd>
                   <Select
-                    value={v.status}
-                    onChange={(e) => void onSaveVideo(v.id, { status: e.target.value })}
-                    aria-label={`Status for ${v.title}`}
-                  >
-                    {VIDEO_STATUSES.map((st) => (
-                      <option key={st} value={st}>
-                        {VIDEO_WORD[st]}
-                      </option>
-                    ))}
-                  </Select>
-                  <Select
-                    value={v.assignedTo ?? ""}
-                    onChange={(e) => void onSaveVideo(v.id, { assignedTo: e.target.value })}
-                    aria-label={`Editor for ${v.title}`}
+                    value={p.ownerEmail ?? ""}
+                    onChange={(e) => void run("pm", { ownerEmail: e.target.value || null })}
+                    aria-label="Project manager"
                   >
                     <option value="">Nobody yet</option>
                     {team.map((t) => (
@@ -789,327 +780,332 @@ function ProjectDrawer({
                       </option>
                     ))}
                   </Select>
-                </div>
-                {linkFor === v.id && (
-                  <div className="mt-2 flex gap-2">
-                    <Input
-                      value={link}
-                      onChange={(e) => setLink(e.target.value)}
-                      placeholder="Link to the cut"
-                    />
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      disabled={busy}
-                      onClick={async () => {
-                        setBusy(true);
-                        await onSaveVideo(v.id, { videoUrl: link });
-                        setBusy(false);
-                        setLinkFor(null);
-                      }}
-                    >
-                      Save
-                    </Button>
-                  </div>
-                )}
-                <PipelinePanel
-                  v={v}
-                  open={lineFor === v.id}
-                  onToggle={() => setLineFor(lineFor === v.id ? null : v.id)}
-                  onStation={(key, patch, requestApproval) =>
-                    onSaveVideo(v.id, { station: { key, ...patch, requestApproval } })
-                  }
-                  onAddDraft={(url, note) => onSaveVideo(v.id, { action: "add_draft", url, note })}
-                />
-              </li>
-            ))}
-          </ul>
-        )}
-        <div className="mt-3 grid gap-2">
-          <div className="flex gap-2">
-            <Input
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-              placeholder="Brand film, master cut"
-              aria-label="New video title"
-            />
-            <Button
-              size="sm"
-              variant="secondary"
-              disabled={busy || !newTitle.trim()}
-              onClick={async () => {
-                setBusy(true);
-                await onAddVideo(newTitle.trim(), newProvided);
-                setBusy(false);
-                setNewTitle("");
-                setNewProvided({ script: false, voiceover: false });
-              }}
-            >
-              Add
-            </Button>
-          </div>
-          {/* known at creation, so the line starts honest: what the client
-              already gave us never gates and never nags */}
-          <div className="flex flex-wrap gap-4">
-            {(
-              [
-                ["script", "They provide the script"],
-                ["voiceover", "They provide the voiceover"],
-              ] as const
-            ).map(([k, label]) => (
-              <label key={k} className="flex items-center gap-1.5 text-body-sm text-muted">
-                <input
-                  type="checkbox"
-                  checked={newProvided[k]}
-                  onChange={(e) => setNewProvided({ ...newProvided, [k]: e.target.checked })}
-                  className="accent-[var(--gold)]"
-                />
-                {label}
-              </label>
-            ))}
-          </div>
-        </div>
-      </Card>
+                </dd>
+              </div>
+              <div className="flex items-baseline justify-between gap-3">
+                <dt className="text-muted">Agreed</dt>
+                <dd className="font-display tabular-nums text-gold">{money(p.money.valueCents)}</dd>
+              </div>
+              <div className="flex items-baseline justify-between gap-3">
+                <dt className="text-muted">Paid</dt>
+                <dd className="tabular-nums text-green">{money(p.money.paidCents)}</dd>
+              </div>
+              <div className="flex items-baseline justify-between gap-3">
+                <dt className="text-muted">Still owed</dt>
+                <dd className={`tabular-nums ${p.money.outstandingCents ? "text-error" : "text-ink"}`}>
+                  {money(p.money.outstandingCents)}
+                </dd>
+              </div>
+            </dl>
+          </Card>
 
-      <Card title="The brief">
-        {p.brief ? (
-          <p className="whitespace-pre-wrap text-body-sm text-muted">{p.brief}</p>
-        ) : (
-          <p className="text-body-sm text-dim">No brief written down yet.</p>
-        )}
-      </Card>
-
-      <Card title="Invoices">
-        {p.invoices.length === 0 ? (
-          <p className="text-body-sm text-muted">
-            None raised. Send one from Invoices and pick this job.
-          </p>
-        ) : (
-          <ul className="grid gap-2">
-            {p.invoices.map((i) => (
-              <li key={i.id} className="flex items-center justify-between gap-3 text-body-sm">
-                <span className="text-ink">{i.number}</span>
-                <span className="flex items-center gap-2">
-                  <Chip tone={i.paid ? "good" : "warn"}>{i.paid ? "paid" : "open"}</Chip>
-                  <span className="tabular-nums text-ink">{money(i.totalCents)}</span>
+          <Card title="Tags">
+            <div className="flex flex-wrap items-center gap-1.5">
+              {p.tags.map((t) => (
+                <span
+                  key={t}
+                  className="flex items-center gap-1 rounded-full border border-hair px-2 py-0.5 font-mono text-label text-muted"
+                >
+                  {t}
+                  <button
+                    type="button"
+                    aria-label={`Remove tag ${t}`}
+                    onClick={() => void run("tags", { tags: p.tags.filter((x) => x !== t) })}
+                    className="tap text-dim transition-colors hover:text-error"
+                  >
+                    <X size={11} aria-hidden="true" />
+                  </button>
                 </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
+              ))}
+              {p.tags.length === 0 && (
+                <span className="text-body-sm text-dim">None yet. Rush, VIP, agency, whatever helps.</span>
+              )}
+            </div>
+            <div className="mt-2.5 flex gap-2">
+              <Input
+                value={tagDraft}
+                onChange={(e) => setTagDraft(e.target.value)}
+                placeholder="Add a tag"
+                aria-label="New tag"
+              />
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={busy !== null || !tagDraft.trim()}
+                onClick={() => {
+                  const t = tagDraft.trim().toLowerCase();
+                  setTagDraft("");
+                  if (t && !p.tags.includes(t)) void run("tags", { tags: [...p.tags, t] });
+                }}
+              >
+                Add
+              </Button>
+            </div>
+          </Card>
 
-      <ItemNotes target={{ projectId: p.id }} authHeader={authHeader} />
+          <Card title="Invoices">
+            {p.invoices.length === 0 ? (
+              <p className="text-body-sm text-muted">
+                None raised. Send one from Invoices and pick this job.
+              </p>
+            ) : (
+              <ul className="grid gap-2">
+                {p.invoices.map((i) => (
+                  <li key={i.id} className="flex items-center justify-between gap-3 text-body-sm">
+                    <span className="text-ink">{i.number}</span>
+                    <span className="flex items-center gap-2">
+                      <Chip tone={i.paid ? "good" : "warn"}>{i.paid ? "paid" : "open"}</Chip>
+                      <span className="tabular-nums text-ink">{money(i.totalCents)}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+
+          <ItemNotes target={{ projectId: p.id }} authHeader={authHeader} />
+        </div>
+      </div>
     </div>
   );
 }
 
-/*
- * The production line inside one video, from Tanvir's side. Six stations:
- * flip who holds each one, keep the file on it, mark what the client
- * provided, and hand a station to the client for approval, which emails
- * them and lights their portal. Animation gets its drafts as versions so
- * a note about 0:12 keeps pointing at the cut it was written on.
- */
-function PipelinePanel({
-  v,
-  open,
-  onToggle,
-  onStation,
-  onAddDraft,
+/* the six stations with their controls, project level */
+function StationList({
+  p,
+  busy,
+  onRun,
 }: {
-  v: Project["videos"][number];
-  open: boolean;
-  onToggle: () => void;
-  onStation: (
-    key: keyof PipelineShape,
-    patch: Partial<StationShape>,
-    requestApproval?: boolean,
-  ) => Promise<void>;
-  onAddDraft: (url: string, note: string) => Promise<void>;
+  p: Project;
+  busy: string | null;
+  onRun: (tag: string, body: Record<string, unknown>) => Promise<void>;
 }) {
   const [urls, setUrls] = useState<Record<string, string>>({});
-  const [draft, setDraft] = useState("");
-  const [busy, setBusy] = useState<string | null>(null);
-  const line = v.pipeline;
-  const doneCount = STATION_META.filter((m) => line[m.key]?.state === "done").length;
+  const [draftUrl, setDraftUrl] = useState("");
+  const line = p.pipeline;
 
-  const run = async (tag: string, fn: () => Promise<void>) => {
-    setBusy(tag);
-    await fn();
-    setBusy(null);
-  };
+  const station = (key: keyof Pipeline, patch: Record<string, unknown>, requestApproval?: boolean) =>
+    onRun(`st-${key}`, { station: { key, ...patch, requestApproval } });
 
   return (
-    <div className="mt-2">
-      <button
-        type="button"
-        onClick={onToggle}
-        className="tap flex w-full items-center justify-between font-mono text-label uppercase text-dim transition-colors hover:text-gold"
-      >
-        <span>Production line, {doneCount} of 6 done</span>
-        <span className="flex items-center gap-1.5">
-          {STATION_META.map((m) => (
-            <span
-              key={m.key}
-              title={`${m.label}: ${STATION_STATE_WORD[line[m.key]?.state ?? "todo"]}`}
-              className={`h-1.5 w-4 rounded-full ${STATION_DOT[line[m.key]?.state ?? "todo"]}`}
-            />
-          ))}
-          <span aria-hidden="true">{open ? "\u2212" : "+"}</span>
-        </span>
-      </button>
+    <div className="grid gap-1.5">
+      {p.mainVideo && p.mainVideo.revisionRound > 0 && (
+        <p className="font-mono text-label uppercase text-dim">
+          revision round {p.mainVideo.revisionRound}
+        </p>
+      )}
+      {STATION_META.map((m) => {
+        const st = line[m.key] ?? { state: "todo" as const };
+        const gated = Boolean(st.gate) && !st.provided;
+        return (
+          <div key={m.key} className="rounded-[8px] border border-hair bg-canvas p-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="flex items-center gap-2">
+                <span aria-hidden="true" className={`h-2 w-2 rounded-full ${STATION_DOT[st.state]}`} />
+                <span className="text-body-sm font-semibold text-ink">{m.label}</span>
+                {st.provided && <Chip tone="neutral">client provided</Chip>}
+                {gated && <Chip tone="warn">needs their approval</Chip>}
+              </span>
+              <span className="flex flex-wrap items-center gap-1.5">
+                {m.providable && (
+                  <button
+                    type="button"
+                    disabled={busy !== null}
+                    onClick={() => void station(m.key, { provided: !st.provided })}
+                    className="tap font-mono text-label uppercase text-dim transition-colors hover:text-gold"
+                  >
+                    {st.provided ? "ours after all" : "theirs"}
+                  </button>
+                )}
+                {m.gateable && (
+                  <button
+                    type="button"
+                    disabled={busy !== null}
+                    onClick={() => void station(m.key, { gate: !st.gate })}
+                    className="tap font-mono text-label uppercase text-dim transition-colors hover:text-gold"
+                  >
+                    {st.gate ? "no approval" : "ask approval"}
+                  </button>
+                )}
+                <Select
+                  value={st.state}
+                  disabled={st.provided}
+                  onChange={(e) => void station(m.key, { state: e.target.value })}
+                  aria-label={`${m.label} state`}
+                >
+                  {(Object.keys(STATION_STATE_WORD) as Station["state"][]).map((k) => (
+                    <option key={k} value={k}>
+                      {STATION_STATE_WORD[k]}
+                    </option>
+                  ))}
+                </Select>
+                {!st.provided && st.state !== "done" && (
+                  <Input
+                    type="date"
+                    value={st.eta ? st.eta.slice(0, 10) : ""}
+                    onChange={(e) => void station(m.key, { eta: e.target.value || null })}
+                    aria-label={`${m.label} expected date`}
+                    title="When you expect this station to land. The client sees it."
+                    className="w-[8.5rem]"
+                  />
+                )}
+              </span>
+            </div>
 
-      {open && (
-        <div className="mt-2 grid gap-1.5">
-          {v.revisionRound > 0 && (
-            <p className="font-mono text-label uppercase text-dim">
-              revision round {v.revisionRound}
-            </p>
-          )}
-          {STATION_META.map((m) => {
-            const st = line[m.key] ?? { state: "todo" as const };
-            const gated = Boolean(st.gate) && !st.provided;
-            return (
-              <div key={m.key} className="rounded-[8px] border border-hair bg-canvas p-2.5">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="flex items-center gap-2">
-                    <span
-                      aria-hidden="true"
-                      className={`h-2 w-2 rounded-full ${STATION_DOT[st.state]}`}
-                    />
-                    <span className="text-body-sm font-semibold text-ink">{m.label}</span>
-                    {st.provided && <Chip tone="neutral">client provided</Chip>}
-                    {gated && <Chip tone="warn">needs their approval</Chip>}
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    {m.providable && (
-                      <button
-                        type="button"
-                        disabled={busy !== null}
-                        onClick={() =>
-                          void run(m.key, () => onStation(m.key, { provided: !st.provided }))
-                        }
-                        className="tap font-mono text-label uppercase text-dim transition-colors hover:text-gold"
-                      >
-                        {st.provided ? "ours after all" : "theirs"}
-                      </button>
-                    )}
-                    {m.gateable && (
-                      <button
-                        type="button"
-                        disabled={busy !== null}
-                        onClick={() => void run(m.key, () => onStation(m.key, { gate: !st.gate }))}
-                        className="tap font-mono text-label uppercase text-dim transition-colors hover:text-gold"
-                      >
-                        {st.gate ? "no approval" : "ask approval"}
-                      </button>
-                    )}
-                    <Select
-                      value={st.state}
-                      disabled={st.provided}
-                      onChange={(e) =>
-                        void run(m.key, () =>
-                          onStation(m.key, { state: e.target.value as StationShape["state"] }),
-                        )
-                      }
-                      aria-label={`${m.label} state`}
-                    >
-                      {(Object.keys(STATION_STATE_WORD) as StationShape["state"][]).map((k) => (
-                        <option key={k} value={k}>
-                          {STATION_STATE_WORD[k]}
-                        </option>
-                      ))}
-                    </Select>
-                    {!st.provided && st.state !== "done" && (
-                      <Input
-                        type="date"
-                        value={st.eta ? st.eta.slice(0, 10) : ""}
-                        onChange={(e) =>
-                          void run(m.key, () => onStation(m.key, { eta: e.target.value || null }))
-                        }
-                        aria-label={`${m.label} expected date`}
-                        title="When you expect this station to land. The client sees it."
-                        className="w-[8.5rem]"
-                      />
-                    )}
-                  </span>
-                </div>
-
-                {m.key === "animation" ? (
-                  <div className="mt-2 flex gap-2">
-                    <Input
-                      value={draft}
-                      onChange={(e) => setDraft(e.target.value)}
-                      placeholder="New draft link, becomes the next version"
-                    />
+            {m.key === "animation" ? (
+              <div className="mt-2 flex gap-2">
+                <Input
+                  value={draftUrl}
+                  onChange={(e) => setDraftUrl(e.target.value)}
+                  placeholder="New draft link, becomes the next version"
+                />
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={busy !== null || !draftUrl.trim()}
+                  onClick={async () => {
+                    await onRun("draft", { action: "add_draft", url: draftUrl.trim() });
+                    setDraftUrl("");
+                  }}
+                >
+                  Add draft
+                </Button>
+              </div>
+            ) : (
+              !st.provided &&
+              m.key !== "sfx" && (
+                <div className="mt-2 flex gap-2">
+                  <Input
+                    value={urls[m.key] ?? st.url ?? ""}
+                    onChange={(e) => setUrls({ ...urls, [m.key]: e.target.value })}
+                    placeholder={
+                      m.key === "design" ? "Figma link" : `Link to the ${m.label.toLowerCase()}`
+                    }
+                  />
+                  {(urls[m.key] ?? "") !== (st.url ?? "") && urls[m.key] !== undefined && (
                     <Button
                       size="sm"
                       variant="secondary"
-                      disabled={busy !== null || !draft.trim()}
-                      onClick={() =>
-                        void run("draft", async () => {
-                          await onAddDraft(draft.trim(), "");
-                          setDraft("");
-                        })
-                      }
+                      disabled={busy !== null}
+                      onClick={() => void station(m.key, { url: urls[m.key] ?? "" })}
                     >
-                      Add draft
+                      Save
                     </Button>
-                  </div>
-                ) : (
-                  !st.provided &&
-                  m.key !== "sfx" && (
-                    <div className="mt-2 flex gap-2">
-                      <Input
-                        value={urls[m.key] ?? st.url ?? ""}
-                        onChange={(e) => setUrls({ ...urls, [m.key]: e.target.value })}
-                        placeholder={
-                          m.key === "design" ? "Figma link" : `Link to the ${m.label.toLowerCase()}`
-                        }
-                      />
-                      {(urls[m.key] ?? "") !== (st.url ?? "") && urls[m.key] !== undefined && (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          disabled={busy !== null}
-                          onClick={() =>
-                            void run(m.key, () => onStation(m.key, { url: urls[m.key] ?? "" }))
-                          }
-                        >
-                          Save
-                        </Button>
-                      )}
-                    </div>
-                  )
-                )}
+                  )}
+                </div>
+              )
+            )}
 
-                {gated && st.state !== "done" && st.state !== "with_client" && (
-                  <div className="mt-2">
-                    <Button
-                      size="sm"
-                      variant="primary"
-                      disabled={busy !== null || (!st.url && m.key !== "delivery" && m.key !== "animation") || (m.key === "animation" && !v.videoUrl)}
-                      onClick={() =>
-                        void run(`send-${m.key}`, () =>
-                          onStation(m.key, { state: "with_client" }, true),
-                        )
-                      }
-                    >
-                      Send for their approval
-                    </Button>
-                  </div>
-                )}
-                {st.state === "with_client" && (
-                  <p className="mt-1.5 font-mono text-label uppercase text-gold">
-                    with the client{st.at ? ` since ${when(st.at)}` : ""}
-                  </p>
+            {gated && st.state !== "done" && st.state !== "with_client" && (
+              <div className="mt-2">
+                <Button
+                  size="sm"
+                  variant="primary"
+                  disabled={
+                    busy !== null ||
+                    (!st.url && m.key !== "delivery" && m.key !== "animation") ||
+                    (m.key === "animation" && !p.mainVideo?.videoUrl)
+                  }
+                  onClick={() => void station(m.key, { state: "with_client" }, true)}
+                >
+                  Send for their approval
+                </Button>
+              </div>
+            )}
+            {st.state === "with_client" && (
+              <p className="mt-1.5 font-mono text-label uppercase text-gold">
+                with the client{st.at ? ` since ${when(st.at)}` : ""}
+              </p>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* the extra formats: title, link once done, one of four states */
+function FormatList({ p, onReload }: { p: Project; onReload: () => Promise<void> }) {
+  const [title, setTitle] = useState("");
+  const [links, setLinks] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
+
+  const call = async (method: "POST" | "PATCH", body: Record<string, unknown>) => {
+    setBusy(true);
+    await fetch("/api/admin/projects/videos", {
+      method,
+      headers: { ...(await authHeader()), "Content-Type": "application/json" },
+      body: JSON.stringify({ projectId: p.id, ...body }),
+    });
+    await onReload();
+    setBusy(false);
+  };
+
+  return (
+    <div className="grid gap-2">
+      {p.formats.length === 0 ? (
+        <p className="text-body-sm text-dim">
+          None yet. Add them once the main video is approved and the client
+          wants a reel or a short.
+        </p>
+      ) : (
+        <ul className="grid gap-1.5">
+          {p.formats.map((f) => (
+            <li key={f.id} className="rounded-[8px] border border-hair bg-canvas p-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="min-w-0 flex-1 text-body-sm font-semibold text-ink">{f.title}</span>
+                <Select
+                  value={f.status}
+                  onChange={(e) => void call("PATCH", { id: f.id, status: e.target.value })}
+                  aria-label={`State for ${f.title}`}
+                >
+                  {Object.entries(FORMAT_WORD).map(([k, w]) => (
+                    <option key={k} value={k}>
+                      {w}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div className="mt-2 flex gap-2">
+                <Input
+                  value={links[f.id] ?? f.videoUrl ?? ""}
+                  onChange={(e) => setLinks({ ...links, [f.id]: e.target.value })}
+                  placeholder="Video link, added once it is ready for review"
+                />
+                {(links[f.id] ?? "") !== (f.videoUrl ?? "") && links[f.id] !== undefined && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={busy}
+                    onClick={() => void call("PATCH", { id: f.id, videoUrl: links[f.id] ?? "" })}
+                  >
+                    Save
+                  </Button>
                 )}
               </div>
-            );
-          })}
-        </div>
+            </li>
+          ))}
+        </ul>
       )}
+      <div className="flex gap-2">
+        <Input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Vertical reel, 30 seconds"
+          aria-label="New format title"
+        />
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled={busy || !title.trim()}
+          onClick={async () => {
+            await call("POST", { title: title.trim() });
+            setTitle("");
+          }}
+        >
+          Add
+        </Button>
+      </div>
     </div>
   );
 }
