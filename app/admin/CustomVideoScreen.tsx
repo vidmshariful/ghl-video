@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, ChevronDown, ChevronRight, Inbox, Plus, X } from "lucide-react";
 import {
   Button,
@@ -18,7 +18,6 @@ import {
 import { authHeader, money, when } from "./client";
 import { initialsOf } from "@/components/portal/board";
 import { pages } from "@/lib/site";
-import { ItemNotes } from "@/components/portal/board";
 import {
   PROJECT_LIST,
   REQUEST_LABEL,
@@ -711,10 +710,12 @@ function ProjectPage({
   onPatch: (body: Record<string, unknown>) => Promise<string | null>;
   onReload: () => Promise<void>;
 }) {
+  const [tab, setTab] = useState<"manage" | "review">("manage");
   const [busy, setBusy] = useState<string | null>(null);
   const [pageErr, setPageErr] = useState("");
   const [confirming, setConfirming] = useState<ProjectStatus | null>(null);
   const [tagDraft, setTagDraft] = useState("");
+  const [openNotes, setOpenNotes] = useState(0);
   useEffect(() => {
     if (!confirming) return;
     const t = setTimeout(() => setConfirming(null), 4000);
@@ -729,242 +730,252 @@ function ProjectPage({
     setBusy(null);
   };
 
+  const invoice = p.invoices[0] ?? null;
+  const paidState = p.money.paidCents >= p.money.valueCents && p.money.valueCents > 0
+    ? { word: "paid", tone: "good" as const }
+    : p.money.paidCents > 0
+      ? { word: "part paid", tone: "warn" as const }
+      : p.money.valueCents > 0
+        ? { word: "unpaid", tone: "bad" as const }
+        : { word: "no price yet", tone: "neutral" as const };
+
   return (
     <div className="w-full">
       <Button variant="ghost" size="sm" icon={<ArrowLeft />} onClick={onBack}>
         All custom video
       </Button>
 
-      <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="font-display text-h3 text-ink">{p.title}</h1>
-          <p className="mt-0.5 text-body-sm text-muted">
-            {p.customerEmail}
-            <span className="ml-2 font-mono text-label uppercase text-dim">
-              opened {when(p.createdAt)}
-            </span>
-          </p>
-        </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          {!isOpen(p.status) ? (
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => void run("reopen", { status: "backlog" })}
-            >
-              Reopen
-            </Button>
-          ) : (
-            (["closed", "cancelled"] as ProjectStatus[]).map((st) => (
-              <Button
-                key={st}
-                size="sm"
-                variant={st === "cancelled" ? "danger" : "secondary"}
-                onClick={() => {
-                  if (confirming === st) {
-                    setConfirming(null);
-                    void run(st, { status: st });
-                  } else setConfirming(st);
-                }}
-              >
-                {confirming === st
-                  ? st === "cancelled"
-                    ? "Click again to cancel it"
-                    : "Click again to close it"
-                  : STUDIO_LABEL[st]}
-              </Button>
-            ))
-          )}
-        </div>
-      </div>
-      {confirming && (
-        <p className="mt-2 text-body-sm text-muted">
-          {confirming === "cancelled" ? "Cancelling" : "Closing"} moves this job
-          into Finished at the foot of the list, where Reopen brings it back.
-          Nothing is deleted.
-        </p>
-      )}
-
-      {/* the stage is arithmetic now: it follows the stations, so this row
-          only reports. Move a station and watch it file itself. */}
-      {isOpen(p.status) && (
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <span className="flex flex-wrap overflow-hidden rounded-[6px] border border-hair">
-            {PROJECT_LIST.map((st) => (
-              <span
-                key={st}
-                className={`px-2.5 py-1.5 font-mono text-label uppercase ${
-                  st === p.status ? "bg-gold text-canvas" : "text-dim"
-                }`}
-              >
-                {STUDIO_LABEL[st]}
+      {/* ---- section 1: the header, everything about this job ---- */}
+      <div className="mt-4 rounded-[12px] border border-hair bg-surface p-5">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="font-display text-h3 text-ink">{p.title}</h1>
+            <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-body-sm text-muted">
+              <span className="text-ink">{p.customerEmail}</span>
+              {p.category && <span className="text-dim">/ {p.category}</span>}
+              <span className="font-mono text-label uppercase text-dim">
+                opened {when(p.createdAt)}
               </span>
-            ))}
-          </span>
-          <Headline p={p} />
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            {!isOpen(p.status) ? (
+              <Button size="sm" variant="secondary" onClick={() => void run("reopen", { status: "backlog" })}>
+                Reopen
+              </Button>
+            ) : (
+              (["closed", "cancelled"] as ProjectStatus[]).map((st) => (
+                <Button
+                  key={st}
+                  size="sm"
+                  variant={st === "cancelled" ? "danger" : "secondary"}
+                  onClick={() => {
+                    if (confirming === st) {
+                      setConfirming(null);
+                      void run(st, { status: st });
+                    } else setConfirming(st);
+                  }}
+                >
+                  {confirming === st
+                    ? st === "cancelled"
+                      ? "Click again to cancel it"
+                      : "Click again to close it"
+                    : STUDIO_LABEL[st]}
+                </Button>
+              ))
+            )}
+          </div>
         </div>
-      )}
+        {confirming && (
+          <p className="mt-2 text-body-sm text-muted">
+            {confirming === "cancelled" ? "Cancelling" : "Closing"} moves this job
+            into Finished at the foot of the list, where Reopen brings it back.
+            Nothing is deleted.
+          </p>
+        )}
+
+        {/* every fact about the job, in the order it gets asked for */}
+        <dl className="mt-4 grid gap-x-6 gap-y-3 border-t border-hair pt-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Fact label="Status">
+            <span className="flex items-center gap-2">
+              <span aria-hidden="true" className={`h-2 w-2 rounded-full ${STATUS_DOT[p.status] ?? "bg-hair"}`} />
+              <span className="text-ink">{STUDIO_LABEL[p.status]}</span>
+            </span>
+            <Headline p={p} />
+          </Fact>
+
+          <Fact label="Due">
+            <Input
+              type="date"
+              value={p.dueAt ? p.dueAt.slice(0, 10) : ""}
+              onChange={(e) =>
+                void run("due", {
+                  dueAt: e.target.value ? new Date(e.target.value).toISOString() : null,
+                })
+              }
+              aria-label="Deadline"
+            />
+          </Fact>
+
+          <Fact label="Producer">
+            <Select
+              value={p.ownerEmail ?? ""}
+              onChange={(e) => void run("pm", { ownerEmail: e.target.value || null })}
+              aria-label="Project manager"
+            >
+              <option value="">Nobody yet</option>
+              {team.map((t) => (
+                <option key={t.email} value={t.email}>
+                  {t.name}
+                </option>
+              ))}
+            </Select>
+          </Fact>
+
+          <Fact label="Category">
+            <Select
+              value={p.category ?? ""}
+              onChange={(e) => void run("category", { category: e.target.value || null })}
+              aria-label="Video category"
+            >
+              <option value="">Not set</option>
+              {CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </Select>
+          </Fact>
+
+          <Fact label="Agreed">
+            <span className="font-display text-h4 tabular-nums text-gold">
+              {money(p.money.valueCents)}
+            </span>
+          </Fact>
+
+          <Fact label="Payment">
+            <span className="flex flex-wrap items-center gap-2">
+              <Chip tone={paidState.tone}>{paidState.word}</Chip>
+              {p.money.outstandingCents > 0 && (
+                <span className="font-mono text-label uppercase text-dim">
+                  {money(p.money.outstandingCents)} owed
+                </span>
+              )}
+            </span>
+          </Fact>
+
+          <Fact label="Invoice">
+            {invoice ? (
+              <span className="flex flex-wrap items-center gap-2">
+                <span className="text-ink">{invoice.number}</span>
+                <Chip tone={invoice.paid ? "good" : "warn"}>{invoice.paid ? "paid" : "open"}</Chip>
+                {p.invoices.length > 1 && (
+                  <span className="font-mono text-label uppercase text-dim">
+                    +{p.invoices.length - 1} more
+                  </span>
+                )}
+              </span>
+            ) : (
+              <span className="text-body-sm text-dim">None raised yet</span>
+            )}
+          </Fact>
+
+          <Fact label="Tags">
+            <span className="flex flex-wrap items-center gap-1.5">
+              {p.tags.map((t) => (
+                <span
+                  key={t}
+                  className="flex items-center gap-1 rounded-full border border-hair px-2 py-0.5 font-mono text-label text-muted"
+                >
+                  {t}
+                  <button
+                    type="button"
+                    aria-label={`Remove tag ${t}`}
+                    onClick={() => void run("tags", { tags: p.tags.filter((x) => x !== t) })}
+                    className="tap text-dim transition-colors hover:text-error"
+                  >
+                    <X size={11} aria-hidden="true" />
+                  </button>
+                </span>
+              ))}
+              <Input
+                value={tagDraft}
+                onChange={(e) => setTagDraft(e.target.value)}
+                placeholder="Add"
+                aria-label="New tag"
+                className="w-20"
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter") return;
+                  const t = tagDraft.trim().toLowerCase();
+                  setTagDraft("");
+                  if (t && !p.tags.includes(t)) void run("tags", { tags: [...p.tags, t] });
+                }}
+              />
+            </span>
+          </Fact>
+        </dl>
+      </div>
 
       {pageErr && <p className="mt-3 text-body-sm text-error">{pageErr}</p>}
 
-      <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] lg:items-start">
-        {/* ---- the work side ---- */}
-        <div className="grid min-w-0 gap-3">
-          <Card
-            title="Production line"
-            description="The six stations of the main video. Files, approvals and expected dates live here."
-          >
-            <StationList p={p} busy={busy} onRun={run} />
-          </Card>
-
-          <Card
-            title="Extra formats"
-            description="Cut after the main video is approved: reels, shorts, square crops. A title, a link when done, one of four states."
-          >
-            <FormatList p={p} onReload={onReload} />
-          </Card>
-
-          <Card title="The brief">
-            {p.brief ? (
-              <p className="whitespace-pre-wrap text-body-sm text-muted">{p.brief}</p>
-            ) : (
-              <p className="text-body-sm text-dim">No brief written down yet.</p>
-            )}
-          </Card>
-        </div>
-
-        {/* ---- the relationship side ---- */}
-        <div className="grid min-w-0 gap-3">
-          <Card title="The job">
-            <dl className="grid gap-2.5 text-body-sm">
-              <div className="flex items-center justify-between gap-3">
-                <dt className="text-muted">Deadline</dt>
-                <dd>
-                  <Input
-                    type="date"
-                    value={p.dueAt ? p.dueAt.slice(0, 10) : ""}
-                    onChange={(e) =>
-                      void run("due", {
-                        dueAt: e.target.value ? new Date(e.target.value).toISOString() : null,
-                      })
-                    }
-                    aria-label="Deadline"
-                    className="w-[9.5rem]"
-                  />
-                </dd>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <dt className="text-muted">Category</dt>
-                <dd>
-                  <Select
-                    value={p.category ?? ""}
-                    onChange={(e) => void run("category", { category: e.target.value || null })}
-                    aria-label="Video category"
-                  >
-                    <option value="">Not set</option>
-                    {CATEGORIES.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </Select>
-                </dd>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <dt className="text-muted">Project manager</dt>
-                <dd>
-                  <Select
-                    value={p.ownerEmail ?? ""}
-                    onChange={(e) => void run("pm", { ownerEmail: e.target.value || null })}
-                    aria-label="Project manager"
-                  >
-                    <option value="">Nobody yet</option>
-                    {team.map((t) => (
-                      <option key={t.email} value={t.email}>
-                        {t.name}
-                      </option>
-                    ))}
-                  </Select>
-                </dd>
-              </div>
-              <div className="flex items-baseline justify-between gap-3">
-                <dt className="text-muted">Agreed</dt>
-                <dd className="font-display tabular-nums text-gold">{money(p.money.valueCents)}</dd>
-              </div>
-              <div className="flex items-baseline justify-between gap-3">
-                <dt className="text-muted">Paid</dt>
-                <dd className="tabular-nums text-green">{money(p.money.paidCents)}</dd>
-              </div>
-              <div className="flex items-baseline justify-between gap-3">
-                <dt className="text-muted">Still owed</dt>
-                <dd className={`tabular-nums ${p.money.outstandingCents ? "text-error" : "text-ink"}`}>
-                  {money(p.money.outstandingCents)}
-                </dd>
-              </div>
-            </dl>
-            <div className="mt-3 border-t border-hair pt-3">
-              <div className="flex flex-wrap items-center gap-1.5">
-                {p.tags.map((t) => (
-                  <span
-                    key={t}
-                    className="flex items-center gap-1 rounded-full border border-hair px-2 py-0.5 font-mono text-label text-muted"
-                  >
-                    {t}
-                    <button
-                      type="button"
-                      aria-label={`Remove tag ${t}`}
-                      onClick={() => void run("tags", { tags: p.tags.filter((x) => x !== t) })}
-                      className="tap text-dim transition-colors hover:text-error"
-                    >
-                      <X size={11} aria-hidden="true" />
-                    </button>
-                  </span>
-                ))}
-                <span className="flex gap-1.5">
-                  <Input
-                    value={tagDraft}
-                    onChange={(e) => setTagDraft(e.target.value)}
-                    placeholder="Add a tag"
-                    aria-label="New tag"
-                    className="w-28"
-                    onKeyDown={(e) => {
-                      if (e.key !== "Enter") return;
-                      const t = tagDraft.trim().toLowerCase();
-                      setTagDraft("");
-                      if (t && !p.tags.includes(t)) void run("tags", { tags: [...p.tags, t] });
-                    }}
-                  />
-                </span>
-              </div>
-            </div>
-          </Card>
-
-
-          <Card title="Invoices">
-            {p.invoices.length === 0 ? (
-              <p className="text-body-sm text-muted">
-                None raised. Send one from Invoices and pick this job.
-              </p>
-            ) : (
-              <ul className="grid gap-2">
-                {p.invoices.map((i) => (
-                  <li key={i.id} className="flex items-center justify-between gap-3 text-body-sm">
-                    <span className="text-ink">{i.number}</span>
-                    <span className="flex items-center gap-2">
-                      <Chip tone={i.paid ? "good" : "warn"}>{i.paid ? "paid" : "open"}</Chip>
-                      <span className="tabular-nums text-ink">{money(i.totalCents)}</span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Card>
-
-          <ProjectThread projectId={p.id} />
-
-          <ItemNotes target={{ projectId: p.id }} authHeader={authHeader} />
-        </div>
+      {/* ---- two tabs, and only two ---- */}
+      <div className="mt-4">
+        <Tabs
+          tabs={[
+            { key: "manage" as const, label: "Manage the project" },
+            { key: "review" as const, label: "Review room", count: openNotes || undefined },
+          ]}
+          active={tab}
+          onChange={setTab}
+        />
       </div>
+
+      {tab === "manage" ? (
+        <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:items-start">
+          {/* column one: the work */}
+          <div className="grid min-w-0 gap-3">
+            <Card
+              title="Production line"
+              description="Six stations. One move each, everything rarer behind Edit."
+            >
+              <StationList p={p} busy={busy} onRun={run} />
+            </Card>
+
+            <Card
+              title="Extra formats"
+              description="Cut after the main video is approved: reels, shorts, square crops."
+            >
+              <FormatList p={p} onReload={onReload} />
+            </Card>
+          </div>
+
+          {/* column two: the record */}
+          <div className="grid min-w-0 gap-3">
+            <FilesCard p={p} />
+            <ActivityCard p={p} />
+            <ProjectThread projectId={p.id} />
+            {p.brief && (
+              <Card title="The brief">
+                <p className="whitespace-pre-wrap text-body-sm text-muted">{p.brief}</p>
+              </Card>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="mt-4">
+          <ReviewRoom projectId={p.id} title={p.title} onCount={setOpenNotes} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* one labelled fact in the header grid */
+function Fact({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <dt className="font-mono text-label uppercase tracking-[0.08em] text-dim">{label}</dt>
+      <dd className="mt-1 text-body-sm text-muted">{children}</dd>
     </div>
   );
 }
@@ -1395,5 +1406,421 @@ function ProjectThread({ projectId }: { projectId: string }) {
         </Button>
       </div>
     </Card>
+  );
+}
+
+/* every link this job has, gathered. Nothing new is stored here. */
+function FilesCard({ p }: { p: Project }) {
+  const rows: { label: string; url: string | null; note?: string }[] = [
+    ...STATION_META.filter((m) => m.key !== "sfx").map((m) => ({
+      label: m.label,
+      url: p.pipeline[m.key]?.url ?? null,
+      note:
+        p.pipeline[m.key]?.provided && !p.pipeline[m.key]?.url
+          ? "the client owes this"
+          : undefined,
+    })),
+    ...p.formats.map((f) => ({ label: f.title, url: f.videoUrl })),
+  ];
+  return (
+    <Card title="Files" description="Every link on this job, in one place.">
+      <ul className="grid gap-1.5">
+        {rows.map((r) => (
+          <li
+            key={r.label}
+            className="flex flex-wrap items-center justify-between gap-2 rounded-[8px] border border-hair bg-canvas px-3 py-2"
+          >
+            <span className="min-w-0 text-body-sm text-ink">{r.label}</span>
+            {r.url ? (
+              <span className="flex shrink-0 items-center gap-2">
+                <a
+                  href={r.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="tap font-mono text-label uppercase text-gold transition-colors hover:text-ink"
+                >
+                  Open it
+                </a>
+                <button
+                  type="button"
+                  onClick={() => void navigator.clipboard?.writeText(r.url!)}
+                  className="tap font-mono text-label uppercase text-dim transition-colors hover:text-ink"
+                >
+                  Copy
+                </button>
+              </span>
+            ) : (
+              <span className="shrink-0 font-mono text-label uppercase text-dim">
+                {r.note ?? "not in yet"}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
+/* what has happened, written by the work itself */
+function ActivityCard({ p }: { p: Project }) {
+  const events: { at: string; body: string }[] = [
+    { at: p.createdAt, body: "Project booked in." },
+  ];
+  for (const m of STATION_META) {
+    const st = p.pipeline[m.key];
+    if (!st?.at) continue;
+    if (st.state === "done") events.push({ at: st.at, body: `${m.label} finished.` });
+    else if (st.state === "with_client")
+      events.push({ at: st.at, body: `${m.label} sent to the client.` });
+    else if (st.state === "with_us") events.push({ at: st.at, body: `${m.label} started.` });
+  }
+  events.sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+
+  return (
+    <Card title="Activity" description="Written by the work, never typed.">
+      <ol className="grid max-h-64 gap-2.5 overflow-y-auto pr-1">
+        {events.map((e, i) => (
+          <li key={`${e.at}-${i}`} className="border-l border-hair pl-3">
+            <p className="text-body-sm text-muted">{e.body}</p>
+            <p className="mt-0.5 font-mono text-label uppercase text-dim">{when(e.at)}</p>
+          </li>
+        ))}
+      </ol>
+    </Card>
+  );
+}
+
+/* ---------------- the review room ---------------- */
+
+type ReviewNote = {
+  id: string;
+  side: "client" | "studio";
+  name: string;
+  body: string;
+  atSeconds: number | null;
+  stamp: string | null;
+  version: number | null;
+  parentId: string | null;
+  resolved: boolean;
+  at: string;
+};
+type Cut = { id: string; version: number; videoUrl: string; createdAt: string };
+
+const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+
+/*
+ * Watch what the client watched, read their notes pinned to the second
+ * they mean, answer them, and mark them done.
+ *
+ * This is the piece custom projects never had: their feedback used to
+ * arrive as a line of text with no video attached to it. A note belongs to
+ * the cut it was written on, so v1's notes stay with v1 when v2 lands.
+ */
+function ReviewRoom({
+  projectId,
+  title,
+  onCount,
+}: {
+  projectId: string;
+  title: string;
+  onCount?: (n: number) => void;
+}) {
+  const [notes, setNotes] = useState<ReviewNote[] | null>(null);
+  const [cuts, setCuts] = useState<Cut[]>([]);
+  const [watching, setWatching] = useState<Cut | null>(null);
+  const [text, setText] = useState("");
+  const [pin, setPin] = useState(true);
+  const [at, setAt] = useState(0);
+  const [replyTo, setReplyTo] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [duration, setDuration] = useState(0);
+  const video = useRef<HTMLVideoElement>(null);
+
+  const load = useCallback(async () => {
+    try {
+      const r = await fetch(`/api/admin/projects/notes?projectId=${projectId}`, {
+        headers: await authHeader(),
+      });
+      const j = await r.json();
+      if (!r.ok) return setErr(j.error ?? "Could not load the review.");
+      const list = (j.notes ?? []) as ReviewNote[];
+      const vs = (j.versions ?? []) as Cut[];
+      setNotes(list);
+      setCuts(vs);
+      setWatching((w) => (w && vs.some((v) => v.id === w.id) ? w : (vs[0] ?? null)));
+      onCount?.(list.filter((n) => n.side === "client" && !n.resolved && !n.parentId).length);
+    } catch {
+      setErr("Could not load the review.");
+    }
+  }, [projectId, onCount]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function post(body: Record<string, unknown>) {
+    setBusy(true);
+    setErr("");
+    try {
+      const r = await fetch("/api/admin/projects/notes", {
+        method: "POST",
+        headers: { ...(await authHeader()), "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, ...body }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) setErr((j as { error?: string }).error ?? "That did not go through.");
+      else await load();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function seek(seconds: number) {
+    const el = video.current;
+    if (!el) return;
+    el.currentTime = seconds;
+    void el.play().catch(() => {});
+  }
+
+  if (notes === null && !err) return <p className="text-body-sm text-muted">Loading the review...</p>;
+
+  const top = (notes ?? []).filter((n) => !n.parentId);
+  const repliesOf = (id: string) => (notes ?? []).filter((n) => n.parentId === id);
+  const currentVersion = watching?.version ?? null;
+  const onThisCut = top.filter(
+    (n) => currentVersion == null || (n.version ?? currentVersion) === currentVersion,
+  );
+  const earlier = top.filter(
+    (n) => currentVersion != null && (n.version ?? currentVersion) !== currentVersion,
+  );
+  const openCount = top.filter((n) => n.side === "client" && !n.resolved).length;
+
+  const marks = onThisCut
+    .filter((n) => n.atSeconds != null)
+    .map((n) => ({ id: n.id, at: n.atSeconds as number, resolved: n.resolved, side: n.side }));
+
+  const noteCard = (n: ReviewNote) => (
+    <li
+      key={n.id}
+      className={`rounded-[8px] border p-3 ${
+        n.side === "client" ? "border-gold/30 bg-gold/5" : "border-hair bg-surface"
+      } ${n.resolved ? "opacity-60" : ""}`}
+    >
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        <span className="text-body-sm font-semibold text-ink">{n.name}</span>
+        {n.stamp && (
+          <button
+            type="button"
+            onClick={() => seek(n.atSeconds ?? 0)}
+            className="tap rounded-full border border-gold/40 px-2 py-0.5 font-mono text-label text-gold transition-colors hover:bg-gold/10"
+          >
+            {n.stamp}
+          </button>
+        )}
+        {n.side === "client" && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void post({ resolveId: n.id, resolved: !n.resolved })}
+            className="tap ml-auto font-mono text-label uppercase text-dim transition-colors hover:text-green"
+          >
+            {n.resolved ? "Reopen" : "Mark done"}
+          </button>
+        )}
+      </div>
+      <p className="mt-1.5 whitespace-pre-wrap text-body-sm text-muted">{n.body}</p>
+      <p className="mt-1 font-mono text-label uppercase text-dim">
+        {when(n.at)}
+        {n.version && cuts.length > 1 ? ` / on v${n.version}` : ""}
+      </p>
+
+      {repliesOf(n.id).map((r) => (
+        <div key={r.id} className="mt-2 border-l-2 border-blue/40 pl-3">
+          <span className="text-body-sm font-semibold text-ink">{r.name}</span>
+          <p className="mt-0.5 whitespace-pre-wrap text-body-sm text-muted">{r.body}</p>
+          <p className="mt-0.5 font-mono text-label uppercase text-dim">{when(r.at)}</p>
+        </div>
+      ))}
+
+      {replyTo === n.id ? (
+        <div className="mt-2 flex gap-2">
+          <Input
+            value={replyText}
+            onChange={(e) => setReplyText(e.target.value)}
+            placeholder="Answer this note"
+            aria-label="Reply"
+          />
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={busy || !replyText.trim()}
+            onClick={async () => {
+              await post({ body: replyText.trim(), parentId: n.id });
+              setReplyText("");
+              setReplyTo(null);
+            }}
+          >
+            Send
+          </Button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setReplyTo(n.id)}
+          className="tap mt-1.5 font-mono text-label uppercase text-dim transition-colors hover:text-gold"
+        >
+          Reply
+        </button>
+      )}
+    </li>
+  );
+
+  return (
+    <div className="grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:items-start">
+      {/* the cut itself */}
+      <div className="grid min-w-0 gap-3">
+        <Card
+          title={cuts.length ? `Watching v${watching?.version ?? ""}` : "No cut yet"}
+          description={
+            cuts.length
+              ? "Press a timestamp on any note and the video jumps there."
+              : "Paste a draft link on the Animation station and it appears here."
+          }
+          actions={
+            cuts.length > 1 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {cuts.map((c) => (
+                  <Button
+                    key={c.id}
+                    size="sm"
+                    variant={watching?.id === c.id ? "primary" : "secondary"}
+                    onClick={() => setWatching(c)}
+                  >
+                    v{c.version}
+                  </Button>
+                ))}
+              </div>
+            ) : undefined
+          }
+        >
+          {watching ? (
+            <div className="grid gap-2">
+              <video
+                ref={video}
+                src={watching.videoUrl}
+                controls
+                onTimeUpdate={(e) => setAt(e.currentTarget.currentTime)}
+                onLoadedMetadata={(e) => setDuration(e.currentTarget.duration || 0)}
+                className="w-full rounded-[8px] bg-canvas"
+              />
+              {marks.length > 0 && duration > 0 && (
+                <div className="relative h-2 rounded-full bg-hair">
+                  {marks.map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => seek(m.at)}
+                      aria-label={`Jump to ${mmss(m.at)}`}
+                      style={{ left: `${Math.min(99, (m.at / duration) * 100)}%` }}
+                      className={`absolute -top-0.5 h-3 w-1 rounded-full ${
+                        m.resolved ? "bg-hair" : m.side === "client" ? "bg-gold" : "bg-blue"
+                      }`}
+                    />
+                  ))}
+                </div>
+              )}
+              <p className="font-mono text-label uppercase text-dim">
+                {cuts.length > 1 && watching.id !== cuts[0].id
+                  ? `an older cut / sent ${when(watching.createdAt)}`
+                  : `current cut / sent ${when(watching.createdAt)}`}
+                {cuts.length > 1 && watching.id !== cuts[0].id && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => {
+                      if (confirm(`Remove cut v${watching.version}? The client can no longer watch it.`))
+                        void post({ removeVersionId: watching.id });
+                    }}
+                    className="tap ml-3 text-dim transition-colors hover:text-error"
+                  >
+                    remove this cut
+                  </button>
+                )}
+              </p>
+            </div>
+          ) : (
+            <p className="text-body-sm text-dim">
+              Nothing to watch. Add a draft on the Manage tab and the client sees
+              it the moment you send it for approval.
+            </p>
+          )}
+        </Card>
+
+        {watching && (
+          <Card title="Write a note">
+            <div className="grid gap-2">
+              <Textarea
+                rows={2}
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="What you want them to know, or what you fixed"
+              />
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <label className="flex items-center gap-2 text-body-sm text-muted">
+                  <input
+                    type="checkbox"
+                    checked={pin}
+                    onChange={(e) => setPin(e.target.checked)}
+                    className="h-4 w-4 accent-[var(--gold)]"
+                  />
+                  Pin this to {mmss(at)}
+                </label>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={busy || !text.trim()}
+                  onClick={async () => {
+                    await post({ body: text.trim(), atSeconds: pin ? Math.floor(at) : null });
+                    setText("");
+                  }}
+                >
+                  Add note
+                </Button>
+              </div>
+            </div>
+          </Card>
+        )}
+      </div>
+
+      {/* their notes */}
+      <div className="grid min-w-0 gap-3">
+        <Card
+          title="Their feedback"
+          description={
+            openCount > 0
+              ? `${openCount} ${openCount === 1 ? "note" : "notes"} still to answer.`
+              : "Everything they asked for has been answered."
+          }
+        >
+          {err && <p className="mb-2 text-body-sm text-error">{err}</p>}
+          {onThisCut.length === 0 ? (
+            <p className="text-body-sm text-dim">
+              No notes on this cut. When {title} goes out for approval, whatever
+              they say lands here pinned to the second they mean.
+            </p>
+          ) : (
+            <ul className="grid gap-2">{onThisCut.map(noteCard)}</ul>
+          )}
+        </Card>
+
+        {earlier.length > 0 && (
+          <Card title="On earlier cuts" description="Kept, so a fixed note stops shouting.">
+            <ul className="grid gap-2">{earlier.map(noteCard)}</ul>
+          </Card>
+        )}
+      </div>
+    </div>
   );
 }
