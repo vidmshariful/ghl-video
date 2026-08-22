@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ArrowLeft, Play } from "lucide-react";
 import { Button, Card, Chip, EmptyState, Input, PageHeader, Textarea } from "@/components/portal/ui";
-import { StageTimeline, WorkCard } from "@/components/portal/board";
+import { StageTimeline } from "@/components/portal/board";
 import { VideoReview } from "./VideoReview";
 import { DownloadAll } from "@/components/portal/DownloadAll";
 import { pages } from "@/lib/site";
@@ -74,33 +74,41 @@ const when = (iso: string) =>
     minute: "2-digit",
   });
 
-const TONE: Record<string, "neutral" | "info" | "good" | "warn" | "bad"> = {
-  backlog: "neutral",
-  planning: "neutral",
-  in_progress: "info",
-  review: "warn",
-  revision: "bad",
-  approved: "good",
-  cutdowns: "info",
-  closed: "good",
-};
-
-/* the macro journey, in the client's words */
-const JOURNEY = [
-  { key: "booked", label: "Booked in", tone: "neutral" as const },
-  { key: "making", label: "Being made", tone: "info" as const },
+/*
+ * The journey walks the same stages the studio's list uses, in the
+ * client's words. Revision is not its own station, it is Being made
+ * wearing its real label, because a line that doubles back reads as a
+ * mistake. Extra formats only appears once the project actually has that
+ * stage in front of it.
+ */
+const JOURNEY_BASE = [
+  { key: "backlog", label: "Booked in", tone: "neutral" as const },
+  { key: "planning", label: "Being planned", tone: "neutral" as const },
+  { key: "in_progress", label: "Being made", tone: "info" as const },
   { key: "review", label: "Your review", tone: "warn" as const },
-  { key: "done", label: "Done", tone: "good" as const },
+  { key: "approved", label: "Approved", tone: "good" as const },
 ];
 
+const CUTDOWNS_STEP = { key: "cutdowns", label: "Extra formats", tone: "info" as const };
+
+const journeySteps = (p: Project) =>
+  p.status === "cutdowns" || p.formats.length > 0
+    ? [...JOURNEY_BASE, CUTDOWNS_STEP]
+    : JOURNEY_BASE;
+
 const journeyKey = (status: string) =>
-  ["backlog", "planning"].includes(status)
-    ? "booked"
-    : ["in_progress", "revision"].includes(status)
-      ? "making"
-      : status === "review"
-        ? "review"
-        : "done";
+  status === "revision" ? "in_progress" : status === "closed" ? "approved" : status;
+
+const STAGE_DOT: Record<string, string> = {
+  backlog: "bg-hair",
+  planning: "bg-blue/60",
+  in_progress: "bg-blue",
+  review: "bg-gold",
+  revision: "bg-error",
+  approved: "bg-green",
+  cutdowns: "bg-gold/60",
+  closed: "bg-green",
+};
 
 const DOT: Record<PipelineStation["state"], string> = {
   todo: "bg-hair",
@@ -198,8 +206,25 @@ export function CustomView({
     );
   }
 
-  const live = projects.filter((p) => p.open);
-  const finished = projects.filter((p) => !p.open);
+  /* the same grouped list the studio reads, in the client's words, and a
+     stage with nothing in it simply does not appear */
+  const STAGE_ORDER = [
+    "backlog",
+    "planning",
+    "in_progress",
+    "review",
+    "revision",
+    "approved",
+    "cutdowns",
+    "closed",
+  ];
+  const groups = STAGE_ORDER.map((key) => ({
+    key,
+    rows: projects.filter((p) => p.status === key),
+  })).filter((g) => g.rows.length > 0);
+
+  const GRID =
+    "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:grid-cols-[minmax(0,2fr)_8rem_6.5rem_minmax(0,1fr)_5.5rem]";
 
   return (
     <div>
@@ -211,56 +236,92 @@ export function CustomView({
       {projects.length === 0 ? (
         <StartModule authedFetch={authedFetch} />
       ) : (
-        <div className="grid gap-5">
-          {live.length > 0 && (
-            <div>
-              <p className="font-mono text-label uppercase tracking-[0.1em] text-dim">
-                In progress
-              </p>
-              <div className="mt-2 grid gap-2.5">
-                {live.map((p) => (
-                  <WorkCard
-                    key={p.id}
-                    item={{
-                      id: p.id,
-                      column: p.status,
-                      title: p.title,
-                      meta: p.statusLabel,
-                      warn: p.pipeline.ball === "client" ? "waiting on you" : null,
-                      due: p.dueAt ? `due ${day(p.dueAt)}` : null,
-                      dueTone: "neutral",
-                      progressPct: p.pipeline.percent,
-                    }}
-                    tone={TONE[p.status] ?? "neutral"}
-                    onOpen={() => setOpen(p.id)}
-                  />
-                ))}
+        <div className="grid gap-1">
+          <div className={`${GRID} px-3.5 pb-1`}>
+            <span className="font-mono text-label uppercase tracking-[0.08em] text-dim">
+              Project
+            </span>
+            <span className="hidden font-mono text-label uppercase tracking-[0.08em] text-dim sm:block">
+              Category
+            </span>
+            <span className="hidden font-mono text-label uppercase tracking-[0.08em] text-dim sm:block">
+              Line
+            </span>
+            <span className="hidden sm:block" />
+            <span className="text-right font-mono text-label uppercase tracking-[0.08em] text-dim">
+              Due
+            </span>
+          </div>
+
+          {groups.map((g) => (
+            <div key={g.key}>
+              <div className="flex items-center gap-2 px-2 py-1.5">
+                <span
+                  aria-hidden="true"
+                  className={`h-2.5 w-2.5 rounded-full ${STAGE_DOT[g.key] ?? "bg-hair"}`}
+                />
+                <span className="font-mono text-label uppercase tracking-[0.08em] text-ink">
+                  {g.rows[0].statusLabel}
+                </span>
+                <span className="font-mono text-label tabular-nums text-dim">
+                  {g.rows.length}
+                </span>
               </div>
-            </div>
-          )}
-          {finished.length > 0 && (
-            <div>
-              <p className="font-mono text-label uppercase tracking-[0.1em] text-dim">Done</p>
-              <div className="mt-2 grid gap-2.5">
-                {finished.map((p) => (
-                  <WorkCard
-                    key={p.id}
-                    item={{
-                      id: p.id,
-                      column: p.status,
-                      title: p.title,
-                      meta: p.statusLabel,
-                      due: "finished",
-                      dueTone: "neutral",
-                      progressPct: 100,
-                    }}
-                    tone="good"
-                    onOpen={() => setOpen(p.id)}
-                  />
+              <ul className="mb-2 ml-1.5 grid gap-px overflow-hidden rounded-[8px] border border-hair">
+                {g.rows.map((p) => (
+                  <li key={p.id}>
+                    <button
+                      type="button"
+                      onClick={() => setOpen(p.id)}
+                      className={`tap ${GRID} w-full bg-surface px-3.5 py-2.5 text-left transition-colors hover:bg-card`}
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate text-body-sm font-semibold text-ink">
+                          {p.title}
+                        </span>
+                        <span className="mt-0.5 block truncate font-mono text-label uppercase text-dim">
+                          {p.pipeline.percent}% through the line
+                        </span>
+                      </span>
+                      <span className="hidden min-w-0 sm:block">
+                        {p.category ? (
+                          <span className="truncate text-body-sm text-muted">{p.category}</span>
+                        ) : (
+                          <span className="font-mono text-label uppercase text-dim">video</span>
+                        )}
+                      </span>
+                      <span className="hidden items-center gap-1 sm:flex">
+                        {p.pipeline.stations.map((st) => (
+                          <span
+                            key={st.key}
+                            title={`${st.label}: ${st.word}`}
+                            className={`h-1.5 w-3 rounded-full ${DOT[st.state]}`}
+                          />
+                        ))}
+                      </span>
+                      <span className="hidden min-w-0 items-center sm:flex">
+                        {p.pipeline.ball === "client" && <Chip tone="warn">waiting on you</Chip>}
+                      </span>
+                      <span
+                        className={`text-right font-mono text-label uppercase ${
+                          p.dueAt && Date.parse(p.dueAt) < Date.now() && p.open
+                            ? "text-error"
+                            : "text-dim"
+                        }`}
+                      >
+                        {p.dueAt
+                          ? new Date(p.dueAt).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                            })
+                          : ""}
+                      </span>
+                    </button>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </div>
-          )}
+          ))}
         </div>
       )}
     </div>
@@ -310,15 +371,9 @@ function ProjectPage({
       <div className="mb-3">
         <Card>
           <StageTimeline
-            steps={JOURNEY}
+            steps={journeySteps(p)}
             currentKey={journeyKey(p.status)}
-            currentLabel={
-              p.status === "revision"
-                ? "Changes in hand"
-                : p.status === "cutdowns"
-                  ? "Extra formats in the works"
-                  : undefined
-            }
+            currentLabel={p.status === "revision" ? "Changes in hand" : undefined}
           />
         </Card>
       </div>
