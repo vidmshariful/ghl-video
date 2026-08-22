@@ -1,20 +1,84 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ArrowUpRight, BadgeDollarSign, Clock3, ShoppingCart, Users } from "lucide-react";
-import { money, supabase, when } from "./client";
+import { useCallback, useEffect, useState } from "react";
+import {
+  ArrowUpRight,
+  BadgeDollarSign,
+  CalendarClock,
+  ClipboardList,
+  Clock3,
+  MessageSquare,
+  Repeat,
+  ShoppingCart,
+  Sparkles,
+  Users,
+} from "lucide-react";
+import { authHeader, money, when } from "./client";
 import type { View } from "./nav";
 
-type DashOrder = {
-  id: string;
-  customer_email: string;
-  amount_cents: number;
-  currency: string;
-  status: string;
-  highlevel_opportunity_id: string | null;
-  created_at: string;
-  product: { name: string } | null;
-  customer: { name: string | null } | null;
+/*
+ * The whole business at a glance, in three layers.
+ *
+ * It used to show money only, which meant the studio's real state, what is
+ * sitting with a client, what has been paid for with no brief, what is
+ * late, lived on five other screens and got found by accident. Now the
+ * first thing on the page is what needs a person today, and it is only
+ * there when something actually does.
+ *
+ * Everything is computed by /api/admin/dashboard in one call, rather than
+ * pulling every order into the browser and adding them up here.
+ */
+
+type Dash = {
+  needs: {
+    withClient: number;
+    projectsWithClient: number;
+    noBrief: number;
+    newEnquiries: number;
+    unreadMessages: number;
+    alarms: number;
+    emailFails: number;
+    lateProjects: number;
+    lateVideos: number;
+  };
+  money: {
+    allTimeCents: number;
+    monthCents: number;
+    mrrCents: number;
+    owedCents: number;
+    pipelineCents: number;
+    openInvoices: number;
+    liveSubscriptions: number;
+  };
+  work: {
+    inProduction: number;
+    revisions: number;
+    queued: number;
+    openProjects: number;
+    byStage: { key: string; label: string; count: number }[];
+    dueSoon: { kind: "project" | "video"; id: string; title: string; who: string; at: string }[];
+  };
+  people: { customers: number; newThisMonth: number };
+  days: { key: string; label: string; cents: number }[];
+  paidOrders: number;
+  recentOrders: {
+    id: string;
+    email: string;
+    name: string | null;
+    product: string | null;
+    amountCents: number;
+    currency: string;
+    status: string;
+    at: string;
+  }[];
+  feedback: {
+    id: string;
+    video_title: string;
+    verdict: string;
+    note: string | null;
+    customer_email: string;
+    created_at: string;
+  }[];
 };
 
 const STATUS_STYLE: Record<string, string> = {
@@ -24,187 +88,168 @@ const STATUS_STYLE: Record<string, string> = {
   refunded: "border-hair text-dim",
 };
 
-type DayPoint = { key: string; label: string; cents: number };
+const day = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
 export function DashboardScreen({ onNavigate }: { onNavigate: (v: View) => void }) {
-  const [orders, setOrders] = useState<DashOrder[]>([]);
-  const [customerCount, setCustomerCount] = useState(0);
-  const [chart, setChart] = useState<{ days: DayPoint[]; monthCents: number; monthOrders: number }>(
-    { days: [], monthCents: 0, monthOrders: 0 },
-  );
-  const [loaded, setLoaded] = useState(false);
-  const [feedback, setFeedback] = useState<
-    { id: string; video_title: string; verdict: string; note: string | null; customer_email: string; created_at: string }[]
-  >([]);
+  const [d, setD] = useState<Dash | null>(null);
+  const [err, setErr] = useState("");
 
-  useEffect(() => {
-    (async () => {
-      const { data } = await supabase
-        .from("orders")
-        .select(
-          "id,customer_email,amount_cents,currency,status,highlevel_opportunity_id,created_at, product:products(name), customer:customers(name)",
-        )
-        .order("created_at", { ascending: false });
-      const { count } = await supabase
-        .from("customers")
-        .select("id", { count: "exact", head: true });
-      /* the one-question ask's answers; skips are silence and stay out */
-      const { data: fb } = await supabase
-        .from("video_feedback")
-        .select("id, video_title, verdict, note, customer_email, created_at")
-        .neq("verdict", "skipped")
-        .order("created_at", { ascending: false })
-        .limit(5);
-      setFeedback((fb as typeof feedback) ?? []);
-      // supabase types a to-one join as an array; at runtime it is a single
-      // object, so cast through unknown.
-      const rows = (data as unknown as DashOrder[]) ?? [];
-      setOrders(rows);
-      setCustomerCount(count ?? 0);
-
-      /* last 30 days of PAID revenue, day by day (computed here at load
-         time, not in render, to keep render pure for the compiler) */
-      const paidRows = rows.filter((o) => o.status === "paid");
-      const days: DayPoint[] = [];
-      const now = new Date();
-      for (let i = 29; i >= 0; i--) {
-        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-        days.push({
-          key: d.toDateString(),
-          label: d.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-          cents: 0,
-        });
-      }
-      for (const o of paidRows) {
-        const key = new Date(o.created_at).toDateString();
-        const slot = days.find((d) => d.key === key);
-        if (slot) slot.cents += o.amount_cents;
-      }
-      setChart({
-        days,
-        monthCents: days.reduce((s, d) => s + d.cents, 0),
-        monthOrders: paidRows.filter(
-          (o) => now.getTime() - new Date(o.created_at).getTime() < 30 * 86_400_000,
-        ).length,
-      });
-      setLoaded(true);
-    })();
+  const load = useCallback(async () => {
+    try {
+      const r = await fetch("/api/admin/dashboard", { headers: await authHeader() });
+      const j = await r.json();
+      if (!r.ok) return setErr(j.error ?? "Could not load the dashboard.");
+      setD(j as Dash);
+    } catch {
+      setErr("Could not load the dashboard.");
+    }
   }, []);
 
-  if (!loaded) return <p className="text-body text-muted">Loading...</p>;
+  useEffect(() => {
+    void load();
+  }, [load]);
 
-  const paid = orders.filter((o) => o.status === "paid");
-  const revenue = paid.reduce((s, o) => s + o.amount_cents, 0);
-  const pending = orders.filter((o) => o.status === "pending").length;
-  const needsAttention = orders.filter(
-    (o) => o.status === "paid" && !o.highlevel_opportunity_id,
-  ).length;
-  const recent = orders.slice(0, 7);
-  const { days, monthCents, monthOrders } = chart;
-  const maxDay = Math.max(1, ...days.map((d) => d.cents));
+  if (err) return <p className="text-body text-error">{err}</p>;
+  if (!d) return <p className="text-body text-muted">Loading...</p>;
+
+  /* the action layer: only the rows that are actually true today */
+  const needs = ([
+    { label: "waiting on a client's approval", n: d.needs.withClient, to: "production", tone: "warn" },
+    { label: "paid with no brief yet", n: d.needs.noBrief, to: "orders", tone: "bad" },
+    { label: "past their due date", n: d.needs.lateVideos + d.needs.lateProjects, to: "production", tone: "bad" },
+    { label: "new enquiries to answer", n: d.needs.newEnquiries, to: "custom", tone: "warn" },
+    { label: "unread client messages", n: d.needs.unreadMessages, to: "messages", tone: "warn" },
+    { label: "emails that failed to send", n: d.needs.emailFails, to: "emails", tone: "bad" },
+    { label: "alarms nobody has cleared", n: d.needs.alarms, to: "health", tone: "bad" },
+  ] as { label: string; n: number; to: View; tone: "warn" | "bad" }[]).filter((x) => x.n > 0);
 
   const stats = [
     {
       label: "Revenue, all time",
-      value: money(revenue),
+      value: money(d.money.allTimeCents),
       icon: <BadgeDollarSign />,
+      chip: "bg-gold/10 text-gold",
       tone: "text-gold",
-      chip: "bg-gold/12 text-gold",
+      to: "sales" as View,
     },
     {
-      label: "Paid orders",
-      value: String(paid.length),
-      icon: <ShoppingCart />,
+      label: "Recurring, per month",
+      value: money(d.money.mrrCents),
+      icon: <Repeat />,
+      chip: "bg-green/10 text-green",
       tone: "text-green",
-      chip: "bg-green/12 text-green",
+      sub: `${d.money.liveSubscriptions} plan${d.money.liveSubscriptions === 1 ? "" : "s"} live`,
+      to: "subscriptions" as View,
     },
     {
-      label: "Customers",
-      value: String(customerCount),
-      icon: <Users />,
-      tone: "text-ink",
-      chip: "bg-blue/12 text-blue",
+      label: "Invoiced, unpaid",
+      value: money(d.money.owedCents),
+      icon: <ShoppingCart />,
+      chip: "bg-blue/10 text-blue",
+      tone: d.money.owedCents ? "text-error" : "text-ink",
+      sub: `${d.money.openInvoices} open`,
+      to: "invoices" as View,
     },
     {
-      // pending is money in flight, not a disabled state: it gets gold
-      label: "Pending orders",
-      value: String(pending),
+      label: "Agreed, not yet paid",
+      value: money(d.money.pipelineCents),
       icon: <Clock3 />,
-      tone: "text-gold",
-      chip: "bg-gold/12 text-gold",
+      chip: "bg-blue/10 text-blue",
+      tone: "text-ink",
+      sub: `${d.work.openProjects} custom job${d.work.openProjects === 1 ? "" : "s"}`,
+      to: "custom" as View,
     },
   ];
 
+  const max = Math.max(1, ...d.days.map((x) => x.cents));
+
   return (
     <div className="w-full">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="font-display text-h3 text-ink">Dashboard</h1>
-          <p className="mt-0.5 text-body-sm text-muted">The business at a glance.</p>
-        </div>
-      </div>
+      <h1 className="font-display text-h3 text-ink">Dashboard</h1>
+      <p className="mt-0.5 text-body-sm text-muted">
+        The business at a glance: what needs you, what the money is doing, and
+        what the studio is making.
+      </p>
 
-      {/* stat cards */}
-      <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      {/* ---- 1. what needs a person today ---- */}
+      {needs.length > 0 && (
+        <div className="mt-5 rounded-[12px] border border-gold/30 bg-gold/[0.04] p-4">
+          <p className="font-mono text-label uppercase tracking-[0.08em] text-gold">
+            Needs you today
+          </p>
+          <div className="mt-3 grid gap-1.5">
+            {needs.map((x) => (
+              <button
+                key={x.label}
+                type="button"
+                onClick={() => onNavigate(x.to)}
+                className="tap flex w-full items-center justify-between gap-3 rounded-[8px] px-2 py-1.5 text-left transition-colors hover:bg-surface"
+              >
+                <span className="flex min-w-0 items-baseline gap-2.5">
+                  <span
+                    className={`font-display text-h4 tabular-nums ${x.tone === "bad" ? "text-error" : "text-gold"}`}
+                  >
+                    {x.n}
+                  </span>
+                  <span className="truncate text-body-sm text-ink">{x.label}</span>
+                </span>
+                <ArrowUpRight size={14} className="shrink-0 text-dim" aria-hidden="true" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ---- 2. the money ---- */}
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((s) => (
-          <div key={s.label} className="rounded-[12px] border border-hair bg-surface p-6">
-            <div className="flex items-center gap-2.5">
+          <button
+            key={s.label}
+            type="button"
+            onClick={() => onNavigate(s.to)}
+            className="tap rounded-[12px] border border-hair bg-surface p-5 text-left transition-colors hover:border-gold/40"
+          >
+            <span className="flex items-center gap-2.5">
               <span
                 className={`grid h-8 w-8 place-items-center rounded-[8px] ${s.chip} [&>svg]:h-[16px] [&>svg]:w-[16px]`}
               >
                 {s.icon}
               </span>
-              <p className="font-mono text-label uppercase text-dim">{s.label}</p>
-            </div>
-            <p
-              className={`mt-3 font-display text-h2 [font-variant-numeric:tabular-nums] ${s.tone}`}
-            >
+              <span className="font-mono text-label uppercase text-dim">{s.label}</span>
+            </span>
+            <span className={`mt-3 block font-display text-h2 tabular-nums ${s.tone}`}>
               {s.value}
-            </p>
-          </div>
+            </span>
+            {s.sub && <span className="mt-1 block text-body-sm text-muted">{s.sub}</span>}
+          </button>
         ))}
       </div>
 
-      {needsAttention > 0 && (
-        <button
-          type="button"
-          onClick={() => onNavigate("orders")}
-          className="mt-4 flex w-full flex-wrap items-center justify-between gap-3 rounded-[12px] border border-error/40 bg-error/[0.06] px-4 py-3 text-left text-body-sm text-ink transition-colors hover:border-error/70"
-        >
-          <span>
-            {needsAttention} paid order{needsAttention > 1 ? "s" : ""}{" "}
-            {needsAttention > 1 ? "have" : "has"} not synced to HighLevel.
-          </span>
-          <span className="inline-flex shrink-0 items-center gap-1 rounded-[8px] border border-error/50 px-3 py-1.5 font-mono text-label font-bold uppercase text-error">
-            Open Orders <ArrowUpRight size={13} />
-          </span>
-        </button>
-      )}
-
-      {/* last 30 days */}
-      <div className="mt-6 rounded-[12px] border border-hair bg-surface p-5 md:p-6">
+      {/* ---- 3. thirty days ---- */}
+      <div className="mt-3 rounded-[12px] border border-hair bg-surface p-5 md:p-6">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="font-display text-h4 font-semibold text-ink">Last 30 days</h2>
           <p className="text-body-sm text-muted">
-            <span className="font-semibold text-ink">{money(monthCents)}</span> across{" "}
-            <span className="font-semibold text-ink">{monthOrders}</span> paid order
-            {monthOrders === 1 ? "" : "s"}
+            <span className="font-semibold text-ink">{money(d.money.monthCents)}</span> across{" "}
+            <span className="font-semibold text-ink">{d.paidOrders}</span> paid order
+            {d.paidOrders === 1 ? "" : "s"} all time
           </p>
         </div>
-        {monthCents === 0 ? (
+        {d.money.monthCents === 0 ? (
           <p className="mt-4 text-body-sm text-dim">
             No paid orders in the last 30 days yet. New sales draw themselves here.
           </p>
         ) : (
           <div className="mt-5 flex h-28 items-end gap-[3px]" aria-hidden="true">
-            {days.map((d) => (
+            {d.days.map((x) => (
               <div
-                key={d.key}
-                title={`${d.label}: ${money(d.cents)}`}
+                key={x.key}
+                title={`${x.label}: ${money(x.cents)}`}
                 className="flex-1 rounded-t-[3px] bg-gold/80"
                 style={{
-                  height: `${Math.max(3, (d.cents / maxDay) * 100)}%`,
-                  opacity: d.cents ? 1 : 0.16,
+                  height: `${Math.max(2, (x.cents / max) * 100)}%`,
+                  opacity: x.cents ? 1 : 0.15,
                 }}
               />
             ))}
@@ -212,93 +257,190 @@ export function DashboardScreen({ onNavigate }: { onNavigate: (v: View) => void 
         )}
       </div>
 
-      {/* what clients said when we asked whether the video performed */}
-      {feedback.length > 0 && (
-        <div className="mt-6 rounded-[12px] border border-hair bg-surface">
-          <div className="border-b border-hair px-5 py-4">
-            <h2 className="font-display text-h4 font-semibold text-ink">What clients say</h2>
-            <p className="mt-0.5 text-body-sm text-muted">
-              Answers to the after-delivery question. The good ones are
-              testimonials waiting for permission.
-            </p>
+      {/* ---- 4. what the studio is making ---- */}
+      <div className="mt-3 grid gap-3 lg:grid-cols-2">
+        <div className="rounded-[12px] border border-hair bg-surface p-5">
+          <div className="flex items-center gap-2.5">
+            <span className="grid h-8 w-8 place-items-center rounded-[8px] bg-blue/10 text-blue [&>svg]:h-[16px] [&>svg]:w-[16px]">
+              <ClipboardList />
+            </span>
+            <h2 className="font-display text-h4 font-semibold text-ink">In the studio</h2>
           </div>
-          <ul>
-            {feedback.map((f) => (
-              <li
-                key={f.id}
-                className="border-t border-hair px-5 py-3.5 first:border-t-0"
-              >
-                <div className="flex flex-wrap items-center gap-2.5">
-                  <span
-                    className={`inline-flex rounded-full border px-2.5 py-0.5 font-mono text-label uppercase ${
-                      f.verdict === "working"
-                        ? "border-green/50 text-green"
-                        : f.verdict === "not_really"
-                          ? "border-error/50 text-error"
-                          : "border-hair text-dim"
-                    }`}
-                  >
-                    {f.verdict === "working"
-                      ? "It's working"
-                      : f.verdict === "not_really"
-                        ? "Not really"
-                        : "Too early"}
-                  </span>
-                  <span className="text-body-sm font-semibold text-ink">{f.video_title}</span>
-                  <span className="font-mono text-label text-dim">{f.customer_email}</span>
-                  <span className="ml-auto font-mono text-label uppercase text-dim">
-                    {when(f.created_at)}
-                  </span>
-                </div>
-                {f.note && <p className="mt-1.5 text-body-sm text-muted">{f.note}</p>}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
 
-      {/* recent orders */}
-      <div className="mt-6 rounded-[12px] border border-hair bg-surface">
-        <div className="flex items-baseline justify-between border-b border-hair px-5 py-4">
+          <div className="mt-4 grid grid-cols-3 gap-3">
+            {[
+              { n: d.work.inProduction, l: "being made" },
+              { n: d.work.revisions, l: "in revisions" },
+              { n: d.work.queued, l: "queued" },
+            ].map((x) => (
+              <div key={x.l} className="rounded-[8px] border border-hair bg-canvas p-3">
+                <p className="font-display text-h3 tabular-nums text-ink">{x.n}</p>
+                <p className="font-mono text-label uppercase text-dim">{x.l}</p>
+              </div>
+            ))}
+          </div>
+
+          {d.work.byStage.length > 0 && (
+            <div className="mt-4">
+              <p className="font-mono text-label uppercase text-dim">Custom jobs by stage</p>
+              <div className="mt-2 grid gap-1.5">
+                {d.work.byStage.map((s) => (
+                  <button
+                    key={s.key}
+                    type="button"
+                    onClick={() => onNavigate("custom")}
+                    className="tap flex items-center justify-between gap-3 rounded-[8px] border border-hair bg-canvas px-3 py-2 text-left transition-colors hover:border-gold/40"
+                  >
+                    <span className="text-body-sm text-ink">{s.label}</span>
+                    <span className="font-mono text-label tabular-nums text-muted">{s.count}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={() => onNavigate("production")}
+            className="tap mt-4 inline-flex items-center gap-1.5 font-mono text-label uppercase text-muted transition-colors hover:text-gold"
+          >
+            Open the studio board <ArrowUpRight size={13} aria-hidden="true" />
+          </button>
+        </div>
+
+        <div className="rounded-[12px] border border-hair bg-surface p-5">
+          <div className="flex items-center gap-2.5">
+            <span className="grid h-8 w-8 place-items-center rounded-[8px] bg-gold/10 text-gold [&>svg]:h-[16px] [&>svg]:w-[16px]">
+              <CalendarClock />
+            </span>
+            <h2 className="font-display text-h4 font-semibold text-ink">Due in the next week</h2>
+          </div>
+          {d.work.dueSoon.length === 0 ? (
+            <p className="mt-4 text-body-sm text-dim">
+              Nothing promised in the next seven days.
+            </p>
+          ) : (
+            <ul className="mt-4 grid gap-1.5">
+              {d.work.dueSoon.map((x) => (
+                <li
+                  key={`${x.kind}-${x.id}`}
+                  className="flex items-center justify-between gap-3 rounded-[8px] border border-hair bg-canvas px-3 py-2"
+                >
+                  <span className="flex min-w-0 items-center gap-2">
+                    {x.kind === "project" ? (
+                      <Sparkles size={13} className="shrink-0 text-gold" aria-hidden="true" />
+                    ) : (
+                      <ClipboardList size={13} className="shrink-0 text-blue" aria-hidden="true" />
+                    )}
+                    <span className="min-w-0">
+                      <span className="block truncate text-body-sm text-ink">{x.title}</span>
+                      {x.who && (
+                        <span className="block truncate font-mono text-label uppercase text-dim">
+                          {x.who}
+                        </span>
+                      )}
+                    </span>
+                  </span>
+                  <span className="shrink-0 font-mono text-label uppercase text-muted">
+                    {day(x.at)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+
+      {/* ---- 5. people, and what they say ---- */}
+      <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
+        <div className="rounded-[12px] border border-hair bg-surface p-5">
+          <div className="flex items-center gap-2.5">
+            <span className="grid h-8 w-8 place-items-center rounded-[8px] bg-green/10 text-green [&>svg]:h-[16px] [&>svg]:w-[16px]">
+              <Users />
+            </span>
+            <h2 className="font-display text-h4 font-semibold text-ink">Clients</h2>
+          </div>
+          <p className="mt-3 font-display text-h2 tabular-nums text-ink">{d.people.customers}</p>
+          <p className="mt-1 text-body-sm text-muted">
+            {d.people.newThisMonth} new in the last 30 days
+          </p>
+          <button
+            type="button"
+            onClick={() => onNavigate("customers")}
+            className="tap mt-3 inline-flex items-center gap-1.5 font-mono text-label uppercase text-muted transition-colors hover:text-gold"
+          >
+            Open clients <ArrowUpRight size={13} aria-hidden="true" />
+          </button>
+        </div>
+
+        <div className="rounded-[12px] border border-hair bg-surface p-5">
+          <div className="flex items-center gap-2.5">
+            <span className="grid h-8 w-8 place-items-center rounded-[8px] bg-gold/10 text-gold [&>svg]:h-[16px] [&>svg]:w-[16px]">
+              <MessageSquare />
+            </span>
+            <h2 className="font-display text-h4 font-semibold text-ink">What clients say</h2>
+          </div>
+          {d.feedback.length === 0 ? (
+            <p className="mt-4 text-body-sm text-dim">
+              No answers to the one-question ask yet.
+            </p>
+          ) : (
+            <ul className="mt-4 grid gap-2">
+              {d.feedback.map((f) => (
+                <li key={f.id} className="border-l border-hair pl-3">
+                  <p className="text-body-sm text-ink">
+                    {f.note || (f.verdict === "yes" ? "Happy with it." : "Not happy with it.")}
+                  </p>
+                  <p className="mt-0.5 font-mono text-label uppercase text-dim">
+                    {f.video_title} / {f.customer_email} / {when(f.created_at)}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+
+      {/* ---- 6. recent orders ---- */}
+      <div className="mt-3 rounded-[12px] border border-hair bg-surface p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-display text-h4 font-semibold text-ink">Recent orders</h2>
           <button
             type="button"
             onClick={() => onNavigate("orders")}
-            className="tap inline-flex items-center gap-1 font-mono text-label uppercase text-muted transition-colors hover:text-gold"
+            className="tap inline-flex items-center gap-1.5 font-mono text-label uppercase text-muted transition-colors hover:text-gold"
           >
-            View all <ArrowUpRight size={13} />
+            View all <ArrowUpRight size={13} aria-hidden="true" />
           </button>
         </div>
-        {recent.length === 0 ? (
-          <p className="px-5 py-6 text-body text-muted">No orders yet.</p>
+        {d.recentOrders.length === 0 ? (
+          <p className="mt-4 text-body-sm text-dim">No orders yet.</p>
         ) : (
-          <ul>
-            {recent.map((o) => (
+          <ul className="mt-3 grid gap-1.5">
+            {d.recentOrders.map((o) => (
               <li
                 key={o.id}
-                className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1 border-t border-hair px-5 py-3.5 first:border-t-0"
+                className="flex flex-wrap items-center justify-between gap-3 rounded-[8px] border border-hair bg-canvas px-3 py-2"
               >
-                <div className="min-w-0">
-                  <p className="text-body font-semibold text-ink">
-                    {o.customer?.name || o.customer_email}
-                    <span className="ml-3 font-mono text-body-sm text-muted">
-                      {o.product?.name ?? ""}
-                    </span>
-                  </p>
-                  <p className="mt-0.5 font-mono text-label uppercase text-dim">
-                    {when(o.created_at)}
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-3">
+                <span className="min-w-0">
+                  <span className="block truncate text-body-sm text-ink">
+                    {o.name || o.email}
+                    {o.product ? <span className="ml-2 text-dim">{o.product}</span> : null}
+                  </span>
+                  <span className="block font-mono text-label uppercase text-dim">
+                    {when(o.at)}
+                  </span>
+                </span>
+                <span className="flex shrink-0 items-center gap-2.5">
                   <span
-                    className={`inline-flex rounded-full border px-2.5 py-0.5 font-mono text-label uppercase ${STATUS_STYLE[o.status] ?? "border-hair text-dim"}`}
+                    className={`rounded-full border px-2.5 py-0.5 font-mono text-label uppercase ${STATUS_STYLE[o.status] ?? "border-hair text-dim"}`}
                   >
                     {o.status}
                   </span>
-                  <span className="font-mono text-price font-bold text-ink [font-variant-numeric:tabular-nums]">
-                    {money(o.amount_cents, o.currency)}
+                  <span className="font-mono text-body-sm font-bold tabular-nums text-ink">
+                    {money(o.amountCents, o.currency)}
                   </span>
-                </div>
+                </span>
               </li>
             ))}
           </ul>
