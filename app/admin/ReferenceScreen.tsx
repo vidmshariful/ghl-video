@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Button, Input, Textarea } from "@/components/portal/ui";
+import { Button, Input, Modal, Textarea } from "@/components/portal/ui";
 import { authHeader } from "./client";
 
 /*
@@ -165,12 +165,14 @@ export function ReferenceScreen() {
 
       {err && <p className="mt-4 text-body-sm text-error">{err}</p>}
 
-      {draft && (
-        <div className="mt-6 rounded-[12px] border border-gold/40 bg-surface p-5">
-          <p className="font-mono text-label uppercase text-gold">
-            {draft.id ? "Edit" : "Add something"}
-          </p>
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
+      <Modal
+        open={!!draft}
+        onClose={() => setDraft(null)}
+        title={draft?.id ? "Edit" : "Add something"}
+      >
+        {draft && (
+          <div>
+          <div className="grid gap-3 md:grid-cols-2">
             <label className="grid gap-1">
               <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Name</span>
               <Input
@@ -244,8 +246,9 @@ export function ReferenceScreen() {
               Cancel
             </Button>
           </div>
-        </div>
-      )}
+          </div>
+        )}
+      </Modal>
 
       {items.length === 0 ? (
         <div className="mt-8 rounded-[12px] border border-hair bg-surface p-8 text-center">

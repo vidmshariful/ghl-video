@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Button, Input } from "@/components/portal/ui";
+import { Button, Input, Modal } from "@/components/portal/ui";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
 import { teamFeaturesFor, type TeamFeature } from "@/lib/team-features";
 
@@ -254,18 +254,32 @@ export function TeamCard({
 
       {notice && <p className="mt-3 text-body-sm text-green">{notice}</p>}
 
-      {editing === "new" ? (
-        <MemberForm
-          accountType={accountType}
-          busy={busy}
-          error={err}
-          onSubmit={save}
-          onCancel={() => {
-            setEditing(null);
-            setErr("");
-          }}
-        />
-      ) : null}
+      <Modal
+        open={editing !== null}
+        onClose={() => {
+          setEditing(null);
+          setErr("");
+        }}
+        title={
+          editing === "new" || editing === null
+            ? "Add a teammate"
+            : `Edit ${editing.name || editing.email}`
+        }
+      >
+        {editing !== null && (
+          <MemberForm
+            accountType={accountType}
+            initial={editing === "new" ? undefined : editing}
+            busy={busy}
+            error={err}
+            onSubmit={save}
+            onCancel={() => {
+              setEditing(null);
+              setErr("");
+            }}
+          />
+        )}
+      </Modal>
 
       <div className="mt-4">
         {members === null ? (
@@ -276,22 +290,7 @@ export function TeamCard({
           </p>
         ) : (
           <ul className="grid gap-2">
-            {members.map((m) =>
-              editing !== null && editing !== "new" && editing.id === m.id ? (
-                <li key={m.id}>
-                  <MemberForm
-                    accountType={accountType}
-                    initial={m}
-                    busy={busy}
-                    error={err}
-                    onSubmit={save}
-                    onCancel={() => {
-                      setEditing(null);
-                      setErr("");
-                    }}
-                  />
-                </li>
-              ) : (
+            {members.map((m) => (
                 <li
                   key={m.id}
                   className={`flex flex-wrap items-center justify-between gap-3 rounded-[8px] border border-hair bg-canvas px-4 py-3 ${
@@ -345,9 +344,8 @@ export function TeamCard({
                     </button>
                   </div>
                 </li>
-              ),
-            )}
-          </ul>
+              ))}
+            </ul>
         )}
       </div>
     </div>

@@ -2,18 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Search } from "lucide-react";
-import {
-  Button,
-  Card,
-  Chip,
-  EmptyState,
-  Field,
-  Input,
-  Table,
-  Td,
-  Th,
-  Toolbar,
-} from "@/components/portal/ui";
+import { Button, Card, Chip, EmptyState, Field, Input, Modal, Table, Td, Th, Toolbar } from "@/components/portal/ui";
 import { authHeader, money, when } from "./client";
 import { CustomerRecord } from "./CustomerRecord";
 
@@ -159,21 +148,8 @@ export function CustomersScreen({
 
       {err && <p className="mt-3 text-body-sm text-error">{err}</p>}
 
-      {draft && (
-        <Card
-          className="mt-4"
-          title="New client"
-          actions={
-            <div className="flex gap-2">
-              <Button variant="ghost" onClick={() => setDraft(null)}>
-                Cancel
-              </Button>
-              <Button variant="brand" disabled={busy} onClick={createClient}>
-                {busy ? "Adding..." : "Add client"}
-              </Button>
-            </div>
-          }
-        >
+      <Modal open={!!draft} onClose={() => setDraft(null)} title="New client">
+        {draft && (
           <div className="grid gap-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Company" hint="What you would call them.">
@@ -241,9 +217,17 @@ export function CustomersScreen({
                 </Field>
               </div>
             </div>
+            <div className="flex justify-end gap-2 border-t border-hair pt-4">
+              <Button variant="ghost" onClick={() => setDraft(null)}>
+                Cancel
+              </Button>
+              <Button variant="brand" disabled={busy} onClick={createClient}>
+                {busy ? "Adding..." : "Add client"}
+              </Button>
+            </div>
           </div>
-        </Card>
-      )}
+        )}
+      </Modal>
 
       <Toolbar
         right={

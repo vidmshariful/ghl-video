@@ -1,26 +1,7 @@
 "use client";
 
 import { KitPage, KitSection, Note, Spec, SpecGrid } from "@/components/uikits/kit";
-import {
-  Button,
-  Card,
-  CardGrid,
-  Chip,
-  EmptyState,
-  Facts,
-  Field,
-  Input,
-  PageHeader,
-  Progress,
-  Select,
-  Stat,
-  Table,
-  Tabs,
-  Td,
-  Textarea,
-  Th,
-  Toolbar,
-} from "@/components/portal/ui";
+import { Button, Card, CardGrid, Chip, EmptyState, Facts, Field, Input, Modal, PageHeader, Progress, Select, Stat, Table, Tabs, Td, Textarea, Th, Toolbar } from "@/components/portal/ui";
 import { AreaChart, BarChart, Donut, Sparkline } from "@/components/portal/charts";
 import { PortalSidebar } from "@/components/portal/Shell";
 import { PortalSearch } from "@/app/portal/PortalSearch";
@@ -28,6 +9,32 @@ import { KanbanBoard, Drawer, StageTimeline, WorkCard } from "@/components/porta
 import { useState } from "react";
 
 /* the board specimen needs a sliver of state for its drawer */
+function ModalSpecimen() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div>
+      <Button variant="brand" onClick={() => setOpen(true)}>
+        Add something
+      </Button>
+      <Modal open={open} onClose={() => setOpen(false)} title="Add something">
+        <div className="grid gap-4">
+          <Field label="Name" required hint="What you would call it out loud.">
+            <Input placeholder="September webinar" />
+          </Field>
+          <div className="flex justify-end gap-2 border-t border-hair pt-4">
+            <Button variant="ghost" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="brand" onClick={() => setOpen(false)}>
+              Create
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
 function BoardSpecimen() {
   const [open, setOpen] = useState<string | null>(null);
   const [items, setItems] = useState([
@@ -152,6 +159,15 @@ export function PortalKitClient() {
               onOpen={() => {}}
             />
           </div>
+        </Spec>
+      </KitSection>
+
+      <KitSection
+        title="The popup"
+        note="Every add or edit form on every portal opens in this Modal: admin, customer and partner alike, never inline. Esc closes, backdrop click closes, focus is trapped, the page behind cannot scroll. Children bring their own buttons."
+      >
+        <Spec label="Modal" surface="portal" ground="canvas">
+          <ModalSpecimen />
         </Spec>
       </KitSection>
 

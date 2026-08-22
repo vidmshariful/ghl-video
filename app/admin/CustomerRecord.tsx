@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ArrowLeft, ExternalLink, MessageSquare, Plus } from "lucide-react";
-import { Button, Card, Chip, Input, Select, Table, Td, Th } from "@/components/portal/ui";
+import { Button, Card, Chip, Input, Modal, Select, Table, Td, Th } from "@/components/portal/ui";
 import { authHeader, money, when } from "./client";
 import { HIDEABLE_SECTIONS } from "./customer-sections";
 
@@ -823,8 +823,9 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
                 ))}
               </ul>
             )}
-            {contact && (
-              <div className="mt-3 grid gap-2 border-t border-hair pt-3">
+            <Modal open={!!contact} onClose={() => setContact(null)} title="Add a contact">
+              {contact && (
+                <div className="grid gap-2">
                 <Input
                   value={contact.name}
                   onChange={(e) => setContact({ ...contact, name: e.target.value })}
@@ -855,16 +856,17 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
                   <option value="billing">Billing</option>
                   <option value="other">Other</option>
                 </Select>
-                <div className="flex gap-2">
-                  <Button variant="brand" size="sm" disabled={busy || !contact.name.trim()} onClick={addContact}>
-                    Save
-                  </Button>
+                <div className="flex justify-end gap-2 border-t border-hair pt-3">
                   <Button variant="ghost" size="sm" onClick={() => setContact(null)}>
                     Cancel
                   </Button>
+                  <Button variant="brand" size="sm" disabled={busy || !contact.name.trim()} onClick={addContact}>
+                    Save
+                  </Button>
                 </div>
-              </div>
-            )}
+                </div>
+              )}
+            </Modal>
           </Card>
 
           <Card title="Portal access">

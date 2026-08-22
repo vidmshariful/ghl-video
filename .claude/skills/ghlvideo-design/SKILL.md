@@ -100,6 +100,16 @@ These are banned. They are what makes AI-built sites look AI-built:
 Instead: video is the hero. Motion serves the product (hover-play cards, one
 orchestrated hero moment). If a screen feels templated, push it once more.
 
+## 4b. Portal forms open in the Modal, never inline
+
+Every add or edit form on every portal surface (admin, customer portal,
+partner portal) opens in the shared `Modal` from `components/portal/ui`
+(admin code may use its `AdminModal` alias). A form that expands inline and
+pushes the page down is a defect (owner decision, 22 August 2026). The
+Modal specimen lives on `/uikits/portal`. Side-panel exceptions: the work
+board's `Drawer` for editing requests, and full-page editors (blog posts,
+email templates) which are screens, not forms.
+
 ## 5. Motion
 
 GSAP + Framer Motion. Reveals go through the `Reveal` / `RevealItem` wrapper,

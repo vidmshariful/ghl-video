@@ -9,6 +9,7 @@ import {
   EmptyState,
   Field,
   Input,
+  Modal,
   PageHeader,
   Select,
   Tabs,
@@ -305,21 +306,8 @@ export function CustomVideoScreen() {
 
       {err && <p className="mb-3 text-body-sm text-error">{err}</p>}
 
-      {draft && (
-        <Card
-          className="mb-4"
-          title="New project"
-          actions={
-            <div className="flex gap-2">
-              <Button variant="ghost" onClick={() => setDraft(null)}>
-                Cancel
-              </Button>
-              <Button variant="brand" disabled={busy} onClick={save}>
-                {busy ? "Saving..." : "Create"}
-              </Button>
-            </div>
-          }
-        >
+      <Modal open={!!draft} onClose={() => setDraft(null)} title="New project">
+        {draft && (
           <div className="grid gap-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <Field
@@ -413,9 +401,17 @@ export function CustomVideoScreen() {
                 />
               </Field>
             </div>
+            <div className="flex justify-end gap-2 border-t border-hair pt-4">
+              <Button variant="ghost" onClick={() => setDraft(null)}>
+                Cancel
+              </Button>
+              <Button variant="brand" disabled={busy} onClick={save}>
+                {busy ? "Saving..." : "Create"}
+              </Button>
+            </div>
           </div>
-        </Card>
-      )}
+        )}
+      </Modal>
 
       {tab === "projects" ? (
         <>

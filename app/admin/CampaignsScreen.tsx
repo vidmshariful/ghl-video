@@ -2,17 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, Plus, Send, Trash2 } from "lucide-react";
-import {
-  Button,
-  Card,
-  Chip,
-  EmptyState,
-  Field,
-  Input,
-  PageHeader,
-  Select,
-  Textarea,
-} from "@/components/portal/ui";
+import { Button, Card, Chip, EmptyState, Field, Input, Modal, PageHeader, Select, Textarea } from "@/components/portal/ui";
 import { authHeader } from "./client";
 
 /*
@@ -252,21 +242,12 @@ export function CampaignsScreen() {
       {err && <p className="mb-3 text-body-sm text-error">{err}</p>}
       {mailNote && <p className="mb-3 text-body-sm text-muted">{mailNote}</p>}
 
-      {draft && (
-        <Card
-          className="mb-4"
-          title={draft.id ? "Edit offer" : "New offer"}
-          actions={
-            <div className="flex gap-2">
-              <Button variant="ghost" onClick={() => setDraft(null)}>
-                Cancel
-              </Button>
-              <Button variant="brand" disabled={busy} onClick={save}>
-                {busy ? "Saving..." : "Save"}
-              </Button>
-            </div>
-          }
-        >
+      <Modal
+        open={!!draft}
+        onClose={() => setDraft(null)}
+        title={draft?.id ? "Edit offer" : "New offer"}
+      >
+        {draft && (
           <div className="grid gap-4">
             <Field label="Headline" required hint="What the client reads first.">
               <Input
@@ -364,9 +345,17 @@ export function CampaignsScreen() {
               />
               Live now
             </label>
+            <div className="flex justify-end gap-2 border-t border-hair pt-4">
+              <Button variant="ghost" onClick={() => setDraft(null)}>
+                Cancel
+              </Button>
+              <Button variant="brand" disabled={busy} onClick={save}>
+                {busy ? "Saving..." : "Save"}
+              </Button>
+            </div>
           </div>
-        </Card>
-      )}
+        )}
+      </Modal>
 
       {rows === null ? (
         <p className="text-body text-muted">Loading...</p>

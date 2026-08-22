@@ -8,6 +8,7 @@ import {
   Chip,
   Field,
   Input,
+  Modal,
   PageHeader,
   Progress,
   Select,
@@ -415,12 +416,13 @@ export function EditingView({
       ) : (
         <div className="grid gap-3 lg:grid-cols-[1fr_20rem] lg:items-start">
           <div className="grid min-w-0 gap-3">
-            {asking && (
-              <Card
-                title="Request a video"
-                description="Tell us what to cut and where the footage is. We work through requests in order."
-              >
+            <Modal open={asking} onClose={() => setAsking(false)} title="Request a video">
+              {asking && (
                 <div className="grid gap-4">
+                  <p className="text-body-sm text-muted">
+                    Tell us what to cut and where the footage is. We work
+                    through requests in order.
+                  </p>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Field label="What is it" required hint="Something you will recognize later.">
                       <Input
@@ -594,8 +596,8 @@ export function EditingView({
                     </Button>
                   </div>
                 </div>
-              </Card>
-            )}
+              )}
+            </Modal>
 
             <Card
               title="This month"
