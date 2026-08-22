@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { verifyAdmin } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { currentCycle, planNameFor, planPriority } from "@/lib/subscription-cycles";
-import { queueOrder, slotsUsed } from "@/lib/subscription-slots";
-import { columnFor, qcPassed, type Qc } from "@/lib/editing-sop";
+import { queueOrder, slotsUsed, type Form } from "@/lib/subscription-slots";
+import { ASPECTS, columnFor, qcPassed, type Aspect, type Qc } from "@/lib/editing-sop";
 import { DELIVERABLE_STATUSES, type DeliverableStatus } from "@/lib/deliverable-status";
 
 export const runtime = "nodejs";
@@ -295,4 +295,192 @@ export async function PATCH(req: Request) {
   const { error } = await db.from("order_deliverables").update(patch).eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ ok: true });
+}
+
+/*
+ * Add a request the client did not type themselves.
+ *
+ * Plenty of editing work arrives by email, on WhatsApp or on a call, and
+ * until now it could only live in somebody's head: the portal grew a request
+ * only when the client filled the form in. This writes the same request from
+ * our side, into the same month as theirs, so it lands on their plan screen
+ * and on this board at once and nothing depends on remembering it.
+ *
+ * Footage is optional here and required there, on purpose. A client pasting a
+ * link is the only way we would ever get one. A producer taking the job down
+ * often has the files already, or is still waiting on them, which is exactly
+ * what the Needs footage column is for.
+ */
+export async function POST(req: Request) {
+  const admin = await verifyAdmin(req);
+  if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+
+  const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+  const subscriptionId = typeof b.subscriptionId === "string" ? b.subscriptionId : "";
+  if (!UUID_RE.test(subscriptionId))
+    return NextResponse.json({ error: "Which client?" }, { status: 400 });
+
+  const db = supabaseAdmin();
+  const { data: sub } = await db
+    .from("subscriptions")
+    .select(SUB_FIELDS)
+    .eq("id", subscriptionId)
+    .maybeSingle();
+  if (!sub) return NextResponse.json({ error: "Not found." }, { status: 404 });
+
+  const cycle = await currentCycle(db, cycleArgs(sub as Row));
+  if (!cycle)
+    return NextResponse.json(
+      { error: "This plan has no open month, so there is nowhere to put the request." },
+      { status: 400 },
+    );
+
+  const str = (k: string, max: number) =>
+    typeof b[k] === "string" ? (b[k] as string).trim().slice(0, max) : "";
+
+  const title = str("title", 160);
+  const brief = str("brief", 4000);
+  const form: Form = b.form === "long" ? "long" : "short";
+  const assetsUrl = str("assetsUrl", 1000);
+  const referenceUrl = str("referenceUrl", 1000);
+  const aspect = ASPECTS.some((a) => a.key === b.aspect) ? (b.aspect as Aspect) : null;
+  const targetSeconds =
+    Number.isFinite(Number(b.targetMinutes)) && Number(b.targetMinutes) > 0
+      ? Math.round(Number(b.targetMinutes) * 60)
+      : null;
+  const wantedBy = str("requestedDueAt", 40) || null;
+  const promised = str("dueAt", 40) || null;
+  const assignedTo = str("assignedTo", 200) || null;
+
+  if (!title) return NextResponse.json({ error: "Give the video a name." }, { status: 400 });
+  if (!brief)
+    return NextResponse.json(
+      { error: "Write down what they asked for. The editor works from this." },
+      { status: 400 },
+    );
+
+  /* short cuts, only ever off a long form request, exactly as the client form
+     builds them: each one is its own video with its own slot */
+  const cuts =
+    form === "long" && Array.isArray(b.cuts)
+      ? (b.cuts as unknown[])
+          .map((c) => (typeof c === "string" ? c.trim().slice(0, 400) : ""))
+          .filter(Boolean)
+          .slice(0, 10)
+      : [];
+
+  const { data: existing } = await db
+    .from("order_deliverables")
+    .select("id, form, cancelled_at")
+    .eq("cycle_id", cycle.id);
+
+  const before = slotsUsed(
+    ((existing ?? []) as Row[]).map((v) => ({
+      form: v.form as Form | null,
+      cancelledAt: (v.cancelled_at as string | null) ?? null,
+    })),
+    { longForm: cycle.longFormAllowed, shortForm: cycle.shortFormAllowed },
+  );
+  const planName = (sub.plan_name as string | null) ?? planNameFor(skuOf(sub as Row));
+
+  /*
+   * Over plan, said to us rather than to them.
+   *
+   * The client's form has a sentence for this already, but it is addressed to
+   * the client: "your plan", "we will still take this one". On this side of
+   * the desk the reader is the producer, and what they need is the count and
+   * the conversation to have, so the sentence is written again here rather
+   * than borrowed. Nothing is refused either way.
+   */
+  const overBy = (kind: Form, extra: number) => {
+    const left = kind === "long" ? before.longLeft : before.shortLeft;
+    if (left >= extra) return null;
+    const allowed = kind === "long" ? before.longAllowed : before.shortAllowed;
+    const used = kind === "long" ? before.longUsed : before.shortUsed;
+    const word = kind === "long" ? "long form" : "short form";
+    return (
+      `This is ${used + extra} ${word} this month and ${planName} covers ${allowed}. ` +
+      `It is in either way. Tell them it runs into next month, or have the upgrade conversation.`
+    );
+  };
+  const warning = overBy(form, 1) ?? (cuts.length ? overBy("short", cuts.length) : null);
+
+  const now = new Date().toISOString();
+  /* footage we already have starts the promise clock now, the same stamp the
+     Footage is in button writes */
+  const readyAt = b.assetsReady ? now : null;
+
+  const { data: made, error } = await db
+    .from("order_deliverables")
+    .insert({
+      cycle_id: cycle.id,
+      title,
+      note: brief,
+      form,
+      status: "queued",
+      aspect,
+      target_seconds: targetSeconds,
+      assets_url: assetsUrl || null,
+      reference_url: referenceUrl || null,
+      requested_due_at: wantedBy,
+      due_at: promised ? new Date(promised).toISOString() : null,
+      assigned_admin_email: assignedTo,
+      assets_ready_at: readyAt,
+      requested_at: now,
+      position: (existing ?? []).length,
+    })
+    .select("id")
+    .single();
+  if (error || !made)
+    return NextResponse.json({ error: error?.message ?? "Could not save that." }, { status: 400 });
+
+  if (cuts.length) {
+    const { error: cutError } = await db.from("order_deliverables").insert(
+      cuts.map((instruction, i) => ({
+        cycle_id: cycle.id,
+        parent_id: made.id,
+        title: `${title}, short cut ${i + 1}`,
+        note: instruction,
+        form: "short",
+        status: "queued",
+        aspect: "9:16",
+        assets_url: assetsUrl || null,
+        requested_due_at: wantedBy,
+        assets_ready_at: readyAt,
+        requested_at: now,
+        position: (existing ?? []).length + i + 1,
+      })),
+    );
+    /* the video is already in. A failed cut is worth saying out loud rather
+       than silently losing. */
+    if (cutError)
+      return NextResponse.json(
+        {
+          ok: true,
+          id: made.id,
+          warning: "The video saved but the short cuts did not. Add them again.",
+        },
+        { status: 200 },
+      );
+  }
+
+  /*
+   * Tell them it is in, unless whoever added it says not to. A request
+   * appearing on their screen that they never typed reads as a mistake
+   * without a line explaining it, and somebody back-filling a month of old
+   * jobs does not want to send ten of these.
+   */
+  if (b.notify !== false) {
+    const { pushNotification } = await import("@/lib/notifications");
+    await pushNotification(db, {
+      audience: "customer",
+      email: String(sub.customer_email),
+      kind: "edit_added",
+      title: `We added your request: ${title}`,
+      body: "You asked for this one outside the portal. It is on your plan now, so you can follow it with the rest.",
+      href: "subscriptions",
+    });
+  }
+
+  return NextResponse.json({ ok: true, id: made.id, warning, cuts: cuts.length });
 }

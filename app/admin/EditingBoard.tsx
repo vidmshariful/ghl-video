@@ -1,10 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft, ChevronRight } from "lucide-react";
-import { Button, Card, Chip, Input, Select } from "@/components/portal/ui";
+import { ArrowLeft, ChevronRight, Plus } from "lucide-react";
+import {
+  Button,
+  Card,
+  Chip,
+  Field,
+  Input,
+  Modal,
+  Select,
+  Textarea,
+} from "@/components/portal/ui";
 import { authHeader, when } from "./client";
 import {
+  ASPECTS,
   EDITING_COLUMNS,
   QC_CHECKS,
   qcRemaining,
@@ -109,6 +119,39 @@ const dueChip = (r: { dueAt: string | null; requestedDueAt: string | null; statu
 
 const mins = (s: number | null) => (s ? `${Math.round(s / 60)} min` : null);
 
+/* a request we type in for them, when the ask arrived by email or on a call */
+type Draft = {
+  title: string;
+  brief: string;
+  form: "long" | "short";
+  aspect: string;
+  targetMinutes: string;
+  assetsUrl: string;
+  referenceUrl: string;
+  requestedDueAt: string;
+  dueAt: string;
+  assignedTo: string;
+  assetsReady: boolean;
+  notify: boolean;
+  cuts: string;
+};
+
+const EMPTY_DRAFT: Draft = {
+  title: "",
+  brief: "",
+  form: "short",
+  aspect: "",
+  targetMinutes: "",
+  assetsUrl: "",
+  referenceUrl: "",
+  requestedDueAt: "",
+  dueAt: "",
+  assignedTo: "",
+  assetsReady: false,
+  notify: true,
+  cuts: "",
+};
+
 /* ---------------- the client list ---------------- */
 
 export function EditingClients({ onOpen }: { onOpen: (id: string) => void }) {
@@ -185,6 +228,8 @@ export function EditingBoard({ id, onBack }: { id: string; onBack: () => void })
   const [err, setErr] = useState("");
   const [open, setOpen] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [draft, setDraft] = useState<Draft | null>(null);
+  const [note, setNote] = useState("");
 
   const load = useCallback(async () => {
     try {
@@ -222,6 +267,37 @@ export function EditingBoard({ id, onBack }: { id: string; onBack: () => void })
     }
   }
 
+  /* the request we are taking down for them. Same row the client's own form
+     writes, into the same month, so it shows on their plan screen too. */
+  async function add() {
+    if (!draft) return;
+    setBusy(true);
+    setErr("");
+    try {
+      const r = await fetch("/api/admin/editing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(await authHeader()) },
+        body: JSON.stringify({
+          subscriptionId: id,
+          ...draft,
+          cuts: draft.cuts
+            .split("\n")
+            .map((c) => c.trim())
+            .filter(Boolean),
+        }),
+      });
+      const j = await r.json();
+      if (!r.ok) return setErr(j.error ?? "Could not add that.");
+      setDraft(null);
+      setNote(j.warning ?? "");
+      await load();
+    } catch {
+      setErr("Could not add that.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (err && !b) return <p className="text-body text-error">{err}</p>;
   if (!b) return <p className="text-body text-muted">Loading...</p>;
 
@@ -247,13 +323,41 @@ export function EditingBoard({ id, onBack }: { id: string; onBack: () => void })
             {b.month ? ` / month of ${when(b.month.startsAt)}` : ""}
           </p>
         </div>
-        <p className="font-mono text-body-sm tabular-nums text-muted">
-          {b.slots.longUsed} of {b.slots.longAllowed} long, {b.slots.shortUsed} of{" "}
-          {b.slots.shortAllowed} short
-        </p>
+        <div className="flex flex-wrap items-center gap-4">
+          <p className="font-mono text-body-sm tabular-nums text-muted">
+            {b.slots.longUsed} of {b.slots.longAllowed} long, {b.slots.shortUsed} of{" "}
+            {b.slots.shortAllowed} short
+          </p>
+          <Button variant="brand" icon={<Plus />} onClick={() => setDraft(EMPTY_DRAFT)}>
+            Add a request
+          </Button>
+        </div>
       </div>
 
       {err && <p className="mt-4 text-body-sm text-error">{err}</p>}
+
+      {/* the over plan sentence, kept up until it is read rather than flashed */}
+      {note && (
+        <div className="mt-4 flex items-start justify-between gap-4 rounded-[8px] border border-gold/40 bg-gold/5 p-4">
+          <p className="text-body-sm text-gold">{note}</p>
+          <button
+            type="button"
+            onClick={() => setNote("")}
+            className="tap shrink-0 font-mono text-label uppercase text-dim transition-colors hover:text-ink"
+          >
+            Got it
+          </button>
+        </div>
+      )}
+
+      <AddRequest
+        draft={draft}
+        team={b.team}
+        busy={busy}
+        onChange={setDraft}
+        onClose={() => setDraft(null)}
+        onSave={add}
+      />
 
       {/* the board: drag a card to move the work; the same gates the buttons
           obey say no by bouncing the card back with the reason */}
@@ -313,6 +417,192 @@ export function EditingBoard({ id, onBack }: { id: string; onBack: () => void })
         )}
       </Drawer>
     </div>
+  );
+}
+
+/* ---------------- taking a request down for them ---------------- */
+
+/*
+ * The client's own form, from our side of the desk.
+ *
+ * Same fields they would have filled in, plus the three only we can answer:
+ * whether the footage is already with us, who is cutting it, and what we are
+ * promising. Footage is optional here because half of these are typed up
+ * while the files are still on their way.
+ */
+function AddRequest({
+  draft: d,
+  team,
+  busy,
+  onChange,
+  onClose,
+  onSave,
+}: {
+  draft: Draft | null;
+  team: { email: string; name: string }[];
+  busy: boolean;
+  onChange: (d: Draft) => void;
+  onClose: () => void;
+  onSave: () => void;
+}) {
+  const set = <K extends keyof Draft>(k: K, v: Draft[K]) => d && onChange({ ...d, [k]: v });
+
+  return (
+    <Modal
+      open={!!d}
+      onClose={onClose}
+      title="Add a request"
+      subtitle="For work they asked for by email, on WhatsApp or on a call. It lands on their plan the same as one they typed themselves."
+    >
+      {d && (
+        <div className="grid gap-4">
+          <div className="grid gap-4 sm:grid-cols-[1fr_10rem]">
+            <Field label="Video name" required hint="What you would call it out loud.">
+              <Input
+                value={d.title}
+                onChange={(e) => set("title", e.target.value)}
+                placeholder="March webinar, cut down"
+              />
+            </Field>
+            <Field label="Length" hint="Which slot it spends.">
+              <Select
+                value={d.form}
+                onChange={(e) => set("form", e.target.value as Draft["form"])}
+              >
+                <option value="short">Short form</option>
+                <option value="long">Long form</option>
+              </Select>
+            </Field>
+          </div>
+
+          <Field label="What they asked for" required hint="In their words if you have them. The editor works from this.">
+            <Textarea
+              rows={3}
+              value={d.brief}
+              onChange={(e) => set("brief", e.target.value)}
+              placeholder="Cut the 45 minute webinar to 8 minutes, keep the demo section, captions throughout."
+            />
+          </Field>
+
+          {d.form === "long" && (
+            <Field
+              label="Short cuts from it"
+              hint="One per line. Each becomes its own video with its own slot and its own review."
+            >
+              <Textarea
+                rows={3}
+                value={d.cuts}
+                onChange={(e) => set("cuts", e.target.value)}
+                placeholder={"The pricing answer\nThe objection at 22 minutes"}
+              />
+            </Field>
+          )}
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Shape" hint="Where it is going to be posted.">
+              <Select value={d.aspect} onChange={(e) => set("aspect", e.target.value)}>
+                <option value="">Not decided</option>
+                {ASPECTS.map((a) => (
+                  <option key={a.key} value={a.key}>
+                    {a.label}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Target length" hint="Minutes. Leave empty if they did not say.">
+              <Input
+                type="number"
+                min={0}
+                value={d.targetMinutes}
+                onChange={(e) => set("targetMinutes", e.target.value)}
+                placeholder="8"
+              />
+            </Field>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Footage" hint="Drive, Dropbox, Frame.io, whatever they sent.">
+              <Input
+                value={d.assetsUrl}
+                onChange={(e) => set("assetsUrl", e.target.value)}
+                placeholder="https://"
+              />
+            </Field>
+            <Field label="Reference" hint="A video they want it to feel like. Optional.">
+              <Input
+                value={d.referenceUrl}
+                onChange={(e) => set("referenceUrl", e.target.value)}
+                placeholder="https://"
+              />
+            </Field>
+          </div>
+
+          <label className="flex cursor-pointer items-start gap-2.5 text-body-sm">
+            <input
+              type="checkbox"
+              checked={d.assetsReady}
+              onChange={(e) => set("assetsReady", e.target.checked)}
+              className="mt-0.5 size-4 shrink-0 accent-[color:var(--green)]"
+            />
+            <span className="text-muted">
+              The footage is already with us.
+              <span className="block text-dim">
+                Ticking this starts the turnaround clock now. Leave it off and the request sits in
+                Needs footage until you have checked the files.
+              </span>
+            </span>
+          </label>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Field label="They asked for" hint="Their date, if they gave one.">
+              <Input
+                type="date"
+                value={d.requestedDueAt}
+                onChange={(e) => set("requestedDueAt", e.target.value)}
+              />
+            </Field>
+            <Field label="We promise" hint="Ours. Can wait until the footage is in.">
+              <Input type="date" value={d.dueAt} onChange={(e) => set("dueAt", e.target.value)} />
+            </Field>
+            <Field label="Editor" hint="Can be nobody for now.">
+              <Select value={d.assignedTo} onChange={(e) => set("assignedTo", e.target.value)}>
+                <option value="">Nobody yet</option>
+                {team.map((t) => (
+                  <option key={t.email} value={t.email}>
+                    {t.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          </div>
+
+          <label className="flex cursor-pointer items-start gap-2.5 text-body-sm">
+            <input
+              type="checkbox"
+              checked={d.notify}
+              onChange={(e) => set("notify", e.target.checked)}
+              className="mt-0.5 size-4 shrink-0 accent-[color:var(--green)]"
+            />
+            <span className="text-muted">
+              Tell them it is in.
+              <span className="block text-dim">
+                A note in their portal saying we added it. Turn this off when you are catching up on
+                old jobs.
+              </span>
+            </span>
+          </label>
+
+          <div className="flex justify-end gap-2 border-t border-hair pt-4">
+            <Button variant="ghost" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button variant="brand" disabled={busy} onClick={onSave}>
+              {busy ? "Adding..." : "Add the request"}
+            </Button>
+          </div>
+        </div>
+      )}
+    </Modal>
   );
 }
 
