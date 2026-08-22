@@ -12,7 +12,15 @@ export const runtime = "nodejs";
  */
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-type LineItem = { description: string; amount_cents: number };
+/* amount_cents is the LINE TOTAL, always. quantity and unit_cents are
+   optional detail, so every screen that already renders invoices keeps
+   working without knowing they exist. */
+type LineItem = {
+  description: string;
+  amount_cents: number;
+  quantity?: number;
+  unit_cents?: number;
+};
 type InvoiceRow = {
   id: string;
   number: string;
@@ -30,6 +38,10 @@ type InvoiceRow = {
   status: "open" | "void";
   sent_at: string | null;
   created_at: string;
+  project_ids: string[] | null;
+  subtotal_cents: number | null;
+  discount_kind: "percent" | "flat" | null;
+  discount_value: number | null;
 };
 
 function shape(inv: InvoiceRow, paid: boolean) {
@@ -42,6 +54,10 @@ function shape(inv: InvoiceRow, paid: boolean) {
     customerEmail: inv.customer_email,
     customerCompany: inv.customer_company,
     lineItems: inv.line_items ?? [],
+    projectIds: inv.project_ids ?? [],
+    subtotalCents: inv.subtotal_cents ?? inv.total_cents,
+    discountKind: inv.discount_kind,
+    discountValue: inv.discount_value,
     totalCents: inv.total_cents,
     currency: inv.currency,
     notes: inv.notes,
@@ -86,10 +102,16 @@ export async function POST(req: Request) {
   const notes = str(body.notes, 4000);
   const dueDate = /^\d{4}-\d{2}-\d{2}$/.test(str(body.dueDate, 10)) ? str(body.dueDate, 10) : null;
   // optional: attach this invoice (extra work) to an existing order
+  const projectIds = (Array.isArray(body.projectIds) ? body.projectIds : [])
+    .filter((v): v is string => typeof v === "string" && /^[0-9a-f-]{36}$/i.test(v))
+    .slice(0, 20);
+  /* the first job stays in project_id, so everything that already reads one
+     job per invoice keeps reading the right one */
   const projectId =
-    typeof body.projectId === "string" && /^[0-9a-f-]{36}$/i.test(body.projectId)
+    projectIds[0] ??
+    (typeof body.projectId === "string" && /^[0-9a-f-]{36}$/i.test(body.projectId)
       ? body.projectId
-      : null;
+      : null);
   const parentOrderId =
     typeof body.parentOrderId === "string" && /^[0-9a-f-]{36}$/i.test(body.parentOrderId)
       ? body.parentOrderId
@@ -99,12 +121,17 @@ export async function POST(req: Request) {
   const lineItems: LineItem[] = rawItems
     .map((it) => {
       const r = it as Record<string, unknown>;
+      const qtyRaw = Math.round(Number(r.quantity));
+      const quantity = Number.isFinite(qtyRaw) && qtyRaw > 0 ? Math.min(999, qtyRaw) : 1;
+      const unit = Math.round(Number(r.unitCents ?? r.amountCents));
       return {
         description: str(r.description, 200),
-        amount_cents: Math.round(Number(r.amountCents)),
+        quantity,
+        unit_cents: Number.isFinite(unit) ? unit : 0,
+        amount_cents: Number.isFinite(unit) ? unit * quantity : 0,
       };
     })
-    .filter((it) => it.description && Number.isFinite(it.amount_cents) && it.amount_cents > 0)
+    .filter((it) => it.description && it.amount_cents > 0)
     .slice(0, 20);
 
   if (!email || !EMAIL_RE.test(email)) {
@@ -113,9 +140,27 @@ export async function POST(req: Request) {
   if (lineItems.length === 0) {
     return NextResponse.json({ error: "Add at least one line item." }, { status: 400 });
   }
-  const total = lineItems.reduce((s, i) => s + i.amount_cents, 0);
+  const subtotal = lineItems.reduce((s, i) => s + i.amount_cents, 0);
+
+  /* a discount is either a percentage of the lines or a flat amount off,
+     and it can never carry a bill below nothing */
+  const discountKind =
+    body.discountKind === "percent" || body.discountKind === "flat" ? body.discountKind : null;
+  const rawDiscount = Math.round(Number(body.discountValue));
+  const discountValue =
+    discountKind && Number.isFinite(rawDiscount) && rawDiscount > 0 ? rawDiscount : null;
+  const discountCents = !discountValue
+    ? 0
+    : discountKind === "percent"
+      ? Math.min(subtotal, Math.round((subtotal * Math.min(100, discountValue)) / 100))
+      : Math.min(subtotal, discountValue);
+  const total = subtotal - discountCents;
+
   if (total < 50) {
-    return NextResponse.json({ error: "The total must be at least $0.50." }, { status: 400 });
+    return NextResponse.json(
+      { error: "After the discount, the total must be at least $0.50." },
+      { status: 400 },
+    );
   }
 
   const db = supabaseAdmin();
@@ -147,11 +192,15 @@ export async function POST(req: Request) {
       customer_company: company || null,
       line_items: lineItems,
       currency: "usd",
+      subtotal_cents: subtotal,
+      discount_kind: discountValue ? discountKind : null,
+      discount_value: discountValue,
       total_cents: total,
       notes: notes || null,
       due_date: dueDate,
       parent_order_id: parentOrderId,
       project_id: projectId,
+      project_ids: projectIds.length ? projectIds : projectId ? [projectId] : [],
       created_by: admin.email,
     })
     .select("*")

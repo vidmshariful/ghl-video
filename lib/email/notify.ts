@@ -151,6 +151,9 @@ async function orderFor(db: SupabaseClient, orderId: string) {
     amountCents: o.amount_cents as number,
     currency: (o.currency as string | null) ?? "usd",
     deliveryUrl: (o.delivery_url as string | null) ?? "",
+    /* the sku is how a payment is recognised as an invoice rather than an
+       order: invoice products carry an inv- sku and an invoice row */
+    sku: (o.products?.sku as string | null) ?? null,
   };
 }
 
@@ -161,6 +164,48 @@ async function orderFor(db: SupabaseClient, orderId: string) {
 export async function sendOrderPaidEmails(db: SupabaseClient, orderId: string): Promise<void> {
   const o = await orderFor(db, orderId);
   if (!o) return;
+
+  /*
+   * An invoice is not an order. It is work already agreed, paid against a
+   * bill we sent, with no brief to fill in and no new video list to build.
+   * Calling it a new order in the client's inbox and in the team's bell was
+   * simply wrong, so an invoice-backed payment says what it is.
+   */
+  const { data: invoice } = await db
+    .from("invoices")
+    .select("number, total_cents, currency")
+    .eq("product_sku", o.sku ?? "")
+    .maybeSingle();
+  if (invoice) {
+    const amount = money(o.amountCents, o.currency);
+    const invVars = {
+      customer_name: escapeHtml(o.name || "there"),
+      customer_email: escapeHtml(o.email),
+      invoice_number: escapeHtml(String(invoice.number)),
+      amount,
+      portal_url: `${SITE_URL}/portal`,
+      admin_url: `${SITE_URL}/admin`,
+    };
+    await sendTemplate(db, "invoice_paid", o.email, o.name, invVars);
+    await sendTemplate(db, "admin_invoice_paid", adminAlertEmail(), null, invVars);
+    await pushNotification(db, {
+      audience: "customer",
+      email: o.email,
+      kind: "invoice_paid",
+      title: "Payment received",
+      body: `${invoice.number}, ${amount}. Thank you, nothing else is needed.`,
+      href: "billing",
+      feature: "orders",
+    });
+    await pushAdminNotifications(db, {
+      kind: "invoice_paid",
+      title: `Invoice payment: ${amount}`,
+      body: `${invoice.number} from ${o.email}`,
+      href: "invoices",
+    });
+    return;
+  }
+
   const vars = {
     customer_name: escapeHtml(o.name || "there"),
     product_name: escapeHtml(o.productName),

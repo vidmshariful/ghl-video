@@ -60,6 +60,8 @@ export const TEMPLATE_VARIABLES: Record<string, string[]> = {
   team_invite: ["member_name", "member_email", "owner_name", "portal_label", "portal_url"],
   portal_welcome: ["customer_name", "customer_email", "portal_url"],
   approval_request: ["customer_name", "video_title", "stage_label", "portal_url"],
+  invoice_paid: ["customer_name", "invoice_number", "amount", "portal_url"],
+  admin_invoice_paid: ["customer_name", "customer_email", "invoice_number", "amount", "admin_url"],
   approval_reminder: ["customer_name", "video_title", "stage_label", "days_waiting", "portal_url"],
   project_digest: ["customer_name", "digest_lines", "portal_url"],
   admin_new_order: ["customer_name", "customer_email", "product_name", "order_code", "amount", "admin_url"],
@@ -271,6 +273,26 @@ ${btn("{{portal_url}}", "Review it now")}
 <div style="${BOX}margin-bottom:26px;">{{digest_lines}}</div>
 ${btn("{{portal_url}}", "Open your portal")}
 <p style="${SMALL}margin-top:22px;">Anything marked waiting on you is holding its video in place. You can switch these emails off in your portal settings.</p>`,
+  },
+  {
+    key: "invoice_paid",
+    name: "Invoice paid",
+    description:
+      "Sent to the client when they pay an invoice. Deliberately not the order confirmation: an invoice is work already agreed, so there is no brief to fill in.",
+    subject: "Payment received: {{invoice_number}}",
+    body: `<h1 style="${H}">Thank you, that is settled.</h1>
+<p style="${P}">Hi {{customer_name}}, we have received your payment of <strong style="${STRONG}">{{amount}}</strong> against invoice <strong style="${STRONG}">{{invoice_number}}</strong>. Nothing else is needed from you.</p>
+${btn("{{portal_url}}", "See it in your portal")}
+<p style="${SMALL}margin-top:22px;">Your receipt and every invoice you have ever had live under Orders and Invoices.</p>`,
+  },
+  {
+    key: "admin_invoice_paid",
+    name: "Invoice paid, team alert",
+    description: "Tells the team an invoice was paid. Not a new order: no brief, no intake, no new work list.",
+    subject: "Invoice payment: {{amount}} from {{customer_email}}",
+    body: `<h1 style="${H}">An invoice has been paid.</h1>
+<p style="${P}"><strong style="${STRONG}">{{customer_name}}</strong> ({{customer_email}}) paid <strong style="${STRONG}">{{amount}}</strong> against invoice {{invoice_number}}.</p>
+${btn("{{admin_url}}/invoices/", "Open Invoices")}`,
   },
   {
     key: "portal_welcome",

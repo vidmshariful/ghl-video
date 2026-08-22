@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Plus, X } from "lucide-react";
+import { Button, Field, Input, Modal, PageHeader, Select } from "@/components/portal/ui";
 import { authHeader, money, supabase, when } from "./client";
 
 /*
@@ -10,11 +12,9 @@ import { authHeader, money, supabase, when } from "./client";
  * HighLevel. Status is open / paid (derived from the order) / void.
  */
 const SITE = "https://www.ghlvideo.com";
-const fField =
-  "mt-1.5 w-full rounded-[8px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none";
 const fLab = "font-mono text-label uppercase text-dim";
 
-type LineItem = { description: string; amount_cents: number };
+type LineItem = { description: string; amount_cents: number; quantity?: number; unit_cents?: number };
 type Invoice = {
   id: string;
   number: string;
@@ -67,19 +67,26 @@ function CopyField({ url }: { url: string }) {
   );
 }
 
-type Row = { description: string; amount: string };
+
+type Customer = { id: string; email: string; name: string | null; company: string | null };
+type ProjectPick = { id: string; title: string; customerEmail: string };
+type Row = { description: string; quantity: string; unit: string };
+
+const EMPTY_ROW: Row = { description: "", quantity: "1", unit: "" };
 
 export function InvoicesScreen() {
   const [invoices, setInvoices] = useState<Invoice[] | null>(null);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [company, setCompany] = useState("");
+  const [open, setOpen] = useState(false);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customerEmail, setCustomerEmail] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [notes, setNotes] = useState("");
-  const [rows, setRows] = useState<Row[]>([{ description: "", amount: "" }]);
+  const [rows, setRows] = useState<Row[]>([{ ...EMPTY_ROW }]);
+  const [discountKind, setDiscountKind] = useState<"" | "percent" | "flat">("");
+  const [discountValue, setDiscountValue] = useState("");
   const [parentOrderId, setParentOrderId] = useState("");
-  const [projectId, setProjectId] = useState("");
-  const [projects, setProjects] = useState<{ id: string; title: string; customerEmail: string }[]>([]);
+  const [projectIds, setProjectIds] = useState<string[]>([]);
+  const [projects, setProjects] = useState<ProjectPick[]>([]);
   const [orders, setOrders] = useState<
     { id: string; customer_email: string; created_at: string; product: { name: string } | null }[]
   >([]);
@@ -90,7 +97,6 @@ export function InvoicesScreen() {
     const r = await fetch("/api/admin/invoices", { headers: await authHeader(), cache: "no-store" });
     const j = await r.json();
     setInvoices((j.invoices as Invoice[]) ?? []);
-    // paid orders, for the "attach to an existing order" picker (extra work)
     const { data } = await supabase
       .from("orders")
       .select("id,customer_email,created_at, product:products(name)")
@@ -110,29 +116,63 @@ export function InvoicesScreen() {
     load();
   }, [load]);
 
-  /* the open jobs an invoice can be billed to. Closed and cancelled ones are
-   * left out: billing a job nobody is working on is almost always a mistake. */
+  /* who an invoice can be for, and which jobs it can bill. Closed and
+   * cancelled jobs are left out: billing work nobody is doing is a mistake. */
   useEffect(() => {
     (async () => {
       try {
-        const r = await fetch("/api/admin/projects", { headers: await authHeader() });
-        const j = await r.json();
-        if (!r.ok) return;
+        const h = await authHeader();
+        const [c, p] = await Promise.all([
+          fetch("/api/admin/customers", { headers: h }).then((x) => x.json()),
+          fetch("/api/admin/projects", { headers: h }).then((x) => x.json()),
+        ]);
+        setCustomers((c.customers as Customer[]) ?? []);
         setProjects(
-          (j.projects as { id: string; title: string; customerEmail: string; status: string }[])
-            .filter((p) => p.status !== "closed" && p.status !== "cancelled")
-            .map((p) => ({ id: p.id, title: p.title, customerEmail: p.customerEmail })),
+          ((p.projects as { id: string; title: string; customerEmail: string; status: string }[]) ?? [])
+            .filter((x) => x.status !== "closed" && x.status !== "cancelled")
+            .map((x) => ({ id: x.id, title: x.title, customerEmail: x.customerEmail })),
         );
       } catch {
-        /* the picker just stays empty; an invoice does not need a job */
+        /* the pickers just stay empty */
       }
     })();
   }, []);
 
-  const previewTotal = rows.reduce((s, r) => {
-    const n = Number(r.amount);
-    return s + (Number.isFinite(n) && n > 0 ? Math.round(n * 100) : 0);
-  }, 0);
+  const chosen = customers.find((c) => c.email === customerEmail) ?? null;
+  /* only this client's jobs can go on this client's bill */
+  const theirProjects = projects.filter(
+    (p) => !customerEmail || p.customerEmail.toLowerCase() === customerEmail.toLowerCase(),
+  );
+
+  const cents = (v: string) => {
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0 ? Math.round(n * 100) : 0;
+  };
+  const qty = (v: string) => {
+    const n = Math.round(Number(v));
+    return Number.isFinite(n) && n > 0 ? n : 1;
+  };
+  const subtotal = rows.reduce((s, r) => s + cents(r.unit) * qty(r.quantity), 0);
+  const discountCents = (() => {
+    const v = Math.round(Number(discountValue));
+    if (!discountKind || !Number.isFinite(v) || v <= 0) return 0;
+    return discountKind === "percent"
+      ? Math.min(subtotal, Math.round((subtotal * Math.min(100, v)) / 100))
+      : Math.min(subtotal, Math.round(v * 100));
+  })();
+  const total = subtotal - discountCents;
+
+  function reset() {
+    setCustomerEmail("");
+    setDueDate("");
+    setNotes("");
+    setRows([{ ...EMPTY_ROW }]);
+    setDiscountKind("");
+    setDiscountValue("");
+    setParentOrderId("");
+    setProjectIds([]);
+    setErr("");
+  }
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
@@ -140,35 +180,37 @@ export function InvoicesScreen() {
     setBusy(true);
     setErr("");
     const lineItems = rows
-      .map((r) => ({ description: r.description.trim(), amountCents: Math.round(Number(r.amount) * 100) }))
-      .filter((r) => r.description && Number.isFinite(r.amountCents) && r.amountCents > 0);
+      .map((r) => ({
+        description: r.description.trim(),
+        quantity: qty(r.quantity),
+        unitCents: cents(r.unit),
+      }))
+      .filter((r) => r.description && r.unitCents > 0);
     const res = await fetch("/api/admin/invoices", {
       method: "POST",
       headers: { ...(await authHeader()), "Content-Type": "application/json" },
       body: JSON.stringify({
-        customerName: name,
-        customerEmail: email,
-        customerCompany: company,
+        customerName: chosen?.name ?? "",
+        customerEmail,
+        customerCompany: chosen?.company ?? "",
         dueDate,
         notes,
         lineItems,
+        discountKind: discountKind || null,
+        discountValue: discountKind
+          ? discountKind === "percent"
+            ? Math.round(Number(discountValue))
+            : Math.round(Number(discountValue) * 100)
+          : null,
         parentOrderId: parentOrderId || null,
-        projectId: projectId || null,
+        projectIds,
       }),
     });
     const j = await res.json();
     setBusy(false);
-    if (j.error) {
-      setErr(j.error);
-      return;
-    }
-    setName("");
-    setEmail("");
-    setCompany("");
-    setDueDate("");
-    setNotes("");
-    setParentOrderId("");
-    setRows([{ description: "", amount: "" }]);
+    if (j.error) return setErr(j.error);
+    reset();
+    setOpen(false);
     load();
   }
 
@@ -186,152 +228,232 @@ export function InvoicesScreen() {
 
   return (
     <div className="w-full">
-      <h1 className="font-display text-h3 text-ink">Invoices</h1>
-      <p className="mt-0.5 text-body-sm text-muted">
-        Itemized invoices for custom videos and one-off deals. Create one, send the link, and it is
-        marked paid the moment the client pays, right inside Orders.
-      </p>
+      <PageHeader
+        title="Invoices"
+        description="Itemized invoices for custom work and one-off deals. Create one, send the link, and it is marked paid the moment the client pays."
+        actions={
+          <Button variant="brand" icon={<Plus />} onClick={() => setOpen(true)}>
+            New invoice
+          </Button>
+        }
+      />
 
-      {/* create */}
-      <form onSubmit={create} className="mt-6 rounded-[12px] border border-gold/30 bg-gold/[0.04] p-5">
-        <p className="font-mono text-label uppercase text-gold">New invoice</p>
-        <div className="mt-4 grid gap-4 sm:grid-cols-3">
-          <label>
-            <span className={fLab}>Client name</span>
-            <input value={name} onChange={(e) => setName(e.target.value)} className={fField} />
-          </label>
-          <label>
-            <span className={fLab}>Client email</span>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className={fField}
-            />
-          </label>
-          <label>
-            <span className={fLab}>Company (optional)</span>
-            <input value={company} onChange={(e) => setCompany(e.target.value)} className={fField} />
-          </label>
-        </div>
-
-        <div className="mt-5">
-          <span className={fLab}>Line items</span>
-          <div className="mt-2 grid gap-2">
-            {rows.map((r, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <input
-                  value={r.description}
-                  onChange={(e) =>
-                    setRows((p) => p.map((x, j) => (j === i ? { ...x, description: e.target.value } : x)))
-                  }
-                  placeholder="Description (e.g. Custom explainer video, 60s)"
-                  className="min-w-0 flex-1 rounded-[8px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none"
-                />
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={r.amount}
-                  onChange={(e) =>
-                    setRows((p) => p.map((x, j) => (j === i ? { ...x, amount: e.target.value } : x)))
-                  }
-                  placeholder="Amount"
-                  className="w-32 shrink-0 rounded-[8px] border border-hair bg-canvas px-3 py-2.5 text-body text-ink focus:border-gold focus:outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={() => setRows((p) => (p.length > 1 ? p.filter((_, j) => j !== i) : p))}
-                  className="tap shrink-0 rounded-[8px] border border-hair px-3 py-2.5 text-dim transition-colors hover:border-error/60 hover:text-error"
-                  aria-label="Remove line"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-          </div>
-          <div className="mt-2 flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => setRows((p) => [...p, { description: "", amount: "" }])}
-              className="tap font-mono text-label uppercase text-muted transition-colors hover:text-gold"
+      <Modal open={open} onClose={() => setOpen(false)} title="New invoice" maxWidth="max-w-3xl">
+        <form onSubmit={create} className="grid gap-4">
+          {/* who it is for: picked once, never typed again */}
+          <Field
+            label="Client"
+            required
+            hint="Add them under Clients first if they are not here yet. Their name, email and company come with them."
+          >
+            <Select
+              value={customerEmail}
+              onChange={(e) => {
+                setCustomerEmail(e.target.value);
+                setProjectIds([]);
+              }}
             >
-              + Add line item
-            </button>
-            <span className="font-mono text-body-sm text-muted">
-              Total{" "}
-              <span className="font-bold text-ink [font-variant-numeric:tabular-nums]">
-                {money(previewTotal)}
-              </span>
-            </span>
+              <option value="">Pick a client</option>
+              {customers.map((c) => (
+                <option key={c.id} value={c.email}>
+                  {c.company || c.name || c.email}
+                </option>
+              ))}
+            </Select>
+          </Field>
+
+          {chosen && (
+            <p className="-mt-2 text-body-sm text-muted">
+              Billing <span className="text-ink">{chosen.name || chosen.email}</span>
+              {chosen.company ? ` at ${chosen.company}` : ""} / {chosen.email}
+            </p>
+          )}
+
+          {/* what it bills: any number of their jobs */}
+          {theirProjects.length > 0 && (
+            <Field
+              label="Custom projects on this invoice"
+              hint="Tick every job this bill covers. One invoice can carry several."
+            >
+              <div className="grid gap-1.5">
+                {theirProjects.map((p) => (
+                  <label key={p.id} className="flex items-center gap-2 text-body-sm text-muted">
+                    <input
+                      type="checkbox"
+                      checked={projectIds.includes(p.id)}
+                      onChange={(e) =>
+                        setProjectIds(
+                          e.target.checked
+                            ? [...projectIds, p.id]
+                            : projectIds.filter((x) => x !== p.id),
+                        )
+                      }
+                      className="h-4 w-4 accent-[var(--gold)]"
+                    />
+                    <span className="text-ink">{p.title}</span>
+                  </label>
+                ))}
+              </div>
+            </Field>
+          )}
+
+          {/* the lines */}
+          <div>
+            <span className={fLab}>Lines</span>
+            <div className="mt-2 grid gap-2">
+              <div className="hidden gap-2 sm:grid sm:grid-cols-[minmax(0,1fr)_5rem_7rem_6rem_2rem]">
+                <span className={fLab}>What</span>
+                <span className={fLab}>Qty</span>
+                <span className={fLab}>Unit price</span>
+                <span className={`${fLab} text-right`}>Line</span>
+                <span />
+              </div>
+              {rows.map((r, i) => (
+                <div
+                  key={i}
+                  className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_5rem_7rem_6rem_2rem] sm:items-center"
+                >
+                  <Input
+                    value={r.description}
+                    onChange={(e) => {
+                      const next = [...rows];
+                      next[i] = { ...r, description: e.target.value };
+                      setRows(next);
+                    }}
+                    placeholder="Vertical reel, 30 seconds"
+                    aria-label="What"
+                  />
+                  <Input
+                    type="number"
+                    min="1"
+                    value={r.quantity}
+                    onChange={(e) => {
+                      const next = [...rows];
+                      next[i] = { ...r, quantity: e.target.value };
+                      setRows(next);
+                    }}
+                    aria-label="Quantity"
+                  />
+                  <Input
+                    type="number"
+                    value={r.unit}
+                    onChange={(e) => {
+                      const next = [...rows];
+                      next[i] = { ...r, unit: e.target.value };
+                      setRows(next);
+                    }}
+                    placeholder="1500"
+                    aria-label="Unit price in dollars"
+                  />
+                  <span className="text-right font-mono text-body-sm tabular-nums text-ink">
+                    {money(cents(r.unit) * qty(r.quantity))}
+                  </span>
+                  {rows.length > 1 ? (
+                    <button
+                      type="button"
+                      onClick={() => setRows(rows.filter((_, x) => x !== i))}
+                      aria-label="Remove this line"
+                      className="tap justify-self-end text-dim transition-colors hover:text-error"
+                    >
+                      <X size={14} aria-hidden="true" />
+                    </button>
+                  ) : (
+                    <span />
+                  )}
+                </div>
+              ))}
+              <div>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setRows([...rows, { ...EMPTY_ROW }])}
+                >
+                  Add a line
+                </Button>
+              </div>
+            </div>
           </div>
-        </div>
 
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          <label>
-            <span className={fLab}>Due date (optional)</span>
-            <input
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-              className={fField}
-            />
-          </label>
-          <label>
-            <span className={fLab}>Notes (optional, shown on the invoice)</span>
-            <input value={notes} onChange={(e) => setNotes(e.target.value)} className={fField} />
-          </label>
-        </div>
+          {/* the discount */}
+          <div className="grid gap-4 sm:grid-cols-[10rem_10rem_minmax(0,1fr)] sm:items-end">
+            <Field label="Discount" hint="Optional.">
+              <Select
+                value={discountKind}
+                onChange={(e) => setDiscountKind(e.target.value as "" | "percent" | "flat")}
+              >
+                <option value="">None</option>
+                <option value="percent">Percentage</option>
+                <option value="flat">Flat amount</option>
+              </Select>
+            </Field>
+            {discountKind && (
+              <Field label={discountKind === "percent" ? "Percent off" : "Dollars off"} hint=" ">
+                <Input
+                  type="number"
+                  value={discountValue}
+                  onChange={(e) => setDiscountValue(e.target.value)}
+                  placeholder={discountKind === "percent" ? "10" : "250"}
+                />
+              </Field>
+            )}
+            <div className="text-right">
+              <p className="font-mono text-label uppercase text-dim">
+                Subtotal {money(subtotal)}
+                {discountCents > 0 ? ` / less ${money(discountCents)}` : ""}
+              </p>
+              <p className="font-display text-h4 tabular-nums text-gold">{money(total)}</p>
+            </div>
+          </div>
 
-        <label className="mt-4 block">
-          <span className={fLab}>Bill this to a custom job (optional)</span>
-          <select
-            value={projectId}
-            onChange={(e) => setProjectId(e.target.value)}
-            className={fField}
-          >
-            <option value="">Not part of a job</option>
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.title} - {p.customerEmail}
-              </option>
-            ))}
-          </select>
-          <span className="mt-1 block text-body-sm text-dim">
-            Ties the invoice to the work, so a job with a deposit and a balance
-            shows both against one agreed price.
-          </span>
-        </label>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Due date" hint="Optional.">
+              <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+            </Field>
+            <Field label="Note on the invoice" hint="The client reads this.">
+              <Input value={notes} onChange={(e) => setNotes(e.target.value)} />
+            </Field>
+          </div>
 
-        <label className="mt-4 block">
-          <span className={fLab}>Attach to an existing order (optional)</span>
-          <select
-            value={parentOrderId}
-            onChange={(e) => setParentOrderId(e.target.value)}
-            className={fField}
-          >
-            <option value="">Standalone invoice</option>
-            {orders.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.customer_email} - {o.product?.name ?? "Order"} ({when(o.created_at)})
-              </option>
-            ))}
-          </select>
-          <span className="mt-1 block text-body-sm text-dim">
-            For extra work on a past order: the invoice nests under that order instead of
-            showing as a separate one.
-          </span>
-        </label>
+          {orders.length > 0 && (
+            <Field
+              label="Extra work on an existing order"
+              hint="Optional. Links this bill to something already bought."
+            >
+              <Select value={parentOrderId} onChange={(e) => setParentOrderId(e.target.value)}>
+                <option value="">Not extra work</option>
+                {orders
+                  .filter(
+                    (o) =>
+                      !customerEmail ||
+                      o.customer_email.toLowerCase() === customerEmail.toLowerCase(),
+                  )
+                  .slice(0, 40)
+                  .map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.product?.name ?? "Order"} / {o.customer_email} / {when(o.created_at)}
+                    </option>
+                  ))}
+              </Select>
+            </Field>
+          )}
 
-        {err ? <p className="mt-3 text-body-sm text-error">{err}</p> : null}
-        <button
-          type="submit"
-          disabled={busy}
-          className="tap mt-4 rounded-[8px] bg-brand-gradient px-6 py-2.5 text-body-sm font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-50"
-        >
-          {busy ? "Creating..." : "Create invoice"}
-        </button>
-      </form>
+          {err && <p className="text-body-sm text-error">{err}</p>}
+
+          <div className="flex justify-end gap-2 border-t border-hair pt-4">
+            <Button variant="ghost" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="brand"
+              disabled={busy || !customerEmail || total < 50}
+              onClick={(e) => create(e as unknown as React.FormEvent)}
+            >
+              {busy ? "Creating..." : `Create invoice for ${money(total)}`}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
 
       {/* list */}
       <p className="mt-8 font-mono text-label uppercase text-dim">All invoices</p>

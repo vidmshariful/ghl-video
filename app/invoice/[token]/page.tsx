@@ -12,7 +12,12 @@ export const metadata: Metadata = {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-type LineItem = { description: string; amount_cents: number };
+type LineItem = {
+  description: string;
+  amount_cents: number;
+  quantity?: number;
+  unit_cents?: number;
+};
 type Invoice = {
   number: string;
   product_sku: string;
@@ -21,6 +26,9 @@ type Invoice = {
   customer_email: string | null;
   customer_company: string | null;
   line_items: LineItem[];
+  subtotal_cents: number | null;
+  discount_kind: "percent" | "flat" | null;
+  discount_value: number | null;
   currency: string;
   total_cents: number;
   notes: string | null;
@@ -132,7 +140,16 @@ export default async function InvoicePage({ params }: { params: Promise<{ token:
                 <tbody>
                   {inv.line_items.map((li, i) => (
                     <tr key={i} className="border-b border-hair last:border-b-0">
-                      <td className="px-4 py-3 text-body text-ink">{li.description}</td>
+                      <td className="px-4 py-3 text-body text-ink">
+                        {li.description}
+                        {/* the sum said out loud, so nobody has to work out
+                            why a line costs what it costs */}
+                        {li.quantity && li.quantity > 1 && li.unit_cents ? (
+                          <span className="mt-0.5 block font-mono text-label uppercase text-dim">
+                            {li.quantity} &times; {money(li.unit_cents, inv.currency)}
+                          </span>
+                        ) : null}
+                      </td>
                       <td className="px-4 py-3 text-right font-mono text-body text-ink [font-variant-numeric:tabular-nums]">
                         {money(li.amount_cents, inv.currency)}
                       </td>
@@ -140,6 +157,29 @@ export default async function InvoicePage({ params }: { params: Promise<{ token:
                   ))}
                 </tbody>
                 <tfoot>
+                  {inv.discount_kind && inv.subtotal_cents ? (
+                    <>
+                      <tr className="border-b border-hair">
+                        <td className="px-4 py-2.5 font-mono text-label uppercase text-muted">
+                          Subtotal
+                        </td>
+                        <td className="px-4 py-2.5 text-right font-mono text-body text-muted [font-variant-numeric:tabular-nums]">
+                          {money(inv.subtotal_cents, inv.currency)}
+                        </td>
+                      </tr>
+                      <tr className="border-b border-hair">
+                        <td className="px-4 py-2.5 font-mono text-label uppercase text-muted">
+                          Discount
+                          {inv.discount_kind === "percent" && inv.discount_value
+                            ? ` (${inv.discount_value}%)`
+                            : ""}
+                        </td>
+                        <td className="px-4 py-2.5 text-right font-mono text-body text-green [font-variant-numeric:tabular-nums]">
+                          &minus;{money(inv.subtotal_cents - inv.total_cents, inv.currency)}
+                        </td>
+                      </tr>
+                    </>
+                  ) : null}
                   <tr className="bg-canvas">
                     <td className="px-4 py-3 font-mono text-label uppercase text-muted">Total</td>
                     <td className="px-4 py-3 text-right font-display text-h4 text-ink [font-variant-numeric:tabular-nums]">
