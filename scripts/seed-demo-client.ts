@@ -390,6 +390,7 @@ async function build() {
         delivery: { state: "todo", gate: true },
       },
       tags: ["demo"],
+      category: "Ads / Promo",
     })
     .select("id")
     .single();
