@@ -672,6 +672,19 @@ export function Modal({
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
+  /*
+   * The latest onClose, held in a ref so the focus effect below can depend
+   * on `open` ALONE. Callers pass an inline arrow, which is a new function
+   * on every render, so depending on it re-ran this effect on every
+   * keystroke: the cleanup handed focus back to the button that opened the
+   * modal and the effect then took it to the panel, which is why typing a
+   * single character dropped you out of the field.
+   */
+  const closeRef = useRef(onClose);
+  useEffect(() => {
+    closeRef.current = onClose;
+  });
+
   useEffect(() => {
     if (!open) return;
     const prevFocus = document.activeElement as HTMLElement | null;
@@ -680,7 +693,7 @@ export function Modal({
 
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") {
-        onClose();
+        closeRef.current();
         return;
       }
       if (e.key !== "Tab") return;
@@ -710,7 +723,7 @@ export function Modal({
       window.clearTimeout(t);
       prevFocus?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open || !mounted) return null;
 
