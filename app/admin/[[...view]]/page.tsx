@@ -12,7 +12,15 @@ export default async function AdminViewPage({
   const { view } = await params;
   const seg = view?.[0] ?? "dashboard";
   const initial = (ALL_VIEWS as string[]).includes(seg) ? (seg as View) : "dashboard";
-  /* /admin/customers/<id>/ opens that client's record directly */
+  /* /admin/customers/<id>/ opens that client's record directly, and
+     /admin/custom/<id>/ opens that project's page the same way */
   const customerId = initial === "customers" && view?.[1] ? view[1] : null;
-  return <AdminClient initialView={initial} initialCustomerId={customerId} />;
+  const projectId = initial === "custom" && view?.[1] ? view[1] : null;
+  return (
+    <AdminClient
+      initialView={initial}
+      initialCustomerId={customerId}
+      initialProjectId={projectId}
+    />
+  );
 }

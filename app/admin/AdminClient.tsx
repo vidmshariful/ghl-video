@@ -257,9 +257,11 @@ const pathFor = (v: View, sub?: string | null) =>
 export function AdminClient({
   initialView,
   initialCustomerId = null,
+  initialProjectId = null,
 }: {
   initialView: View;
   initialCustomerId?: string | null;
+  initialProjectId?: string | null;
 }) {
   const [session, setSession] = useState<Session | null>(null);
   const [ready, setReady] = useState(false);
@@ -271,6 +273,7 @@ export function AdminClient({
   /* the client record open at /admin/customers/<id>/, so one can be linked
      to a teammate rather than described */
   const [customerId, setCustomerId] = useState<string | null>(initialCustomerId);
+  const [projectId, setProjectId] = useState<string | null>(initialProjectId);
 
   const [loginError, setLoginError] = useState("");
 
@@ -282,9 +285,17 @@ export function AdminClient({
     setView(v);
     setHelpSlug(v === "help" ? slug : null);
     setCustomerId(null);
+    setProjectId(null);
     if (window.location.pathname !== pathFor(v)) {
       window.history.pushState(null, "", pathFor(v));
     }
+  };
+
+  /* opening a project is a navigation, so it gets a URL of its own */
+  const openProject = (id: string | null) => {
+    setProjectId(id);
+    const path = id ? pathFor("custom", id) : pathFor("custom");
+    if (window.location.pathname !== path) window.history.pushState(null, "", path);
   };
 
   /* opening a client record is a navigation, so it gets a URL of its own */
@@ -297,6 +308,7 @@ export function AdminClient({
     const onPop = () => {
       const segs = window.location.pathname.replace(/^\/admin\/?/, "").split("/").filter(Boolean);
       const seg = segs[0] ?? "";
+      setProjectId(seg === "custom" && segs[1] ? segs[1] : null);
       setView(seg && (ALL_VIEWS as string[]).includes(seg) ? (seg as View) : "dashboard");
       setCustomerId(seg === "customers" && segs[1] ? segs[1] : null);
     };
@@ -573,7 +585,7 @@ export function AdminClient({
           ) : view === "sales" ? (
             <SalesScreen />
           ) : view === "custom" ? (
-            <CustomVideoScreen />
+            <CustomVideoScreen openProjectId={projectId} onOpenProject={openProject} />
           ) : view === "customers" ? (
             <CustomersScreen openId={customerId} onOpen={openCustomer} />
           ) : view === "partners" ? (

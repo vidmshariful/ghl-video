@@ -24,6 +24,7 @@ type PipelineStation = {
   state: "todo" | "with_us" | "with_client" | "done";
   word: string;
   gated: boolean;
+  provided: boolean;
   url: string | null;
   at: string | null;
   eta: string | null;
@@ -122,14 +123,23 @@ export function CustomView({
   onMessageStudio,
   focusVideoId,
   onFocused,
+  openProjectId = null,
+  onOpenProject,
 }: {
   authedFetch: (path: string, init?: RequestInit) => Promise<Record<string, unknown>>;
   onMessageStudio?: () => void;
   focusVideoId?: string | null;
   onFocused?: () => void;
+  openProjectId?: string | null;
+  onOpenProject?: (id: string | null) => void;
 }) {
   const [projects, setProjects] = useState<Project[] | null>(null);
-  const [open, setOpen] = useState<string | null>(null);
+  const [open, setOpenState] = useState<string | null>(openProjectId);
+  useEffect(() => setOpenState(openProjectId), [openProjectId]);
+  const setOpen = (id: string | null) => {
+    setOpenState(id);
+    onOpenProject?.(id);
+  };
   const [playing, setPlaying] = useState<(Reviewable & { title: string }) | null>(null);
 
   const load = useCallback(async () => {
@@ -148,7 +158,8 @@ export function CustomView({
       (p) => p.main?.id === focusVideoId || p.formats.some((f) => f.id === focusVideoId),
     );
     if (home) {
-      setOpen(home.id);
+      setOpenState(home.id);
+      onOpenProject?.(home.id);
       const target =
         home.main?.id === focusVideoId
           ? home.main && { ...home.main, title: home.title }
@@ -156,7 +167,7 @@ export function CustomView({
       if (target?.videoUrl) setPlaying(target);
     }
     onFocused?.();
-  }, [focusVideoId, projects, onFocused]);
+  }, [focusVideoId, projects, onFocused, onOpenProject]);
 
   if (!projects) return <p className="text-body text-muted">Loading your projects...</p>;
 
@@ -345,9 +356,11 @@ function ProjectPage({
   onPlay: (r: Reviewable & { title: string }) => void;
   onMessageStudio?: () => void;
 }) {
-  const waiting =
-    p.pipeline.stations.filter((s) => s.state === "with_client" && s.gated).length +
-    p.formats.filter((f) => f.canReview).length;
+  const approvals = p.pipeline.stations.filter((s) => s.state === "with_client" && s.gated).length;
+  const filesOwed = p.pipeline.stations.filter(
+    (s) => s.provided && s.state !== "done" && (s.key === "script" || s.key === "voiceover"),
+  ).length;
+  const waiting = approvals + filesOwed + p.formats.filter((f) => f.canReview).length;
 
   return (
     <div>
@@ -383,11 +396,14 @@ function ProjectPage({
           {waiting > 0 && (
             <Card
               tone="dark"
-              title={`${waiting} ${waiting === 1 ? "thing is" : "things are"} waiting on you`}
+              title={`${waiting} ${waiting === 1 ? "thing needs" : "things need"} you`}
             >
               <p className="text-body-sm text-chrome-muted">
-                Nothing moves until you have had your say. The gold buttons
-                below are where your word is needed.
+                {filesOwed > 0 && approvals > 0
+                  ? "We are waiting on a file from you and on an approval. The gold buttons below are exactly where."
+                  : filesOwed > 0
+                    ? "We are waiting on a file only you have. Send the link with the gold button below and the work starts moving."
+                    : "Nothing moves until you have had your look. The gold buttons below are where your word is needed."}
               </p>
             </Card>
           )}
@@ -466,6 +482,8 @@ function ProjectPage({
             </Card>
           )}
 
+          <ClientThread projectId={p.id} authedFetch={authedFetch} />
+
           {p.brief && (
             <Card title="The brief" description="What we agreed to make.">
               <p className="whitespace-pre-wrap text-body-sm text-muted">{p.brief}</p>
@@ -540,11 +558,36 @@ function StationRow({
 }) {
   const [noteOpen, setNoteOpen] = useState(false);
   const [note, setNote] = useState("");
+  const [provideOpen, setProvideOpen] = useState(false);
+  const [provideUrl, setProvideUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
   const mine = st.state === "with_client" && st.gated;
   const playerGate = st.key === "animation" || st.key === "delivery";
+  const providable = st.provided && (st.key === "script" || st.key === "voiceover");
+  const needsTheirFile = providable && st.state !== "done";
+
+  async function provide() {
+    setBusy(true);
+    setErr("");
+    try {
+      const j = await authedFetch(`/api/portal/projects/${p.id}/provide`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stage: st.key, url: provideUrl.trim() }),
+      });
+      if (j.error) setErr(String(j.error));
+      else {
+        setProvideOpen(false);
+        setProvideUrl("");
+        onChanged();
+      }
+    } catch {
+      setErr("That did not go through. Please try again.");
+    }
+    setBusy(false);
+  }
 
   async function gate(action: "approve" | "changes") {
     setBusy(true);
@@ -592,6 +635,20 @@ function StationRow({
             Open it
           </a>
         )}
+        {needsTheirFile && (
+          <Button size="sm" variant="brand" onClick={() => setProvideOpen(!provideOpen)}>
+            {st.url ? "Send a new link" : `Add your ${st.key === "script" ? "script" : "voiceover"}`}
+          </Button>
+        )}
+        {providable && st.state === "done" && !provideOpen && (
+          <button
+            type="button"
+            onClick={() => setProvideOpen(true)}
+            className="tap font-mono text-label uppercase text-dim transition-colors hover:text-gold"
+          >
+            Send an update
+          </button>
+        )}
         {mine && playerGate && p.main?.videoUrl && (
           <Button size="sm" variant="brand" onClick={() => onPlay({ ...p.main!, title: p.title })}>
             Review it
@@ -628,6 +685,19 @@ function StationRow({
             onClick={() => void gate("changes")}
           >
             Send
+          </Button>
+        </span>
+      )}
+      {provideOpen && (
+        <span className="flex w-full gap-2">
+          <Input
+            value={provideUrl}
+            onChange={(e) => setProvideUrl(e.target.value)}
+            placeholder={`Link to your ${st.key === "script" ? "script" : "voiceover"}, e.g. a Google Doc or Drive file`}
+            aria-label={`Your ${st.key === "script" ? "script" : "voiceover"} link`}
+          />
+          <Button size="sm" variant="brand" disabled={busy || !provideUrl.trim()} onClick={provide}>
+            {busy ? "Sending..." : "Send it"}
           </Button>
         </span>
       )}
@@ -733,5 +803,84 @@ function StartModule({
         </div>
       )}
     </div>
+  );
+}
+
+/* the one thread this project has: the studio reads and writes the same one */
+function ClientThread({
+  projectId,
+  authedFetch,
+}: {
+  projectId: string;
+  authedFetch: (path: string, init?: RequestInit) => Promise<Record<string, unknown>>;
+}) {
+  const [notes, setNotes] = useState<
+    { id: string; side: string; name: string; body: string; stamp: string | null; at: string }[] | null
+  >(null);
+  const [draft, setDraft] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    const j = await authedFetch(`/api/portal/projects/${projectId}/notes`).catch(() => null);
+    setNotes(((j?.notes as typeof notes) ?? []) as never);
+  }, [projectId, authedFetch]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function send() {
+    if (!draft.trim()) return;
+    setBusy(true);
+    await authedFetch(`/api/portal/projects/${projectId}/notes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body: draft.trim() }),
+    }).catch(() => null);
+    setDraft("");
+    await load();
+    setBusy(false);
+  }
+
+  return (
+    <Card
+      title="Notes on this project"
+      description="Talk to the people making it. Approval requests and your review notes land here too."
+    >
+      {notes === null ? (
+        <p className="text-body-sm text-muted">Loading...</p>
+      ) : notes.length === 0 ? (
+        <p className="text-body-sm text-dim">Nothing said yet. Anything on your mind lands with the studio here.</p>
+      ) : (
+        <ol className="grid max-h-72 gap-2.5 overflow-y-auto pr-1">
+          {notes.map((n) => (
+            <li
+              key={n.id}
+              className={`border-l pl-3 ${n.side === "studio" ? "border-gold/50" : "border-blue/50"}`}
+            >
+              <p className="text-body-sm text-ink">{n.body}</p>
+              <p className="mt-0.5 font-mono text-label uppercase text-dim">
+                {n.name}
+                {n.stamp ? ` at ${n.stamp}` : ""} / {when(n.at)}
+              </p>
+            </li>
+          ))}
+        </ol>
+      )}
+      <div className="mt-3 flex gap-2">
+        <Input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          placeholder="Write to the studio"
+          aria-label="Note to the studio"
+          onKeyDown={(e) => {
+            if (e.key === "Enter") void send();
+          }}
+        />
+        <Button size="sm" variant="secondary" disabled={busy || !draft.trim()} onClick={send}>
+          Send
+        </Button>
+      </div>
+    </Card>
   );
 }

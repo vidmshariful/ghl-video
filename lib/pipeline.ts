@@ -93,11 +93,10 @@ export function normalizePipeline(raw: unknown): Pipeline {
       at: typeof s.at === "string" ? s.at : null,
       eta: typeof s.eta === "string" && s.eta ? s.eta : null,
     };
-    /* a piece the client provided is done by definition and never gated */
-    if (base[k].provided) {
-      base[k].state = "done";
-      base[k].gate = false;
-    }
+    /* a piece the client provides carries no approval gate, but marking it
+       theirs is a promise, not a receipt: the state still has to walk to
+       done when the file actually lands */
+    if (base[k].provided) base[k].gate = false;
   }
   return base;
 }
@@ -136,11 +135,14 @@ export function statusForPipeline(
   return "queued";
 }
 
-/** The station line in the client's words. */
+/** The station line in the client's words, saying exactly what is needed. */
 export function clientStationWord(key: StationKey, s: Station): string {
-  if (s.provided) return "You provided this";
+  if (s.provided) {
+    if (s.state === "done") return "You provided this";
+    return s.url ? "Yours, checking it" : "We need this from you";
+  }
   if (s.state === "done") return STATIONS[key].defaultGate && s.gate ? "Approved" : "Done";
-  if (s.state === "with_client") return "Waiting on you";
+  if (s.state === "with_client") return s.gate ? "Needs your approval" : "With you";
   if (s.state === "with_us") return "With us";
   return "Not started";
 }

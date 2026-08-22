@@ -1,8 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   normalizePipeline,
+  statusForPipeline,
   STATION_ORDER,
   STATIONS,
+  type Pipeline,
   type StationKey,
   type StationState,
 } from "@/lib/pipeline";
@@ -55,6 +57,28 @@ export async function ensureMainCarrier(db: DB, projectId: string): Promise<stri
   return String(made.id);
 }
 
+/**
+ * The invisible main carrier's coarse status follows the project's line.
+ * Without this the review machinery reads a video stuck at queued and the
+ * client's Review button never lights, which is exactly the bug that
+ * shipped first.
+ */
+export async function syncMainStatus(db: DB, projectId: string, line: Pipeline): Promise<void> {
+  const mainId = await ensureMainCarrier(db, projectId);
+  if (!mainId) return;
+  const { data: main } = await db
+    .from("order_deliverables")
+    .select("status, revision_round, ready_at")
+    .eq("id", mainId)
+    .single();
+  const derived = statusForPipeline(line, Number(main?.revision_round ?? 0));
+  if (String(main?.status) === derived) return;
+  const write: Record<string, unknown> = { status: derived, updated_at: new Date().toISOString() };
+  if (derived === "ready" && !main?.ready_at) write.ready_at = new Date().toISOString();
+  if (derived === "approved") write.approved_at = new Date().toISOString();
+  await db.from("order_deliverables").update(write).eq("id", mainId);
+}
+
 const stationOf = (v: unknown): StationKey | null =>
   typeof v === "string" && (STATION_ORDER as string[]).includes(v) ? (v as StationKey) : null;
 
@@ -91,6 +115,7 @@ export async function handleStationOp(
   const line2 = normalizePipeline({ ...line, [key]: next });
   const { error } = await db.from("projects").update({ pipeline: line2 }).eq("id", projectId);
   if (error) return { status: 400, body: { error: error.message } };
+  await syncMainStatus(db, projectId, line2);
 
   /* the animation and delivery files are what the client watches, so they
      mirror onto the main carrier the review machine reads */
@@ -123,6 +148,21 @@ export async function handleStationOp(
       videoTitle: String((project as Row).title ?? "your video"),
       stageLabel: STATIONS[key].label,
     });
+    /* the ask also lands in the project's own notes, so the conversation
+       and the request live in one place on the client's screen */
+    const mainId = await ensureMainCarrier(db, projectId);
+    if (mainId) {
+      const { addComment } = await import("@/lib/review");
+      await addComment(db, {
+        deliverableId: mainId,
+        side: "studio",
+        email: "studio",
+        name: "GHL Video",
+        body: `The ${STATIONS[key].label.toLowerCase()} is ready for your approval. Open it, have your look, and approve it or tell us what to change.`,
+        atSeconds: null,
+        parentId: null,
+      });
+    }
     const { pushNotification } = await import("@/lib/notifications");
     await pushNotification(db, {
       audience: "customer",
@@ -168,5 +208,6 @@ export async function handleAddDraft(
   });
   await db.from("projects").update({ pipeline: line2 }).eq("id", projectId);
   await db.from("order_deliverables").update({ video_url: url }).eq("id", mainId);
+  await syncMainStatus(db, projectId, line2);
   return { status: 200, body: { ok: true, version: v.version } };
 }

@@ -176,14 +176,25 @@ const EMPTY_DRAFT = {
   fromRequestId: "",
 };
 
-export function CustomVideoScreen() {
+export function CustomVideoScreen({
+  openProjectId = null,
+  onOpenProject,
+}: {
+  openProjectId?: string | null;
+  onOpenProject?: (id: string | null) => void;
+}) {
   const [tab, setTab] = useState<"projects" | "enquiries">("projects");
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [enquiries, setEnquiries] = useState<Enquiry[] | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [team, setTeam] = useState<{ email: string; name: string }[]>([]);
   const [draft, setDraft] = useState<typeof EMPTY_DRAFT | null>(null);
-  const [open, setOpen] = useState<string | null>(null);
+  const [open, setOpenState] = useState<string | null>(openProjectId);
+  useEffect(() => setOpenState(openProjectId), [openProjectId]);
+  const setOpen = (id: string | null) => {
+    setOpenState(id);
+    onOpenProject?.(id);
+  };
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -958,6 +969,8 @@ function ProjectPage({
             )}
           </Card>
 
+          <ProjectThread projectId={p.id} />
+
           <ItemNotes target={{ projectId: p.id }} authHeader={authHeader} />
         </div>
       </div>
@@ -998,7 +1011,11 @@ function StationList({
               <span className="flex items-center gap-2">
                 <span aria-hidden="true" className={`h-2 w-2 rounded-full ${STATION_DOT[st.state]}`} />
                 <span className="text-body-sm font-semibold text-ink">{m.label}</span>
-                {st.provided && <Chip tone="neutral">client provided</Chip>}
+                {st.provided && (
+                  <Chip tone={st.url ? "neutral" : "warn"}>
+                    {st.url ? "client provided" : "waiting on their file"}
+                  </Chip>
+                )}
                 {gated && <Chip tone="warn">needs their approval</Chip>}
               </span>
               <span className="flex flex-wrap items-center gap-1.5">
@@ -1009,7 +1026,7 @@ function StationList({
                     onClick={() => void station(m.key, { provided: !st.provided })}
                     className="tap font-mono text-label uppercase text-dim transition-colors hover:text-gold"
                   >
-                    {st.provided ? "ours after all" : "theirs"}
+                    {st.provided ? "we make it" : "client provides"}
                   </button>
                 )}
                 {m.gateable && (
@@ -1024,7 +1041,6 @@ function StationList({
                 )}
                 <Select
                   value={st.state}
-                  disabled={st.provided}
                   onChange={(e) => void station(m.key, { state: e.target.value })}
                   aria-label={`${m.label} state`}
                 >
@@ -1048,36 +1064,51 @@ function StationList({
             </div>
 
             {m.key === "animation" ? (
-              <div className="mt-2 flex gap-2">
-                <Input
-                  value={draftUrl}
-                  onChange={(e) => setDraftUrl(e.target.value)}
-                  placeholder="New draft link, becomes the next version"
-                />
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  disabled={busy !== null || !draftUrl.trim()}
-                  onClick={async () => {
-                    await onRun("draft", { action: "add_draft", url: draftUrl.trim() });
-                    setDraftUrl("");
-                  }}
-                >
-                  Add draft
-                </Button>
+              <div className="mt-2 grid gap-2">
+                {st.url && (
+                  <a
+                    href={st.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="tap font-mono text-label uppercase text-gold transition-colors hover:text-ink"
+                  >
+                    Current draft, open it
+                  </a>
+                )}
+                <div className="flex gap-2">
+                  <Input
+                    value={draftUrl}
+                    onChange={(e) => setDraftUrl(e.target.value)}
+                    placeholder="New draft link, becomes the next version"
+                  />
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={busy !== null || !draftUrl.trim()}
+                    onClick={async () => {
+                      await onRun("draft", { action: "add_draft", url: draftUrl.trim() });
+                      setDraftUrl("");
+                    }}
+                  >
+                    Add draft
+                  </Button>
+                </div>
               </div>
             ) : (
-              !st.provided &&
               m.key !== "sfx" && (
-                <div className="mt-2 flex gap-2">
+                <div className="mt-2 flex items-center gap-2">
                   <Input
                     value={urls[m.key] ?? st.url ?? ""}
                     onChange={(e) => setUrls({ ...urls, [m.key]: e.target.value })}
                     placeholder={
-                      m.key === "design" ? "Figma link" : `Link to the ${m.label.toLowerCase()}`
+                      m.key === "design"
+                        ? "Figma link"
+                        : st.provided
+                          ? `Link to their ${m.label.toLowerCase()}`
+                          : `Link to the ${m.label.toLowerCase()}`
                     }
                   />
-                  {(urls[m.key] ?? "") !== (st.url ?? "") && urls[m.key] !== undefined && (
+                  {(urls[m.key] ?? "") !== (st.url ?? "") && urls[m.key] !== undefined ? (
                     <Button
                       size="sm"
                       variant="secondary"
@@ -1086,6 +1117,17 @@ function StationList({
                     >
                       Save
                     </Button>
+                  ) : (
+                    st.url && (
+                      <a
+                        href={st.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="tap shrink-0 font-mono text-label uppercase text-gold transition-colors hover:text-ink"
+                      >
+                        Open it
+                      </a>
+                    )
                   )}
                 </div>
               )
@@ -1202,5 +1244,86 @@ function FormatList({ p, onReload }: { p: Project; onReload: () => Promise<void>
         </Button>
       </div>
     </div>
+  );
+}
+
+/*
+ * The conversation the client sees too: one thread per project, shared
+ * with their project page and the review screen. Not to be confused with
+ * team notes below it, which the client never reads.
+ */
+function ProjectThread({ projectId }: { projectId: string }) {
+  const [notes, setNotes] = useState<
+    { id: string; side: string; name: string; body: string; stamp: string | null; at: string }[] | null
+  >(null);
+  const [draft, setDraft] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      const r = await fetch(`/api/admin/projects/notes?projectId=${projectId}`, {
+        headers: await authHeader(),
+      });
+      const j = await r.json();
+      setNotes(r.ok ? (j.notes ?? []) : []);
+    } catch {
+      setNotes([]);
+    }
+  }, [projectId]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function send() {
+    if (!draft.trim()) return;
+    setBusy(true);
+    await fetch("/api/admin/projects/notes", {
+      method: "POST",
+      headers: { ...(await authHeader()), "Content-Type": "application/json" },
+      body: JSON.stringify({ projectId, body: draft.trim() }),
+    });
+    setDraft("");
+    await load();
+    setBusy(false);
+  }
+
+  return (
+    <Card
+      title="Notes with the client"
+      description="They read this thread on their project page. Approval requests and review notes land here too."
+    >
+      {notes === null ? (
+        <p className="text-body-sm text-muted">Loading...</p>
+      ) : notes.length === 0 ? (
+        <p className="text-body-sm text-dim">Nothing said yet.</p>
+      ) : (
+        <ol className="grid max-h-72 gap-2.5 overflow-y-auto pr-1">
+          {notes.map((n) => (
+            <li key={n.id} className={`border-l pl-3 ${n.side === "studio" ? "border-gold/50" : "border-blue/50"}`}>
+              <p className="text-body-sm text-ink">{n.body}</p>
+              <p className="mt-0.5 font-mono text-label uppercase text-dim">
+                {n.name}
+                {n.stamp ? ` at ${n.stamp}` : ""} / {when(n.at)}
+              </p>
+            </li>
+          ))}
+        </ol>
+      )}
+      <div className="mt-3 flex gap-2">
+        <Input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          placeholder="Write to the client"
+          aria-label="Note to the client"
+          onKeyDown={(e) => {
+            if (e.key === "Enter") void send();
+          }}
+        />
+        <Button size="sm" variant="secondary" disabled={busy || !draft.trim()} onClick={send}>
+          Send
+        </Button>
+      </div>
+    </Card>
   );
 }

@@ -40,11 +40,25 @@ describe("what a fresh line looks like", () => {
     assert.equal(p.delivery.state, "todo");
   });
 
-  test("a client-provided piece is done by definition and never gated", () => {
+  test("a client-provided piece loses its gate but is not magically done", () => {
     const p = normalizePipeline({ script: { state: "todo", provided: true, gate: true } });
-    assert.equal(p.script.state, "done");
+    assert.equal(p.script.state, "todo");
     assert.equal(p.script.gate, false);
-    assert.equal(clientStationWord("script", p.script), "You provided this");
+    assert.equal(clientStationWord("script", p.script), "We need this from you");
+  });
+
+  test("their file arriving is what finishes a provided station", () => {
+    const waiting = normalizePipeline({ script: { state: "todo", provided: true } });
+    assert.equal(clientStationWord("script", waiting.script), "We need this from you");
+    const sent = normalizePipeline({ script: { state: "with_us", provided: true, url: "https://docs.google.com/x" } });
+    assert.equal(clientStationWord("script", sent.script), "Yours, checking it");
+    const done = normalizePipeline({ script: { state: "done", provided: true, url: "https://docs.google.com/x" } });
+    assert.equal(clientStationWord("script", done.script), "You provided this");
+  });
+
+  test("a gated station in their court asks for approval in words", () => {
+    const p = normalizePipeline({ animation: { state: "with_client", gate: true } });
+    assert.equal(clientStationWord("animation", p.animation), "Needs your approval");
   });
 
   test("sound can never be marked client-provided", () => {

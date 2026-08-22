@@ -1087,7 +1087,7 @@ function SettingsView({
 const pathFor = (s: PortalSection, sub?: string | null) =>
   s === "dashboard"
     ? "/portal/"
-    : (s === "orders" || s === "library") && sub
+    : (s === "orders" || s === "library" || s === "projects") && sub
       ? `/portal/${s}/${sub}/`
       : `/portal/${s}/`;
 
@@ -1107,16 +1107,20 @@ function Portal({
   initialView,
   initialOrderId,
   initialItemCode,
+  initialProjectId,
 }: {
   session: Session;
   initialView: PortalSection;
   initialOrderId: string | null;
   initialItemCode: string | null;
+  initialProjectId: string | null;
 }) {
   const [section, setSection] = useState<PortalSection>(initialView);
   const [openOrder, setOpenOrder] = useState<string | null>(initialOrderId);
   /* the library item open at /portal/library/<code>/, if any */
   const [openItem, setOpenItem] = useState<string | null>(initialItemCode);
+  /* the custom project open at /portal/projects/<id>/, if any */
+  const [openProjectId, setOpenProjectId] = useState<string | null>(initialProjectId);
   const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
   /* a video to open on arrival, set when somebody presses Watch it on the
    * dashboard. The three line screens each know how to honour it. */
@@ -1140,6 +1144,7 @@ function Portal({
       setSection(next);
       setOpenOrder(next === "orders" && segs[1] ? segs[1] : null);
       setOpenItem(next === "library" && segs[1] ? segs[1] : null);
+      setOpenProjectId(next === "projects" && segs[1] ? segs[1] : null);
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
@@ -1685,6 +1690,11 @@ function Portal({
               focusVideoId={focusVideo}
               onFocused={() => setFocusVideo(null)}
               onMessageStudio={can("messages") ? () => go("messages") : undefined}
+              openProjectId={openProjectId}
+              onOpenProject={(id) => {
+                setOpenProjectId(id);
+                pushUrl("projects", id);
+              }}
             />
           ) : (
             <DashboardView
@@ -1712,10 +1722,12 @@ export function PortalClient({
   initialView,
   initialOrderId,
   initialItemCode,
+  initialProjectId = null,
 }: {
   initialView: PortalSection;
   initialOrderId: string | null;
   initialItemCode: string | null;
+  initialProjectId?: string | null;
 }) {
   const [session, setSession] = useState<Session | null>(null);
   const [ready, setReady] = useState(false);
@@ -1744,6 +1756,7 @@ export function PortalClient({
           initialView={initialView}
           initialOrderId={initialOrderId}
           initialItemCode={initialItemCode}
+          initialProjectId={initialProjectId}
         />
       ) : (
         <>

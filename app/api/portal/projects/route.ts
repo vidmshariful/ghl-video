@@ -82,6 +82,7 @@ export async function GET(req: Request) {
               state: line[k].state,
               word: clientStationWord(k, line[k]),
               gated: Boolean(line[k].gate) && !line[k].provided,
+              provided: Boolean(line[k].provided),
               url: STATIONS[k].clientFile ? (line[k].url ?? null) : null,
               at: line[k].at ?? null,
               eta: line[k].eta ?? null,
@@ -142,7 +143,12 @@ function activityFor(project: Row, line: Pipeline, formats: Row[]) {
     if (!st.at || st.provided) continue;
     if (st.state === "done") events.push({ at: st.at, body: `${STATIONS[k].label} finished.` });
     else if (st.state === "with_client")
-      events.push({ at: st.at, body: `${STATIONS[k].label} is waiting on you.` });
+      events.push({
+        at: st.at,
+        body: st.gate
+          ? `${STATIONS[k].label} needs your approval.`
+          : `${STATIONS[k].label} is with you.`,
+      });
     else if (st.state === "with_us")
       events.push({ at: st.at, body: `${STATIONS[k].label} started.` });
   }

@@ -25,11 +25,14 @@ export default async function PortalViewPage({
   /* /portal/library/<code>/ opens that video or pack directly, so one can be
    * sent to a cofounder as a plain link */
   const initialItemCode = initialView === "library" && view?.[1] ? view[1] : null;
+  /* /portal/projects/<id>/ opens that project's page directly */
+  const initialProjectId = initialView === "projects" && view?.[1] ? view[1] : null;
   return (
     <PortalClient
       initialView={initialView}
       initialOrderId={initialOrderId}
       initialItemCode={initialItemCode}
+      initialProjectId={initialProjectId}
     />
   );
 }
