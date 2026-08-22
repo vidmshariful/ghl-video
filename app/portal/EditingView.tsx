@@ -90,6 +90,8 @@ type Plan = {
     shortUsed: number;
     longAllowed: number;
     shortAllowed: number;
+    /* everything we made them that month */
+    videos: Video[];
   }[];
 };
 
@@ -122,7 +124,7 @@ const ROW: Record<string, string> = {
   approved: "border-green/30 bg-green/[0.05]",
 };
 
-type Tab = "month" | "guide" | "plan";
+type Tab = "month" | "past" | "guide" | "plan";
 
 /* the line a request travels, in the client's words. Revisions is not a
  * station of its own: a line that doubles back reads as a mistake, so
@@ -327,8 +329,15 @@ export function EditingView({
   const live = plan.videos.filter((v) => !v.cancelledAt);
   const parents = live.filter((v) => !v.parentId);
 
+  /* finished months still hold real videos, so a past edit opens into the
+     same panel a current one does */
+  const pastVideos = plan.history.flatMap((h) => h.videos ?? []);
+  const pastCount = pastVideos.filter((v) => !v.cancelledAt).length;
+
   /* one request, opened over the list rather than instead of it */
-  const opened = openRequest ? plan.videos.find((v) => v.id === openRequest) : null;
+  const opened = openRequest
+    ? ([...plan.videos, ...pastVideos].find((v) => v.id === openRequest) ?? null)
+    : null;
 
   return (
     <div>
@@ -363,6 +372,7 @@ export function EditingView({
         <Tabs
           tabs={[
             { key: "month" as Tab, label: "This month", count: live.length },
+            { key: "past" as Tab, label: "Past Edits", count: pastCount },
             { key: "guide" as Tab, label: "How we cut for you" },
             { key: "plan" as Tab, label: "Your plan" },
           ]}
@@ -371,7 +381,9 @@ export function EditingView({
         />
       </div>
 
-      {tab === "guide" ? (
+      {tab === "past" ? (
+        <PastEdits months={plan.history} onOpen={setOpenRequest} />
+      ) : tab === "guide" ? (
         <StyleGuideView authedFetch={authedFetch} aspects={plan.aspects} />
       ) : tab === "plan" ? (
         <div className="grid gap-3 lg:grid-cols-[1fr_20rem] lg:items-start">
@@ -769,6 +781,119 @@ export function EditingView({
  * on it; now the card carries its stage as a colour, and opening it is how
  * you get to the video, the brief, and everything we know about it.
  */
+/* ---------------- past edits ---------------- */
+
+/* "July 2026", the way somebody says which month they mean */
+const monthName = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+
+/*
+ * Everything from the months that have closed.
+ *
+ * A plan renews and the counters reset, which is right, but the work does
+ * not stop existing: a cut we made in March is still the client's video and
+ * still the answer to "send me that one again". This is where it lives,
+ * newest month first, filtered down to one month when they know which one
+ * they want.
+ */
+function PastEdits({
+  months,
+  onOpen,
+}: {
+  months: Plan["history"];
+  onOpen: (id: string) => void;
+}) {
+  const [pick, setPick] = useState("all");
+
+  /* only months that actually produced something: an empty month is a row
+     of nothing to read */
+  const withWork = months
+    .map((m) => ({ ...m, kept: (m.videos ?? []).filter((v) => !v.cancelledAt) }))
+    .filter((m) => m.kept.length > 0);
+
+  const shown = pick === "all" ? withWork : withWork.filter((m) => m.id === pick);
+  const total = withWork.reduce((n, m) => n + m.kept.length, 0);
+
+  if (!withWork.length)
+    return (
+      <Card title="Past edits">
+        <p className="text-body-sm text-muted">
+          Nothing here yet. When this month closes, everything we made you moves
+          here and stays, so you can always come back for it.
+        </p>
+      </Card>
+    );
+
+  return (
+    <div className="grid gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-body-sm text-muted">
+          <span className="font-mono tabular-nums text-ink">{total}</span>{" "}
+          {total === 1 ? "video" : "videos"} across{" "}
+          <span className="font-mono tabular-nums text-ink">{withWork.length}</span>{" "}
+          {withWork.length === 1 ? "month" : "months"}. They stay here for good.
+        </p>
+        <label className="flex items-center gap-2">
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">
+            Month
+          </span>
+          <Select
+            value={pick}
+            onChange={(e) => setPick(e.target.value)}
+            aria-label="Filter by month"
+            className="w-auto"
+          >
+            <option value="all">All months</option>
+            {withWork.map((m) => (
+              <option key={m.id} value={m.id}>
+                {monthName(m.startsAt)} ({m.kept.length})
+              </option>
+            ))}
+          </Select>
+        </label>
+      </div>
+
+      {shown.map((m) => {
+        const parents = m.kept.filter((v) => !v.parentId);
+        return (
+          <Card
+            key={m.id}
+            title={monthName(m.startsAt)}
+            description={`${day(m.startsAt)} to ${day(m.endsAt)} / ${m.longUsed} long form, ${m.shortUsed} short form`}
+            actions={
+              <DownloadAll
+                videoIds={m.kept
+                  .filter((v) => v.videoUrl && v.status === "approved")
+                  .map((v) => v.id)}
+              />
+            }
+          >
+            <ul className="grid gap-2">
+              {parents.map((v) => {
+                const cuts = m.kept.filter((c) => c.parentId === v.id);
+                return (
+                  <li key={v.id}>
+                    <VideoRow v={v} cuts={cuts.length} onOpen={() => onOpen(v.id)} />
+                    {cuts.length > 0 && (
+                      <ul className="mt-1.5 grid gap-1.5 border-l border-hair pl-4">
+                        {cuts.map((c) => (
+                          <li key={c.id}>
+                            <VideoRow v={c} onOpen={() => onOpen(c.id)} />
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </Card>
+        );
+      })}
+    </div>
+  );
+}
+
 function VideoRow({
   v,
   onOpen,

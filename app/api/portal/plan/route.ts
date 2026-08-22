@@ -49,6 +49,57 @@ const skuOf = (sub: Row | null) =>
       null)
     : null;
 
+/* every column a video is described by, current month or long finished */
+const VIDEO_FIELDS =
+  "id, parent_id, title, status, form, aspect, note, due_at, requested_due_at, assets_ready_at, assets_url, reference_url, video_url, revision_round, cancelled_at, cancelled_reason, created_at";
+
+/*
+ * One video, as the client reads it.
+ *
+ * Shared by this month and by every month before it, because a video does
+ * not become a different kind of thing when its month ends. A finished cut
+ * from March is still watchable, still has its brief, and still says what it
+ * was; only the counting stops.
+ */
+function shapeVideo(v: Row) {
+  const status = String(v.status);
+  const column = columnFor({
+    status,
+    assetsReadyAt: (v.assets_ready_at as string | null) ?? null,
+  });
+  return {
+    id: String(v.id),
+    parentId: (v.parent_id as string | null) ?? null,
+    title: String(v.title),
+    status,
+    /* the word THEY read, which is not always our word for it */
+    state: CLIENT_STATUS_WORD[column] ?? status,
+    column,
+    form: (v.form as Form | null) ?? null,
+    aspect: (v.aspect as string | null) ?? null,
+    brief: (v.note as string | null) ?? null,
+    dueAt: (v.due_at as string | null) ?? null,
+    requestedDueAt: (v.requested_due_at as string | null) ?? null,
+    assetsReadyAt: (v.assets_ready_at as string | null) ?? null,
+    assetsUrl: (v.assets_url as string | null) ?? null,
+    /* withheld until it is genuinely watchable, the same rule the rest of
+     * the portal follows: a client finding an unfinished cut is the exact
+     * accident this prevents */
+    videoUrl:
+      status === "ready" || status === "revisions" || status === "approved"
+        ? ((v.video_url as string | null) ?? null)
+        : null,
+    canReview: status === "ready" || status === "revisions",
+    /* every editing tier sells unlimited revisions, so they get them */
+    revisionsUsed: Number(v.revision_round ?? 0),
+    cancelledAt: (v.cancelled_at as string | null) ?? null,
+    cancelledReason: (v.cancelled_reason as string | null) ?? null,
+    /* they can pull a request back while it is still only a request */
+    canCancel: !v.cancelled_at && status === "queued",
+    createdAt: String(v.created_at),
+  };
+}
+
 const cycleArgs = (sub: Row) => ({
   id: String(sub.id),
   current_period_end: (sub.current_period_end as string | null) ?? null,
@@ -69,50 +120,11 @@ export async function GET(req: Request) {
 
   const { data: videos } = await db
     .from("order_deliverables")
-    .select(
-      "id, parent_id, title, status, form, aspect, note, due_at, requested_due_at, assets_ready_at, assets_url, reference_url, video_url, revision_round, cancelled_at, cancelled_reason, created_at",
-    )
+    .select(VIDEO_FIELDS)
     .eq("cycle_id", cycle.id)
     .order("created_at", { ascending: false });
 
-  const items = ((videos ?? []) as Row[]).map((v) => {
-    const status = String(v.status);
-    const column = columnFor({
-      status,
-      assetsReadyAt: (v.assets_ready_at as string | null) ?? null,
-    });
-    return {
-      id: String(v.id),
-      parentId: (v.parent_id as string | null) ?? null,
-      title: String(v.title),
-      status,
-      /* the word THEY read, which is not always our word for it */
-      state: CLIENT_STATUS_WORD[column] ?? status,
-      column,
-      form: (v.form as Form | null) ?? null,
-      aspect: (v.aspect as string | null) ?? null,
-      brief: (v.note as string | null) ?? null,
-      dueAt: (v.due_at as string | null) ?? null,
-      requestedDueAt: (v.requested_due_at as string | null) ?? null,
-      assetsReadyAt: (v.assets_ready_at as string | null) ?? null,
-      assetsUrl: (v.assets_url as string | null) ?? null,
-      /* withheld until it is genuinely watchable, the same rule the rest of
-       * the portal follows: a client finding an unfinished cut is the exact
-       * accident this prevents */
-      videoUrl:
-        status === "ready" || status === "revisions" || status === "approved"
-          ? ((v.video_url as string | null) ?? null)
-          : null,
-      canReview: status === "ready" || status === "revisions",
-      /* every editing tier sells unlimited revisions, so they get them */
-      revisionsUsed: Number(v.revision_round ?? 0),
-      cancelledAt: (v.cancelled_at as string | null) ?? null,
-      cancelledReason: (v.cancelled_reason as string | null) ?? null,
-      /* they can pull a request back while it is still only a request */
-      canCancel: !v.cancelled_at && status === "queued",
-      createdAt: String(v.created_at),
-    };
-  });
+  const items = ((videos ?? []) as Row[]).map(shapeVideo);
 
   const use = slotsUsed(items, {
     longForm: cycle.longFormAllowed,
@@ -125,11 +137,20 @@ export async function GET(req: Request) {
   /* past months, so a client can see what they got for what they paid */
   const history = await cycleHistory(db, String(sub.id));
   const pastIds = history.filter((h) => h.id !== cycle.id).map((h) => h.id);
+  /*
+   * The videos themselves, not only how many there were.
+   *
+   * A month ending used to take its work off the client's screen entirely:
+   * the counts survived, the videos did not, so "where is the cut you made
+   * us in March" had no answer anywhere in the portal. Everything they have
+   * ever been made comes back now, month by month.
+   */
   const { data: pastVideos } = pastIds.length
     ? await db
         .from("order_deliverables")
-        .select("cycle_id, form, cancelled_at")
+        .select(`cycle_id, ${VIDEO_FIELDS}`)
         .in("cycle_id", pastIds)
+        .order("created_at", { ascending: false })
     : { data: [] };
 
   return NextResponse.json({
@@ -164,6 +185,10 @@ export async function GET(req: Request) {
             shortUsed: mine.filter((v) => v.form === "short").length,
             longAllowed: h.longFormAllowed,
             shortAllowed: h.shortFormAllowed,
+            /* what we actually made them that month */
+            videos: ((pastVideos ?? []) as Row[])
+              .filter((v) => String(v.cycle_id) === h.id)
+              .map(shapeVideo),
           };
         }),
     },
