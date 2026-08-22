@@ -120,10 +120,6 @@ export function StyleGuideView({
   return (
     <div className="grid gap-3 lg:grid-cols-[1fr_20rem] lg:items-start">
       <div className="grid min-w-0 gap-3">
-        {/* what we wrote for them, above what they write for us: it is the
-            thing they came here to read */}
-        <StyleGuideDoc authedFetch={authedFetch} />
-
         <Card
           title="How we cut for you"
           description="Fill this in once and your editor works to it every month. Nothing here is required."
@@ -167,6 +163,11 @@ export function StyleGuideView({
       </div>
 
       <div className="grid gap-3">
+        {/* the guide we wrote them sits at the top of the sidebar: it is the
+            thing they came to read, and it opens full screen rather than
+            competing for room with the form beside it */}
+        <StyleGuideDoc authedFetch={authedFetch} />
+
         <Card title="Why this is worth ten minutes">
           <p className="text-body-sm text-muted">
             Almost every round of changes comes from something we had to guess.
