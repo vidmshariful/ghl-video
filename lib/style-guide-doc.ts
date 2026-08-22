@@ -46,9 +46,31 @@ export type Doc = {
   note: string | null;
   uploadedBy: string | null;
   createdAt: string;
-  /** signed, expires in an hour, absent if the file has gone missing */
+  /** signed and hour-limited when we host it, the plain link when we do not */
   url: string | null;
+  /** where it actually lives, so the studio knows which rules apply */
+  hosted: "ours" | "linked";
+  /** null until checked; false means the far end stopped answering */
+  linkOk: boolean | null;
 };
+
+/**
+ * Is a linked guide still there?
+ *
+ * A link to somebody else's library can be deleted at the far end without
+ * telling us, and the first person to find out should not be the client
+ * opening it. Cheap enough to run when the studio opens the board.
+ */
+export async function checkLink(url: string) {
+  try {
+    const r = await fetch(url, { method: "GET", headers: { range: "bytes=0-1023" } });
+    if (!r.ok) return false;
+    const type = r.headers.get("content-type") ?? "";
+    return /pdf/i.test(type);
+  } catch {
+    return false;
+  }
+}
 
 function shapeNote(n: Row): Note {
   return {
@@ -72,24 +94,35 @@ function shapeNote(n: Row): Note {
 export async function guideFor(db: DB, email: string) {
   const { data: rows } = await db
     .from("style_guide_docs")
-    .select("id, version, path, filename, size_bytes, note, uploaded_by, created_at")
+    .select(
+      "id, version, path, external_url, link_ok, filename, size_bytes, note, uploaded_by, created_at",
+    )
     .ilike("customer_email", email)
     .order("version", { ascending: false });
 
   const docs: Doc[] = [];
   for (const d of (rows ?? []) as Row[]) {
-    const { data: signed } = await db.storage
-      .from(BUCKET)
-      .createSignedUrl(String(d.path), SIGNED_FOR);
+    const link = (d.external_url as string | null) ?? null;
+    /* a link is handed over as it is; a file we host gets a fresh signature
+       with an hour on it, every time it is asked for */
+    let url = link;
+    if (!link && d.path) {
+      const { data: signed } = await db.storage
+        .from(BUCKET)
+        .createSignedUrl(String(d.path), SIGNED_FOR);
+      url = signed?.signedUrl ?? null;
+    }
     docs.push({
       id: String(d.id),
       version: Number(d.version),
-      filename: String(d.filename),
+      filename: (d.filename as string | null) ?? "Style guide",
       sizeBytes: (d.size_bytes as number | null) ?? null,
       note: (d.note as string | null) ?? null,
       uploadedBy: (d.uploaded_by as string | null) ?? null,
       createdAt: String(d.created_at),
-      url: signed?.signedUrl ?? null,
+      url,
+      hosted: link ? "linked" : "ours",
+      linkOk: link ? ((d.link_ok as boolean | null) ?? null) : null,
     });
   }
 

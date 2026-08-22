@@ -33,6 +33,8 @@ type Doc = {
   uploadedBy: string | null;
   createdAt: string;
   url: string | null;
+  hosted: "ours" | "linked";
+  linkOk: boolean | null;
 };
 
 const size = (n: number | null) =>
@@ -43,6 +45,10 @@ export function StyleGuideAdmin({ email }: { email: string }) {
   const [notes, setNotes] = useState<Record<string, Note[]>>({});
   const [showing, setShowing] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
+  const [link, setLink] = useState("");
+  /* linking is the usual way now; uploading is the exception, so it hides
+     behind a toggle rather than sitting there inviting a 2MB file */
+  const [mode, setMode] = useState<"link" | "upload">("link");
   const [what, setWhat] = useState("");
   const [reply, setReply] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
@@ -69,13 +75,14 @@ export function StyleGuideAdmin({ email }: { email: string }) {
   }, [load]);
 
   async function upload() {
-    if (!file) return;
+    if (mode === "link" ? !link.trim() : !file) return;
     setBusy(true);
     setErr("");
     try {
       const body = new FormData();
       body.append("email", email);
-      body.append("file", file);
+      if (mode === "link") body.append("url", link.trim());
+      else if (file) body.append("file", file);
       body.append("note", what.trim());
       /* no Content-Type here on purpose: the browser sets the multipart
          boundary, and stamping json over it silently corrupts the upload */
@@ -85,8 +92,9 @@ export function StyleGuideAdmin({ email }: { email: string }) {
         body,
       });
       const j = await r.json();
-      if (!r.ok) return setErr(j.error ?? "Could not upload that.");
+      if (!r.ok) return setErr(j.error ?? "Could not save that.");
       setFile(null);
+      setLink("");
       setWhat("");
       if (picker.current) picker.current.value = "";
       setShowing(null);
@@ -156,6 +164,7 @@ export function StyleGuideAdmin({ email }: { email: string }) {
           <>
             <div className="flex flex-wrap items-center gap-2">
               <Chip tone={docs[0].id === doc.id ? "good" : "neutral"}>Version {doc.version}</Chip>
+              <Chip tone="neutral">{doc.hosted === "linked" ? "Linked" : "We host it"}</Chip>
               {open > 0 && <Chip tone="warn">{open} to answer</Chip>}
               <span className="font-mono text-label uppercase text-dim">
                 {doc.filename}
@@ -167,6 +176,13 @@ export function StyleGuideAdmin({ email }: { email: string }) {
                 </Button>
               )}
             </div>
+            {doc.linkOk === false && (
+              <p className="mt-2 rounded-[8px] border border-error/40 bg-error/5 p-3 text-body-sm text-error">
+                This link stopped answering. It has probably been deleted or
+                unshared in the media library, and the client is seeing a dead
+                page. Paste a working link below.
+              </p>
+            )}
             {doc.note && <p className="mt-2 text-body-sm text-muted">{doc.note}</p>}
 
             <div className="mt-4 border-t border-hair pt-3">
@@ -263,14 +279,50 @@ export function StyleGuideAdmin({ email }: { email: string }) {
             {doc ? "Upload a new version" : "Upload their guide"}
           </p>
           <div className="mt-2 grid gap-2.5">
-            <input
-              ref={picker}
-              type="file"
-              accept="application/pdf,.pdf"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              className="block w-full text-body-sm text-muted file:mr-3 file:rounded-[3px] file:border-0 file:bg-surface file:px-3 file:py-2 file:font-mono file:text-label file:uppercase file:text-ink hover:file:bg-card"
-              aria-label="Pick the PDF"
-            />
+            {mode === "link" ? (
+              <>
+                <Input
+                  value={link}
+                  onChange={(e) => setLink(e.target.value)}
+                  placeholder="https://assets.cdn.filesafe.space/..."
+                  aria-label="Link to the guide"
+                />
+                <p className="text-body-sm text-dim">
+                  The link from your HighLevel media library. It costs us no
+                  storage, and anyone holding the link can open it, so keep it
+                  to work like this.{" "}
+                  <button
+                    type="button"
+                    onClick={() => setMode("upload")}
+                    className="tap text-blue underline underline-offset-2"
+                  >
+                    Upload a file instead
+                  </button>
+                </p>
+              </>
+            ) : (
+              <>
+                <input
+                  ref={picker}
+                  type="file"
+                  accept="application/pdf,.pdf"
+                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                  className="block w-full text-body-sm text-muted file:mr-3 file:rounded-[3px] file:border-0 file:bg-surface file:px-3 file:py-2 file:font-mono file:text-label file:uppercase file:text-ink hover:file:bg-card"
+                  aria-label="Pick the PDF"
+                />
+                <p className="text-body-sm text-dim">
+                  PDF, up to 25MB. We host it, and only this client can open
+                  it, through a link that dies after an hour.{" "}
+                  <button
+                    type="button"
+                    onClick={() => setMode("link")}
+                    className="tap text-blue underline underline-offset-2"
+                  >
+                    Paste a link instead
+                  </button>
+                </p>
+              </>
+            )}
             <Textarea
               rows={2}
               value={what}
@@ -279,12 +331,21 @@ export function StyleGuideAdmin({ email }: { email: string }) {
               aria-label="What changed"
             />
             <div>
-              <Button variant="brand" size="sm" disabled={busy || !file} onClick={upload}>
-                {busy ? "Uploading..." : doc ? `Upload version ${docs[0].version + 1}` : "Upload it"}
+              <Button
+                variant="brand"
+                size="sm"
+                disabled={busy || (mode === "link" ? !link.trim() : !file)}
+                onClick={upload}
+              >
+                {busy
+                  ? "Saving..."
+                  : doc
+                    ? `Save version ${docs[0].version + 1}`
+                    : "Save it"}
               </Button>
             </div>
             <p className="text-body-sm text-dim">
-              PDF, up to 25MB. Uploading tells them it is ready to read.
+              Saving tells them it is ready to read.
             </p>
           </div>
         </div>

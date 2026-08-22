@@ -4,11 +4,32 @@ import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import {
   BUCKET,
   MAX_BYTES,
+  checkLink,
   guideFor,
   nextVersion,
   ownerOf,
   pathFor,
 } from "@/lib/style-guide-doc";
+
+/* said once, because a link and an upload both need to say it */
+async function tellThem(
+  db: ReturnType<typeof supabaseAdmin>,
+  email: string,
+  version: number,
+) {
+  const { pushNotification } = await import("@/lib/notifications");
+  await pushNotification(db, {
+    audience: "customer",
+    email,
+    kind: "style_guide",
+    title:
+      version === 1
+        ? "Your style guide is ready to read"
+        : `Your style guide has been updated to version ${version}`,
+    body: "Open it in Editing, under How we cut for you. Tell us anything you want changed.",
+    href: "subscriptions",
+  });
+}
 
 export const runtime = "nodejs";
 
@@ -32,7 +53,29 @@ export async function GET(req: Request) {
   if (!email) return NextResponse.json({ error: "Which client?" }, { status: 400 });
 
   const db = supabaseAdmin();
-  return NextResponse.json(await guideFor(db, email));
+  const guide = await guideFor(db, email);
+
+  /*
+   * Re-check the current guide if it lives somewhere else.
+   *
+   * Only the current one, and only on our side: a link can be deleted at the
+   * far end without telling anybody, and we would rather find that here than
+   * have a client open a dead page. Older versions are left alone so opening
+   * a board never turns into a dozen outbound requests.
+   */
+  const current = guide.docs[0];
+  if (current?.hosted === "linked" && current.url) {
+    const ok = await checkLink(current.url);
+    if (ok !== current.linkOk) {
+      await db
+        .from("style_guide_docs")
+        .update({ link_ok: ok, link_checked_at: new Date().toISOString() })
+        .eq("id", current.id);
+    }
+    current.linkOk = ok;
+  }
+
+  return NextResponse.json(guide);
 }
 
 /*
@@ -52,10 +95,66 @@ export async function POST(req: Request) {
 
   const email = String(form.get("email") ?? "").trim();
   const note = String(form.get("note") ?? "").trim().slice(0, 500);
+  const link = String(form.get("url") ?? "").trim().slice(0, 1000);
   const file = form.get("file");
   if (!email) return NextResponse.json({ error: "Which client?" }, { status: 400 });
+
+  /*
+   * A link, which is the usual way now: the guide lives in the HighLevel
+   * media library and costs us no storage. Checked before it is saved, so a
+   * typo is caught here rather than by the client finding a dead page.
+   */
+  if (link && !(file instanceof File && file.size > 0)) {
+    let parsed: URL;
+    try {
+      parsed = new URL(link);
+    } catch {
+      return NextResponse.json({ error: "That is not a web address." }, { status: 400 });
+    }
+    if (parsed.protocol !== "https:")
+      return NextResponse.json(
+        { error: "The link has to start with https." },
+        { status: 400 },
+      );
+
+    const reachable = await checkLink(link);
+    if (!reachable)
+      return NextResponse.json(
+        {
+          error:
+            "That link did not answer with a PDF. Open it in a new tab and check it is the right one, and that it is shared publicly.",
+        },
+        { status: 400 },
+      );
+
+    const dbLink = supabaseAdmin();
+    const version = await nextVersion(dbLink, email);
+    const { data: madeLink, error: linkErr } = await dbLink
+      .from("style_guide_docs")
+      .insert({
+        customer_email: email.toLowerCase(),
+        version,
+        external_url: link,
+        filename: decodeURIComponent(parsed.pathname.split("/").pop() ?? "").slice(0, 200) ||
+          `style-guide-v${version}.pdf`,
+        note: note || null,
+        uploaded_by: admin.email ?? null,
+        link_ok: true,
+        link_checked_at: new Date().toISOString(),
+      })
+      .select("id")
+      .single();
+    if (linkErr) return NextResponse.json({ error: linkErr.message }, { status: 400 });
+
+    await tellThem(dbLink, email, version);
+    return NextResponse.json({ ok: true, id: madeLink.id, version });
+  }
+
   if (!(file instanceof File))
-    return NextResponse.json({ error: "Pick a PDF to upload." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Paste a link to the guide, or pick a PDF to upload." },
+      { status: 400 },
+    );
   if (file.size > MAX_BYTES)
     return NextResponse.json(
       { error: "That file is over 25MB. Export it smaller and try again." },
@@ -96,18 +195,7 @@ export async function POST(req: Request) {
 
   /* tell them it is there, because a guide nobody reads is a guide that
      gets disagreed with after the first video instead of before it */
-  const { pushNotification } = await import("@/lib/notifications");
-  await pushNotification(db, {
-    audience: "customer",
-    email,
-    kind: "style_guide",
-    title:
-      version === 1
-        ? "Your style guide is ready to read"
-        : `Your style guide has been updated to version ${version}`,
-    body: "Open it in Editing, under How we cut for you. Tell us anything you want changed.",
-    href: "subscriptions",
-  });
+  await tellThem(db, email, version);
 
   return NextResponse.json({ ok: true, id: made.id, version });
 }
