@@ -107,6 +107,7 @@ HighLevel token/location/pipeline/stage + `HIGHLEVEL_LEAD_PIPELINE_ID` /
 npm run dev                 # dev server (usually already running on :3000)
 npm run build               # includes the catalog integrity gate
 npm run lint                # eslint
+npm run check:live          # the four world-state checks, before asking to deploy
 npm run migrate             # apply pending SQL migrations (tracked)
 npm run seed:subscriptions  # seed the 3 editing plans (idempotent)
 npm run test:e2e            # Playwright smoke suite
@@ -231,7 +232,52 @@ what survives. Claude maintains it via `scripts/journal.mjs`:
 
 Entries are for the owner: plain language, what and why, never code dumps.
 
-## 9. Quality floor
+## 9. Working agreement (read before every task)
+
+Written after a week where the platform grew faster than the discipline
+around it: work was deployed without being asked for, a curated sales page
+was silently rewired, a shared component shipped a bug that broke typing in
+every form, and a plan was built on assumptions instead of on the owner's
+process. None of that was a tooling failure. These are the rules that
+prevent the repeat.
+
+**1. State the scope before building.** One line on what is being done, the
+files or areas it touches, and explicitly **what will not be touched**.
+Anything outside that list needs a yes first.
+
+**2. Flag root causes, do not fix them unasked.** Noticing that a page reads
+the wrong data source is useful. Rewiring it inside a task about something
+else is not. Say what is wrong, offer to fix it, wait.
+
+**3. Never deploy without being asked.** Build, run the gates, verify in a
+browser, report, stop. `git push origin design-update:main` happens when
+Shariful says so, never as the end of a task. Committing locally is fine.
+
+**4. Shared code is a blast radius.** `components/portal/ui.tsx`,
+`components/portal/board/`, `lib/pipeline.ts`, `lib/projects.ts` and anything
+in `lib/email/` are used by screens far from the one being worked on. Name
+that out loud before changing them, and check at least two other callers
+afterwards.
+
+**5. Use the thing, do not photograph it.** A screenshot proves a screen
+renders, never that it works. Type a whole sentence into the field, submit
+the form, reopen the page, press the button twice. The modal that lost focus
+after one character passed a screenshot review.
+
+**6. Stop and check at the size limit.** If a fix is heading past roughly
+five files or two hundred lines, it has become a different task. Say so and
+confirm before continuing.
+
+**7. Small and reversible beats clever and broad.** When two fixes are
+available, prefer the one that changes less. The best outcome of most tasks
+is a diff the owner can read in a minute.
+
+**8. Before asking for a deploy, run `npm run check:live`.** It is the four
+world-state checks (price drift, deliverables, composition, demo account)
+that deliberately do NOT gate the build, because a bad state must never
+block deploying its own fix.
+
+## 10. Quality floor
 
 Responsive from 320px. Visible keyboard focus everywhere. Reduced motion
 respected. Pinch zoom never disabled. Per-page metadata + canonical; new
