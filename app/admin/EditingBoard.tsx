@@ -13,6 +13,7 @@ import {
   Textarea,
 } from "@/components/portal/ui";
 import { authHeader, when } from "./client";
+import { StyleGuideAdmin } from "./StyleGuideAdmin";
 import {
   ASPECTS,
   EDITING_COLUMNS,
@@ -417,6 +418,7 @@ export function EditingBoard({ slug, onBack }: { slug: string; onBack: () => voi
       </div>
 
       <StyleGuideCard guide={b.styleGuide} email={b.client.email} />
+      <StyleGuideAdmin email={b.client.email} />
 
       {/* the item, over the board instead of instead of it */}
       <Drawer open={!!opened} onClose={() => setOpen(null)} title={opened?.title ?? ""}>

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Button, Card, Field, Select, Textarea } from "@/components/portal/ui";
+import { StyleGuideDoc } from "./StyleGuideDoc";
 
 /*
  * How this client wants their videos cut, said once instead of every month.
@@ -118,10 +119,15 @@ export function StyleGuideView({
 
   return (
     <div className="grid gap-3 lg:grid-cols-[1fr_20rem] lg:items-start">
-      <Card
-        title="How we cut for you"
-        description="Fill this in once and your editor works to it every month. Nothing here is required."
-      >
+      <div className="grid min-w-0 gap-3">
+        {/* what we wrote for them, above what they write for us: it is the
+            thing they came here to read */}
+        <StyleGuideDoc authedFetch={authedFetch} />
+
+        <Card
+          title="How we cut for you"
+          description="Fill this in once and your editor works to it every month. Nothing here is required."
+        >
         <div className="grid gap-4">
           <Field label="Your usual shape" hint="What most of your videos are cut for.">
             <Select
@@ -157,7 +163,8 @@ export function StyleGuideView({
             {saved && <span className="text-body-sm text-green">Saved. Your editor sees it now.</span>}
           </div>
         </div>
-      </Card>
+        </Card>
+      </div>
 
       <div className="grid gap-3">
         <Card title="Why this is worth ten minutes">
