@@ -70,6 +70,8 @@ type Req = {
 
 type Client = {
   subscriptionId: string;
+  /* the handle their board lives at, /admin/editing/<slug>/ */
+  slug: string | null;
   email: string;
   name: string | null;
   company: string | null;
@@ -90,6 +92,8 @@ type Board = {
   requests: Req[];
   styleGuide: Record<string, unknown> | null;
   team: { email: string; name: string }[];
+  /* who a new request lands on unless somebody says otherwise */
+  defaultProducer: string | null;
 };
 
 const COLUMN_TONE: Record<EditingColumn, "neutral" | "warn" | "info" | "good" | "bad"> = {
@@ -186,7 +190,8 @@ export function EditingClients({ onOpen }: { onOpen: (id: string) => void }) {
         <button
           key={c.subscriptionId}
           type="button"
-          onClick={() => onOpen(c.subscriptionId)}
+          /* the handle if they have one, the id if they do not: either opens */
+          onClick={() => onOpen(c.slug ?? c.subscriptionId)}
           className="tap w-full rounded-[12px] border border-hair bg-surface p-5 text-left transition-colors hover:border-gold/50"
         >
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -223,7 +228,7 @@ export function EditingClients({ onOpen }: { onOpen: (id: string) => void }) {
 
 /* ---------------- one client's board ---------------- */
 
-export function EditingBoard({ id, onBack }: { id: string; onBack: () => void }) {
+export function EditingBoard({ slug, onBack }: { slug: string; onBack: () => void }) {
   const [b, setB] = useState<Board | null>(null);
   const [err, setErr] = useState("");
   const [open, setOpen] = useState<string | null>(null);
@@ -233,7 +238,7 @@ export function EditingBoard({ id, onBack }: { id: string; onBack: () => void })
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch(`/api/admin/editing?subscription=${id}`, {
+      const r = await fetch(`/api/admin/editing?client=${encodeURIComponent(slug)}`, {
         headers: await authHeader(),
       });
       const j = await r.json();
@@ -242,7 +247,7 @@ export function EditingBoard({ id, onBack }: { id: string; onBack: () => void })
     } catch {
       setErr("Could not load this board.");
     }
-  }, [id]);
+  }, [slug]);
 
   useEffect(() => {
     void load();
@@ -270,7 +275,7 @@ export function EditingBoard({ id, onBack }: { id: string; onBack: () => void })
   /* the request we are taking down for them. Same row the client's own form
      writes, into the same month, so it shows on their plan screen too. */
   async function add() {
-    if (!draft) return;
+    if (!draft || !b) return;
     setBusy(true);
     setErr("");
     try {
@@ -278,7 +283,7 @@ export function EditingBoard({ id, onBack }: { id: string; onBack: () => void })
         method: "POST",
         headers: { "Content-Type": "application/json", ...(await authHeader()) },
         body: JSON.stringify({
-          subscriptionId: id,
+          subscriptionId: b.client.subscriptionId,
           ...draft,
           cuts: draft.cuts
             .split("\n")
@@ -328,7 +333,13 @@ export function EditingBoard({ id, onBack }: { id: string; onBack: () => void })
             {b.slots.longUsed} of {b.slots.longAllowed} long, {b.slots.shortUsed} of{" "}
             {b.slots.shortAllowed} short
           </p>
-          <Button variant="brand" icon={<Plus />} onClick={() => setDraft(EMPTY_DRAFT)}>
+          <Button
+            variant="brand"
+            icon={<Plus />}
+            onClick={() =>
+              setDraft({ ...EMPTY_DRAFT, assignedTo: b.defaultProducer ?? "" })
+            }
+          >
             Add a request
           </Button>
         </div>
@@ -564,7 +575,7 @@ function AddRequest({
             <Field label="We promise" hint="Ours. Can wait until the footage is in.">
               <Input type="date" value={d.dueAt} onChange={(e) => set("dueAt", e.target.value)} />
             </Field>
-            <Field label="Editor" hint="Can be nobody for now.">
+            <Field label="Producer" hint="Who runs this with the client.">
               <Select value={d.assignedTo} onChange={(e) => set("assignedTo", e.target.value)}>
                 <option value="">Nobody yet</option>
                 {team.map((t) => (
@@ -798,12 +809,12 @@ function RequestDetail({
         <Card title="Who and when">
           <div className="grid gap-3">
             <div>
-              <p className="font-mono text-label uppercase text-dim">Editor</p>
+              <p className="font-mono text-label uppercase text-dim">Producer</p>
               <div className="mt-1">
                 <Select
                   value={r.assignedTo ?? ""}
                   disabled={busy}
-                  aria-label="Assign an editor"
+                  aria-label="Name the producer"
                   onChange={(e) => onSave(r.id, { assignedTo: e.target.value })}
                 >
                   <option value="">Nobody yet</option>

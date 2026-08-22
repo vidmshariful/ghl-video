@@ -258,10 +258,12 @@ export function AdminClient({
   initialView,
   initialCustomerId = null,
   initialProjectId = null,
+  initialEditingSlug = null,
 }: {
   initialView: View;
   initialCustomerId?: string | null;
   initialProjectId?: string | null;
+  initialEditingSlug?: string | null;
 }) {
   const [session, setSession] = useState<Session | null>(null);
   const [ready, setReady] = useState(false);
@@ -274,6 +276,8 @@ export function AdminClient({
      to a teammate rather than described */
   const [customerId, setCustomerId] = useState<string | null>(initialCustomerId);
   const [projectId, setProjectId] = useState<string | null>(initialProjectId);
+  /* the editing client open at /admin/editing/<slug>/ */
+  const [editingSlug, setEditingSlug] = useState<string | null>(initialEditingSlug);
 
   const [loginError, setLoginError] = useState("");
 
@@ -286,9 +290,18 @@ export function AdminClient({
     setHelpSlug(v === "help" ? slug : null);
     setCustomerId(null);
     setProjectId(null);
+    setEditingSlug(null);
     if (window.location.pathname !== pathFor(v)) {
       window.history.pushState(null, "", pathFor(v));
     }
+  };
+
+  /* opening an editing client is a navigation too, so their board gets the
+     URL somebody can paste to a teammate */
+  const openEditingClient = (slug: string | null) => {
+    setEditingSlug(slug);
+    const path = pathFor("editing", slug);
+    if (window.location.pathname !== path) window.history.pushState(null, "", path);
   };
 
   /* opening a project is a navigation, so it gets a URL of its own */
@@ -311,6 +324,7 @@ export function AdminClient({
       setProjectId(seg === "custom" && segs[1] ? segs[1] : null);
       setView(seg && (ALL_VIEWS as string[]).includes(seg) ? (seg as View) : "dashboard");
       setCustomerId(seg === "customers" && segs[1] ? segs[1] : null);
+      setEditingSlug(seg === "editing" && segs[1] ? segs[1] : null);
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
@@ -609,7 +623,7 @@ export function AdminClient({
           ) : view === "production" ? (
             <ProductionScreen onNavigate={go} />
           ) : view === "editing" ? (
-            <EditingScreen />
+            <EditingScreen openSlug={editingSlug} onOpenClient={openEditingClient} />
           ) : view === "emails" || view === "code" ? (
             me ? (
               <SettingsScreen me={me} onMeChanged={loadMe} initialTab={view} />

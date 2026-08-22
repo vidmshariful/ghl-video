@@ -24,7 +24,47 @@ type Row = Record<string, unknown>;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const SUB_FIELDS =
-  "id, customer_email, plan_name, status, amount_cents, current_period_end, metadata, product:products(sku, name), customer:customers(name, company)";
+  "id, customer_email, plan_name, status, amount_cents, current_period_end, metadata, product:products(sku, name), customer:customers(name, company, slug)";
+
+/* Who can be put on a job. Sales reps are not production, so they are not
+   offered; the executive producer sorts to the top because that is who takes
+   the work by default. */
+const PRODUCTION_ROLES = ["admin", "manager"];
+
+/*
+ * The executive producer.
+ *
+ * Editing work is not assigned to editors here, by decision (August 2026):
+ * the editors work in ClickUp, and what this board tracks is who is running
+ * the job with the client. That is Tanvir. If the role ever changes hands,
+ * this is the one line to change; if the address is not on the team any
+ * more, the picker quietly falls back to whoever is.
+ */
+const EXECUTIVE_PRODUCER = "prince@vidiosa.com";
+
+/*
+ * The handle in the URL, turned back into a subscription.
+ *
+ * /admin/editing/extendly is worth sending to somebody; a uuid is not. The
+ * slug belongs to the client, so it resolves through them to whichever plan
+ * they are currently on.
+ */
+async function subscriptionForSlug(db: ReturnType<typeof supabaseAdmin>, slug: string) {
+  const { data: customer } = await db
+    .from("customers")
+    .select("email")
+    .eq("slug", slug)
+    .maybeSingle();
+  if (!customer?.email) return null;
+  const { data: sub } = await db
+    .from("subscriptions")
+    .select("id")
+    .ilike("customer_email", String(customer.email))
+    .in("status", ["active", "trialing", "past_due"])
+    .order("created_at", { ascending: false })
+    .maybeSingle();
+  return sub?.id ? String(sub.id) : null;
+}
 
 /* what currentCycle needs, built explicitly rather than spread: the sku can
  * come from the joined product or the metadata, so it is resolved here once */
@@ -80,7 +120,20 @@ export async function GET(req: Request) {
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const db = supabaseAdmin();
-  const wanted = new URL(req.url).searchParams.get("subscription");
+  const q = new URL(req.url).searchParams;
+  /* by uuid from a click, or by slug from a pasted URL */
+  const slug = q.get("client");
+  const wanted = slug
+    ? /* a client with no handle yet still opens, by id */
+      UUID_RE.test(slug)
+      ? slug
+      : await subscriptionForSlug(db, slug)
+    : q.get("subscription");
+  if (slug && !wanted)
+    return NextResponse.json(
+      { error: "No editing client with that name." },
+      { status: 404 },
+    );
 
   /* ---------- one client's board ---------- */
   if (wanted) {
@@ -129,10 +182,20 @@ export async function GET(req: Request) {
 
     /* who can be put on a job */
     const { data: team } = await db.from("admins").select("email, name, role");
+    const crew = ((team ?? []) as Row[])
+      .filter((t) => PRODUCTION_ROLES.includes(String(t.role)))
+      .sort((a, b) =>
+        a.email === EXECUTIVE_PRODUCER ? -1 : b.email === EXECUTIVE_PRODUCER ? 1 : 0,
+      )
+      .map((t) => ({
+        email: String(t.email),
+        name: (t.name as string | null) ?? String(t.email),
+      }));
 
     return NextResponse.json({
       client: {
         subscriptionId: String(sub.id),
+        slug: (sub.customer as { slug?: string } | null)?.slug ?? null,
         email: String(sub.customer_email),
         name: (sub.customer as { name?: string } | null)?.name ?? null,
         company: (sub.customer as { company?: string } | null)?.company ?? null,
@@ -148,10 +211,16 @@ export async function GET(req: Request) {
       slots: use,
       requests: all,
       styleGuide: guide ?? null,
-      team: ((team ?? []) as Row[]).map((t) => ({
-        email: String(t.email),
-        name: (t.name as string | null) ?? String(t.email),
-      })),
+      /* production only, and the producers first: the picker on this screen
+         names who is running the work, not who sold it */
+      team: crew,
+      /* who a new request lands on: whoever already runs this account, then
+         the executive producer, then anyone in production at all */
+      defaultProducer:
+        all.filter((r) => r.assignedTo).slice(-1)[0]?.assignedTo ??
+        crew.find((t) => t.email === EXECUTIVE_PRODUCER)?.email ??
+        crew[0]?.email ??
+        null,
     });
   }
 
@@ -185,6 +254,8 @@ export async function GET(req: Request) {
 
     clients.push({
       subscriptionId: String(sub.id),
+      /* the handle their screen lives at */
+      slug: (sub.customer as { slug?: string } | null)?.slug ?? null,
       email: String(sub.customer_email),
       name: (sub.customer as { name?: string } | null)?.name ?? null,
       company: (sub.customer as { company?: string } | null)?.company ?? null,

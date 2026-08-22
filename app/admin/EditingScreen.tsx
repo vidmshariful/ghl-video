@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { PageHeader } from "@/components/portal/ui";
 import { EditingBoard, EditingClients } from "./EditingBoard";
 
@@ -12,22 +11,30 @@ import { EditingBoard, EditingClients } from "./EditingBoard";
  * board, a project board and a monthly board are three jobs, not three views
  * of one. Putting editing inside the order board made it look like a special
  * case of an order, which is exactly the confusion the spine exists to end.
+ *
+ * Which client is open lives in the URL (/admin/editing/extendly/) rather
+ * than in this component, so a board can be sent to somebody, bookmarked,
+ * and walked back out of with the browser's own back button.
  */
-export function EditingScreen() {
-  const [openClient, setOpenClient] = useState<string | null>(null);
-
+export function EditingScreen({
+  openSlug,
+  onOpenClient,
+}: {
+  openSlug: string | null;
+  onOpenClient: (slug: string | null) => void;
+}) {
   return (
     <div className="w-full">
-      {!openClient && (
+      {!openSlug && (
         <PageHeader
           title="Editing"
           description="Everyone on a monthly plan. Open a client for their board: what they have asked for, what needs footage, and what is with them for review."
         />
       )}
-      {openClient ? (
-        <EditingBoard id={openClient} onBack={() => setOpenClient(null)} />
+      {openSlug ? (
+        <EditingBoard slug={openSlug} onBack={() => onOpenClient(null)} />
       ) : (
-        <EditingClients onOpen={setOpenClient} />
+        <EditingClients onOpen={onOpenClient} />
       )}
     </div>
   );
