@@ -2,7 +2,9 @@ import { defineConfig, devices } from "@playwright/test";
 
 /*
  * Read-only smoke suite over the marketing pages. Reuses a dev server
- * already running on :3000 (the usual state on this machine) or starts one.
+ * already running on :3200 (the usual state on this machine) or starts one.
+ * 3200 rather than the default 3000 on purpose: another project lives on
+ * 3000 here, and a suite that "reused" it would test the wrong app.
  * Checkout pages are deliberately not visited: /checkout/[sku] creates a
  * real PaymentIntent on load, and a smoke run must never write anywhere.
  */
@@ -18,14 +20,14 @@ export default defineConfig({
   timeout: 60_000,
   expect: { timeout: 15_000 },
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL: "http://localhost:3200",
     navigationTimeout: 45_000,
     trace: "retain-on-failure",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
     command: "npm run dev",
-    url: "http://localhost:3000",
+    url: "http://localhost:3200",
     reuseExistingServer: true,
     timeout: 60_000,
   },

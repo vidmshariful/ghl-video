@@ -25,7 +25,7 @@ const PATHS = [
 export default async function globalSetup() {
   for (const p of PATHS) {
     try {
-      await fetch(`http://localhost:3000${p}`, { redirect: "follow" });
+      await fetch(`http://localhost:3200${p}`, { redirect: "follow" });
     } catch {
       // the webServer block hasn't finished booting yet; tests will retry
     }

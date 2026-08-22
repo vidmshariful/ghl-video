@@ -104,7 +104,7 @@ HighLevel token/location/pipeline/stage + `HIGHLEVEL_LEAD_PIPELINE_ID` /
 `HIGHLEVEL_LEAD_STAGE_ID` (quote leads; falls back loudly to defaults).
 
 ```
-npm run dev                 # dev server (usually already running on :3000)
+npm run dev                 # dev server, always on :3200 (3000 belongs to another project)
 npm run build               # includes the catalog integrity gate
 npm run lint                # eslint
 npm run check:live          # the four world-state checks, before asking to deploy
