@@ -19,6 +19,10 @@ export async function generateMetadata(): Promise<Metadata> {
     title: "Blog",
     description:
       "Practical playbooks for HighLevel SaaS founders: video strategy, funnels, objection handling, and what actually moves signups. From the studio creating HighLevel videos since 2020.",
+    /* noindex while the blog is a designed stub with no real posts, the same
+       as /resources/. A DB override in seo_pages flips this the day it is
+       ready to be crawled, no deploy needed. */
+    robots: { index: false, follow: true },
     alternates: { canonical: "/blog/" },
   });
 }
