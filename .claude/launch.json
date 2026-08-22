@@ -2,16 +2,11 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "ghl-video-dev",
+      "name": "portal-work-dev",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
-      "port": 3000,
+      "port": 3100,
       "autoPort": true
-    },
-    {
-      "name": "ghl-video-attach-3001",
-      "url": "http://localhost:3001",
-      "port": 3001
     }
   ]
 }

@@ -58,8 +58,16 @@ export const STATIONS: Record<
     defaultGate: boolean;
   }
 > = {
-  script: { label: "Scripting", clientFile: true, providable: true, defaultGate: true },
-  voiceover: { label: "Voiceover", clientFile: true, providable: true, defaultGate: true },
+  /*
+   * Only the video stops and waits (owner decision, 22 August 2026). A
+   * client gives feedback by watching the animation, which is why they
+   * never needed an approve button on a script, and certainly not on a
+   * script they wrote themselves. Scripting, voiceover and design carry a
+   * state and a file; the animation draft and the final delivery are the
+   * two moments the work pauses for a person.
+   */
+  script: { label: "Scripting", clientFile: true, providable: true, defaultGate: false },
+  voiceover: { label: "Voiceover", clientFile: true, providable: true, defaultGate: false },
   design: { label: "Concept and Design", clientFile: true, providable: false, defaultGate: false },
   animation: { label: "Animation", clientFile: true, providable: false, defaultGate: true },
   sfx: { label: "Sound Design", clientFile: false, providable: false, defaultGate: false },
@@ -88,7 +96,10 @@ export function normalizePipeline(raw: unknown): Pipeline {
       state:
         state === "with_us" || state === "with_client" || state === "done" ? state : "todo",
       provided: STATIONS[k].providable ? Boolean(s.provided) : false,
-      gate: typeof s.gate === "boolean" ? s.gate : STATIONS[k].defaultGate,
+      /* the gate is the station's, not the row's: a project written under
+         the old four-gate model must not carry an approve button on its
+         script forever */
+      gate: STATIONS[k].defaultGate,
       url: typeof s.url === "string" && s.url.trim() ? s.url.trim() : null,
       at: typeof s.at === "string" ? s.at : null,
       eta: typeof s.eta === "string" && s.eta ? s.eta : null,
@@ -141,7 +152,7 @@ export function clientStationWord(key: StationKey, s: Station): string {
     if (s.state === "done") return "You provided this";
     return s.url ? "Yours, checking it" : "We need this from you";
   }
-  if (s.state === "done") return STATIONS[key].defaultGate && s.gate ? "Approved" : "Done";
+  if (s.state === "done") return STATIONS[key].defaultGate ? "Approved" : "Done";
   if (s.state === "with_client") return s.gate ? "Needs your approval" : "With you";
   if (s.state === "with_us") return "With us";
   return "Not started";

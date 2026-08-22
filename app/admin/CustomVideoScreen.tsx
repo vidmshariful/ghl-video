@@ -1342,7 +1342,7 @@ function ProjectThread({ projectId }: { projectId: string }) {
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch(`/api/admin/projects/notes?projectId=${projectId}`, {
+      const r = await fetch(`/api/admin/projects/talk?projectId=${projectId}`, {
         headers: await authHeader(),
       });
       const j = await r.json();
@@ -1359,7 +1359,7 @@ function ProjectThread({ projectId }: { projectId: string }) {
   async function send() {
     if (!draft.trim()) return;
     setBusy(true);
-    await fetch("/api/admin/projects/notes", {
+    await fetch("/api/admin/projects/talk", {
       method: "POST",
       headers: { ...(await authHeader()), "Content-Type": "application/json" },
       body: JSON.stringify({ projectId, body: draft.trim() }),
@@ -1371,8 +1371,8 @@ function ProjectThread({ projectId }: { projectId: string }) {
 
   return (
     <Card
-      title="Notes with the client"
-      description="They read this thread on their project page. Approval requests and review notes land here too."
+      title="Messages"
+      description="The one inbox this client has. Video feedback is not here: it lives in the review room, pinned to the second it is about."
     >
       {notes === null ? (
         <p className="text-body-sm text-muted">Loading...</p>
@@ -1395,7 +1395,7 @@ function ProjectThread({ projectId }: { projectId: string }) {
         <Input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          placeholder="Write to the client"
+          placeholder="Message this client"
           aria-label="Note to the client"
           onKeyDown={(e) => {
             if (e.key === "Enter") void send();

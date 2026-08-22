@@ -549,8 +549,6 @@ function StationRow({
   authedFetch: (path: string, init?: RequestInit) => Promise<Record<string, unknown>>;
   onChanged: () => void;
 }) {
-  const [noteOpen, setNoteOpen] = useState(false);
-  const [note, setNote] = useState("");
   const [provideOpen, setProvideOpen] = useState(false);
   const [provideUrl, setProvideUrl] = useState("");
   const [busy, setBusy] = useState(false);
@@ -574,27 +572,6 @@ function StationRow({
       else {
         setProvideOpen(false);
         setProvideUrl("");
-        onChanged();
-      }
-    } catch {
-      setErr("That did not go through. Please try again.");
-    }
-    setBusy(false);
-  }
-
-  async function gate(action: "approve" | "changes") {
-    setBusy(true);
-    setErr("");
-    try {
-      const j = await authedFetch(`/api/portal/projects/${p.id}/gate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ stage: st.key, action, note: action === "changes" ? note : undefined }),
-      });
-      if (j.error) setErr(String(j.error));
-      else {
-        setNoteOpen(false);
-        setNote("");
         onChanged();
       }
     } catch {
@@ -642,42 +619,9 @@ function StationRow({
             Send an update
           </button>
         )}
-        {/* the player sits at the top of the page whenever there is a cut,
-            so this row only names the state */}
-        {mine && !playerGate && (
-          <>
-            <Button size="sm" variant="brand" disabled={busy} onClick={() => void gate("approve")}>
-              Approve
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              disabled={busy}
-              onClick={() => setNoteOpen(!noteOpen)}
-            >
-              Ask for changes
-            </Button>
-          </>
-        )}
+        {/* no approve buttons live on a station any more: the only thing a
+            client decides is the video, and the player above owns that */}
       </span>
-      {noteOpen && (
-        <span className="flex w-full gap-2">
-          <Input
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="What should change?"
-            aria-label={`Changes to the ${st.label.toLowerCase()}`}
-          />
-          <Button
-            size="sm"
-            variant="secondary"
-            disabled={busy || !note.trim()}
-            onClick={() => void gate("changes")}
-          >
-            Send
-          </Button>
-        </span>
-      )}
       {provideOpen && (
         <span className="flex w-full gap-2">
           <Input
@@ -837,8 +781,8 @@ function ClientThread({
 
   return (
     <Card
-      title="Notes on this project"
-      description="Talk to the people making it. Approval requests and your review notes land here too."
+      title="Message the studio"
+      description="Goes to the same inbox as everything else you have said to us, tagged with this project. Notes about the video itself belong on the player above."
     >
       {notes === null ? (
         <p className="text-body-sm text-muted">Loading...</p>
@@ -854,7 +798,7 @@ function ClientThread({
           if (merged.length === 0)
             return (
               <p className="text-body-sm text-dim">
-                Nothing yet. Anything you write here lands with the people
+                Nothing yet. Anything you write here reaches the people
                 making your video.
               </p>
             );
@@ -888,7 +832,7 @@ function ClientThread({
         <Input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          placeholder="Write to the studio"
+          placeholder="Ask us anything about this project"
           aria-label="Note to the studio"
           onKeyDown={(e) => {
             if (e.key === "Enter") void send();

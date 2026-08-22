@@ -25,14 +25,21 @@ import {
 const at = "2026-08-21T10:00:00.000Z";
 
 describe("what a fresh line looks like", () => {
-  test("gates follow the studio's real rules, not a template", () => {
+  test("only the video stops and waits", () => {
     const p = defaultPipeline();
-    assert.equal(p.script.gate, true);
-    assert.equal(p.voiceover.gate, true);
+    /* a client gives feedback by watching the animation, so nothing before
+       it asks for an approval, least of all a script they wrote */
+    assert.equal(p.script.gate, false);
+    assert.equal(p.voiceover.gate, false);
     assert.equal(p.design.gate, false);
-    assert.equal(p.animation.gate, true);
     assert.equal(p.sfx.gate, false);
+    assert.equal(p.animation.gate, true);
     assert.equal(p.delivery.gate, true);
+  });
+
+  test("a gate stored under the old four-gate model does not resurrect", () => {
+    const p = normalizePipeline({ script: { state: "with_client", gate: true } });
+    assert.equal(p.script.gate, false);
   });
 
   test("garbage in storage becomes a whole line, not a crash", () => {
@@ -199,9 +206,15 @@ describe("the derived stage: one truth, computed", () => {
     assert.equal(derivedStage(n({ sfx: { state: "with_us" } }), o), "in_progress");
   });
 
-  test("anything gated with the client is review, wherever the line stands", () => {
-    assert.equal(derivedStage(n({ script: { state: "with_client", gate: true } }), o), "review");
-    assert.equal(derivedStage(n({ animation: { state: "with_client", gate: true } }), o), "review");
+  test("the video with the client is review, wherever the line stands", () => {
+    assert.equal(derivedStage(n({ animation: { state: "with_client" } }), o), "review");
+    assert.equal(
+      derivedStage(n({ script: { state: "done" }, delivery: { state: "with_client" } }), o),
+      "review",
+    );
+    /* a script sitting with the client is not a review any more: it carries
+       no gate, so it cannot hold the job up */
+    assert.equal(derivedStage(n({ script: { state: "with_client" } }), o), "planning");
   });
 
   test("animation back with us after feedback is revision", () => {
