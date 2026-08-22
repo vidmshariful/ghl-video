@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { verifyAdmin } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
+import { isOpen } from "@/lib/projects";
 import { orderKind, type InvoiceLink } from "@/lib/order-kind";
 
 export const runtime = "nodejs";
@@ -131,10 +132,10 @@ export async function GET(req: Request) {
     .filter((i) => String(i.status) === "open" && !paidSkus.has(String(i.product_sku)))
     .reduce((s, i) => s + Number(i.total_cents), 0);
 
-  /* work agreed and not yet paid for: the pipeline */
-  const OPEN = new Set(["scoped", "in_production", "review", "delivered"]);
+  /* work agreed and not yet paid for: the pipeline. isOpen speaks both the
+     old and the new status vocabulary, so this survives the rename. */
   const pipelineCents = ((projects ?? []) as Row[])
-    .filter((p) => OPEN.has(String(p.status)))
+    .filter((p) => isOpen(String(p.status)))
     .reduce(
       (s, p) => s + Number(p.agreed_cents ?? p.quoted_cents ?? 0),
       0,
@@ -205,7 +206,7 @@ export async function GET(req: Request) {
       addon: sales.filter((s) => s.kind === "addon").length,
       custom: sales.filter((s) => s.kind === "custom").length,
       liveSubscriptions: planRows.reduce((a, p) => a + p.live, 0),
-      openProjects: ((projects ?? []) as Row[]).filter((p) => OPEN.has(String(p.status))).length,
+      openProjects: ((projects ?? []) as Row[]).filter((p) => isOpen(String(p.status))).length,
     },
     plans: planRows.sort((a, b) => b.mrrCents - a.mrrCents),
     months,

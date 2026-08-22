@@ -15,6 +15,8 @@ import {
   Textarea,
 } from "@/components/portal/ui";
 import { authHeader, money, when } from "./client";
+import { initialsOf } from "@/components/portal/board";
+import { pages } from "@/lib/site";
 import { ItemNotes } from "@/components/portal/board";
 import {
   PROJECT_LIST,
@@ -63,6 +65,7 @@ type Project = {
   title: string;
   brief: string | null;
   status: ProjectStatus;
+  category: string | null;
   tags: string[];
   pipeline: Pipeline;
   ball: "us" | "client" | null;
@@ -154,10 +157,17 @@ const day = (iso: string | null) =>
     ? new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" })
     : null;
 
+const CATEGORIES = pages.custom.formats.items.map((f) => f.name);
+
+/* the shared column skeleton, so the header and every row line up */
+const TABLE_GRID =
+  "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 lg:grid-cols-[minmax(0,2.3fr)_8.5rem_6.5rem_minmax(0,1fr)_3rem_5.5rem_5rem]";
+
 const EMPTY_DRAFT = {
   customerEmail: "",
   contactId: "",
   title: "",
+  category: "",
   brief: "",
   quotedCents: "",
   agreedCents: "",
@@ -357,6 +367,19 @@ export function CustomVideoScreen() {
                   placeholder="Onboarding explainer, 90 sec"
                 />
               </Field>
+              <Field label="Category" hint="The format being made. Same four the site sells.">
+                <Select
+                  value={draft.category}
+                  onChange={(e) => setDraft({ ...draft, category: e.target.value })}
+                >
+                  <option value="">Pick one</option>
+                  {CATEGORIES.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
             </div>
             <Field label="The brief" hint="What they asked for, in their words if you have them.">
               <Textarea
@@ -408,6 +431,31 @@ export function CustomVideoScreen() {
             />
           ) : (
             <div className="grid gap-1">
+              {/* the header every group's rows align to */}
+              <div className={`${TABLE_GRID} px-3.5 pb-1`}>
+                <span className="font-mono text-label uppercase tracking-[0.08em] text-dim">
+                  Project
+                </span>
+                <span className="hidden font-mono text-label uppercase tracking-[0.08em] text-dim lg:block">
+                  Category
+                </span>
+                <span className="hidden font-mono text-label uppercase tracking-[0.08em] text-dim lg:block">
+                  Line
+                </span>
+                <span className="hidden font-mono text-label uppercase tracking-[0.08em] text-dim lg:block">
+                  Tags
+                </span>
+                <span className="hidden font-mono text-label uppercase tracking-[0.08em] text-dim lg:block">
+                  PM
+                </span>
+                <span className="hidden text-right font-mono text-label uppercase tracking-[0.08em] text-dim lg:block">
+                  Owed
+                </span>
+                <span className="text-right font-mono text-label uppercase tracking-[0.08em] text-dim">
+                  Due
+                </span>
+              </div>
+
               {PROJECT_LIST.map((cat) => {
                 const rows = live.filter((p) => p.status === cat);
                 const shut = collapsed.has(cat);
@@ -448,7 +496,7 @@ export function CustomVideoScreen() {
                             <button
                               type="button"
                               onClick={() => setOpen(p.id)}
-                              className="tap grid w-full grid-cols-[1fr_auto] items-center gap-3 bg-surface px-3.5 py-2.5 text-left transition-colors hover:bg-card sm:grid-cols-[minmax(0,2.2fr)_minmax(0,1.6fr)_auto]"
+                              className={`tap ${TABLE_GRID} w-full bg-surface px-3.5 py-2.5 text-left transition-colors hover:bg-card`}
                             >
                               <span className="min-w-0">
                                 <span className="block truncate text-body-sm font-semibold text-ink">
@@ -458,8 +506,31 @@ export function CustomVideoScreen() {
                                   {p.customerEmail}
                                 </span>
                               </span>
-                              <span className="hidden min-w-0 items-center gap-1.5 sm:flex">
-                                {p.tags.slice(0, 3).map((t) => (
+                              <span className="hidden min-w-0 lg:block">
+                                {p.category ? (
+                                  <span className="truncate text-body-sm text-muted">
+                                    {p.category}
+                                  </span>
+                                ) : (
+                                  <span className="font-mono text-label uppercase text-dim">
+                                    not set
+                                  </span>
+                                )}
+                              </span>
+                              <span className="hidden items-center gap-1 lg:flex">
+                                {(
+                                  ["script", "voiceover", "design", "animation", "sfx", "delivery"] as const
+                                ).map((k) => (
+                                  <span
+                                    key={k}
+                                    title={k}
+                                    className={`h-1.5 w-3 rounded-full ${STATION_DOT[p.pipeline[k]?.state ?? "todo"]}`}
+                                  />
+                                ))}
+                              </span>
+                              <span className="hidden min-w-0 items-center gap-1.5 lg:flex">
+                                {p.ball === "client" && <Chip tone="warn">with client</Chip>}
+                                {p.tags.slice(0, 2).map((t) => (
                                   <span
                                     key={t}
                                     className="truncate rounded-full border border-hair px-2 py-0.5 font-mono text-label text-muted"
@@ -468,22 +539,33 @@ export function CustomVideoScreen() {
                                   </span>
                                 ))}
                               </span>
-                              <span className="flex shrink-0 items-center gap-2.5">
-                                {p.ball === "client" && <Chip tone="warn">with client</Chip>}
-                                {p.money.outstandingCents > 0 && (
-                                  <span className="hidden font-mono text-label uppercase text-dim md:inline">
-                                    {money(p.money.outstandingCents)} owed
-                                  </span>
-                                )}
-                                {p.dueAt && (
+                              <span className="hidden lg:block">
+                                {p.ownerEmail ? (
                                   <span
-                                    className={`font-mono text-label uppercase ${
-                                      Date.parse(p.dueAt) < Date.now() ? "text-error" : "text-dim"
-                                    }`}
+                                    title={p.ownerEmail}
+                                    className="grid h-6 w-6 place-items-center rounded-full border border-hair bg-card font-mono text-label font-bold text-ink"
                                   >
-                                    {day(p.dueAt)}
+                                    {initialsOf(p.ownerEmail)}
                                   </span>
+                                ) : (
+                                  <span className="font-mono text-label text-dim">?</span>
                                 )}
+                              </span>
+                              <span className="hidden text-right font-mono text-label uppercase tabular-nums lg:block">
+                                {p.money.outstandingCents > 0 ? (
+                                  <span className="text-gold">{money(p.money.outstandingCents)}</span>
+                                ) : (
+                                  <span className="text-dim">paid</span>
+                                )}
+                              </span>
+                              <span
+                                className={`text-right font-mono text-label uppercase ${
+                                  p.dueAt && Date.parse(p.dueAt) < Date.now()
+                                    ? "text-error"
+                                    : "text-dim"
+                                }`}
+                              >
+                                {p.dueAt ? day(p.dueAt) : ""}
                               </span>
                             </button>
                           </li>
@@ -763,6 +845,23 @@ function ProjectPage({
                     aria-label="Deadline"
                     className="w-[9.5rem]"
                   />
+                </dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-muted">Category</dt>
+                <dd>
+                  <Select
+                    value={p.category ?? ""}
+                    onChange={(e) => void run("category", { category: e.target.value || null })}
+                    aria-label="Video category"
+                  >
+                    <option value="">Not set</option>
+                    {CATEGORIES.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </Select>
                 </dd>
               </div>
               <div className="flex items-center justify-between gap-3">

@@ -44,6 +44,7 @@ type Project = {
   id: string;
   title: string;
   brief: string | null;
+  category: string | null;
   status: string;
   statusLabel: string;
   open: boolean;
@@ -300,7 +301,9 @@ function ProjectPage({
       <div className="mt-4">
         <PageHeader
           title={p.title}
-          description={p.dueAt ? `${p.statusLabel}. Due ${day(p.dueAt)}.` : p.statusLabel}
+          description={[p.category, p.statusLabel, p.dueAt ? `Due ${day(p.dueAt)}.` : null]
+            .filter(Boolean)
+            .join(". ")}
         />
       </div>
 

@@ -87,6 +87,7 @@ export async function GET(req: Request) {
       title: String(p.title),
       brief: (p.brief as string | null) ?? null,
       status: normalizeProjectStatus(String(p.status)),
+      category: (p.category as string | null) ?? null,
       tags: ((p.tags as string[] | null) ?? []).slice(0, 12),
       pipeline: line,
       ball: ballInCourt(line),
@@ -161,8 +162,9 @@ export async function POST(req: Request) {
       customer_email: email,
       customer_id: (customer?.id as string | undefined) ?? null,
       title,
+      category: str(b.category, 60),
       brief: str(b.brief, 8000),
-      status: PROJECT_STATUSES.includes(b.status as ProjectStatus) ? b.status : "scoped",
+      status: PROJECT_STATUSES.includes(b.status as ProjectStatus) ? b.status : "backlog",
       quoted_cents: cents(b.quotedCents),
       agreed_cents: cents(b.agreedCents),
       owner_email: str(b.ownerEmail, 200) ?? admin.email,
@@ -209,6 +211,7 @@ export async function PATCH(req: Request) {
 
   const patch: Record<string, unknown> = {};
   if (PROJECT_STATUSES.includes(b.status as ProjectStatus)) patch.status = b.status;
+  if ("category" in b) patch.category = str(b.category, 60);
   if (Array.isArray(b.tags))
     patch.tags = (b.tags as unknown[])
       .filter((t): t is string => typeof t === "string" && t.trim().length > 0)

@@ -66,6 +66,7 @@ export async function GET(req: Request) {
           id: String(p.id),
           title: String(p.title),
           brief: (p.brief as string | null) ?? null,
+          category: (p.category as string | null) ?? null,
           status,
           statusLabel: CLIENT_LABEL[status],
           open: isOpen(status),
