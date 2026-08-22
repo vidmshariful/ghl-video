@@ -201,3 +201,40 @@ export function needsChase(
 export function daysWaiting(sinceIso: string, nowIso: string): number {
   return Math.max(1, Math.floor((Date.parse(nowIso) - Date.parse(sinceIso)) / DAY_MS));
 }
+
+/* ---------------- the derived stage ---------------- */
+
+/*
+ * The list category computes itself from the line (owner decision,
+ * 22 August 2026). Two hand-managed truths about where a project stands
+ * kept drifting apart; now the studio moves stations and the category
+ * follows, every time. Closed and cancelled stay manual: finishing a
+ * relationship is a decision, not arithmetic.
+ */
+export type DerivedStage =
+  | "backlog"
+  | "planning"
+  | "in_progress"
+  | "review"
+  | "revision"
+  | "approved"
+  | "cutdowns";
+
+export function derivedStage(
+  p: Pipeline,
+  opts: { revisionRound: number; openFormats: number },
+): DerivedStage {
+  /* anything gated sitting in the client's court is a review, wherever
+     the line otherwise stands */
+  if (STATION_ORDER.some((k) => p[k].state === "with_client" && p[k].gate && !p[k].provided))
+    return "review";
+  if (p.delivery.state === "done") return opts.openFormats > 0 ? "cutdowns" : "approved";
+  if (p.animation.state === "with_us" && opts.revisionRound > 0) return "revision";
+  if (p.animation.state !== "todo" || p.sfx.state !== "todo" || p.delivery.state !== "todo")
+    return "in_progress";
+  /* pre-production: a script being written, a voiceover promised, a design
+     underway. Marking a piece theirs counts: the wait for materials is work. */
+  const pre: StationKey[] = ["script", "voiceover", "design"];
+  if (pre.some((k) => p[k].state !== "todo" || p[k].provided)) return "planning";
+  return "backlog";
+}

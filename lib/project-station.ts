@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
+  derivedStage,
   normalizePipeline,
   statusForPipeline,
   STATION_ORDER,
@@ -63,7 +64,7 @@ export async function ensureMainCarrier(db: DB, projectId: string): Promise<stri
  * client's Review button never lights, which is exactly the bug that
  * shipped first.
  */
-export async function syncMainStatus(db: DB, projectId: string, line: Pipeline): Promise<void> {
+export async function syncProjectState(db: DB, projectId: string, line: Pipeline): Promise<void> {
   const mainId = await ensureMainCarrier(db, projectId);
   if (!mainId) return;
   const { data: main } = await db
@@ -71,13 +72,36 @@ export async function syncMainStatus(db: DB, projectId: string, line: Pipeline):
     .select("status, revision_round, ready_at")
     .eq("id", mainId)
     .single();
-  const derived = statusForPipeline(line, Number(main?.revision_round ?? 0));
-  if (String(main?.status) === derived) return;
-  const write: Record<string, unknown> = { status: derived, updated_at: new Date().toISOString() };
-  if (derived === "ready" && !main?.ready_at) write.ready_at = new Date().toISOString();
-  if (derived === "approved") write.approved_at = new Date().toISOString();
-  await db.from("order_deliverables").update(write).eq("id", mainId);
+  const round = Number(main?.revision_round ?? 0);
+
+  const mainStatus = statusForPipeline(line, round);
+  if (String(main?.status) !== mainStatus) {
+    const write: Record<string, unknown> = {
+      status: mainStatus,
+      updated_at: new Date().toISOString(),
+    };
+    if (mainStatus === "ready" && !main?.ready_at) write.ready_at = new Date().toISOString();
+    if (mainStatus === "approved") write.approved_at = new Date().toISOString();
+    await db.from("order_deliverables").update(write).eq("id", mainId);
+  }
+
+  /* the list category is arithmetic now; closed and cancelled stay a
+     human's word and are never overwritten */
+  const { count: openFormats } = await db
+    .from("order_deliverables")
+    .select("id", { count: "exact", head: true })
+    .eq("project_id", projectId)
+    .eq("category", "format")
+    .neq("status", "approved");
+  const { data: proj } = await db.from("projects").select("status").eq("id", projectId).single();
+  const current = String(proj?.status ?? "");
+  if (current === "closed" || current === "cancelled") return;
+  const stage = derivedStage(line, { revisionRound: round, openFormats: openFormats ?? 0 });
+  if (current !== stage) await db.from("projects").update({ status: stage }).eq("id", projectId);
 }
+
+/* the old name, for the two routes that still say it */
+export const syncMainStatus = syncProjectState;
 
 const stationOf = (v: unknown): StationKey | null =>
   typeof v === "string" && (STATION_ORDER as string[]).includes(v) ? (v as StationKey) : null;
@@ -115,7 +139,7 @@ export async function handleStationOp(
   const line2 = normalizePipeline({ ...line, [key]: next });
   const { error } = await db.from("projects").update({ pipeline: line2 }).eq("id", projectId);
   if (error) return { status: 400, body: { error: error.message } };
-  await syncMainStatus(db, projectId, line2);
+  await syncProjectState(db, projectId, line2);
 
   /* the animation and delivery files are what the client watches, so they
      mirror onto the main carrier the review machine reads */
@@ -128,13 +152,6 @@ export async function handleStationOp(
   if (st.requestApproval === true) {
     if (!line2[key].url && key !== "delivery")
       return { status: 200, body: { ok: true, warning: "No file on that station yet." } };
-    /* handing the big pieces to the client files the job under Review on
-       its own, so the list stays honest without a second click */
-    if (
-      (key === "animation" || key === "delivery") &&
-      !["closed", "cancelled"].includes(String((project as Row).status))
-    )
-      await db.from("projects").update({ status: "review" }).eq("id", projectId);
     const email = String((project as Row).customer_email ?? "");
     const { data: cust } = await db
       .from("customers")
@@ -208,6 +225,6 @@ export async function handleAddDraft(
   });
   await db.from("projects").update({ pipeline: line2 }).eq("id", projectId);
   await db.from("order_deliverables").update({ video_url: url }).eq("id", mainId);
-  await syncMainStatus(db, projectId, line2);
+  await syncProjectState(db, projectId, line2);
   return { status: 200, body: { ok: true, version: v.version } };
 }

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { verifyAdmin } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
+import { normalizePipeline } from "@/lib/pipeline";
+import { syncProjectState } from "@/lib/project-station";
 
 export const runtime = "nodejs";
 
@@ -53,6 +55,8 @@ export async function POST(req: Request) {
     position: last ? Number(last.position) + 1 : 1,
   });
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  const { data: proj } = await db.from("projects").select("pipeline").eq("id", projectId).single();
+  await syncProjectState(db, projectId, normalizePipeline(proj?.pipeline));
   return NextResponse.json({ ok: true });
 }
 
@@ -91,5 +95,7 @@ export async function PATCH(req: Request) {
 
   const { error } = await db.from("order_deliverables").update(patch).eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  const { data: proj } = await db.from("projects").select("pipeline").eq("id", projectId).single();
+  await syncProjectState(db, projectId, normalizePipeline(proj?.pipeline));
   return NextResponse.json({ ok: true });
 }

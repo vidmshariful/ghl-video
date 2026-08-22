@@ -198,17 +198,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         action === "approve" ? approveStation(line, key, now) : returnStation(line, key, now);
       const derived = statusForPipeline(line2, round);
 
-      const projectPatch: Record<string, unknown> = { pipeline: line2 };
-      if (project && !["closed", "cancelled"].includes(String(project.status))) {
-        if (action === "changes") projectPatch.status = "revision";
-        else if (key === "delivery") projectPatch.status = "approved";
-        else projectPatch.status = "in_progress";
-      }
-      await g.db.from("projects").update(projectPatch).eq("id", g.deliverable.project_id);
+      await g.db
+        .from("projects")
+        .update({ pipeline: line2 })
+        .eq("id", g.deliverable.project_id);
       await g.db
         .from("order_deliverables")
         .update({ status: derived, updated_at: now })
         .eq("id", id);
+      const { syncProjectState } = await import("@/lib/project-station");
+      await syncProjectState(g.db, String(g.deliverable.project_id), line2);
       (res as { status: string }).status = derived;
     }
 

@@ -8,7 +8,7 @@ import {
   STATIONS,
   type StationKey,
 } from "@/lib/pipeline";
-import { ensureMainCarrier } from "@/lib/project-station";
+import { ensureMainCarrier, syncProjectState } from "@/lib/project-station";
 import { addComment } from "@/lib/review";
 import { pushAdminNotifications } from "@/lib/notifications";
 
@@ -63,6 +63,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const line2 = action === "approve" ? approveStation(line, key, now) : returnStation(line, key, now);
   const { error } = await db.from("projects").update({ pipeline: line2 }).eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  await syncProjectState(db, id, line2);
 
   if (note) {
     const mainId = await ensureMainCarrier(db, id);

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   approveStation,
   daysWaiting,
+  derivedStage,
   needsChase,
   ballInCourt,
   clientStationWord,
@@ -177,5 +178,43 @@ describe("the chase policy", () => {
   test("days waiting is honest and never zero", () => {
     assert.equal(daysWaiting(d0, day(4.7)), 4);
     assert.equal(daysWaiting(d0, day(0.2)), 1);
+  });
+});
+
+describe("the derived stage: one truth, computed", () => {
+  const n = (over: Record<string, unknown> = {}) => normalizePipeline(over);
+  const o = { revisionRound: 0, openFormats: 0 };
+
+  test("an untouched line is backlog", () => {
+    assert.equal(derivedStage(n(), o), "backlog");
+  });
+
+  test("pre-production moving, or a piece promised by the client, is planning", () => {
+    assert.equal(derivedStage(n({ script: { state: "with_us" } }), o), "planning");
+    assert.equal(derivedStage(n({ voiceover: { state: "todo", provided: true } }), o), "planning");
+  });
+
+  test("animation or sound moving is in progress", () => {
+    assert.equal(derivedStage(n({ script: { state: "done" }, animation: { state: "with_us" } }), o), "in_progress");
+    assert.equal(derivedStage(n({ sfx: { state: "with_us" } }), o), "in_progress");
+  });
+
+  test("anything gated with the client is review, wherever the line stands", () => {
+    assert.equal(derivedStage(n({ script: { state: "with_client", gate: true } }), o), "review");
+    assert.equal(derivedStage(n({ animation: { state: "with_client", gate: true } }), o), "review");
+  });
+
+  test("animation back with us after feedback is revision", () => {
+    const p = n({ script: { state: "done" }, animation: { state: "with_us" } });
+    assert.equal(derivedStage(p, { revisionRound: 1, openFormats: 0 }), "revision");
+  });
+
+  test("delivery done is approved, or cutdowns while formats are being cut", () => {
+    const done = n({
+      script: { state: "done" }, voiceover: { state: "done" }, design: { state: "done" },
+      animation: { state: "done" }, sfx: { state: "done" }, delivery: { state: "done" },
+    });
+    assert.equal(derivedStage(done, { revisionRound: 2, openFormats: 0 }), "approved");
+    assert.equal(derivedStage(done, { revisionRound: 2, openFormats: 2 }), "cutdowns");
   });
 });

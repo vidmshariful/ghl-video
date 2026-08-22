@@ -785,24 +785,23 @@ function ProjectPage({
         </p>
       )}
 
-      {/* the stage, one click per category */}
+      {/* the stage is arithmetic now: it follows the stations, so this row
+          only reports. Move a station and watch it file itself. */}
       {isOpen(p.status) && (
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <span className="flex flex-wrap overflow-hidden rounded-[6px] border border-hair">
             {PROJECT_LIST.map((st) => (
-              <button
+              <span
                 key={st}
-                type="button"
-                disabled={busy !== null || st === p.status}
-                onClick={() => void run("stage", { status: st })}
-                className={`tap px-2.5 py-1.5 font-mono text-label uppercase transition-colors ${
-                  st === p.status ? "bg-gold text-canvas" : "text-dim hover:text-ink"
+                className={`px-2.5 py-1.5 font-mono text-label uppercase ${
+                  st === p.status ? "bg-gold text-canvas" : "text-dim"
                 }`}
               >
                 {STUDIO_LABEL[st]}
-              </button>
+              </span>
             ))}
           </span>
+          <Headline p={p} />
         </div>
       )}
 
@@ -903,51 +902,43 @@ function ProjectPage({
                 </dd>
               </div>
             </dl>
+            <div className="mt-3 border-t border-hair pt-3">
+              <div className="flex flex-wrap items-center gap-1.5">
+                {p.tags.map((t) => (
+                  <span
+                    key={t}
+                    className="flex items-center gap-1 rounded-full border border-hair px-2 py-0.5 font-mono text-label text-muted"
+                  >
+                    {t}
+                    <button
+                      type="button"
+                      aria-label={`Remove tag ${t}`}
+                      onClick={() => void run("tags", { tags: p.tags.filter((x) => x !== t) })}
+                      className="tap text-dim transition-colors hover:text-error"
+                    >
+                      <X size={11} aria-hidden="true" />
+                    </button>
+                  </span>
+                ))}
+                <span className="flex gap-1.5">
+                  <Input
+                    value={tagDraft}
+                    onChange={(e) => setTagDraft(e.target.value)}
+                    placeholder="Add a tag"
+                    aria-label="New tag"
+                    className="w-28"
+                    onKeyDown={(e) => {
+                      if (e.key !== "Enter") return;
+                      const t = tagDraft.trim().toLowerCase();
+                      setTagDraft("");
+                      if (t && !p.tags.includes(t)) void run("tags", { tags: [...p.tags, t] });
+                    }}
+                  />
+                </span>
+              </div>
+            </div>
           </Card>
 
-          <Card title="Tags">
-            <div className="flex flex-wrap items-center gap-1.5">
-              {p.tags.map((t) => (
-                <span
-                  key={t}
-                  className="flex items-center gap-1 rounded-full border border-hair px-2 py-0.5 font-mono text-label text-muted"
-                >
-                  {t}
-                  <button
-                    type="button"
-                    aria-label={`Remove tag ${t}`}
-                    onClick={() => void run("tags", { tags: p.tags.filter((x) => x !== t) })}
-                    className="tap text-dim transition-colors hover:text-error"
-                  >
-                    <X size={11} aria-hidden="true" />
-                  </button>
-                </span>
-              ))}
-              {p.tags.length === 0 && (
-                <span className="text-body-sm text-dim">None yet. Rush, VIP, agency, whatever helps.</span>
-              )}
-            </div>
-            <div className="mt-2.5 flex gap-2">
-              <Input
-                value={tagDraft}
-                onChange={(e) => setTagDraft(e.target.value)}
-                placeholder="Add a tag"
-                aria-label="New tag"
-              />
-              <Button
-                size="sm"
-                variant="secondary"
-                disabled={busy !== null || !tagDraft.trim()}
-                onClick={() => {
-                  const t = tagDraft.trim().toLowerCase();
-                  setTagDraft("");
-                  if (t && !p.tags.includes(t)) void run("tags", { tags: [...p.tags, t] });
-                }}
-              >
-                Add
-              </Button>
-            </div>
-          </Card>
 
           <Card title="Invoices">
             {p.invoices.length === 0 ? (
@@ -978,7 +969,34 @@ function ProjectPage({
   );
 }
 
-/* the six stations with their controls, project level */
+/* what the whole job is waiting for, in one line */
+function Headline({ p }: { p: Project }) {
+  const withClient = STATION_META.filter((m) => p.pipeline[m.key]?.state === "with_client");
+  if (withClient.length > 0) {
+    const at = withClient.map((m) => p.pipeline[m.key]?.at).filter(Boolean).sort()[0];
+    return (
+      <span className="font-mono text-label uppercase text-gold">
+        waiting on the client{at ? ` since ${when(String(at))}` : ""}
+      </span>
+    );
+  }
+  const next = STATION_META.find((m) => p.pipeline[m.key]?.state !== "done");
+  if (!next) return <span className="font-mono text-label uppercase text-green">all stations done</span>;
+  const st = p.pipeline[next.key];
+  return (
+    <span className="font-mono text-label uppercase text-dim">
+      {st?.state === "with_us" ? `in hand: ${next.label}` : `next: ${next.label}`}
+    </span>
+  );
+}
+
+/*
+ * The six stations, each with exactly one action: Start it, send it for
+ * approval, or mark it done. Everything rarer, whose file it is, whether
+ * it gates, the expected date, a correction, lives behind the small Edit
+ * on each row. Tanvir moves stations; the stage and the client's screen
+ * follow on their own.
+ */
 function StationList({
   p,
   busy,
@@ -988,8 +1006,8 @@ function StationList({
   busy: string | null;
   onRun: (tag: string, body: Record<string, unknown>) => Promise<void>;
 }) {
-  const [urls, setUrls] = useState<Record<string, string>>({});
   const [draftUrl, setDraftUrl] = useState("");
+  const [settingsFor, setSettingsFor] = useState<(typeof STATION_META)[number] | null>(null);
   const line = p.pipeline;
 
   const station = (key: keyof Pipeline, patch: Record<string, unknown>, requestApproval?: boolean) =>
@@ -1005,150 +1023,102 @@ function StationList({
       {STATION_META.map((m) => {
         const st = line[m.key] ?? { state: "todo" as const };
         const gated = Boolean(st.gate) && !st.provided;
+        const waitingOnFile = Boolean(st.provided) && st.state !== "done" && !st.url;
+        const hasFile = m.key === "animation" ? Boolean(st.url || p.mainVideo?.videoUrl) : Boolean(st.url);
+
+        /* the one thing to do next at this station, if anything */
+        let action: { label: string; run: () => void; primary?: boolean } | null = null;
+        if (st.state === "todo" && !waitingOnFile) {
+          action = { label: "Start", run: () => void station(m.key, { state: "with_us" }) };
+        } else if (st.state === "with_us") {
+          if (gated && (hasFile || m.key === "delivery")) {
+            action = {
+              label: "Send for approval",
+              primary: true,
+              run: () => void station(m.key, { state: "with_client" }, true),
+            };
+          } else if (!gated) {
+            action = { label: "Mark done", run: () => void station(m.key, { state: "done" }) };
+          }
+        }
+
         return (
-          <div key={m.key} className="rounded-[8px] border border-hair bg-canvas p-2.5">
+          <div key={m.key} className="rounded-[8px] border border-hair bg-canvas px-3 py-2.5">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="flex items-center gap-2">
-                <span aria-hidden="true" className={`h-2 w-2 rounded-full ${STATION_DOT[st.state]}`} />
+              <span className="flex min-w-0 items-center gap-2">
+                <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${STATION_DOT[st.state]}`} />
                 <span className="text-body-sm font-semibold text-ink">{m.label}</span>
+                <span className="font-mono text-label uppercase text-dim">
+                  {STATION_STATE_WORD[st.state]}
+                </span>
                 {st.provided && (
-                  <Chip tone={st.url ? "neutral" : "warn"}>
-                    {st.url ? "client provided" : "waiting on their file"}
+                  <Chip tone={st.url || st.state === "done" ? "neutral" : "warn"}>
+                    {st.url || st.state === "done" ? "client provided" : "waiting on their file"}
                   </Chip>
                 )}
-                {gated && <Chip tone="warn">needs their approval</Chip>}
-              </span>
-              <span className="flex flex-wrap items-center gap-1.5">
-                {m.providable && (
-                  <button
-                    type="button"
-                    disabled={busy !== null}
-                    onClick={() => void station(m.key, { provided: !st.provided })}
-                    className="tap font-mono text-label uppercase text-dim transition-colors hover:text-gold"
-                  >
-                    {st.provided ? "we make it" : "client provides"}
-                  </button>
+                {gated && st.state === "with_us" && !hasFile && m.key !== "delivery" && (
+                  <span className="font-mono text-label uppercase text-dim">needs its link</span>
                 )}
-                {m.gateable && (
-                  <button
-                    type="button"
-                    disabled={busy !== null}
-                    onClick={() => void station(m.key, { gate: !st.gate })}
-                    className="tap font-mono text-label uppercase text-dim transition-colors hover:text-gold"
-                  >
-                    {st.gate ? "no approval" : "ask approval"}
-                  </button>
-                )}
-                <Select
-                  value={st.state}
-                  onChange={(e) => void station(m.key, { state: e.target.value })}
-                  aria-label={`${m.label} state`}
-                >
-                  {(Object.keys(STATION_STATE_WORD) as Station["state"][]).map((k) => (
-                    <option key={k} value={k}>
-                      {STATION_STATE_WORD[k]}
-                    </option>
-                  ))}
-                </Select>
-                {!st.provided && st.state !== "done" && (
-                  <Input
-                    type="date"
-                    value={st.eta ? st.eta.slice(0, 10) : ""}
-                    onChange={(e) => void station(m.key, { eta: e.target.value || null })}
-                    aria-label={`${m.label} expected date`}
-                    title="When you expect this station to land. The client sees it."
-                    className="w-[8.5rem]"
-                  />
+                {st.eta && st.state !== "done" && (
+                  <span className="font-mono text-label uppercase text-dim">
+                    expected {day(st.eta)}
+                  </span>
                 )}
               </span>
-            </div>
-
-            {m.key === "animation" ? (
-              <div className="mt-2 grid gap-2">
+              <span className="flex shrink-0 items-center gap-2">
                 {st.url && (
                   <a
                     href={st.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="tap font-mono text-label uppercase text-gold transition-colors hover:text-ink"
+                    className="tap font-mono text-label uppercase text-muted transition-colors hover:text-gold"
                   >
-                    Current draft, open it
+                    Open it
                   </a>
                 )}
-                <div className="flex gap-2">
-                  <Input
-                    value={draftUrl}
-                    onChange={(e) => setDraftUrl(e.target.value)}
-                    placeholder="New draft link, becomes the next version"
-                  />
+                {action && (
                   <Button
                     size="sm"
-                    variant="secondary"
-                    disabled={busy !== null || !draftUrl.trim()}
-                    onClick={async () => {
-                      await onRun("draft", { action: "add_draft", url: draftUrl.trim() });
-                      setDraftUrl("");
-                    }}
+                    variant={action.primary ? "primary" : "secondary"}
+                    disabled={busy !== null}
+                    onClick={action.run}
                   >
-                    Add draft
+                    {action.label}
                   </Button>
-                </div>
-              </div>
-            ) : (
-              m.key !== "sfx" && (
-                <div className="mt-2 flex items-center gap-2">
-                  <Input
-                    value={urls[m.key] ?? st.url ?? ""}
-                    onChange={(e) => setUrls({ ...urls, [m.key]: e.target.value })}
-                    placeholder={
-                      m.key === "design"
-                        ? "Figma link"
-                        : st.provided
-                          ? `Link to their ${m.label.toLowerCase()}`
-                          : `Link to the ${m.label.toLowerCase()}`
-                    }
-                  />
-                  {(urls[m.key] ?? "") !== (st.url ?? "") && urls[m.key] !== undefined ? (
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      disabled={busy !== null}
-                      onClick={() => void station(m.key, { url: urls[m.key] ?? "" })}
-                    >
-                      Save
-                    </Button>
-                  ) : (
-                    st.url && (
-                      <a
-                        href={st.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="tap shrink-0 font-mono text-label uppercase text-gold transition-colors hover:text-ink"
-                      >
-                        Open it
-                      </a>
-                    )
-                  )}
-                </div>
-              )
-            )}
+                )}
+                <button
+                  type="button"
+                  onClick={() => setSettingsFor(m)}
+                  className="tap font-mono text-label uppercase text-dim transition-colors hover:text-gold"
+                >
+                  Edit
+                </button>
+              </span>
+            </div>
 
-            {gated && st.state !== "done" && st.state !== "with_client" && (
-              <div className="mt-2">
+            {/* drafts are the daily motion of animation, so its input stays
+                on the row */}
+            {m.key === "animation" && st.state !== "done" && (
+              <div className="mt-2 flex gap-2">
+                <Input
+                  value={draftUrl}
+                  onChange={(e) => setDraftUrl(e.target.value)}
+                  placeholder="New draft link, becomes the next version"
+                />
                 <Button
                   size="sm"
-                  variant="primary"
-                  disabled={
-                    busy !== null ||
-                    (!st.url && m.key !== "delivery" && m.key !== "animation") ||
-                    (m.key === "animation" && !p.mainVideo?.videoUrl)
-                  }
-                  onClick={() => void station(m.key, { state: "with_client" }, true)}
+                  variant="secondary"
+                  disabled={busy !== null || !draftUrl.trim()}
+                  onClick={async () => {
+                    await onRun("draft", { action: "add_draft", url: draftUrl.trim() });
+                    setDraftUrl("");
+                  }}
                 >
-                  Send for their approval
+                  Add draft
                 </Button>
               </div>
             )}
+
             {st.state === "with_client" && (
               <p className="mt-1.5 font-mono text-label uppercase text-gold">
                 with the client{st.at ? ` since ${when(st.at)}` : ""}
@@ -1157,11 +1127,111 @@ function StationList({
           </div>
         );
       })}
+
+      <StationSettings
+        m={settingsFor}
+        st={settingsFor ? (line[settingsFor.key] ?? { state: "todo" }) : null}
+        busy={busy}
+        onClose={() => setSettingsFor(null)}
+        onSave={(patch) => {
+          if (settingsFor) void station(settingsFor.key, patch);
+        }}
+      />
     </div>
   );
 }
 
-/* the extra formats: title, link once done, one of four states */
+/* the rare knobs, out of the way until asked for */
+function StationSettings({
+  m,
+  st,
+  busy,
+  onClose,
+  onSave,
+}: {
+  m: (typeof STATION_META)[number] | null;
+  st: Station | null;
+  busy: string | null;
+  onClose: () => void;
+  onSave: (patch: Record<string, unknown>) => void;
+}) {
+  const [url, setUrl] = useState("");
+  useEffect(() => setUrl(st?.url ?? ""), [st?.url, m?.key]);
+  if (!m || !st) return <Modal open={false} onClose={onClose} title="">{null}</Modal>;
+  return (
+    <Modal open onClose={onClose} title={`${m.label} settings`}>
+      <div className="grid gap-4">
+        <Field
+          label={st.provided ? `Link to their ${m.label.toLowerCase()}` : `Link to the ${m.label.toLowerCase()}`}
+          hint="The file or page this station is about. The client can open it."
+        >
+          <div className="flex gap-2">
+            <Input
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder={m.key === "design" ? "Figma link" : "https://..."}
+            />
+            {url !== (st.url ?? "") && (
+              <Button size="sm" variant="secondary" disabled={busy !== null} onClick={() => onSave({ url })}>
+                Save
+              </Button>
+            )}
+          </div>
+        </Field>
+
+        <div className="flex flex-wrap gap-4">
+          {m.providable && (
+            <label className="flex items-center gap-2 text-body-sm text-muted">
+              <input
+                type="checkbox"
+                checked={Boolean(st.provided)}
+                onChange={(e) => onSave({ provided: e.target.checked })}
+                className="h-4 w-4 accent-[var(--gold)]"
+              />
+              The client provides this
+            </label>
+          )}
+          {m.gateable && (
+            <label className="flex items-center gap-2 text-body-sm text-muted">
+              <input
+                type="checkbox"
+                checked={Boolean(st.gate)}
+                onChange={(e) => onSave({ gate: e.target.checked })}
+                className="h-4 w-4 accent-[var(--gold)]"
+              />
+              Needs their approval
+            </label>
+          )}
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Expected date" hint="The client sees this on their line.">
+            <Input
+              type="date"
+              value={st.eta ? st.eta.slice(0, 10) : ""}
+              onChange={(e) => onSave({ eta: e.target.value || null })}
+            />
+          </Field>
+          <Field label="Correct the state" hint="For fixing a slip, not for daily moves.">
+            <Select
+              value={st.state}
+              onChange={(e) => onSave({ state: e.target.value })}
+              aria-label={`${m.label} state`}
+            >
+              {(Object.keys(STATION_STATE_WORD) as Station["state"][]).map((k) => (
+                <option key={k} value={k}>
+                  {STATION_STATE_WORD[k]}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+/* the extra formats: title, link once done, one of four states *//* the extra formats: title, link once done, one of four states */
 function FormatList({ p, onReload }: { p: Project; onReload: () => Promise<void> }) {
   const [title, setTitle] = useState("");
   const [links, setLinks] = useState<Record<string, string>>({});

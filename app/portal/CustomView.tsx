@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { ArrowLeft, Play } from "lucide-react";
 import { Button, Card, Chip, EmptyState, Input, PageHeader, Textarea } from "@/components/portal/ui";
-import { StageTimeline } from "@/components/portal/board";
 import { VideoReview } from "./VideoReview";
 import { DownloadAll } from "@/components/portal/DownloadAll";
 import { pages } from "@/lib/site";
@@ -75,30 +74,6 @@ const when = (iso: string) =>
     minute: "2-digit",
   });
 
-/*
- * The journey walks the same stages the studio's list uses, in the
- * client's words. Revision is not its own station, it is Being made
- * wearing its real label, because a line that doubles back reads as a
- * mistake. Extra formats only appears once the project actually has that
- * stage in front of it.
- */
-const JOURNEY_BASE = [
-  { key: "backlog", label: "Booked in", tone: "neutral" as const },
-  { key: "planning", label: "Being planned", tone: "neutral" as const },
-  { key: "in_progress", label: "Being made", tone: "info" as const },
-  { key: "review", label: "Your review", tone: "warn" as const },
-  { key: "approved", label: "Approved", tone: "good" as const },
-];
-
-const CUTDOWNS_STEP = { key: "cutdowns", label: "Extra formats", tone: "info" as const };
-
-const journeySteps = (p: Project) =>
-  p.status === "cutdowns" || p.formats.length > 0
-    ? [...JOURNEY_BASE, CUTDOWNS_STEP]
-    : JOURNEY_BASE;
-
-const journeyKey = (status: string) =>
-  status === "revision" ? "in_progress" : status === "closed" ? "approved" : status;
 
 const STAGE_DOT: Record<string, string> = {
   backlog: "bg-hair",
@@ -356,7 +331,18 @@ function ProjectPage({
   onPlay: (r: Reviewable & { title: string }) => void;
   onMessageStudio?: () => void;
 }) {
-  const approvals = p.pipeline.stations.filter((s) => s.state === "with_client" && s.gated).length;
+  const playerAsk = Boolean(
+    p.main?.videoUrl &&
+      p.pipeline.stations.some(
+        (s) => (s.key === "animation" || s.key === "delivery") && s.state === "with_client" && s.gated,
+      ),
+  );
+  const approvals = p.pipeline.stations.filter(
+    (s) =>
+      s.state === "with_client" &&
+      s.gated &&
+      !(playerAsk && (s.key === "animation" || s.key === "delivery")),
+  ).length;
   const filesOwed = p.pipeline.stations.filter(
     (s) => s.provided && s.state !== "done" && (s.key === "script" || s.key === "voiceover"),
   ).length;
@@ -381,15 +367,50 @@ function ProjectPage({
         />
       </div>
 
-      <div className="mb-3">
-        <Card>
-          <StageTimeline
-            steps={journeySteps(p)}
-            currentKey={journeyKey(p.status)}
-            currentLabel={p.status === "revision" ? "Changes in hand" : undefined}
-          />
-        </Card>
+      {/* the line as one quiet strip: six dots, the current station, how far */}
+      <div className="mb-3 flex flex-wrap items-center gap-3 rounded-[8px] border border-hair bg-surface px-4 py-2.5">
+        <span className="flex items-center gap-1.5">
+          {p.pipeline.stations.map((st) => (
+            <span
+              key={st.key}
+              title={`${st.label}: ${st.word}`}
+              className={`h-1.5 w-4 rounded-full ${DOT[st.state]}`}
+            />
+          ))}
+        </span>
+        <span className="font-mono text-label uppercase text-dim">
+          {p.pipeline.percent}% through
+        </span>
+        {(() => {
+          const cur = p.pipeline.stations.find((st) => st.state !== "done");
+          return cur ? (
+            <span className="font-mono text-label uppercase text-muted">
+              {cur.label}: <span className={cur.state === "with_client" ? "text-gold" : ""}>{cur.word.toLowerCase()}</span>
+            </span>
+          ) : (
+            <span className="font-mono text-label uppercase text-green">finished</span>
+          );
+        })()}
       </div>
+
+      {/* the video is the page the moment there is a video: watch it, leave
+          notes at the second something happens, approve it right here */}
+      {p.main?.videoUrl && (
+        <div className="mb-3">
+          <VideoReview
+            videoId={p.main.id}
+            title={p.title}
+            videoUrl={p.main.videoUrl}
+            status={"ready"}
+            canRequestChanges={p.main.canRequestChanges}
+            revisionsIncluded={p.main.revisionsIncluded}
+            revisionsUsed={p.main.revisionsUsed}
+            authedFetch={authedFetch}
+            onMessageStudio={onMessageStudio}
+            onChanged={onChanged}
+          />
+        </div>
+      )}
 
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:items-start">
         <div className="grid min-w-0 gap-3">
@@ -420,7 +441,6 @@ function ProjectPage({
                   st={st}
                   authedFetch={authedFetch}
                   onChanged={onChanged}
-                  onPlay={onPlay}
                 />
               ))}
             </ol>
@@ -482,8 +502,6 @@ function ProjectPage({
             </Card>
           )}
 
-          <ClientThread projectId={p.id} authedFetch={authedFetch} />
-
           {p.brief && (
             <Card title="The brief" description="What we agreed to make.">
               <p className="whitespace-pre-wrap text-body-sm text-muted">{p.brief}</p>
@@ -492,6 +510,8 @@ function ProjectPage({
         </div>
 
         <div className="grid min-w-0 gap-3">
+          <ClientThread projectId={p.id} authedFetch={authedFetch} system={p.activity} />
+
           <Card title="Where it is">
             <dl className="grid gap-2 text-body-sm">
               <div className="flex items-baseline justify-between gap-3">
@@ -511,31 +531,6 @@ function ProjectPage({
             </dl>
           </Card>
 
-          {p.activity.length > 0 && (
-            <Card title="What has happened">
-              <ol className="grid gap-2.5">
-                {p.activity.map((a, i) => (
-                  <li key={`${a.at}-${i}`} className="border-l border-hair pl-3">
-                    <p className="text-body-sm text-muted">{a.body}</p>
-                    <p className="mt-0.5 font-mono text-label uppercase text-dim">{when(a.at)}</p>
-                  </li>
-                ))}
-              </ol>
-            </Card>
-          )}
-
-          {onMessageStudio && (
-            <Card title="Something to say?">
-              <p className="text-body-sm text-muted">
-                Message your producer and it lands with the people making this.
-              </p>
-              <div className="mt-3">
-                <Button variant="secondary" size="sm" onClick={onMessageStudio}>
-                  Message the studio
-                </Button>
-              </div>
-            </Card>
-          )}
         </div>
       </div>
     </div>
@@ -548,13 +543,11 @@ function StationRow({
   st,
   authedFetch,
   onChanged,
-  onPlay,
 }: {
   p: Project;
   st: PipelineStation;
   authedFetch: (path: string, init?: RequestInit) => Promise<Record<string, unknown>>;
   onChanged: () => void;
-  onPlay: (r: Reviewable & { title: string }) => void;
 }) {
   const [noteOpen, setNoteOpen] = useState(false);
   const [note, setNote] = useState("");
@@ -649,11 +642,8 @@ function StationRow({
             Send an update
           </button>
         )}
-        {mine && playerGate && p.main?.videoUrl && (
-          <Button size="sm" variant="brand" onClick={() => onPlay({ ...p.main!, title: p.title })}>
-            Review it
-          </Button>
-        )}
+        {/* the player sits at the top of the page whenever there is a cut,
+            so this row only names the state */}
         {mine && !playerGate && (
           <>
             <Button size="sm" variant="brand" disabled={busy} onClick={() => void gate("approve")}>
@@ -810,9 +800,12 @@ function StartModule({
 function ClientThread({
   projectId,
   authedFetch,
+  system = [],
 }: {
   projectId: string;
   authedFetch: (path: string, init?: RequestInit) => Promise<Record<string, unknown>>;
+  /* the machine's own lines: station moves, drafts landing */
+  system?: { at: string; body: string }[];
 }) {
   const [notes, setNotes] = useState<
     { id: string; side: string; name: string; body: string; stamp: string | null; at: string }[] | null
@@ -849,23 +842,47 @@ function ClientThread({
     >
       {notes === null ? (
         <p className="text-body-sm text-muted">Loading...</p>
-      ) : notes.length === 0 ? (
-        <p className="text-body-sm text-dim">Nothing said yet. Anything on your mind lands with the studio here.</p>
       ) : (
-        <ol className="grid max-h-72 gap-2.5 overflow-y-auto pr-1">
-          {notes.map((n) => (
-            <li
-              key={n.id}
-              className={`border-l pl-3 ${n.side === "studio" ? "border-gold/50" : "border-blue/50"}`}
-            >
-              <p className="text-body-sm text-ink">{n.body}</p>
-              <p className="mt-0.5 font-mono text-label uppercase text-dim">
-                {n.name}
-                {n.stamp ? ` at ${n.stamp}` : ""} / {when(n.at)}
+        (() => {
+          const merged: (
+            | { kind: "note"; at: string; n: NonNullable<typeof notes>[number] }
+            | { kind: "system"; at: string; body: string }
+          )[] = [
+            ...notes.map((n) => ({ kind: "note" as const, at: n.at, n })),
+            ...system.map((a) => ({ kind: "system" as const, at: a.at, body: a.body })),
+          ].sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+          if (merged.length === 0)
+            return (
+              <p className="text-body-sm text-dim">
+                Nothing yet. Anything you write here lands with the people
+                making your video.
               </p>
-            </li>
-          ))}
-        </ol>
+            );
+          return (
+            <ol className="grid max-h-80 gap-2.5 overflow-y-auto pr-1">
+              {merged.map((e, i) =>
+                e.kind === "note" ? (
+                  <li
+                    key={e.n.id}
+                    className={`border-l pl-3 ${e.n.side === "studio" ? "border-gold/50" : "border-blue/50"}`}
+                  >
+                    <p className="text-body-sm text-ink">{e.n.body}</p>
+                    <p className="mt-0.5 font-mono text-label uppercase text-dim">
+                      {e.n.name}
+                      {e.n.stamp ? ` at ${e.n.stamp}` : ""} / {when(e.at)}
+                    </p>
+                  </li>
+                ) : (
+                  <li key={`sys-${i}`} className="pl-3">
+                    <p className="font-mono text-label uppercase text-dim">
+                      {e.body} / {when(e.at)}
+                    </p>
+                  </li>
+                ),
+              )}
+            </ol>
+          );
+        })()
       )}
       <div className="mt-3 flex gap-2">
         <Input

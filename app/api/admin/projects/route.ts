@@ -210,7 +210,9 @@ export async function PATCH(req: Request) {
   }
 
   const patch: Record<string, unknown> = {};
-  if (PROJECT_STATUSES.includes(b.status as ProjectStatus)) patch.status = b.status;
+  /* the stage computes itself from the line now; the only words a person
+     may still say are closed, cancelled, and backlog to reopen */
+  if (["closed", "cancelled", "backlog"].includes(b.status as string)) patch.status = b.status;
   if ("category" in b) patch.category = str(b.category, 60);
   if (Array.isArray(b.tags))
     patch.tags = (b.tags as unknown[])
