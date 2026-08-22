@@ -126,7 +126,9 @@ const EXTRA_VIDEOS: SalesLibVideo[] = [
   },
 ];
 
-/* the new library normalized to the card shape, plus the classics above */
+/* the curated library for this page: the premade videos plus the two
+ * classics above. Deliberately NOT the whole catalogue: this shelf is a
+ * chosen set, and a landing page that lists everything sells nothing. */
 const ALL_LIB: SalesLibVideo[] = [
   ...premadeVideos.map((v) => ({
     slug: v.slug,

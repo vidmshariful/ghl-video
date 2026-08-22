@@ -16,8 +16,8 @@ export const premadeTypes = [
 ] as const;
 export type PremadeType = (typeof premadeTypes)[number];
 
-/* Real AI First SaaS Pack videos on the LeadConnector CDN. Seven are
- * delivered; two are in production (comingSoon). */
+/* Real AI First SaaS Pack videos on the LeadConnector CDN. All nine are
+ * delivered as of 22 August 2026. */
 export const aiPackClips = {
   master:
     "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a54fdf79c9b37b5fd24a140.mp4",
@@ -33,6 +33,10 @@ export const aiPackClips = {
     "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a734d2da177d5c2b9ffbf3a.mp4",
   demo:
     "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a79fde81635e466c144a517.mp4",
+  askAi:
+    "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a86f3d7e6501a951884ac39.mp4",
+  mobileApp:
+    "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a86f3d77e10a4f6a6a301dc.mp4",
 } as const;
 
 export type PackVideo = {
@@ -144,18 +148,16 @@ export const premadePacks: PremadePack[] = [
             type: "Feature Explainer",
             format: "Feature Explainer",
             capability: "Ask AI",
-            src: null,
+            src: aiPackClips.askAi,
             poster: null,
-            comingSoon: true,
           },
           {
             title: "Mobile App, Run Your Business From Your Phone",
             type: "Feature Explainer",
             format: "Feature Explainer",
             capability: "Mobile App",
-            src: null,
+            src: aiPackClips.mobileApp,
             poster: null,
-            comingSoon: true,
           },
         ],
       },

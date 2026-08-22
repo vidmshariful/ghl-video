@@ -20,6 +20,8 @@ export const productCodes: Record<string, string> = {
   "reputation-management-reviews-ai": "FEXP-033",
   "social-media-planner-content-ai": "FEXP-034",
   "ai-website-funnel-builder": "FEXP-035",
+  "ask-ai-your-in-platform-assistant": "FEXP-036",
+  "mobile-app-run-your-business-from-your-phone": "FEXP-037",
   "highlevel-official-full-platform-pitch": "EXP-004",
   "ai-employee": "SHORT-004",
   "conversational-ai": "SHORT-005",
