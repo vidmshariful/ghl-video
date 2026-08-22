@@ -58,10 +58,11 @@ const eslintConfig = defineConfig([
                 "@/components/checkout/*",
                 "@/components/sales/*",
                 "@/components/admin/*",
+                "@/components/portal/*",
                 "@/lib/checkout/*",
               ],
               message:
-                "Public site must not import checkout/sales/admin UI or money-path internals. Put shared code in lib/content or a shared component.",
+                "Public site must not import checkout/sales/admin/portal UI or money-path internals. Put shared code in lib/content or a shared component.",
             },
             KIT_IS_DEV_ONLY,
           ],
@@ -83,9 +84,10 @@ const eslintConfig = defineConfig([
                 "@/components/pages/*",
                 "@/components/premade/*",
                 "@/components/sales/*",
+                "@/components/portal/*",
               ],
               message:
-                "Checkout must not import marketing or sales UI. Put shared code in a shared component.",
+                "Checkout must not import marketing, sales, or portal UI. Put shared code in a shared component.",
             },
             KIT_IS_DEV_ONLY,
           ],
@@ -94,7 +96,15 @@ const eslintConfig = defineConfig([
     },
   },
   {
-    // Part 3: the portals (site admin, customer portal, partner portal).
+    /* Part 3: the portals (site admin, customer portal, partner portal).
+     * The guard runs both ways as of 22 August 2026: the three parts above
+     * are also forbidden from importing portal and library UI. It used to
+     * be one-directional, so nothing complained when a sales page reached
+     * for portal internals.
+     *
+     * components/library is deliberately NOT restricted: it is a shared
+     * part, the same video card rendered by the public premade page and by
+     * the portal library, which is why both may import it. */
     // One surface, three doors; they share the portal skin + auth and may
     // use only top-level shared components (Logo, GhlMark, chat).
     files: [
@@ -143,9 +153,10 @@ const eslintConfig = defineConfig([
                 "@/components/premade/*",
                 "@/components/checkout/*",
                 "@/components/admin/*",
+                "@/components/portal/*",
               ],
               message:
-                "Sales pages must not import marketing/checkout/admin UI. Put shared code in a shared component or lib/content.",
+                "Sales pages must not import marketing/checkout/admin/portal UI. Put shared code in a shared component or lib/content.",
             },
             KIT_IS_DEV_ONLY,
           ],
