@@ -1,4 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { lookup } from "dns/promises";
+import net from "net";
 
 /*
  * The visual style guide we hand a client, as a document.
@@ -54,22 +56,91 @@ export type Doc = {
   linkOk: boolean | null;
 };
 
+/* Addresses the server must never be talked into fetching: loopback, the
+   private ranges, and the link-local block that holds the cloud metadata
+   endpoint. Checked against the resolved IP, not the hostname, so a public
+   name pointing at an internal address is still refused. */
+function isBlockedIp(ip: string): boolean {
+  if (net.isIPv4(ip)) {
+    const [a, b] = ip.split(".").map(Number);
+    if (a === 0 || a === 127 || a === 10) return true;
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    if (a === 192 && b === 168) return true;
+    if (a === 169 && b === 254) return true;
+    return false;
+  }
+  const low = ip.toLowerCase();
+  if (low === "::1" || low === "::") return true;
+  if (low.startsWith("fe80")) return true;
+  if (low.startsWith("fc") || low.startsWith("fd")) return true;
+  const mapped = low.match(/::ffff:(\d+\.\d+\.\d+\.\d+)$/);
+  if (mapped) return isBlockedIp(mapped[1]);
+  return false;
+}
+
+/* https only, and every IP the host resolves to must be public */
+async function hostAllowed(target: string): Promise<boolean> {
+  let u: URL;
+  try {
+    u = new URL(target);
+  } catch {
+    return false;
+  }
+  if (u.protocol !== "https:") return false;
+  try {
+    const ips = await lookup(u.hostname, { all: true });
+    return ips.length > 0 && ips.every((r) => !isBlockedIp(r.address));
+  } catch {
+    return false;
+  }
+}
+
 /**
- * Is a linked guide still there?
+ * Is a linked guide still there, and is it actually a PDF?
  *
  * A link to somebody else's library can be deleted at the far end without
  * telling us, and the first person to find out should not be the client
  * opening it. Cheap enough to run when the studio opens the board.
+ *
+ * The url is admin-supplied, so this is written not to be turned into a way
+ * to probe our own network: each hop's host is resolved and refused if it
+ * lands on an internal address, redirects are followed by hand so the target
+ * is re-checked rather than trusted, and the whole thing times out. Only a
+ * yes / no ever comes back, never the fetched bytes.
  */
-export async function checkLink(url: string) {
-  try {
-    const r = await fetch(url, { method: "GET", headers: { range: "bytes=0-1023" } });
+export async function checkLink(url: string): Promise<boolean> {
+  let target = url;
+  for (let hop = 0; hop < 4; hop++) {
+    if (!(await hostAllowed(target))) return false;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8000);
+    let r: Response;
+    try {
+      r = await fetch(target, {
+        method: "GET",
+        headers: { range: "bytes=0-1023" },
+        redirect: "manual",
+        signal: ctrl.signal,
+      });
+    } catch {
+      clearTimeout(timer);
+      return false;
+    }
+    clearTimeout(timer);
+    if (r.status >= 300 && r.status < 400) {
+      const loc = r.headers.get("location");
+      if (!loc) return false;
+      try {
+        target = new URL(loc, target).toString();
+      } catch {
+        return false;
+      }
+      continue;
+    }
     if (!r.ok) return false;
-    const type = r.headers.get("content-type") ?? "";
-    return /pdf/i.test(type);
-  } catch {
-    return false;
+    return /pdf/i.test(r.headers.get("content-type") ?? "");
   }
+  return false;
 }
 
 function shapeNote(n: Row): Note {

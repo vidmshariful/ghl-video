@@ -268,19 +268,7 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Nothing to change." }, { status: 400 });
   }
 
-  let { error } = await db.from("projects").update(patch).eq("id", id);
-  /* graceful until the stage_locked column exists: apply everything else and
-     skip the lock, so pinning a stage still changes it (it just will not
-     stick yet) rather than erroring on the click */
-  if (error && "stage_locked" in patch && /stage_locked/.test(error.message)) {
-    const rest = { ...patch };
-    delete rest.stage_locked;
-    if (Object.keys(rest).length) {
-      ({ error } = await db.from("projects").update(rest).eq("id", id));
-    } else {
-      error = null;
-    }
-  }
+  const { error } = await db.from("projects").update(patch).eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
   /* handing control back to the line means the stored stage may now be

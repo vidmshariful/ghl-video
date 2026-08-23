@@ -15,7 +15,7 @@ import {
   Tabs,
   Textarea,
 } from "@/components/portal/ui";
-import { VideoReview } from "./VideoReview";
+import { VideoReviewModal } from "./VideoReviewModal";
 import { StyleGuideView } from "./StyleGuideView";
 import { DownloadAll } from "@/components/portal/DownloadAll";
 import { stageFor } from "@/lib/editing-sop";
@@ -291,38 +291,27 @@ export function EditingView({
     );
   }
 
-  /* reviewing one video takes over, the same way it does in My Videos */
-  if (reviewing && reviewing.videoUrl) {
-    return (
-      <div>
-        <button
-          type="button"
-          onClick={() => setReviewing(null)}
-          className="tap font-mono text-label uppercase text-muted transition-colors hover:text-gold"
-        >
-          Back to your videos
-        </button>
-        <div className="mt-4">
-          <VideoReview
-            videoId={reviewing.id}
-            title={reviewing.title}
-            videoUrl={reviewing.videoUrl}
-            status={reviewing.status}
-            canRequestChanges={reviewing.status !== "approved"}
-            revisionsIncluded={0}
-            revisionsUsed={reviewing.revisionsUsed}
-            unlimitedRevisions
-            authedFetch={authedFetch}
-            onMessageStudio={onMessageStudio}
-            onChanged={() => {
-              void load();
-              setReviewing(null);
-            }}
-          />
-        </div>
-      </div>
-    );
-  }
+  /* reviewing opens over the page as a full-screen popup, never inline
+     (owner rule, final): the same review the pre-made videos use */
+  const reviewModal =
+    reviewing && reviewing.videoUrl ? (
+      <VideoReviewModal
+        video={{
+          id: reviewing.id,
+          title: reviewing.title,
+          videoUrl: reviewing.videoUrl,
+          status: reviewing.status,
+          canRequestChanges: reviewing.status !== "approved",
+          revisionsIncluded: 0,
+          revisionsUsed: reviewing.revisionsUsed,
+          unlimitedRevisions: true,
+        }}
+        onClose={() => setReviewing(null)}
+        onChanged={() => void load()}
+        authedFetch={authedFetch}
+        onMessageStudio={onMessageStudio}
+      />
+    ) : null;
 
   const s = plan.slots;
   const warning = draft.form === "long" ? plan.warnings.long : plan.warnings.short;
@@ -341,6 +330,7 @@ export function EditingView({
 
   return (
     <div>
+      {reviewModal}
       <PageHeader
         title="Editing"
         description={`${plan.planName}, ${money(plan.amountCents)} a month. ${

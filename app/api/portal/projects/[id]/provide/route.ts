@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { contextCan, resolvePortalContext } from "@/lib/account-team";
 import { normalizePipeline, STATIONS, type StationKey } from "@/lib/pipeline";
-import { ensureMainCarrier, syncMainStatus } from "@/lib/project-station";
+import { ensureMainCarrier, syncProjectState } from "@/lib/project-station";
 import { addComment } from "@/lib/review";
 import { pushAdminNotifications } from "@/lib/notifications";
 
@@ -58,7 +58,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   });
   const { error } = await db.from("projects").update({ pipeline: line2 }).eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-  await syncMainStatus(db, id, line2);
+  await syncProjectState(db, id, line2);
 
   const label = key === "script" ? "script" : "voiceover";
   const mainId = await ensureMainCarrier(db, id);

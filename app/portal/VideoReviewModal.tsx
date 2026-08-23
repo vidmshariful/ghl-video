@@ -13,7 +13,7 @@ import { ShareVideo } from "./ShareVideo";
  * in the corner.
  */
 
-export type ReviewTarget = {
+type ReviewTarget = {
   id: string;
   title: string;
   videoUrl: string;

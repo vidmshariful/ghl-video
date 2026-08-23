@@ -105,9 +105,6 @@ export async function syncProjectState(db: DB, projectId: string, line: Pipeline
   if (current !== stage) await db.from("projects").update({ status: stage }).eq("id", projectId);
 }
 
-/* the old name, for the two routes that still say it */
-export const syncMainStatus = syncProjectState;
-
 const stationOf = (v: unknown): StationKey | null =>
   typeof v === "string" && (STATION_ORDER as string[]).includes(v) ? (v as StationKey) : null;
 
