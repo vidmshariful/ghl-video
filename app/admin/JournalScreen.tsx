@@ -20,7 +20,7 @@ import { AdminModal } from "./Modal";
 type Entry = {
   id: string;
   seq: number;
-  kind: "log" | "decision" | "idea";
+  kind: "log" | "decision" | "idea" | "bug" | "feature";
   title: string;
   body: string | null;
   status: string | null;
@@ -35,8 +35,39 @@ type Entry = {
   feedback_by: string | null;
 };
 
-type Tab = "log" | "decision" | "idea";
+type Tab = "log" | "decision" | "idea" | "bug" | "feature";
 
+/* idea, bug and feature all move through the same open lifecycle */
+const QUEUE: Tab[] = ["idea", "bug", "feature"];
+const isQueue = (t: Tab) => QUEUE.includes(t);
+
+/* the words each queue kind uses, so one set of code renders all three */
+const QUEUE_COPY: Record<string, { one: string; titleField: string; intro: string; create: string; empty: string }> = {
+  idea: {
+    one: "idea",
+    titleField: "The idea, in one line",
+    intro:
+      "Your inbox to Claude. Jot a thought the moment it clicks; every working session starts by reading the open ones.",
+    create: "Jot an idea",
+    empty: "No open ideas. When something clicks, jot it.",
+  },
+  bug: {
+    one: "bug report",
+    titleField: "What is broken, in one line",
+    intro:
+      "Something not working right. Report it here and it is worked through open, planned, then done or dropped, the same as an idea.",
+    create: "Report a bug",
+    empty: "No open bugs. Report one the moment you spot it.",
+  },
+  feature: {
+    one: "feature request",
+    titleField: "The feature, in one line",
+    intro:
+      "A new feature you want. Add it here and it is worked through open, planned, then done or dropped, the same as an idea.",
+    create: "Request a feature",
+    empty: "No open feature requests. Add one when you think of it.",
+  },
+};
 
 const IDEA_STATUS_STYLE: Record<string, string> = {
   open: "border-gold/40 text-gold",
@@ -87,7 +118,9 @@ function EntryForm({
       decided_on: decidedOn || null,
       ...(isNew
         ? {
-            status: kind === "decision" ? "active" : kind === "idea" ? "open" : null,
+            /* decisions land active, the three queue kinds land open, a log
+               note carries no status */
+            status: kind === "decision" ? "active" : kind === "log" ? null : "open",
             author: meEmail || "team",
           }
         : {}),
@@ -108,16 +141,22 @@ function EntryForm({
     <form onSubmit={save}>
       <div className="mt-5 grid gap-4">
         <label>
-          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">{kind === "idea" ? "The idea, in one line" : "Title"}</span>
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">
+            {isQueue(kind) ? QUEUE_COPY[kind].titleField : "Title"}
+          </span>
           <Input required value={title} onChange={(e) => setTitle(e.target.value)} />
         </label>
         <label>
           <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">
-            {kind === "decision" ? "What we decided, and why" : "Details (optional)"}
+            {kind === "decision"
+              ? "What we decided, and why"
+              : kind === "bug"
+                ? "What happens, where, and how to see it (optional)"
+                : "Details (optional)"}
           </span>
           <Textarea rows={4} value={body} onChange={(e) => setBody(e.target.value)} />
         </label>
-        {kind !== "idea" && (
+        {(kind === "log" || kind === "decision") && (
           <label className="max-w-56">
             <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">{kind === "decision" ? "Decided on" : "For the day"}</span>
             <Input type="date" value={decidedOn ?? ""} onChange={(e) => setDecidedOn(e.target.value)} />
@@ -323,16 +362,24 @@ export function JournalScreen({ meEmail }: { meEmail: string }) {
 
   const logs = rows.filter((r) => r.kind === "log");
   const decisions = rows.filter((r) => r.kind === "decision");
-  const ideas = rows.filter((r) => r.kind === "idea");
-  const openIdeas = ideas.filter((r) => r.status === "open" || r.status === "planned");
-  const closedIdeas = ideas.filter((r) => r.status === "done" || r.status === "dropped");
   const activeDecisions = decisions.filter((r) => r.status !== "superseded");
   const supersededDecisions = decisions.filter((r) => r.status === "superseded");
+
+  /* one queue for whichever of idea / bug / feature is open, plus a count of
+     each kind's open items for the tab labels */
+  const openOf = (kind: Tab) =>
+    rows.filter((r) => r.kind === kind && (r.status === "open" || r.status === "planned"));
+  const queueOpen = isQueue(tab) ? openOf(tab) : [];
+  const queueClosed = isQueue(tab)
+    ? rows.filter((r) => r.kind === tab && (r.status === "done" || r.status === "dropped"))
+    : [];
 
   const tabs: { key: Tab; label: string }[] = [
     { key: "log", label: `Build log (${logs.length})` },
     { key: "decision", label: `Decisions (${activeDecisions.length})` },
-    { key: "idea", label: `Ideas (${openIdeas.length})` },
+    { key: "idea", label: `Ideas (${openOf("idea").length})` },
+    { key: "bug", label: `Bug reports (${openOf("bug").length})` },
+    { key: "feature", label: `Feature requests (${openOf("feature").length})` },
   ];
 
   /* logs grouped by day, newest day first */
@@ -349,7 +396,11 @@ export function JournalScreen({ meEmail }: { meEmail: string }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-h3 text-ink">Journal</h1>
         <Button variant="brand" onClick={() => setEditing("new")}>
-          {tab === "log" ? "Add note" : tab === "decision" ? "Record decision" : "Jot an idea"}
+          {tab === "log"
+            ? "Add note"
+            : tab === "decision"
+              ? "Record decision"
+              : QUEUE_COPY[tab].create}
         </Button>
       </div>
       <p className="mt-2 max-w-[var(--measure-body)] text-body text-muted">
@@ -357,7 +408,7 @@ export function JournalScreen({ meEmail }: { meEmail: string }) {
           ? "What changed, day by day, in plain language. Claude writes an entry after every working session; add your own notes any time."
           : tab === "decision"
             ? "What we decided and why. When a direction changes, the old decision is marked superseded, never erased, so the history of thinking survives."
-            : "Your inbox to Claude. Jot a thought the moment it clicks; every working session starts by reading the open ones."}
+            : QUEUE_COPY[tab].intro}
       </p>
 
       <div className="mt-6 flex gap-1 border-b border-hair">
@@ -387,16 +438,18 @@ export function JournalScreen({ meEmail }: { meEmail: string }) {
         onClose={() => setEditing(null)}
         title={
           editing === "new" || !editing
-            ? tab === "idea"
-              ? "What clicked?"
+            ? tab === "log"
+              ? "Add a log note"
               : tab === "decision"
                 ? "Record a decision"
-                : "Add a log note"
-            : tab === "idea"
-              ? "Edit idea"
+                : tab === "idea"
+                  ? "What clicked?"
+                  : QUEUE_COPY[tab].create
+            : tab === "log"
+              ? `Edit note #${editing.seq}`
               : tab === "decision"
                 ? `Edit decision #${editing.seq}`
-                : `Edit note #${editing.seq}`
+                : `Edit ${QUEUE_COPY[tab].one}`
         }
       >
         {editing && (
@@ -510,17 +563,17 @@ export function JournalScreen({ meEmail }: { meEmail: string }) {
         </div>
       )}
 
-      {/* ---- ideas ---- */}
-      {tab === "idea" && (
+      {/* ---- ideas, bug reports and feature requests: one queue, three kinds ---- */}
+      {isQueue(tab) && (
         <div className="mt-6 grid gap-3">
           <p className="text-body-sm text-dim">
-            Claude reads every open idea at the start of a session and moves it along:
-            open, planned, then done or dropped.
+            Claude reads every open {QUEUE_COPY[tab].one} at the start of a session and moves it
+            along: open, planned, then done or dropped.
           </p>
-          {openIdeas.length === 0 && (
-            <p className="text-body text-muted">No open ideas. When something clicks, jot it.</p>
+          {queueOpen.length === 0 && (
+            <p className="text-body text-muted">{QUEUE_COPY[tab].empty}</p>
           )}
-          {openIdeas.map((e) => (
+          {queueOpen.map((e) => (
             <div key={e.id} className="rounded-[12px] border border-hair bg-surface p-5">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <p className="text-body font-semibold text-ink">{e.title}</p>
@@ -555,18 +608,18 @@ export function JournalScreen({ meEmail }: { meEmail: string }) {
               <Reaction e={e} />
             </div>
           ))}
-          {closedIdeas.length > 0 && (
+          {queueClosed.length > 0 && (
             <div className="mt-4">
               <button
                 type="button"
                 onClick={() => setShowClosed(!showClosed)}
                 className="tap font-mono text-label uppercase text-muted transition-colors hover:text-gold"
               >
-                {showClosed ? "Hide" : "Show"} done and dropped ({closedIdeas.length})
+                {showClosed ? "Hide" : "Show"} done and dropped ({queueClosed.length})
               </button>
               {showClosed && (
                 <div className="mt-3 grid gap-3">
-                  {closedIdeas.map((e) => (
+                  {queueClosed.map((e) => (
                     <div key={e.id} className="rounded-[12px] border border-hair bg-canvas p-5 opacity-70">
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <p className="text-body font-semibold text-ink">{e.title}</p>

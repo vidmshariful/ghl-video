@@ -97,6 +97,21 @@ if (cmd === "ideas") {
     );
   }
   for (const e of data) console.log(line(e), "\n");
+} else if (cmd === "queue" || cmd === "bugs" || cmd === "features") {
+  /* what the team has raised and is waiting on: open bug reports and feature
+     requests. `queue` shows both, `bugs`/`features` narrow to one. */
+  const kinds = cmd === "bugs" ? ["bug"] : cmd === "features" ? ["feature"] : ["bug", "feature"];
+  const { data, error } = await db
+    .from("journal")
+    .select("*")
+    .in("kind", kinds)
+    .in("status", ["open", "planned"])
+    .order("kind", { ascending: true })
+    .order("rating", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: true });
+  if (error) throw new Error(error.message);
+  if (!data.length) console.log(`No open ${kinds.join(" or ")} entries.`);
+  for (const e of data) console.log(line(e), "\n");
 } else if (cmd === "recent") {
   const n = Number(args[1]) || 15;
   const { data, error } = await db
@@ -109,11 +124,15 @@ if (cmd === "ideas") {
 } else if (cmd === "add") {
   const kind = flag("kind");
   const title = flag("title");
-  if (!["log", "decision", "idea"].includes(kind ?? "") || !title) {
-    console.error('usage: add --kind log|decision|idea --title "..." [--body ...] [--status ...] [--decided-on YYYY-MM-DD] [--author name] [--supersedes N]');
+  if (!["log", "decision", "idea", "bug", "feature"].includes(kind ?? "") || !title) {
+    console.error('usage: add --kind log|decision|idea|bug|feature --title "..." [--body ...] [--status ...] [--decided-on YYYY-MM-DD] [--author name] [--supersedes N]');
     process.exit(1);
   }
-  const status = flag("status") ?? (kind === "decision" ? "active" : kind === "idea" ? "open" : null);
+  /* bugs and feature requests share the idea lifecycle, so they open the
+     same way; decisions are active; a log is undated status-less prose */
+  const status =
+    flag("status") ??
+    (kind === "decision" ? "active" : ["idea", "bug", "feature"].includes(kind) ? "open" : null);
   const { data, error } = await db
     .from("journal")
     .insert({
@@ -148,6 +167,6 @@ if (cmd === "ideas") {
   if (error) throw new Error(error.message);
   console.log(`#${seq} -> ${status}`);
 } else {
-  console.error("usage: journal.mjs ideas | recent [n] | add ... | set-status <seq> <status>");
+  console.error("usage: journal.mjs ideas | queue | bugs | features | recent [n] | add ... | set-status <seq> <status>");
   process.exit(1);
 }
