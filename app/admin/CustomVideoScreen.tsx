@@ -1648,14 +1648,28 @@ type ReviewNote = {
   body: string;
   atSeconds: number | null;
   stamp: string | null;
+  /* the production-line stage this note is about */
+  stage: string | null;
   version: number | null;
   parentId: string | null;
   resolved: boolean;
   at: string;
 };
-type Cut = { id: string; version: number; videoUrl: string; createdAt: string };
+type StageInfo = {
+  key: string;
+  label: string;
+  medium: "doc" | "audio" | "pdf" | "video" | null;
+  url: string | null;
+  state: "todo" | "with_us" | "with_client" | "done";
+  gate: boolean;
+  provided: boolean;
+  open: number;
+};
 
 const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+
+/* a Google Doc share link embeds read-only through /preview */
+const reviewDocEmbed = (url: string) => url.replace(/\/(edit|view)(\?[^#]*)?(#.*)?$/, "/preview");
 
 /*
  * Watch what the client watched, read their notes pinned to the second
@@ -1665,6 +1679,14 @@ const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).
  * arrive as a line of text with no video attached to it. A note belongs to
  * the cut it was written on, so v1's notes stay with v1 when v2 lands.
  */
+/* how a stage's file reads, so the room can label what it is showing */
+const MEDIUM_WORD: Record<string, string> = {
+  doc: "Script document",
+  audio: "Voiceover audio",
+  pdf: "Concept PDF",
+  video: "Video",
+};
+
 function ReviewRoom({
   projectId,
   title,
@@ -1675,8 +1697,8 @@ function ReviewRoom({
   onCount?: (n: number) => void;
 }) {
   const [notes, setNotes] = useState<ReviewNote[] | null>(null);
-  const [cuts, setCuts] = useState<Cut[]>([]);
-  const [watching, setWatching] = useState<Cut | null>(null);
+  const [stages, setStages] = useState<StageInfo[]>([]);
+  const [active, setActive] = useState<string | null>(null);
   const [text, setText] = useState("");
   const [pin, setPin] = useState(true);
   const [at, setAt] = useState(0);
@@ -1685,7 +1707,7 @@ function ReviewRoom({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [duration, setDuration] = useState(0);
-  const video = useRef<HTMLVideoElement>(null);
+  const media = useRef<HTMLVideoElement & HTMLAudioElement>(null);
 
   const load = useCallback(async () => {
     try {
@@ -1695,10 +1717,16 @@ function ReviewRoom({
       const j = await r.json();
       if (!r.ok) return setErr(j.error ?? "Could not load the review.");
       const list = (j.notes ?? []) as ReviewNote[];
-      const vs = (j.versions ?? []) as Cut[];
+      const sts = (j.stages ?? []) as StageInfo[];
       setNotes(list);
-      setCuts(vs);
-      setWatching((w) => (w && vs.some((v) => v.id === w.id) ? w : (vs[0] ?? null)));
+      setStages(sts);
+      /* open the file they are waiting on: first with unanswered notes, else
+         the first that has something to show, else the first stage */
+      setActive((cur) =>
+        cur && sts.some((s) => s.key === cur)
+          ? cur
+          : ((sts.find((s) => s.open > 0) ?? sts.find((s) => s.url) ?? sts[0])?.key ?? null),
+      );
       onCount?.(list.filter((n) => n.side === "client" && !n.resolved && !n.parentId).length);
     } catch {
       setErr("Could not load the review.");
@@ -1727,28 +1755,26 @@ function ReviewRoom({
   }
 
   function seek(seconds: number) {
-    const el = video.current;
+    const el = media.current;
     if (!el) return;
     el.currentTime = seconds;
-    void el.play().catch(() => {});
+    void el.play?.().catch(() => {});
   }
 
   if (notes === null && !err) return <p className="text-body-sm text-muted">Loading the review...</p>;
 
-  const top = (notes ?? []).filter((n) => !n.parentId);
+  const stage = stages.find((s) => s.key === active) ?? null;
+  const timed = stage?.medium === "audio" || stage?.medium === "video";
+  const forStage = (notes ?? []).filter((n) => n.stage === active);
+  const top = forStage.filter((n) => !n.parentId);
   const repliesOf = (id: string) => (notes ?? []).filter((n) => n.parentId === id);
-  const currentVersion = watching?.version ?? null;
-  const onThisCut = top.filter(
-    (n) => currentVersion == null || (n.version ?? currentVersion) === currentVersion,
-  );
-  const earlier = top.filter(
-    (n) => currentVersion != null && (n.version ?? currentVersion) !== currentVersion,
-  );
   const openCount = top.filter((n) => n.side === "client" && !n.resolved).length;
 
-  const marks = onThisCut
-    .filter((n) => n.atSeconds != null)
-    .map((n) => ({ id: n.id, at: n.atSeconds as number, resolved: n.resolved, side: n.side }));
+  const marks = timed
+    ? top
+        .filter((n) => n.atSeconds != null)
+        .map((n) => ({ id: n.id, at: n.atSeconds as number, resolved: n.resolved, side: n.side }))
+    : [];
 
   const noteCard = (n: ReviewNote) => (
     <li
@@ -1780,10 +1806,7 @@ function ReviewRoom({
         )}
       </div>
       <p className="mt-1.5 whitespace-pre-wrap text-body-sm text-muted">{n.body}</p>
-      <p className="mt-1 font-mono text-label uppercase text-dim">
-        {when(n.at)}
-        {n.version && cuts.length > 1 ? ` / on v${n.version}` : ""}
-      </p>
+      <p className="mt-1 font-mono text-label uppercase text-dim">{when(n.at)}</p>
 
       {repliesOf(n.id).map((r) => (
         <div key={r.id} className="mt-2 border-l-2 border-blue/40 pl-3">
@@ -1826,150 +1849,203 @@ function ReviewRoom({
     </li>
   );
 
+  const viewer = () => {
+    if (!stage) return null;
+    if (!stage.url)
+      return (
+        <p className="text-body-sm text-dim">
+          Nothing on this file yet. It appears here the moment you send it to the client.
+        </p>
+      );
+    if (stage.medium === "video")
+      return (
+        <video
+          ref={media}
+          key={stage.key}
+          src={stage.url}
+          controls
+          preload="metadata"
+          onTimeUpdate={(e) => setAt(e.currentTarget.currentTime)}
+          onLoadedMetadata={(e) => setDuration(e.currentTarget.duration || 0)}
+          className="max-h-[60vh] w-full rounded-[8px] bg-canvas"
+        />
+      );
+    if (stage.medium === "audio")
+      return (
+        <audio
+          ref={media}
+          key={stage.key}
+          src={stage.url}
+          controls
+          preload="metadata"
+          onTimeUpdate={(e) => setAt(e.currentTarget.currentTime)}
+          onLoadedMetadata={(e) => setDuration(e.currentTarget.duration || 0)}
+          className="w-full"
+        />
+      );
+    if (stage.medium === "pdf")
+      return (
+        <div className="overflow-hidden rounded-[8px] border border-hair bg-canvas">
+          <iframe src={stage.url} title={stage.label} className="h-[58vh] w-full border-0" />
+        </div>
+      );
+    /* doc */
+    return (
+      <div className="overflow-hidden rounded-[8px] border border-hair bg-white">
+        <iframe src={reviewDocEmbed(stage.url)} title={stage.label} className="h-[58vh] w-full border-0" />
+      </div>
+    );
+  };
+
+  const stateWord = (s: StageInfo) =>
+    s.provided
+      ? "Given by the client"
+      : s.state === "with_client"
+        ? "With the client now"
+        : s.state === "done"
+          ? s.gate
+            ? "Approved"
+            : "Done"
+          : s.state === "with_us"
+            ? "With us"
+            : "Not started";
+
   return (
-    <div className="grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:items-start">
-      {/* the cut itself */}
-      <div className="grid min-w-0 gap-3">
-        <Card
-          title={cuts.length ? `Watching v${watching?.version ?? ""}` : "No cut yet"}
-          description={
-            cuts.length
-              ? "Press a timestamp on any note and the video jumps there."
-              : "Paste a draft link on the Animation station and it appears here."
-          }
-          actions={
-            cuts.length > 1 ? (
-              <div className="flex flex-wrap gap-1.5">
-                {cuts.map((c) => (
-                  <Button
-                    key={c.id}
-                    size="sm"
-                    variant={watching?.id === c.id ? "primary" : "secondary"}
-                    onClick={() => setWatching(c)}
-                  >
-                    v{c.version}
-                  </Button>
-                ))}
-              </div>
-            ) : undefined
-          }
-        >
-          {watching ? (
-            <div className="grid gap-2">
-              <video
-                ref={video}
-                src={watching.videoUrl}
-                controls
-                onTimeUpdate={(e) => setAt(e.currentTarget.currentTime)}
-                onLoadedMetadata={(e) => setDuration(e.currentTarget.duration || 0)}
-                className="w-full rounded-[8px] bg-canvas"
-              />
-              {marks.length > 0 && duration > 0 && (
-                <div className="relative h-2 rounded-full bg-hair">
-                  {marks.map((m) => (
-                    <button
-                      key={m.id}
-                      type="button"
-                      onClick={() => seek(m.at)}
-                      aria-label={`Jump to ${mmss(m.at)}`}
-                      style={{ left: `${Math.min(99, (m.at / duration) * 100)}%` }}
-                      className={`absolute -top-0.5 h-3 w-1 rounded-full ${
-                        m.resolved ? "bg-hair" : m.side === "client" ? "bg-gold" : "bg-blue"
-                      }`}
-                    />
-                  ))}
-                </div>
+    <div className="grid gap-3">
+      {/* one chip per file the client can speak to */}
+      <div className="flex flex-wrap gap-1.5">
+        {stages.map((s) => {
+          const on = s.key === active;
+          return (
+            <button
+              key={s.key}
+              type="button"
+              onClick={() => setActive(s.key)}
+              className={`tap flex items-center gap-2 rounded-[8px] border px-3 py-1.5 text-body-sm transition-colors ${
+                on
+                  ? "border-gold/60 bg-gold/10 text-ink"
+                  : "border-hair bg-surface text-muted hover:border-gold/40 hover:text-ink"
+              }`}
+            >
+              {s.label}
+              {s.open > 0 && (
+                <span className="rounded-full bg-gold px-1.5 py-0.5 font-mono text-[10px] font-semibold leading-none text-canvas">
+                  {s.open}
+                </span>
               )}
-              <p className="font-mono text-label uppercase text-dim">
-                {cuts.length > 1 && watching.id !== cuts[0].id
-                  ? `an older cut / sent ${when(watching.createdAt)}`
-                  : `current cut / sent ${when(watching.createdAt)}`}
-                {cuts.length > 1 && watching.id !== cuts[0].id && (
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => {
-                      if (confirm(`Remove cut v${watching.version}? The client can no longer watch it.`))
-                        void post({ removeVersionId: watching.id });
-                    }}
-                    className="tap ml-3 text-dim transition-colors hover:text-error"
+            </button>
+          );
+        })}
+      </div>
+
+      {stage && (
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:items-start">
+          {/* the file itself */}
+          <div className="grid min-w-0 gap-3">
+            <Card
+              title={stage.label}
+              description={`${stage.medium ? MEDIUM_WORD[stage.medium] : "File"} / ${stateWord(stage)}`}
+              actions={
+                stage.url ? (
+                  <a
+                    href={stage.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="tap rounded-[8px] border border-hair px-3 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-blue/60 hover:text-blue"
                   >
-                    remove this cut
-                  </button>
+                    Open
+                  </a>
+                ) : undefined
+              }
+            >
+              <div className="grid gap-2">
+                {viewer()}
+                {marks.length > 0 && duration > 0 && (
+                  <div className="relative h-2 rounded-full bg-hair">
+                    {marks.map((m) => (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => seek(m.at)}
+                        aria-label={`Jump to ${mmss(m.at)}`}
+                        style={{ left: `${Math.min(99, (m.at / duration) * 100)}%` }}
+                        className={`absolute -top-0.5 h-3 w-1 rounded-full ${
+                          m.resolved ? "bg-hair" : m.side === "client" ? "bg-gold" : "bg-blue"
+                        }`}
+                      />
+                    ))}
+                  </div>
                 )}
-              </p>
-            </div>
-          ) : (
-            <p className="text-body-sm text-dim">
-              Nothing to watch. Add a draft on the Manage tab and the client sees
-              it the moment you send it for approval.
-            </p>
-          )}
-        </Card>
-
-        {watching && (
-          <Card title="Write a note">
-            <div className="grid gap-2">
-              <Textarea
-                rows={2}
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                placeholder="What you want them to know, or what you fixed"
-              />
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <label className="flex items-center gap-2 text-body-sm text-muted">
-                  <input
-                    type="checkbox"
-                    checked={pin}
-                    onChange={(e) => setPin(e.target.checked)}
-                    className="h-4 w-4 accent-[var(--gold)]"
-                  />
-                  Pin this to {mmss(at)}
-                </label>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  disabled={busy || !text.trim()}
-                  onClick={async () => {
-                    await post({ body: text.trim(), atSeconds: pin ? Math.floor(at) : null });
-                    setText("");
-                  }}
-                >
-                  Add note
-                </Button>
               </div>
-            </div>
-          </Card>
-        )}
-      </div>
+            </Card>
 
-      {/* their notes */}
-      <div className="grid min-w-0 gap-3">
-        <Card
-          title="Their feedback"
-          description={
-            openCount > 0
-              ? `${openCount} ${openCount === 1 ? "note" : "notes"} still to answer.`
-              : "Everything they asked for has been answered."
-          }
-        >
-          {err && <p className="mb-2 text-body-sm text-error">{err}</p>}
-          {onThisCut.length === 0 ? (
-            <p className="text-body-sm text-dim">
-              No notes on this cut. When {title} goes out for approval, whatever
-              they say lands here pinned to the second they mean.
-            </p>
-          ) : (
-            <ul className="grid gap-2">{onThisCut.map(noteCard)}</ul>
-          )}
-        </Card>
+            {stage.url && (
+              <Card title="Write a note">
+                <div className="grid gap-2">
+                  <Textarea
+                    rows={2}
+                    value={text}
+                    onChange={(e) => setText(e.target.value)}
+                    placeholder="What you want them to know, or what you fixed"
+                  />
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    {timed ? (
+                      <label className="flex items-center gap-2 text-body-sm text-muted">
+                        <input
+                          type="checkbox"
+                          checked={pin}
+                          onChange={(e) => setPin(e.target.checked)}
+                          className="h-4 w-4 accent-[var(--gold)]"
+                        />
+                        Pin this to {mmss(at)}
+                      </label>
+                    ) : (
+                      <span />
+                    )}
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={busy || !text.trim()}
+                      onClick={async () => {
+                        await post({
+                          body: text.trim(),
+                          atSeconds: timed && pin ? Math.floor(at) : null,
+                          stage: stage.key,
+                        });
+                        setText("");
+                      }}
+                    >
+                      Add note
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            )}
+          </div>
 
-        {earlier.length > 0 && (
-          <Card title="On earlier cuts" description="Kept, so a fixed note stops shouting.">
-            <ul className="grid gap-2">{earlier.map(noteCard)}</ul>
-          </Card>
-        )}
-      </div>
+          {/* what they asked for on this file */}
+          <div className="grid min-w-0 gap-3">
+            <Card
+              title="Their feedback"
+              description={
+                openCount > 0
+                  ? `${openCount} ${openCount === 1 ? "note" : "notes"} still to answer.`
+                  : "Nothing outstanding on this file."
+              }
+            >
+              {err && <p className="mb-2 text-body-sm text-error">{err}</p>}
+              {top.length === 0 ? (
+                <p className="text-body-sm text-dim">
+                  Nothing on {stage.label.toLowerCase()} yet. When {title} reaches the client,
+                  whatever they say about this file lands here.
+                </p>
+              ) : (
+                <ul className="grid gap-2">{top.map(noteCard)}</ul>
+              )}
+            </Card>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

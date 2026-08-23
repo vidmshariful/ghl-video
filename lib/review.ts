@@ -26,6 +26,9 @@ export type ReviewComment = {
   author_name: string | null;
   body: string;
   at_seconds: number | null;
+  /* which production-line stage this note is about, null for a plain video
+     review note written before per-stage feedback existed */
+  stage: string | null;
   revision_round: number;
   version: number | null;
   parent_id: string | null;
@@ -83,6 +86,9 @@ export type NewComment = {
   name?: string | null;
   body: string;
   atSeconds?: number | null;
+  /** which production-line stage this note is about, null for the plain
+      video review that predates per-stage feedback */
+  stage?: string | null;
   /** set when this note answers another note */
   parentId?: string | null;
 };
@@ -127,6 +133,7 @@ export async function addComment(
       author_name: c.name ?? null,
       body,
       at_seconds: at,
+      stage: c.stage ?? null,
       revision_round: d.revision_round as number,
       version,
       parent_id: c.parentId ?? null,

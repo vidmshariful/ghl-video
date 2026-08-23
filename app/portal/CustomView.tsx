@@ -1,11 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft, Download, MessageSquarePlus, Play, Share2 } from "lucide-react";
+import { ArrowLeft, Play } from "lucide-react";
 import { Button, Card, Chip, EmptyState, Input, Modal, PageHeader, Textarea } from "@/components/portal/ui";
 import { VideoReviewModal } from "./VideoReviewModal";
-import { ShareVideo } from "./ShareVideo";
-import { ConfirmDialog } from "./ConfirmDialog";
+import { StageReview } from "./StageReview";
 import { DownloadAll } from "@/components/portal/DownloadAll";
 import { pages } from "@/lib/site";
 
@@ -116,6 +115,16 @@ const SHORT: Record<string, string> = {
   animation: "Animation",
   sfx: "Sound",
   delivery: "Delivery",
+};
+
+/* what each stage is reviewed as; sound design has nothing to show */
+const MEDIUM: Record<string, "doc" | "audio" | "pdf" | "video" | null> = {
+  script: "doc",
+  voiceover: "audio",
+  design: "pdf",
+  animation: "video",
+  sfx: null,
+  delivery: "video",
 };
 
 /* the station the work sits on now, and how it reads to the client */
@@ -355,43 +364,16 @@ function ProjectPage({
   onChanged: () => void;
   onPlay: (r: Reviewable & { title: string }) => void;
 }) {
-  const playerAsk = Boolean(
-    p.main?.videoUrl &&
-      p.pipeline.stations.some(
-        (s) => (s.key === "animation" || s.key === "delivery") && s.state === "with_client" && s.gated,
-      ),
-  );
+  /* which stage's review room is open, if any */
+  const [reviewing, setReviewing] = useState<string | null>(null);
+
   const approvals = p.pipeline.stations.filter(
-    (s) =>
-      s.state === "with_client" &&
-      s.gated &&
-      !(playerAsk && (s.key === "animation" || s.key === "delivery")),
+    (s) => (s.key === "animation" || s.key === "delivery") && s.state === "with_client" && s.gated,
   ).length;
   const filesOwed = p.pipeline.stations.filter(
     (s) => s.provided && s.state !== "done" && (s.key === "script" || s.key === "voiceover"),
   ).length;
-  const waiting = approvals + filesOwed + p.formats.filter((f) => f.canReview).length;
-
-  /* which of the two video gates is waiting on the client, and its word */
-  const gate = p.pipeline.stations.find(
-    (s) => (s.key === "animation" || s.key === "delivery") && s.state === "with_client" && s.gated,
-  );
-  const gateLabel = gate?.key === "delivery" ? "Final delivery" : "Animation";
-  const [sharing, setSharing] = useState(false);
-  const [approving, setApproving] = useState(false);
-  const [busy, setBusy] = useState(false);
-
-  async function approveGate() {
-    if (!p.main) return;
-    setBusy(true);
-    await authedFetch(`/api/portal/videos/${p.main.id}/review`, {
-      method: "POST",
-      body: JSON.stringify({ action: "approve" }),
-    }).catch(() => null);
-    setBusy(false);
-    setApproving(false);
-    onChanged();
-  }
+  const waiting = approvals + filesOwed;
 
   return (
     <div>
@@ -461,78 +443,20 @@ function ProjectPage({
         </div>
       </div>
 
-      {approving && (
-        <ConfirmDialog
-          title={`Approve ${gateLabel}?`}
-          body="This tells the studio it is finished. You will still be able to watch and download it. If you want changes instead, use Give feedback."
-          confirmLabel={busy ? "Approving..." : "Yes, approve it"}
-          tone="green"
-          onConfirm={approveGate}
-          onCancel={() => setApproving(false)}
-        />
-      )}
-      {sharing && p.main && (
-        <ShareVideo
-          videoId={p.main.id}
-          title={p.title}
+      {/* one review room, whatever the medium, opened from a stage below */}
+      {reviewing && (
+        <StageReview
+          projectId={p.id}
+          stageKey={reviewing}
+          videoId={p.main?.id ?? null}
           authedFetch={authedFetch}
-          onClose={() => setSharing(false)}
+          onClose={() => setReviewing(null)}
+          onChanged={onChanged}
         />
       )}
 
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:items-start">
         <div className="grid min-w-0 gap-3">
-          {/* the video as a contained hero, sized to the column rather than
-              bleeding the full page. Feedback is never inline; it opens the
-              same full-screen review the pre-made videos use (owner rule). */}
-          {p.main?.videoUrl && (
-            <div className="overflow-hidden rounded-[12px] border border-hair bg-surface">
-              <div className="flex aspect-video items-center justify-center bg-black">
-                <video
-                  controls
-                  preload="metadata"
-                  playsInline
-                  src={p.main.videoUrl}
-                  className="h-full w-full object-contain"
-                />
-              </div>
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-hair px-4 py-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  {gate && (
-                    <Button variant="brand" disabled={busy} onClick={() => setApproving(true)}>
-                      Approve {gateLabel}
-                    </Button>
-                  )}
-                  <Button
-                    variant="secondary"
-                    icon={<MessageSquarePlus />}
-                    onClick={() => p.main && onPlay({ ...p.main, title: p.title })}
-                  >
-                    Give feedback
-                  </Button>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    icon={<Download />}
-                    href={`/api/portal/videos/${p.main.id}/download`}
-                  >
-                    Download
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    icon={<Share2 />}
-                    onClick={() => setSharing(true)}
-                  >
-                    Share
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
-
           {waiting > 0 && (
             <Card
               tone="dark"
@@ -540,26 +464,27 @@ function ProjectPage({
             >
               <p className="text-body-sm text-chrome-muted">
                 {filesOwed > 0 && approvals > 0
-                  ? "We are waiting on a file from you and on an approval. The gold buttons below are exactly where."
+                  ? "We are waiting on a file from you, and on your word at a step below. The gold buttons are where."
                   : filesOwed > 0
-                    ? "We are waiting on a file only you have. Send the link with the gold button below and the work starts moving."
-                    : "Nothing moves until you have had your look. The gold buttons below are where your word is needed."}
+                    ? "We are waiting on a file only you have. Add it at the step below and the work starts moving."
+                    : "Something below is ready for your look. Open it, watch or read it, and tell us what you think."}
               </p>
             </Card>
           )}
 
           <Card
             title="The production line"
-            description="Six stations. Watch your video move through them."
+            description="Each step of your video. Open one to see our work and tell us what you think."
           >
-            <ol className="grid gap-1.5">
+            <ol className="grid gap-2">
               {p.pipeline.stations.map((st) => (
-                <StationRow
+                <StageRow
                   key={st.key}
                   p={p}
                   st={st}
                   authedFetch={authedFetch}
                   onChanged={onChanged}
+                  onReview={setReviewing}
                 />
               ))}
             </ol>
@@ -656,33 +581,42 @@ function ProjectPage({
   );
 }
 
-/* one station: its word, its file, and the buttons when the ball is theirs */
-function StationRow({
+/*
+ * One step of the production line, as the client reads it.
+ *
+ * A step whose work is ready to look at opens the review room for its
+ * medium: the script as a doc, the voiceover as audio, the design as a PDF,
+ * the animation and the final cut as video. Reviewing and feedback all live
+ * in that room, never on this row. A step the client supplies themselves
+ * (their own script or voiceover) shows the upload instead, in a popup.
+ */
+function StageRow({
   p,
   st,
   authedFetch,
   onChanged,
+  onReview,
 }: {
   p: Project;
   st: PipelineStation;
   authedFetch: (path: string, init?: RequestInit) => Promise<Record<string, unknown>>;
   onChanged: () => void;
+  onReview: (stageKey: string) => void;
 }) {
   const [provideOpen, setProvideOpen] = useState(false);
   const [provideUrl, setProvideUrl] = useState("");
-  const [feedbackOpen, setFeedbackOpen] = useState(false);
-  const [feedback, setFeedback] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
-  const mine = st.state === "with_client" && st.gated;
+  const medium = MEDIUM[st.key];
   const playerGate = st.key === "animation" || st.key === "delivery";
+  const needsYou = playerGate && st.state === "with_client" && st.gated;
+  /* something we made and shared, ready for the client to review; a piece
+     the client supplies themselves is not reviewed, it is uploaded */
+  const reviewable = Boolean(medium) && Boolean(st.url) && !st.provided;
   const providable = st.provided && (st.key === "script" || st.key === "voiceover");
   const needsTheirFile = providable && st.state !== "done";
-  /* a piece WE made and shared, on a station that is not the video: the
-     client can look at it and say what they think, as a comment (owner
-     decision, 23 August 2026, not a formal approval) */
-  const canReact = !playerGate && !st.provided && Boolean(st.url);
+  const provideNoun = st.key === "script" ? "script" : "voiceover";
 
   async function provide() {
     setBusy(true);
@@ -705,59 +639,38 @@ function StationRow({
     setBusy(false);
   }
 
-  async function sendFeedback() {
-    const text = feedback.trim();
-    if (!text) return;
-    setBusy(true);
-    setErr("");
-    try {
-      const j = await authedFetch(`/api/portal/projects/${p.id}/notes`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body: `Feedback on ${st.label}: ${text}` }),
-      });
-      if (j.error) setErr(String(j.error));
-      else {
-        setFeedbackOpen(false);
-        setFeedback("");
-        onChanged();
-      }
-    } catch {
-      setErr("That did not go through. Please try again.");
-    }
-    setBusy(false);
-  }
-
-  const provideNoun = st.key === "script" ? "script" : "voiceover";
-
   return (
-    <li className="flex flex-wrap items-center justify-between gap-2 rounded-[8px] border border-hair bg-canvas px-3 py-2">
-      <span className="flex min-w-0 items-center gap-2">
-        <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${DOT[st.state]}`} />
-        <span className={`text-body-sm ${st.state === "todo" ? "text-dim" : "text-ink"}`}>
-          {st.label}
+    <li
+      className={`flex flex-wrap items-center justify-between gap-2 rounded-[8px] border px-3.5 py-3 ${
+        needsYou ? "border-gold/40 bg-gold/5" : "border-hair bg-canvas"
+      }`}
+    >
+      <span className="flex min-w-0 items-center gap-2.5">
+        <span aria-hidden="true" className={`h-2.5 w-2.5 shrink-0 rounded-full ${DOT[st.state]}`} />
+        <span className="min-w-0">
+          <span
+            className={`block text-body-sm font-semibold ${st.state === "todo" ? "text-dim" : "text-ink"}`}
+          >
+            {st.label}
+          </span>
+          <span
+            className={`block font-mono text-label uppercase ${
+              st.state === "with_client" ? "text-gold" : "text-dim"
+            }`}
+          >
+            {st.word}
+            {st.eta && st.state !== "done" ? ` / expected ${day(st.eta)}` : ""}
+          </span>
         </span>
-        <span className={`font-mono text-label uppercase ${mine ? "text-gold" : "text-dim"}`}>
-          {st.word}
-        </span>
-        {st.eta && st.state !== "done" && (
-          <span className="font-mono text-label uppercase text-dim">expected {day(st.eta)}</span>
-        )}
       </span>
       <span className="flex shrink-0 items-center gap-2">
-        {st.url && !playerGate && (
-          <a
-            href={st.url}
-            target="_blank"
-            rel="noreferrer"
-            className="tap font-mono text-label uppercase text-muted transition-colors hover:text-gold"
+        {reviewable && (
+          <Button
+            size="sm"
+            variant={needsYou ? "brand" : "secondary"}
+            onClick={() => onReview(st.key)}
           >
-            View
-          </a>
-        )}
-        {canReact && (
-          <Button size="sm" variant="secondary" onClick={() => setFeedbackOpen(true)}>
-            Give feedback
+            {needsYou ? "Review and approve" : "Review"}
           </Button>
         )}
         {needsTheirFile && (
@@ -776,7 +689,7 @@ function StationRow({
         )}
       </span>
 
-      {/* their file, in a popup, never expanding the row inline */}
+      {/* the client's own file, in a popup, never expanding the row inline */}
       <Modal
         open={provideOpen}
         onClose={() => setProvideOpen(false)}
@@ -797,33 +710,6 @@ function StationRow({
             </Button>
             <Button variant="brand" disabled={busy || !provideUrl.trim()} onClick={provide}>
               {busy ? "Sending..." : "Send it"}
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* feedback on a non-video station, as a comment to the studio */}
-      <Modal
-        open={feedbackOpen}
-        onClose={() => setFeedbackOpen(false)}
-        title={`Feedback on ${st.label}`}
-        subtitle="Tell us what you think. It reaches us in your messages, tagged to this step."
-      >
-        <div className="grid gap-4">
-          <Textarea
-            rows={4}
-            value={feedback}
-            onChange={(e) => setFeedback(e.target.value)}
-            placeholder="What do you like, what would you change?"
-            aria-label={`Feedback on ${st.label}`}
-          />
-          {err && <p className="text-body-sm text-error">{err}</p>}
-          <div className="flex justify-end gap-2 border-t border-hair pt-4">
-            <Button variant="ghost" onClick={() => setFeedbackOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="brand" disabled={busy || !feedback.trim()} onClick={sendFeedback}>
-              {busy ? "Sending..." : "Send feedback"}
             </Button>
           </div>
         </div>

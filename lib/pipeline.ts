@@ -47,6 +47,13 @@ export const STATION_ORDER: StationKey[] = [
   "delivery",
 ];
 
+/* How a stage's work is reviewed. The script reads as a document, the
+   voiceover plays as audio, the concept is a PDF, the animation and the final
+   cut are video, and sound design has nothing to show. One map, read by the
+   client's review room, the studio's, and the APIs behind both, so a stage
+   can never mean one medium on one screen and another elsewhere. */
+export type ReviewMedium = "doc" | "audio" | "pdf" | "video";
+
 export const STATIONS: Record<
   StationKey,
   {
@@ -56,6 +63,8 @@ export const STATIONS: Record<
     /* can "provided by client" apply here */
     providable: boolean;
     defaultGate: boolean;
+    /* how this stage's work is shown for review, null when nothing is shown */
+    reviewMedium: ReviewMedium | null;
   }
 > = {
   /*
@@ -66,12 +75,12 @@ export const STATIONS: Record<
    * state and a file; the animation draft and the final delivery are the
    * two moments the work pauses for a person.
    */
-  script: { label: "Scripting", clientFile: true, providable: true, defaultGate: false },
-  voiceover: { label: "Voiceover", clientFile: true, providable: true, defaultGate: false },
-  design: { label: "Concept and Design", clientFile: true, providable: false, defaultGate: false },
-  animation: { label: "Animation", clientFile: true, providable: false, defaultGate: true },
-  sfx: { label: "Sound Design", clientFile: false, providable: false, defaultGate: false },
-  delivery: { label: "Final delivery", clientFile: true, providable: false, defaultGate: true },
+  script: { label: "Scripting", clientFile: true, providable: true, defaultGate: false, reviewMedium: "doc" },
+  voiceover: { label: "Voiceover", clientFile: true, providable: true, defaultGate: false, reviewMedium: "audio" },
+  design: { label: "Concept and Design", clientFile: true, providable: false, defaultGate: false, reviewMedium: "pdf" },
+  animation: { label: "Animation", clientFile: true, providable: false, defaultGate: true, reviewMedium: "video" },
+  sfx: { label: "Sound Design", clientFile: false, providable: false, defaultGate: false, reviewMedium: null },
+  delivery: { label: "Final delivery", clientFile: true, providable: false, defaultGate: true, reviewMedium: "video" },
 };
 
 export function defaultPipeline(): Pipeline {
