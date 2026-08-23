@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { resolvePortalContext } from "@/lib/account-team";
-import { CLIENT_LABEL, isOpen, normalizeProjectStatus } from "@/lib/projects";
+import { CLIENT_LABEL, isOpen, normalizeProjectStatus, projectBalance } from "@/lib/projects";
 import {
   canRequestChanges,
   canReview,
@@ -32,6 +32,15 @@ export const runtime = "nodejs";
  */
 
 type Row = Record<string, unknown>;
+
+/* the client's payment standing on a project, said plainly: what they owe, if
+   anything, without the studio's invoicing detail */
+function clientPayment(money: { valueCents: number; paidCents: number; outstandingCents: number }) {
+  if (money.valueCents <= 0) return { label: "Not set", outstandingCents: 0 };
+  if (money.outstandingCents <= 0) return { label: "Paid", outstandingCents: 0 };
+  if (money.paidCents > 0) return { label: "Part paid", outstandingCents: money.outstandingCents };
+  return { label: "Unpaid", outstandingCents: money.outstandingCents };
+}
 
 export async function GET(req: Request) {
   const db = supabaseAdmin();
@@ -67,6 +76,23 @@ export async function GET(req: Request) {
     }
   }
 
+  /* payment standing: the client's own invoices on these projects, marked paid
+     when one of their paid orders covers the invoice's product */
+  const { data: invoices } = ids.length
+    ? await db
+        .from("invoices")
+        .select("total_cents, project_id, product_sku")
+        .in("project_id", ids)
+    : { data: [] };
+  const { data: paidOrders } = await db
+    .from("orders")
+    .select("product:products(sku)")
+    .eq("status", "paid")
+    .ilike("customer_email", ctx.ownerEmail);
+  const paidSkus = new Set(
+    ((paidOrders ?? []) as Row[]).map((o) => String((o.product as { sku?: unknown } | null)?.sku ?? "")),
+  );
+
   return NextResponse.json({
     projects: ((projects ?? []) as Row[])
       /* a cancelled job is not something to show somebody who is paying us */
@@ -74,6 +100,15 @@ export async function GET(req: Request) {
       .map((p) => {
         const status = normalizeProjectStatus(String(p.status));
         const line = normalizePipeline(p.pipeline);
+        const money = projectBalance(
+          {
+            quotedCents: p.quoted_cents == null ? null : Number(p.quoted_cents),
+            agreedCents: p.agreed_cents == null ? null : Number(p.agreed_cents),
+          },
+          ((invoices ?? []) as Row[])
+            .filter((i) => String(i.project_id) === String(p.id))
+            .map((i) => ({ totalCents: Number(i.total_cents), paid: paidSkus.has(String(i.product_sku)) })),
+        );
         const mine = ((videos ?? []) as Row[]).filter(
           (v) => String(v.project_id) === String(p.id),
         );
@@ -94,6 +129,7 @@ export async function GET(req: Request) {
             const email = (p.owner_email as string | null)?.toLowerCase();
             return email ? (managerName.get(email) ?? null) : null;
           })(),
+          payment: clientPayment(money),
           pipeline: {
             ball: ballInCourt(line),
             percent: pipelinePercent(line),

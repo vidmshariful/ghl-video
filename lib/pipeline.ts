@@ -162,8 +162,8 @@ export function clientStationWord(key: StationKey, s: Station): string {
     return s.url ? "Yours, checking it" : "We need this from you";
   }
   if (s.state === "done") return STATIONS[key].defaultGate ? "Approved" : "Done";
-  if (s.state === "with_client") return s.gate ? "Needs your approval" : "With you";
-  if (s.state === "with_us") return "With us";
+  if (s.state === "with_client") return s.gate ? "Needs your approval" : "Need your feedback";
+  if (s.state === "with_us") return "In progress";
   return "Not started";
 }
 

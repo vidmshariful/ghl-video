@@ -64,6 +64,7 @@ type Project = {
   dueAt: string | null;
   createdAt: string;
   manager: string | null;
+  payment: { label: string; outstandingCents: number };
   pipeline: {
     ball: "us" | "client" | null;
     percent: number;
@@ -107,17 +108,27 @@ const DOT: Record<PipelineStation["state"], string> = {
   done: "bg-green",
 };
 
-/* the stage's colour, given a name to sit beside so it is never a mystery */
-const STAGE_TONE: Record<string, "neutral" | "good" | "warn" | "bad" | "info"> = {
-  backlog: "neutral",
-  planning: "info",
-  in_progress: "info",
-  review: "warn",
-  revision: "bad",
-  approved: "good",
-  cutdowns: "warn",
-  closed: "good",
-  cancelled: "neutral",
+/* the station's state as a label pill: a tinted, transparent chip that carries
+   the word, coloured by whose court the ball is in */
+const STATE_PILL: Record<PipelineStation["state"], string> = {
+  todo: "border-hair bg-transparent text-dim",
+  with_us: "border-blue/30 bg-blue/5 text-blue",
+  with_client: "border-gold/40 bg-gold/10 text-gold",
+  done: "border-green/30 bg-green/5 text-green",
+};
+
+/* the project's own lifecycle stage, shown as its status. This is the stage a
+   producer sets, not anything derived from the production line. */
+const STAGE_LABEL: Record<string, string> = {
+  backlog: "Backlog",
+  planning: "Planning",
+  in_progress: "In progress",
+  review: "In review",
+  revision: "In revision",
+  approved: "Approved",
+  cutdowns: "Extra formats",
+  closed: "Complete",
+  cancelled: "Cancelled",
 };
 
 
@@ -405,60 +416,23 @@ function ProjectPage({
         <ArrowLeft size={14} aria-hidden="true" /> All projects
       </button>
 
-      {/* TOP: everything about the project and where it stands, in one place.
-          The station by station line is not repeated here, it lives once in
-          the production line below. */}
+      {/* TOP: the project and where it stands. Just this: the name, the type,
+          and a factual row. The station by station line lives once, below, and
+          the project status here is the stage a producer set, not the line. */}
       <div className="mt-4 rounded-[12px] border border-hair bg-surface p-4 sm:p-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h1 className="font-display text-h3 leading-tight text-ink">{p.title}</h1>
-            {p.category && (
-              <p className="mt-1 font-mono text-label uppercase tracking-[0.1em] text-dim">
-                {p.category}
-              </p>
-            )}
-          </div>
-          <div className="flex flex-wrap items-center gap-2.5">
-            <Chip tone={STAGE_TONE[p.status] ?? "neutral"}>{p.statusLabel}</Chip>
-            {(() => {
-              const cur = currentStation(p.pipeline.stations);
-              return cur ? (
-                <span className="font-mono text-label uppercase text-muted">
-                  now: {cur.label},{" "}
-                  <span className={cur.state === "with_client" ? "text-gold" : ""}>
-                    {cur.word.toLowerCase()}
-                  </span>
-                </span>
-              ) : (
-                <span className="font-mono text-label uppercase text-green">all finished</span>
-              );
-            })()}
-          </div>
-        </div>
+        <h1 className="font-display text-h3 leading-tight text-ink">{p.title}</h1>
+        {p.category && (
+          <p className="mt-1 font-mono text-label uppercase tracking-[0.1em] text-dim">
+            {p.category}
+          </p>
+        )}
 
-        <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
-          <Fact label="Your producer">{p.manager ?? "Being assigned"}</Fact>
-          <Fact label="Progress">
-            <span className="tabular-nums">{p.pipeline.percent}%</span> through the line
-          </Fact>
-          <Fact label="Started">{day(p.createdAt)}</Fact>
+        <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-4">
+          <Fact label="Project status">{STAGE_LABEL[p.status] ?? p.statusLabel}</Fact>
           <Fact label="Due">{p.dueAt ? day(p.dueAt) : "To be set"}</Fact>
+          <Fact label="Producer">{p.manager ?? "Being assigned"}</Fact>
+          <Fact label="Payment">{p.payment.label}</Fact>
         </dl>
-
-        {/* the number given something to mean: the line, as a bar */}
-        <div
-          className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-hair"
-          role="progressbar"
-          aria-valuenow={p.pipeline.percent}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-label="How far through the production line"
-        >
-          <div
-            className="h-full rounded-full bg-brand-gradient"
-            style={{ width: `${Math.max(3, p.pipeline.percent)}%` }}
-          />
-        </div>
       </div>
 
       {/* one review room, whatever the medium, opened from a stage below */}
@@ -981,13 +955,19 @@ function StageRow({
           >
             {st.label}
           </span>
-          <span
-            className={`block font-mono text-label uppercase ${
-              st.state === "with_client" ? "text-gold" : "text-dim"
-            }`}
-          >
-            {st.word}
-            {st.eta && st.state !== "done" ? ` / expected ${day(st.eta)}` : ""}
+          <span className="mt-1 flex flex-wrap items-center gap-2">
+            <span
+              className={`inline-flex items-center rounded-full border px-2 py-0.5 font-mono text-label uppercase ${STATE_PILL[st.state]}`}
+            >
+              {st.word}
+            </span>
+            {/* an expected date only means something before the work is with
+               the client: once it is theirs, the ball is in their court */}
+            {st.eta && (st.state === "todo" || st.state === "with_us") && (
+              <span className="font-mono text-label uppercase text-dim">
+                expected {day(st.eta)}
+              </span>
+            )}
           </span>
         </span>
       </span>
@@ -1187,7 +1167,7 @@ function ClientThread({
 
   return (
     <Card
-      title="Message the studio"
+      title="Project Discussion"
       description="The same inbox as everywhere else, tagged with this project. For notes on a specific cut, open its review room above."
     >
       {notes === null ? (
