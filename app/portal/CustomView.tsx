@@ -1,7 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft, Play } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  Archive,
+  ArrowLeft,
+  File as FileIcon,
+  FileText,
+  Film,
+  ImageIcon,
+  Music,
+  Paperclip,
+  Play,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import { Button, Card, Chip, EmptyState, Input, Modal, PageHeader, Textarea } from "@/components/portal/ui";
 import { VideoReviewModal } from "./VideoReviewModal";
 import { StageReview } from "./StageReview";
@@ -51,6 +63,7 @@ type Project = {
   open: boolean;
   dueAt: string | null;
   createdAt: string;
+  manager: string | null;
   pipeline: {
     ball: "us" | "client" | null;
     percent: number;
@@ -107,15 +120,6 @@ const STAGE_TONE: Record<string, "neutral" | "good" | "warn" | "bad" | "info"> =
   cancelled: "neutral",
 };
 
-/* short station names for the compact line, where the full label is long */
-const SHORT: Record<string, string> = {
-  script: "Script",
-  voiceover: "Voice",
-  design: "Design",
-  animation: "Animation",
-  sfx: "Sound",
-  delivery: "Delivery",
-};
 
 /* what each stage is reviewed as; sound design has nothing to show */
 const MEDIUM: Record<string, "doc" | "audio" | "pdf" | "video" | null> = {
@@ -385,62 +389,45 @@ function ProjectPage({
         <ArrowLeft size={14} aria-hidden="true" /> All projects
       </button>
 
-      <div className="mt-4">
-        <PageHeader
-          title={p.title}
-          description={[p.category, p.statusLabel, p.dueAt ? `Due ${day(p.dueAt)}.` : null]
-            .filter(Boolean)
-            .join(". ")}
-        />
-      </div>
-
-      {/* where the whole job stands, said in words first: the stage by name,
-          how far through, and which station it sits on right now. The six
-          dots keep their colour but each carries its station name, so a
-          colour is never shown without the word for it. */}
-      <div className="mb-3 grid gap-2.5 rounded-[8px] border border-hair bg-surface px-4 py-3">
-        <div className="flex flex-wrap items-center gap-2.5">
-          <Chip tone={STAGE_TONE[p.status] ?? "neutral"}>{p.statusLabel}</Chip>
-          <span className="font-mono text-label uppercase text-dim">
-            {p.pipeline.percent}% through the line
-          </span>
-          {(() => {
-            const cur = currentStation(p.pipeline.stations);
-            return cur ? (
-              <span className="font-mono text-label uppercase text-muted">
-                now: {cur.label},{" "}
-                <span className={cur.state === "with_client" ? "text-gold" : ""}>
-                  {cur.word.toLowerCase()}
+      {/* TOP: everything about the project and where it stands, in one place.
+          The station by station line is not repeated here, it lives once in
+          the production line below. */}
+      <div className="mt-4 rounded-[12px] border border-hair bg-surface p-4 sm:p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="font-display text-h3 leading-tight text-ink">{p.title}</h1>
+            {p.category && (
+              <p className="mt-1 font-mono text-label uppercase tracking-[0.1em] text-dim">
+                {p.category}
+              </p>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <Chip tone={STAGE_TONE[p.status] ?? "neutral"}>{p.statusLabel}</Chip>
+            {(() => {
+              const cur = currentStation(p.pipeline.stations);
+              return cur ? (
+                <span className="font-mono text-label uppercase text-muted">
+                  now: {cur.label},{" "}
+                  <span className={cur.state === "with_client" ? "text-gold" : ""}>
+                    {cur.word.toLowerCase()}
+                  </span>
                 </span>
-              </span>
-            ) : (
-              <span className="font-mono text-label uppercase text-green">all finished</span>
-            );
-          })()}
+              ) : (
+                <span className="font-mono text-label uppercase text-green">all finished</span>
+              );
+            })()}
+          </div>
         </div>
-        <div className="flex flex-wrap gap-x-3.5 gap-y-1.5">
-          {p.pipeline.stations.map((st) => (
-            <span key={st.key} className="inline-flex items-center gap-1.5" title={st.word}>
-              <span
-                aria-hidden="true"
-                className={`h-1.5 w-4 shrink-0 rounded-full ${DOT[st.state]}`}
-              />
-              <span
-                className={`font-mono text-label uppercase ${
-                  st.state === "done"
-                    ? "text-dim"
-                    : st.state === "with_client"
-                      ? "text-gold"
-                      : st.state === "with_us"
-                        ? "text-muted"
-                        : "text-dim"
-                }`}
-              >
-                {SHORT[st.key] ?? st.label}
-              </span>
-            </span>
-          ))}
-        </div>
+
+        <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
+          <Fact label="Your producer">{p.manager ?? "Being assigned"}</Fact>
+          <Fact label="Progress">
+            <span className="tabular-nums">{p.pipeline.percent}%</span> through the line
+          </Fact>
+          <Fact label="Started">{day(p.createdAt)}</Fact>
+          <Fact label="Due">{p.dueAt ? day(p.dueAt) : "To be set"}</Fact>
+        </dl>
       </div>
 
       {/* one review room, whatever the medium, opened from a stage below */}
@@ -455,7 +442,8 @@ function ProjectPage({
         />
       )}
 
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:items-start">
+      {/* MIDDLE: the production line on the left, the conversation on the right */}
+      <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:items-start">
         <div className="grid min-w-0 gap-3">
           {waiting > 0 && (
             <Card
@@ -545,39 +533,328 @@ function ProjectPage({
               )}
             </Card>
           )}
-
-          {p.brief && (
-            <Card title="The brief" description="What we agreed to make.">
-              <p className="whitespace-pre-wrap text-body-sm text-muted">{p.brief}</p>
-            </Card>
-          )}
         </div>
 
         <div className="grid min-w-0 gap-3">
           <ClientThread projectId={p.id} authedFetch={authedFetch} system={p.activity} />
-
-          <Card title="Where it is">
-            <dl className="grid gap-2 text-body-sm">
-              <div className="flex items-baseline justify-between gap-3">
-                <dt className="text-muted">Started</dt>
-                <dd className="text-ink">{day(p.createdAt)}</dd>
-              </div>
-              {p.dueAt && (
-                <div className="flex items-baseline justify-between gap-3">
-                  <dt className="text-muted">Due</dt>
-                  <dd className="text-ink">{day(p.dueAt)}</dd>
-                </div>
-              )}
-              <div className="flex items-baseline justify-between gap-3">
-                <dt className="text-muted">Through the line</dt>
-                <dd className="tabular-nums text-ink">{p.pipeline.percent}%</dd>
-              </div>
-            </dl>
-          </Card>
-
         </div>
       </div>
+
+      {/* BOTTOM: the brief we both keep current, and the files we pass around */}
+      <div className="mt-3 grid gap-3 lg:grid-cols-2 lg:items-start">
+        <BriefEditor projectId={p.id} brief={p.brief} authedFetch={authedFetch} onChanged={onChanged} />
+        <Attachments projectId={p.id} authedFetch={authedFetch} />
+      </div>
     </div>
+  );
+}
+
+/* one labelled fact in the top strip */
+function Fact({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <dt className="font-mono text-label uppercase tracking-[0.1em] text-dim">{label}</dt>
+      <dd className="mt-1 truncate text-body-sm text-ink">{children}</dd>
+    </div>
+  );
+}
+
+/*
+ * The brief, as a description box both sides keep current.
+ *
+ * Click it to edit, like the description on a task board. What the client
+ * writes here is the same field the studio edits from admin, so it stays one
+ * source of truth for what we agreed to make.
+ */
+function BriefEditor({
+  projectId,
+  brief,
+  authedFetch,
+  onChanged,
+}: {
+  projectId: string;
+  brief: string | null;
+  authedFetch: (path: string, init?: RequestInit) => Promise<Record<string, unknown>>;
+  onChanged: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(brief ?? "");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!editing) setText(brief ?? "");
+  }, [brief, editing]);
+
+  async function save() {
+    setBusy(true);
+    await authedFetch(`/api/portal/projects/${projectId}/brief`, {
+      method: "PATCH",
+      body: JSON.stringify({ brief: text }),
+    }).catch(() => null);
+    setBusy(false);
+    setEditing(false);
+    onChanged();
+  }
+
+  return (
+    <Card
+      title="The brief"
+      description="What we are making. You and your producer can both keep this up to date."
+      actions={
+        !editing && brief ? (
+          <Button size="sm" variant="secondary" onClick={() => setEditing(true)}>
+            Edit
+          </Button>
+        ) : undefined
+      }
+    >
+      {editing ? (
+        <div className="grid gap-2">
+          <Textarea
+            rows={8}
+            autoFocus
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="The goal, who it is for, what must be in it, and links to anything useful."
+          />
+          <div className="flex gap-2">
+            <Button size="sm" variant="brand" disabled={busy} onClick={save}>
+              Save
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={busy}
+              onClick={() => {
+                setEditing(false);
+                setText(brief ?? "");
+              }}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      ) : brief ? (
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className="tap w-full rounded-[8px] px-1 py-0.5 text-left transition-colors hover:bg-canvas"
+          title="Click to edit"
+        >
+          <p className="whitespace-pre-wrap text-body-sm text-muted">{brief}</p>
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className="tap w-full rounded-[8px] border border-dashed border-hair px-3 py-6 text-center text-body-sm text-dim transition-colors hover:border-gold/50 hover:text-muted"
+        >
+          Add a brief. Tell us the goal, the audience, and anything that must be in it.
+        </button>
+      )}
+    </Card>
+  );
+}
+
+type ClientFile = {
+  id: string;
+  name: string;
+  sizeBytes: number;
+  kind: "image" | "video" | "audio" | "pdf" | "doc" | "archive" | "file";
+  uploadedBy: "client" | "studio";
+  uploaderName: string | null;
+  at: string;
+  url: string | null;
+};
+
+const MAX_ATTACH_BYTES = 10 * 1024 * 1024;
+
+function fmtSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+const KIND_ICON: Record<ClientFile["kind"], typeof FileIcon> = {
+  image: ImageIcon,
+  video: Film,
+  audio: Music,
+  pdf: FileText,
+  doc: FileText,
+  archive: Archive,
+  file: FileIcon,
+};
+
+/*
+ * The files we pass each other. If we asked the client for a logo or a clip,
+ * this is where it lands; if we handed them a reference, it shows here too.
+ * Either side can add or remove, nothing over 10 MB.
+ */
+function Attachments({
+  projectId,
+  authedFetch,
+}: {
+  projectId: string;
+  authedFetch: (path: string, init?: RequestInit) => Promise<Record<string, unknown>>;
+}) {
+  const [files, setFiles] = useState<ClientFile[] | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [confirmId, setConfirmId] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const load = useCallback(async () => {
+    const j = await authedFetch(`/api/portal/projects/${projectId}/files`).catch(() => null);
+    if (j && Array.isArray((j as { files?: unknown }).files)) setFiles((j as { files: ClientFile[] }).files);
+    else if (!files) setFiles([]);
+  }, [authedFetch, projectId, files]);
+
+  useEffect(() => {
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
+
+  async function upload(list: FileList | null) {
+    if (!list || !list.length) return;
+    setErr("");
+    setBusy(true);
+    for (const file of Array.from(list)) {
+      if (file.size > MAX_ATTACH_BYTES) {
+        setErr(`${file.name} is over 10 MB.`);
+        continue;
+      }
+      const fd = new FormData();
+      fd.append("file", file);
+      const r = (await authedFetch(`/api/portal/projects/${projectId}/files`, {
+        method: "POST",
+        body: fd,
+      }).catch(() => null)) as { ok?: boolean; error?: string } | null;
+      if (r && r.error) setErr(r.error);
+    }
+    setBusy(false);
+    if (inputRef.current) inputRef.current.value = "";
+    await load();
+  }
+
+  async function remove(id: string) {
+    setBusy(true);
+    await authedFetch(`/api/portal/projects/${projectId}/files?fileId=${id}`, {
+      method: "DELETE",
+    }).catch(() => null);
+    setBusy(false);
+    setConfirmId(null);
+    await load();
+  }
+
+  return (
+    <Card
+      title="Attachments"
+      description="Files we pass each other: what you send us, and what we send you. Up to 10 MB each."
+      actions={
+        <Button
+          size="sm"
+          variant="secondary"
+          icon={<Upload />}
+          disabled={busy}
+          onClick={() => inputRef.current?.click()}
+        >
+          Add file
+        </Button>
+      }
+    >
+      <input
+        ref={inputRef}
+        type="file"
+        multiple
+        className="hidden"
+        onChange={(e) => void upload(e.target.files)}
+      />
+      {err && <p className="mb-2 text-body-sm text-error">{err}</p>}
+
+      {files === null ? (
+        <p className="text-body-sm text-dim">Loading...</p>
+      ) : files.length === 0 ? (
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          className="tap flex w-full flex-col items-center gap-2 rounded-[8px] border border-dashed border-hair px-3 py-8 text-center transition-colors hover:border-gold/50"
+        >
+          <Paperclip size={20} className="text-dim" aria-hidden="true" />
+          <span className="text-body-sm text-dim">
+            Nothing here yet. Add a logo, a screenshot, a clip, anything we need.
+          </span>
+        </button>
+      ) : (
+        <ul className="grid gap-2">
+          {files.map((f) => {
+            const Icon = KIND_ICON[f.kind];
+            return (
+              <li
+                key={f.id}
+                className="flex items-center gap-3 rounded-[8px] border border-hair bg-canvas p-2"
+              >
+                <span className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-[6px] border border-hair bg-surface">
+                  {f.kind === "image" && f.url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={f.url} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <Icon size={18} className="text-muted" aria-hidden="true" />
+                  )}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-body-sm font-semibold text-ink" title={f.name}>
+                    {f.name}
+                  </p>
+                  <p className="font-mono text-label uppercase tracking-[0.08em] text-dim">
+                    {fmtSize(f.sizeBytes)} / {f.uploadedBy === "studio" ? "from us" : "from you"}
+                  </p>
+                </div>
+                <span className="flex shrink-0 items-center gap-1">
+                  {f.url && (
+                    <a
+                      href={f.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="tap rounded-[6px] border border-hair px-2.5 py-1 font-mono text-label uppercase text-muted transition-colors hover:border-blue/60 hover:text-blue"
+                    >
+                      Open
+                    </a>
+                  )}
+                  {confirmId === f.id ? (
+                    <>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => void remove(f.id)}
+                        className="tap rounded-[6px] border border-error/50 px-2.5 py-1 font-mono text-label uppercase text-error transition-colors hover:bg-error hover:text-canvas"
+                      >
+                        Delete
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmId(null)}
+                        className="tap font-mono text-label uppercase text-dim transition-colors hover:text-muted"
+                      >
+                        No
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      aria-label={`Delete ${f.name}`}
+                      onClick={() => setConfirmId(f.id)}
+                      className="tap grid h-7 w-7 place-items-center rounded-[6px] border border-hair text-dim transition-colors hover:border-error/60 hover:text-error"
+                    >
+                      <Trash2 size={14} aria-hidden="true" />
+                    </button>
+                  )}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Card>
   );
 }
 

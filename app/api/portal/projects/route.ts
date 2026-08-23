@@ -49,6 +49,24 @@ export async function GET(req: Request) {
     ? await db.from("order_deliverables").select("*").in("project_id", ids).order("position")
     : { data: [] };
 
+  /* the client should know who their producer is by name, not by our email.
+     one lookup over the handful of managers on their projects. */
+  const managerEmails = [
+    ...new Set(
+      ((projects ?? []) as Row[])
+        .map((p) => (p.owner_email as string | null)?.toLowerCase())
+        .filter((e): e is string => Boolean(e)),
+    ),
+  ];
+  const managerName = new Map<string, string>();
+  if (managerEmails.length) {
+    const { data: mgrs } = await db.from("admins").select("email, name").in("email", managerEmails);
+    for (const m of (mgrs ?? []) as Row[]) {
+      const email = (m.email as string | null)?.toLowerCase();
+      if (email) managerName.set(email, (m.name as string | null) ?? email);
+    }
+  }
+
   return NextResponse.json({
     projects: ((projects ?? []) as Row[])
       /* a cancelled job is not something to show somebody who is paying us */
@@ -72,6 +90,10 @@ export async function GET(req: Request) {
           open: isOpen(status),
           dueAt: (p.due_at as string | null) ?? null,
           createdAt: String(p.created_at),
+          manager: (() => {
+            const email = (p.owner_email as string | null)?.toLowerCase();
+            return email ? (managerName.get(email) ?? null) : null;
+          })(),
           pipeline: {
             ball: ballInCourt(line),
             percent: pipelinePercent(line),
