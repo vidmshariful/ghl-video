@@ -165,7 +165,8 @@ async function tell(
       kind: "alarm",
       title,
       body: a.message.slice(0, 300),
-      href: "/admin/health",
+      href: "health",
+      vars: { headline: title, message: a.message.slice(0, 300) },
     });
   } catch (e) {
     console.error("[alarm] bell failed:", e instanceof Error ? e.message : e);

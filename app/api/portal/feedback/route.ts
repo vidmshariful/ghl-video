@@ -140,7 +140,12 @@ export async function POST(req: Request) {
       kind: "video_feedback",
       title: `Client feedback: "${said}" on ${String(video.title)}`,
       body: note ?? ctx.ownerEmail,
-      href: "/admin/orders/",
+      href: "orders",
+      vars: {
+        video_title: String(video.title),
+        summary: `Said "${said}". ${note ?? ctx.ownerEmail}`,
+        customer_name: ctx.ownerEmail,
+      },
     });
   }
 

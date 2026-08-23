@@ -148,6 +148,46 @@ export async function addProjectFile(
     await db.storage.from(BUCKET).remove([path]).catch(() => {});
     return { error: rowErr.message };
   }
+
+  /* tell the other side a file landed. If we asked the client for a logo, the
+     producer should not have to go looking for it. Fail-soft: the file is in. */
+  try {
+    const { data: p } = await db
+      .from("projects")
+      .select("title, customer_email")
+      .eq("id", input.projectId)
+      .maybeSingle();
+    if (p) {
+      const { pushAdminNotifications, pushNotification } = await import("@/lib/notifications");
+      const vars = {
+        project_title: String(p.title),
+        file_name: file.name.slice(0, 200),
+        who: input.name || input.email || (input.side === "client" ? "The client" : "The studio"),
+      };
+      if (input.side === "client") {
+        await pushAdminNotifications(db, {
+          kind: "project_file",
+          title: `New file on ${vars.project_title}`,
+          body: `${vars.who} added ${vars.file_name}.`,
+          href: `custom/${input.projectId}`,
+          vars,
+        });
+      } else if (p.customer_email) {
+        await pushNotification(db, {
+          audience: "customer",
+          email: String(p.customer_email),
+          kind: "project_file",
+          title: `We added a file to ${vars.project_title}`,
+          body: `${vars.file_name} is in your attachments.`,
+          href: `projects/${input.projectId}`,
+          feature: "orders",
+          vars,
+        });
+      }
+    }
+  } catch (e) {
+    console.error("[project-files] notify failed:", e instanceof Error ? e.message : e);
+  }
   return { ok: true };
 }
 

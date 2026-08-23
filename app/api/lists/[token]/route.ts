@@ -124,7 +124,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
       kind: "list_invoice_requested",
       title: `Invoice asked for: ${list.title}`,
       body: `${name} at ${email}, ${list.items.length} videos, ${(list.totalCents / 100).toLocaleString("en-US")} USD.`,
-      href: "/admin/invoices/",
+      href: "invoices",
+      vars: {
+        list_title: list.title,
+        name,
+        email,
+        count: String(list.items.length),
+        total: (list.totalCents / 100).toLocaleString("en-US"),
+      },
     });
   } catch {
     /* a notification failing must never fail the request */

@@ -171,7 +171,24 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       kind: action === "approve" ? "stage_approved" : "stage_changes",
       title: `${STATIONS[stage].label} ${action === "approve" ? "approved" : "sent back"}: ${String(g.project.title)}`,
       body: text ? text.slice(0, 140) : `By ${g.ctx.ownerEmail}.`,
-      href: `/admin/custom/${id}/`,
+      href: `custom/${id}`,
+      vars: {
+        stage_label: STATIONS[stage].label,
+        project_title: String(g.project.title),
+        note: text ? text.slice(0, 140) : `By ${g.ctx.ownerEmail}.`,
+        customer_email: g.ctx.ownerEmail,
+      },
+    });
+    /* the producer's inbox, not only the bell: a verdict can wait a day on a
+       bell nobody had open */
+    const { sendProjectFeedbackAlert } = await import("@/lib/email/notify");
+    await sendProjectFeedbackAlert(g.db, {
+      projectId: id,
+      kind: action === "approve" ? "approved" : "changes",
+      stageLabel: STATIONS[stage].label,
+      customerName: g.name,
+      customerEmail: g.ctx.ownerEmail,
+      message: text,
     });
     return NextResponse.json({ ok: true });
   }
@@ -193,7 +210,24 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     kind: "stage_feedback",
     title: `Feedback on ${STATIONS[stage].label}: ${String(g.project.title)}`,
     body: text.slice(0, 140),
-    href: `/admin/custom/${id}/`,
+    href: `custom/${id}`,
+    vars: {
+      stage_label: STATIONS[stage].label,
+      project_title: String(g.project.title),
+      note: text.slice(0, 140),
+      customer_email: g.ctx.ownerEmail,
+    },
   });
+  if (!parentId) {
+    const { sendProjectFeedbackAlert } = await import("@/lib/email/notify");
+    await sendProjectFeedbackAlert(g.db, {
+      projectId: id,
+      kind: "comment",
+      stageLabel: STATIONS[stage].label,
+      customerName: g.name,
+      customerEmail: g.ctx.ownerEmail,
+      message: text,
+    });
+  }
   return NextResponse.json({ ok: true });
 }

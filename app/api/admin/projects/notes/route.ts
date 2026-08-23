@@ -197,7 +197,8 @@ export async function POST(req: Request) {
     kind: "project_note",
     title: `A note on ${String(project.title)}`,
     body: text.slice(0, 140),
-    href: "custom",
+    href: `projects/${projectId}`,
+    vars: { project_title: String(project.title), text: text.slice(0, 140) },
   });
 
   return NextResponse.json({ ok: true });

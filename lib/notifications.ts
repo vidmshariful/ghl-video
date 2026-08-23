@@ -1,5 +1,9 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Audience } from "@/lib/notifications-types";
+import { NOTIFICATION_DEFAULTS, notifId } from "@/lib/comms";
+
+export type { Audience } from "@/lib/notifications-types";
 
 /*
  * In-portal notifications: the bell in every portal top bar. Rows are written
@@ -8,12 +12,16 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * inbox. Everything is fail-soft: a notification problem is logged and
  * swallowed, it never breaks the money path.
  *
+ * What a bell says is decided here, not at the call site. Every kind has a
+ * default in lib/comms.ts, the team can override the words or switch a kind
+ * off in admin (notification_templates), and the call site only supplies the
+ * facts as `vars`. The literal title a call site passes is the last resort,
+ * for a kind nobody has registered yet.
+ *
  * Chat messages deliberately do NOT create rows here: chat has its own icon
  * and unread badges, and mirroring every message into the bell would bury
  * the business events this feed exists for.
  */
-
-export type Audience = "admin" | "customer" | "partner";
 
 export type NotificationRow = {
   id: string;
@@ -32,15 +40,53 @@ type PushInput = {
   title: string;
   body?: string;
   href?: string;
+  /* the facts this bell can mention; filled into the template's {{variables}} */
+  vars?: Record<string, string>;
   /* the team grant this event belongs to; members without it are skipped */
   feature?: string;
   /* personal events (e.g. the invite itself) never fan out to the team */
   ownerOnly?: boolean;
 };
 
+const fill = (tpl: string, vars: Record<string, string>) =>
+  tpl.replace(/\{\{\s*([a-z_]+)\s*\}\}/gi, (_, k) => vars[k.toLowerCase()] ?? "");
+
+/**
+ * The words for this bell: the admin's override if there is one, else the
+ * registered default, else whatever the call site said. Returns null when the
+ * team has switched this kind off for this audience.
+ */
+async function wording(
+  db: SupabaseClient,
+  audience: Audience,
+  n: { kind: string; title: string; body?: string; vars?: Record<string, string> },
+): Promise<{ title: string; body: string | null } | null> {
+  type Row = { title: string; body: string | null; enabled: boolean };
+  const vars = n.vars ?? {};
+  let row: Row | null = null;
+  try {
+    const { data } = await db
+      .from("notification_templates")
+      .select("title, body, enabled")
+      .eq("audience", audience)
+      .eq("kind", n.kind)
+      .maybeSingle();
+    row = (data as Row | null) ?? null;
+  } catch {
+    /* a template lookup problem must never cost the event its bell */
+  }
+  if (row && !row.enabled) return null;
+  if (row) return { title: fill(row.title, vars), body: row.body ? fill(row.body, vars) : null };
+  const def = NOTIFICATION_DEFAULTS[notifId(audience, n.kind)];
+  if (def && n.vars) return { title: fill(def.title, vars), body: def.body ? fill(def.body, vars) : null };
+  return { title: n.title, body: n.body ?? null };
+}
+
 export async function pushNotification(db: SupabaseClient, n: PushInput): Promise<void> {
   try {
     if (!n.email) return;
+    const words = await wording(db, n.audience, n);
+    if (!words) return;
     let recipients = [n.email.toLowerCase()];
     // customer and partner accounts can have team members; every recipient
     // gets their own row, so each person has their own read state
@@ -52,8 +98,8 @@ export async function pushNotification(db: SupabaseClient, n: PushInput): Promis
       audience: n.audience,
       recipient_email: email,
       kind: n.kind,
-      title: n.title,
-      body: n.body ?? null,
+      title: words.title,
+      body: words.body,
       href: n.href ?? null,
     }));
     const { error } = await db.from("notifications").insert(rows);
@@ -70,6 +116,8 @@ export async function pushAdminNotifications(
   n: Omit<PushInput, "audience" | "email">,
 ): Promise<void> {
   try {
+    const words = await wording(db, "admin", n);
+    if (!words) return;
     const { data } = await db.from("admins").select("email");
     const emails = (data ?? [])
       .map((r) => (r.email as string | null)?.toLowerCase())
@@ -79,8 +127,8 @@ export async function pushAdminNotifications(
       audience: "admin",
       recipient_email: email,
       kind: n.kind,
-      title: n.title,
-      body: n.body ?? null,
+      title: words.title,
+      body: words.body,
       href: n.href ?? null,
     }));
     const { error } = await db.from("notifications").insert(rows);
@@ -164,12 +212,14 @@ export async function pushOrderOwnerNotification(
     const owner = (order?.assigned_admin_email as string | null)?.toLowerCase();
     if (!owner) return pushAdminNotifications(db, n);
 
+    const words = await wording(db, "admin", n);
+    if (!words) return;
     const { error } = await db.from("notifications").insert({
       audience: "admin",
       recipient_email: owner,
       kind: n.kind,
-      title: n.title,
-      body: n.body ?? null,
+      title: words.title,
+      body: words.body,
       href: n.href ?? null,
     });
     if (error) console.error(`[notify] owner ${n.kind} not stored:`, error.message);

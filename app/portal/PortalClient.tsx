@@ -1288,14 +1288,24 @@ function Portal({
     window.location.reload();
   };
 
-  /* bell links: "orders", "orders/<id>", "messages", "subscriptions" */
+  /* bell links: "orders", "orders/<id>", "projects/<id>", "videos", "messages",
+     "subscriptions". Older rows carry a full "/portal/videos/" path and the
+     pre-rename "custom", so both are folded in rather than dropped. */
   const openHref = (href: string) => {
-    const [head, tail] = href.split("/");
+    const segs = href.replace(/^\/portal\/?/, "").split("/").filter(Boolean);
+    const head = segs[0] === "custom" ? "projects" : (segs[0] ?? "");
+    const tail = segs[1];
     if (head === "orders" && tail && can("orders")) {
       openOrderById(tail);
       return;
     }
-    if (["orders", "messages", "subscriptions"].includes(head) && !can(head)) return;
+    if (head === "projects" && tail && can("orders")) {
+      setSection("projects");
+      setOpenProjectId(tail);
+      pushUrl("projects", tail);
+      return;
+    }
+    if (["orders", "messages", "subscriptions", "projects", "videos"].includes(head) && !can(head === "projects" || head === "videos" ? "orders" : head)) return;
     if ((PORTAL_SECTIONS as readonly string[]).includes(head)) {
       go(head as PortalSection);
     }

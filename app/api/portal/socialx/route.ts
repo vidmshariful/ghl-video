@@ -69,6 +69,7 @@ export async function POST(req: Request) {
     title: "SocialX code request",
     body: `${name} (${email}) wants their 10% code.${message ? ` Notes: ${message.slice(0, 80)}` : ""}`,
     href: "customers",
+    vars: { name, email, notes: message ? ` Notes: ${message.slice(0, 80)}` : "" },
   });
   await pushNotification(db, {
     audience: "customer",
@@ -76,6 +77,7 @@ export async function POST(req: Request) {
     kind: "socialx_request",
     title: "Your SocialX code is on the way",
     body: "We send it to your email personally, usually within a day.",
+    vars: { name },
     ownerOnly: true,
   });
 

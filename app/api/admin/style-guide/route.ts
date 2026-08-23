@@ -28,6 +28,13 @@ async function tellThem(
         : `Your style guide has been updated to version ${version}`,
     body: "Open it in Editing, under How we cut for you. Tell us anything you want changed.",
     href: "subscriptions",
+    vars: {
+      headline:
+        version === 1
+          ? "Your style guide is ready to read"
+          : `Your style guide has been updated to version ${version}`,
+      version: String(version),
+    },
   });
 }
 

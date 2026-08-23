@@ -80,7 +80,8 @@ export async function POST(req: Request) {
     kind: "style_guide_note",
     title: `Style guide note from ${g.name ?? g.ctx.ownerEmail}`,
     body: `${page ? `Page ${page}: ` : ""}${body.slice(0, 120)}`,
-    href: "/admin/editing/",
+    href: "editing",
+    vars: { who: g.name ?? g.ctx.ownerEmail, summary: `${page ? `Page ${page}: ` : ""}${body.slice(0, 120)}` },
   });
 
   return NextResponse.json({ ok: true });

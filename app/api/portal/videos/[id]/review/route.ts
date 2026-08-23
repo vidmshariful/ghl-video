@@ -149,7 +149,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       kind: "video_feedback",
       title: `Feedback on ${g.deliverable.title}`,
       body: `${name || who}${where ? ` at ${where}` : ""}: ${text.slice(0, 140)}`,
-      href: "/admin/production/",
+      href: "production",
+      vars: {
+        video_title: String(g.deliverable.title),
+        summary: `${name || who}${where ? ` at ${where}` : ""}: ${text.slice(0, 140)}`,
+        customer_name: name || who,
+      },
     });
 
     // The bell alone meant feedback could sit unseen for a day if nobody had
@@ -225,7 +230,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           ? `Approved: ${g.deliverable.title}`
           : `Changes requested: ${g.deliverable.title}`,
       body: `${name || who} ${action === "approve" ? "approved this video." : "asked for changes."}`,
-      href: "/admin/production/",
+      href: "production",
+      vars: { video_title: String(g.deliverable.title), who: name || who },
     });
 
     const { sendVideoFeedbackAlert } = await import("@/lib/email/notify");

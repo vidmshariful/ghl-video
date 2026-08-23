@@ -348,5 +348,20 @@ export async function POST(
     console.error(`[intake] due dates failed for order ${orderId}:`, e);
   }
 
+  /*
+   * Tell both sides the brief is in. Only the first time: a client editing a
+   * field on their brief a week later must not re-announce it to the studio or
+   * re-promise a date. Fail-soft, after the due dates exist so the email can
+   * name one.
+   */
+  if (!order.intake_completed_at) {
+    try {
+      const { sendBriefReceivedEmail } = await import("@/lib/email/notify");
+      await sendBriefReceivedEmail(db, orderId);
+    } catch (e) {
+      console.error(`[intake] brief received email failed for order ${orderId}:`, e);
+    }
+  }
+
   return NextResponse.json({ ok: true });
 }

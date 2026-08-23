@@ -354,7 +354,12 @@ export async function POST(req: Request) {
     kind: "edit_requested",
     title: `Edit requested: ${title}`,
     body: `${ctx.ownerEmail}, ${form} form${cuts.length ? ` plus ${cuts.length} short ${cuts.length === 1 ? "cut" : "cuts"}` : ""}${wantedBy ? `, wants it by ${wantedBy.slice(0, 10)}` : ""}${warnings.length ? ". Over their plan this month." : ""}`,
-    href: "/admin/production/",
+    href: "editing",
+    vars: {
+      title,
+      customer_email: ctx.ownerEmail,
+      summary: `${ctx.ownerEmail}, ${form} form${cuts.length ? ` plus ${cuts.length} short ${cuts.length === 1 ? "cut" : "cuts"}` : ""}${wantedBy ? `, wants it by ${wantedBy.slice(0, 10)}` : ""}${warnings.length ? ". Over their plan this month." : ""}`,
+    },
   });
 
   return NextResponse.json({

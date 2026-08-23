@@ -19,6 +19,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   if (action === "sent") {
     await db.from("invoices").update({ sent_at: new Date().toISOString() }).eq("id", id);
+    /* the link goes to the client with the invoice itself, so nobody pastes
+       it into a message by hand. Fail-soft: the stamp above already stands. */
+    try {
+      const { sendInvoiceSentEmail } = await import("@/lib/email/notify");
+      await sendInvoiceSentEmail(db, id);
+    } catch (e) {
+      console.error("[invoice] sent email failed:", e instanceof Error ? e.message : e);
+    }
   } else if (action === "void") {
     const { data: inv } = await db
       .from("invoices")

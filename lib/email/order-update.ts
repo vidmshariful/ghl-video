@@ -44,6 +44,10 @@ export async function sendOrderUpdateEmail(
       title: `New update on ${productLabel(o.products)}`,
       body: updateMessage.length > 120 ? `${updateMessage.slice(0, 117)}...` : updateMessage,
       href: `orders/${orderId}`,
+      vars: {
+        product_name: productLabel(o.products),
+        update_message: updateMessage.length > 120 ? `${updateMessage.slice(0, 117)}...` : updateMessage,
+      },
     });
 
     const tpl = await loadTemplate(db, "order_update");

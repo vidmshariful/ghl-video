@@ -67,6 +67,13 @@ export const TEMPLATE_VARIABLES: Record<string, string[]> = {
   admin_new_order: ["customer_name", "customer_email", "product_name", "order_code", "amount", "admin_url"],
   admin_new_application: ["name", "email", "channel", "audience", "admin_url"],
   admin_dispute: ["customer_email", "product_name", "order_code", "amount", "reason", "admin_url"],
+  intake_reminder: ["customer_name", "product_name", "order_code", "intake_url", "portal_url"],
+  video_ready: ["customer_name", "video_title", "portal_url"],
+  video_reply: ["customer_name", "video_title", "message", "portal_url"],
+  admin_video_feedback: ["headline", "customer_name", "video_title", "where", "message", "admin_url"],
+  brief_received: ["customer_name", "product_name", "order_code", "due_line", "due_date", "portal_url"],
+  invoice_sent: ["customer_name", "invoice_number", "amount", "due_line", "due_date", "pay_url", "line_items", "notes", "portal_url"],
+  admin_project_feedback: ["headline", "customer_name", "customer_email", "project_title", "stage_label", "message", "admin_url"],
 };
 
 /* shared inline-style shorthands for the default bodies below */
@@ -375,6 +382,41 @@ ${btn("{{admin_url}}", "Review in admin")}`,
 <p style="${P}">Order <strong style="${STRONG}">{{order_code}}</strong> ({{product_name}}, {{amount}}) from <strong style="${STRONG}">{{customer_email}}</strong> is disputed. Reason: <strong style="${STRONG}">{{reason}}</strong>.</p>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 22px;"><tr><td style="${BOX}">Respond in the Stripe dashboard before the deadline. Evidence wins disputes: delivery links, intake records, and email threads.</td></tr></table>
 ${btn("{{admin_url}}", "Open Orders")}`,
+  },
+  {
+    key: "brief_received",
+    name: "Brief received",
+    description:
+      "Sent to the client the moment their branding brief lands. The delivery clock starts here, so this is where they first hear the date.",
+    subject: "Your brief is in: {{product_name}}",
+    body: `<h1 style="${H}">We have everything we need.</h1>
+<p style="${P}">Hi {{customer_name}}, your branding brief for <strong style="${STRONG}">{{product_name}}</strong> ({{order_code}}) has arrived and the work is starting{{due_line}}.</p>
+<p style="${P}">You will hear from us the moment there is something to watch. Each video lands in your portal for review, one at a time, and nothing is final until you say so.</p>
+${btn("{{portal_url}}", "Open your portal")}`,
+  },
+  {
+    key: "invoice_sent",
+    name: "Invoice sent",
+    description:
+      "Sent to the client when a person marks an invoice sent in admin. Carries the pay link, so nobody has to paste it into a message by hand.",
+    subject: "Invoice {{invoice_number}} from GHL Video: {{amount}}",
+    body: `<h1 style="${H}">Here is your invoice.</h1>
+<p style="${P}">Hi {{customer_name}}, invoice <strong style="${STRONG}">{{invoice_number}}</strong> for <strong style="${STRONG}">{{amount}}</strong> is ready{{due_line}}.</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 22px;"><tr><td style="${BOX}">{{line_items}}</td></tr></table>
+<p style="${P}">{{notes}}</p>
+${btn("{{pay_url}}", "Pay the invoice")}
+<p style="${SMALL}margin-top:22px;">The link is yours alone and stays open until it is paid. Every invoice also lives in your portal under Orders and Invoices.</p>`,
+  },
+  {
+    key: "admin_project_feedback",
+    name: "Team alert: client reviewed a stage",
+    description:
+      "Sent to the project's producer when a client comments on a stage of a custom project, approves the animation or final cut, or sends it back. The custom project equivalent of the video feedback alert.",
+    subject: "{{headline}}",
+    body: `<h1 style="${H}">{{headline}}</h1>
+<p style="${P}"><strong style="${STRONG}">{{customer_name}}</strong> ({{customer_email}}) on <strong style="${STRONG}">{{stage_label}}</strong> of <strong style="${STRONG}">{{project_title}}</strong>.</p>
+<p style="${P}">{{message}}</p>
+${btn("{{admin_url}}", "Open the project")}`,
   },
 ];
 

@@ -51,7 +51,11 @@ export async function POST(req: Request) {
     kind: "project_request",
     title: `Custom enquiry from ${customer?.company ?? customer?.name ?? email}`,
     body: `${format ? format + ": " : ""}${brief.slice(0, 140)}`,
-    href: "/admin/production/",
+    href: "custom",
+    vars: {
+      customer: String(customer?.company ?? customer?.name ?? email),
+      summary: `${format ? format + ": " : ""}${brief.slice(0, 140)}`,
+    },
   });
 
   return NextResponse.json({ ok: true });

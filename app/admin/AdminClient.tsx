@@ -17,6 +17,7 @@ import {
 import { HandbookScreen } from "./HandbookScreen";
 import { ReferenceScreen } from "./ReferenceScreen";
 import { HealthScreen } from "./HealthScreen";
+import { CommsScreen } from "./CommsScreen";
 import { handbookFor } from "./handbook-map";
 import {
   BarChart3,
@@ -29,6 +30,7 @@ import {
   Globe,
   Handshake,
   HeartPulse,
+  Mail,
   LayoutDashboard,
   LifeBuoy,
   Link2,
@@ -455,6 +457,7 @@ export function AdminClient({
       items: [
         { key: "dashboard", label: "Dashboard", icon: <LayoutDashboard /> },
         { key: "messages", label: "Messages", icon: <MessageSquare />, badge: msgUnread || undefined },
+        { key: "emails", label: "Emails & notifications", icon: <Mail /> },
         { key: "journal", label: "Journal", icon: <BookOpen /> },
         { key: "reference", label: "Reference", icon: <KeyRound /> },
         { key: "health", label: "Health", icon: <HeartPulse />, badge: alarmCount || undefined },
@@ -545,8 +548,20 @@ export function AdminClient({
               endpoint="/api/admin/notifications"
               fetcher={adminFetch}
               onOpenHref={(href) => {
-                const target = href.split("/")[0] as View;
-                if (me && canAccess(target, me.role, me.features)) go(target);
+                /* "custom/<id>", "customers/<id>", "health"; older rows carry a
+                   full "/admin/production/" path, so strip that first */
+                const segs = href.replace(/^\/admin\/?/, "").split("/").filter(Boolean);
+                const target = (segs[0] ?? "") as View;
+                if (!me || !canAccess(target, me.role, me.features)) return;
+                if (target === "custom" && segs[1]) {
+                  go("custom");
+                  openProject(segs[1]);
+                } else if (target === "customers" && segs[1]) {
+                  go("customers");
+                  openCustomer(segs[1]);
+                } else {
+                  go(target);
+                }
               }}
             />
             <ProfileMenu
@@ -624,7 +639,9 @@ export function AdminClient({
             <ProductionScreen onNavigate={go} />
           ) : view === "editing" ? (
             <EditingScreen openSlug={editingSlug} onOpenClient={openEditingClient} />
-          ) : view === "emails" || view === "code" ? (
+          ) : view === "emails" ? (
+            <CommsScreen />
+          ) : view === "code" ? (
             me ? (
               <SettingsScreen me={me} onMeChanged={loadMe} initialTab={view} />
             ) : (

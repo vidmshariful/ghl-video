@@ -1449,7 +1449,7 @@ export function PartnersClient({ initialView }: { initialView: View }) {
   const acting = viewer?.actingFor ?? null;
 
   const openHref = (href: string) => {
-    const key = href.split("/")[0];
+    const key = href.replace(/^\/partners\/?/, "").split("/").filter(Boolean)[0] ?? "";
     if (["performance", "referrals", "earnings", "assets"].includes(key) && !can(key)) return;
     if ((PARTNER_VIEWS as readonly string[]).includes(key)) {
       go(key as View);

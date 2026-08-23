@@ -87,7 +87,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         ? `${label} approved: ${String(project.title)}`
         : `${label} sent back: ${String(project.title)}`,
     body: note ? note.slice(0, 140) : `By ${ctx.ownerEmail}.`,
-    href: "/admin/production/",
+    href: `custom/${id}`,
+    vars: {
+      stage_label: label,
+      project_title: String(project.title),
+      note: note ? note.slice(0, 140) : `By ${ctx.ownerEmail}.`,
+      customer_email: ctx.ownerEmail,
+    },
   });
 
   return NextResponse.json({ ok: true });

@@ -550,6 +550,7 @@ export async function POST(req: Request) {
       title: `We added your request: ${title}`,
       body: "You asked for this one outside the portal. It is on your plan now, so you can follow it with the rest.",
       href: "subscriptions",
+      vars: { title },
     });
   }
 

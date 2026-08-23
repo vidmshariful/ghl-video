@@ -77,7 +77,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     kind: "client_provided",
     title: `${STATIONS[key].label} ${replacing ? "updated" : "received"}: ${String(project.title)}`,
     body: url,
-    href: "/admin/production/",
+    href: `custom/${id}`,
+    vars: {
+      stage_label: STATIONS[key].label,
+      event: replacing ? "updated" : "received",
+      project_title: String(project.title),
+      url,
+    },
   });
 
   return NextResponse.json({ ok: true });

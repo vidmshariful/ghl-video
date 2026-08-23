@@ -64,7 +64,7 @@ export const TOGGLEABLE_VIEWS: { key: View; label: string; group: string }[] = [
   { key: "blog", label: "Blog", group: "CMS" },
   { key: "seo", label: "SEO", group: "CMS" },
   { key: "studio", label: "Studio Insights", group: "CMS" },
-  { key: "emails", label: "Emails (in Settings)", group: "Settings" },
+  { key: "emails", label: "Emails and notifications", group: "Daily" },
   { key: "code", label: "Site code (in Settings)", group: "Settings" },
   /* Toggleable rather than always-on: it reports payments that did not become
    * orders and orders that did not reach the studio, which is the owner's and

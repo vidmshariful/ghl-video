@@ -125,7 +125,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       kind: "video_reply",
       title: `A reply on ${video.title}`,
       body: `${where ? `At ${where}: ` : ""}${text.slice(0, 140)}`,
-      href: "/portal/videos/",
+      href: "videos",
+      vars: { video_title: String(video.title), summary: `${where ? `At ${where}: ` : ""}${text.slice(0, 140)}` },
       feature: "orders",
     });
     const { sendVideoReplyEmail } = await import("@/lib/email/notify");

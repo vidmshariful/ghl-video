@@ -100,6 +100,7 @@ export async function POST(req: Request) {
     title: `A message about ${String(found.project.title)}`,
     body: text.slice(0, 140),
     href: "messages",
+    vars: { project_title: String(found.project.title), text: text.slice(0, 140) },
   });
 
   return NextResponse.json({ ok: true });

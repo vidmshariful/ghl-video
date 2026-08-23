@@ -189,7 +189,8 @@ export async function handleStationOp(
       kind: "approval_request",
       title: `Your review: ${STATIONS[key].label}`,
       body: `${String((project as Row).title ?? "Your project")} is waiting on your approval.`,
-      href: "custom",
+      href: `projects/${projectId}`,
+      vars: { stage_label: STATIONS[key].label, project_title: String((project as Row).title ?? "Your project") },
     });
   }
   return { status: 200, body: { ok: true } };

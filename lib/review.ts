@@ -291,7 +291,8 @@ export async function completeIfAllApproved(db: DB, orderId: string): Promise<bo
       kind: "order_completed",
       title: `Finished: ${product}`,
       body: "Every video approved. The client has their wrap-up.",
-      href: "/admin/production/",
+      href: "production",
+      vars: { product_name: product },
     });
     if (o?.customer_email) {
       await pushNotification(db, {
@@ -300,7 +301,8 @@ export async function completeIfAllApproved(db: DB, orderId: string): Promise<bo
         kind: "order_completed",
         title: "Your order is complete",
         body: "Every video is approved and yours to use.",
-        href: "/portal/videos/",
+        href: "videos",
+        vars: { product_name: product },
         feature: "orders",
       });
     }

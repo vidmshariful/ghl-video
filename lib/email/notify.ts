@@ -188,6 +188,7 @@ export async function sendOrderPaidEmails(db: SupabaseClient, orderId: string): 
     };
     await sendTemplate(db, "invoice_paid", o.email, o.name, invVars);
     await sendTemplate(db, "admin_invoice_paid", adminAlertEmail(), null, invVars);
+    const bell = { invoice_number: String(invoice.number), amount, customer_email: o.email };
     await pushNotification(db, {
       audience: "customer",
       email: o.email,
@@ -196,12 +197,14 @@ export async function sendOrderPaidEmails(db: SupabaseClient, orderId: string): 
       body: `${invoice.number}, ${amount}. Thank you, nothing else is needed.`,
       href: "billing",
       feature: "orders",
+      vars: bell,
     });
     await pushAdminNotifications(db, {
       kind: "invoice_paid",
       title: `Invoice payment: ${amount}`,
       body: `${invoice.number} from ${o.email}`,
       href: "invoices",
+      vars: bell,
     });
     return;
   }
@@ -220,6 +223,12 @@ export async function sendOrderPaidEmails(db: SupabaseClient, orderId: string): 
     customer_email: escapeHtml(o.email),
     admin_url: `${SITE_URL}/admin`,
   });
+  const bell = {
+    product_name: o.productName,
+    amount: money(o.amountCents, o.currency),
+    order_code: o.code,
+    customer_email: o.email,
+  };
   await pushNotification(db, {
     audience: "customer",
     email: o.email,
@@ -228,12 +237,14 @@ export async function sendOrderPaidEmails(db: SupabaseClient, orderId: string): 
     body: `${o.productName}, ${money(o.amountCents, o.currency)}. Next step: your branding brief.`,
     href: `orders/${orderId}`,
     feature: "orders",
+    vars: bell,
   });
   await pushAdminNotifications(db, {
     kind: "order_paid",
     title: `New order: ${money(o.amountCents, o.currency)}`,
     body: `${o.productName} for ${o.email}`,
     href: "orders",
+    vars: bell,
   });
 }
 
@@ -345,6 +356,7 @@ export async function sendOrderRefundedEmail(
     portal_url: `${SITE_URL}/portal`,
   });
   const refunded = money(refundedCents || o.amountCents, o.currency);
+  const bell = { amount: refunded, product_name: o.productName, customer_email: o.email, order_code: o.code };
   await pushNotification(db, {
     audience: "customer",
     email: o.email,
@@ -353,12 +365,14 @@ export async function sendOrderRefundedEmail(
     body: `${refunded} back to your card for ${o.productName}.`,
     href: `orders/${orderId}`,
     feature: "orders",
+    vars: bell,
   });
   await pushAdminNotifications(db, {
     kind: "order_refunded",
     title: `Order refunded: ${refunded}`,
     body: `${o.productName} for ${o.email}`,
     href: "orders",
+    vars: bell,
   });
 }
 
@@ -390,6 +404,7 @@ export async function sendSubscriptionStartedEmail(db: SupabaseClient, rowId: st
     amount: money(s.amountCents, s.currency),
     portal_url: `${SITE_URL}/portal`,
   });
+  const bell = { plan_name: s.planName, amount: money(s.amountCents, s.currency), customer_email: s.email };
   await pushNotification(db, {
     audience: "customer",
     email: s.email,
@@ -398,12 +413,14 @@ export async function sendSubscriptionStartedEmail(db: SupabaseClient, rowId: st
     body: `${s.planName}, ${money(s.amountCents, s.currency)} monthly.`,
     href: "subscriptions",
     feature: "subscriptions",
+    vars: bell,
   });
   await pushAdminNotifications(db, {
     kind: "subscription_started",
     title: `New subscription: ${s.planName}`,
     body: `${s.email}, ${money(s.amountCents, s.currency)} monthly`,
     href: "subscriptions",
+    vars: bell,
   });
 }
 
@@ -440,6 +457,7 @@ export async function sendSubscriptionPriceChangedEmail(
     body: `${s.planName} moves to ${newAmount} a month from ${opts.effective}.`,
     href: "subscriptions",
     feature: "subscriptions",
+    vars: { plan_name: s.planName, new_amount: newAmount, effective_date: opts.effective },
   });
 }
 
@@ -452,6 +470,7 @@ export async function sendSubscriptionCanceledEmail(db: SupabaseClient, rowId: s
     plan_name: escapeHtml(s.planName),
     portal_url: `${SITE_URL}/portal`,
   });
+  const bell = { plan_name: s.planName, customer_email: s.email };
   await pushNotification(db, {
     audience: "customer",
     email: s.email,
@@ -460,12 +479,14 @@ export async function sendSubscriptionCanceledEmail(db: SupabaseClient, rowId: s
     body: `${s.planName} is canceled. Restart anytime from your portal.`,
     href: "subscriptions",
     feature: "subscriptions",
+    vars: bell,
   });
   await pushAdminNotifications(db, {
     kind: "subscription_canceled",
     title: "Subscription canceled",
     body: `${s.email}, ${s.planName}`,
     href: "subscriptions",
+    vars: bell,
   });
 }
 
@@ -484,6 +505,8 @@ export async function sendQuoteReceivedEmail(
     kind: "quote_received",
     title: "New quote request",
     body: `${name || "Someone"}, ${email}. The lead is in HighLevel.`,
+    href: "custom",
+    vars: { name: name || "Someone", email },
   });
 }
 
@@ -508,6 +531,7 @@ export async function sendPartnerApplicationEmails(
     title: "New partner application",
     body: `${applicant.name}, ${applicant.channel || "channel not said"}`,
     href: "partners",
+    vars: { name: applicant.name, channel: applicant.channel || "channel not said" },
   });
 }
 
@@ -530,6 +554,7 @@ export async function sendAffiliateJoinedEmails(
     title: "New affiliate partner joined",
     body: `${joined.name}, ${joined.channel || "channel not said"}. Auto-approved into Tier 1.`,
     href: "partners",
+    vars: { name: joined.name, channel: joined.channel || "channel not said" },
   });
 }
 
@@ -550,6 +575,7 @@ export async function sendPartnerInviteEmail(
     body: "Your portal is live. Grab your links, assets, and coupon.",
     href: "dashboard",
     ownerOnly: true,
+    vars: { partner_name: partner.name || "there" },
   });
 }
 
@@ -666,6 +692,7 @@ export async function sendTeamInviteEmail(
     body: `${input.ownerName || "The account owner"} added you to their ${portalLabel}.`,
     href: "dashboard",
     ownerOnly: true,
+    vars: { owner_name: input.ownerName || "The account owner", portal_label: portalLabel },
   });
 }
 
@@ -690,6 +717,11 @@ export async function sendDisputeAlertEmail(
     title: `Payment dispute: ${money(dispute.amountCents, o?.currency ?? "usd")}`,
     body: `${o?.email ?? "unknown"}, ${o?.productName ?? "unknown product"}. Respond in Stripe.`,
     href: "orders",
+    vars: {
+      amount: money(dispute.amountCents, o?.currency ?? "usd"),
+      customer_email: o?.email ?? "unknown",
+      product_name: o?.productName ?? "unknown product",
+    },
   });
 }
 
@@ -810,5 +842,170 @@ export async function sendVideoFeedbackAlert(
     });
   } catch (e) {
     console.error("[email] admin_video_feedback failed:", e instanceof Error ? e.message : e);
+  }
+}
+
+/* ---- the brief, invoices sent by hand, and custom project feedback ---- */
+
+const shortDate = (iso: string | null | undefined) =>
+  iso
+    ? new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+    : "";
+
+/**
+ * The client's branding brief has landed. This is the moment the delivery
+ * clock starts and the due dates are set, so it is the first time a date can
+ * honestly be promised. Tells the client, and tells the order's owner the
+ * work can start. Fail-soft: the brief is already saved.
+ */
+export async function sendBriefReceivedEmail(db: SupabaseClient, orderId: string): Promise<void> {
+  try {
+    const o = await orderFor(db, orderId);
+    if (!o) return;
+    const { data: due } = await db
+      .from("order_deliverables")
+      .select("due_at")
+      .eq("order_id", orderId)
+      .not("due_at", "is", null)
+      .order("due_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const dueDate = shortDate((due?.due_at as string | null) ?? null);
+    const dueLine = dueDate ? `, due by ${dueDate}` : "";
+
+    await sendTemplate(db, "brief_received", o.email, o.name, {
+      customer_name: escapeHtml(o.name || "there"),
+      product_name: escapeHtml(o.productName),
+      order_code: escapeHtml(o.code),
+      due_line: escapeHtml(dueLine),
+      due_date: escapeHtml(dueDate),
+      portal_url: `${SITE_URL}/portal`,
+    });
+
+    const bell = {
+      product_name: o.productName,
+      customer_email: o.email,
+      due_line: dueLine,
+      due_date: dueDate,
+    };
+    await pushNotification(db, {
+      audience: "customer",
+      email: o.email,
+      kind: "brief_received",
+      title: "Your brief is in",
+      body: `We have what we need for ${o.productName}${dueLine}.`,
+      href: `orders/${orderId}`,
+      feature: "orders",
+      vars: bell,
+    });
+    const { pushOrderOwnerNotification } = await import("@/lib/notifications");
+    await pushOrderOwnerNotification(db, orderId, {
+      kind: "brief_received",
+      title: `Brief received: ${o.productName}`,
+      body: `${o.email} sent their branding brief${dueLine}.`,
+      href: "production",
+      vars: bell,
+    });
+  } catch (e) {
+    console.error("[email] brief_received failed:", e instanceof Error ? e.message : e);
+  }
+}
+
+/**
+ * A person marked an invoice sent. Until now that only stamped a date and the
+ * link went out by hand; this carries the pay link itself. Fail-soft.
+ */
+export async function sendInvoiceSentEmail(db: SupabaseClient, invoiceId: string): Promise<void> {
+  try {
+    const { data: inv } = await db
+      .from("invoices")
+      .select("number, token, total_cents, currency, due_at, customer_email, line_items, notes")
+      .eq("id", invoiceId)
+      .maybeSingle();
+    if (!inv?.customer_email) return;
+    const email = String(inv.customer_email);
+    const { data: c } = await db.from("customers").select("name").ilike("email", email).maybeSingle();
+    const name = (c?.name as string | null) ?? null;
+
+    const amount = money(Number(inv.total_cents ?? 0), (inv.currency as string | null) ?? "usd");
+    const dueDate = shortDate((inv.due_at as string | null) ?? null);
+    const dueLine = dueDate ? `, due ${dueDate}` : "";
+    const items = ((inv.line_items as { description?: string; amount_cents?: number }[] | null) ?? [])
+      .map(
+        (li) =>
+          `${escapeHtml(String(li.description ?? ""))}: ${money(Number(li.amount_cents ?? 0), (inv.currency as string | null) ?? "usd")}`,
+      )
+      .join("<br>");
+    const payUrl = `${SITE_URL}/invoice/${String(inv.token)}/`;
+
+    await sendTemplate(db, "invoice_sent", email, name, {
+      customer_name: escapeHtml(name || "there"),
+      invoice_number: escapeHtml(String(inv.number)),
+      amount,
+      due_line: escapeHtml(dueLine),
+      due_date: escapeHtml(dueDate),
+      pay_url: payUrl,
+      line_items: items || "See the invoice for the breakdown.",
+      notes: escapeHtml(String(inv.notes ?? "")),
+      portal_url: `${SITE_URL}/portal`,
+    });
+    await pushNotification(db, {
+      audience: "customer",
+      email,
+      kind: "invoice_sent",
+      title: "An invoice is ready to pay",
+      body: `${String(inv.number)}, ${amount}${dueLine}.`,
+      href: "billing",
+      feature: "orders",
+      vars: { invoice_number: String(inv.number), amount, due_line: dueLine },
+    });
+  } catch (e) {
+    console.error("[email] invoice_sent failed:", e instanceof Error ? e.message : e);
+  }
+}
+
+/**
+ * A client reviewed a stage of a custom project: a comment, an approval, or a
+ * send-back. Goes to the project's producer, else the team address, the way
+ * the pre-made feedback alert reaches an order's owner. Fail-soft.
+ */
+export async function sendProjectFeedbackAlert(
+  db: SupabaseClient,
+  args: {
+    projectId: string;
+    kind: "comment" | "approved" | "changes";
+    stageLabel: string;
+    customerName: string | null;
+    customerEmail: string;
+    message: string;
+  },
+): Promise<void> {
+  try {
+    const { data: p } = await db
+      .from("projects")
+      .select("title, owner_email")
+      .eq("id", args.projectId)
+      .maybeSingle();
+    if (!p) return;
+    const to = (p.owner_email as string | null) || adminAlertEmail();
+    const title = String(p.title);
+    const headline =
+      args.kind === "approved"
+        ? `${args.stageLabel} approved: ${title}`
+        : args.kind === "changes"
+          ? `${args.stageLabel} sent back: ${title}`
+          : `Feedback on ${args.stageLabel}: ${title}`;
+
+    await sendTemplate(db, "admin_project_feedback", to, null, {
+      headline: escapeHtml(headline),
+      customer_name: escapeHtml(args.customerName || args.customerEmail),
+      customer_email: escapeHtml(args.customerEmail),
+      project_title: escapeHtml(title),
+      stage_label: escapeHtml(args.stageLabel),
+      message: escapeHtml(args.message.slice(0, 600) || "No note, just the verdict."),
+      admin_url: `${SITE_URL}/admin/custom/${args.projectId}/`,
+    });
+  } catch (e) {
+    console.error("[email] admin_project_feedback failed:", e instanceof Error ? e.message : e);
   }
 }
