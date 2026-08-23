@@ -1095,7 +1095,7 @@ function ProjectPage({
           <div className="grid min-w-0 gap-3">
             <Card
               title="Production line"
-              description="Six stations. One move each, everything rarer behind Edit."
+              description="Six stations. Click any one to manage it: move it along, set its file, name the date."
             >
               <StationList p={p} busy={busy} onRun={run} />
             </Card>
@@ -1110,7 +1110,6 @@ function ProjectPage({
 
           {/* column two: the record */}
           <div className="grid min-w-0 gap-3">
-            <FilesCard p={p} />
             <ActivityCard p={p} />
             <ProjectThread projectId={p.id} />
             {p.brief && (
@@ -1161,11 +1160,11 @@ function Headline({ p }: { p: Project }) {
 }
 
 /*
- * The six stations, each with exactly one action: Start it, send it for
- * approval, or mark it done. Everything rarer, whose file it is, whether
- * it gates, the expected date, a correction, lives behind the small Edit
- * on each row. Tanvir moves stations; the stage and the client's screen
- * follow on their own.
+ * The six stations. Each row is clean and says only where it stands and
+ * where its file is; everything you do to a station, the move, the file, the
+ * drafts, whose it is, whether it gates, the date, a correction, happens in
+ * one popup you open by clicking the row (owner decision, 23 August 2026,
+ * one place per station rather than buttons scattered across the row).
  */
 function StationList({
   p,
@@ -1176,12 +1175,8 @@ function StationList({
   busy: string | null;
   onRun: (tag: string, body: Record<string, unknown>) => Promise<void>;
 }) {
-  const [draftUrl, setDraftUrl] = useState("");
-  const [settingsFor, setSettingsFor] = useState<(typeof STATION_META)[number] | null>(null);
+  const [managing, setManaging] = useState<(typeof STATION_META)[number] | null>(null);
   const line = p.pipeline;
-
-  const station = (key: keyof Pipeline, patch: Record<string, unknown>, requestApproval?: boolean) =>
-    onRun(`st-${key}`, { station: { key, ...patch, requestApproval } });
 
   return (
     <div className="grid gap-1.5">
@@ -1193,28 +1188,16 @@ function StationList({
       {STATION_META.map((m) => {
         const st = line[m.key] ?? { state: "todo" as const };
         const gated = Boolean(st.gate) && !st.provided;
-        const waitingOnFile = Boolean(st.provided) && st.state !== "done" && !st.url;
-        const hasFile = m.key === "animation" ? Boolean(st.url || p.mainVideo?.videoUrl) : Boolean(st.url);
-
-        /* the one thing to do next at this station, if anything */
-        let action: { label: string; run: () => void; primary?: boolean } | null = null;
-        if (st.state === "todo" && !waitingOnFile) {
-          action = { label: "Start", run: () => void station(m.key, { state: "with_us" }) };
-        } else if (st.state === "with_us") {
-          if (gated && (hasFile || m.key === "delivery")) {
-            action = {
-              label: "Send for approval",
-              primary: true,
-              run: () => void station(m.key, { state: "with_client" }, true),
-            };
-          } else if (!gated) {
-            action = { label: "Mark done", run: () => void station(m.key, { state: "done" }) };
-          }
-        }
+        const fileUrl =
+          m.key === "animation" ? st.url ?? p.mainVideo?.videoUrl ?? null : st.url ?? null;
 
         return (
-          <div key={m.key} className="rounded-[8px] border border-hair bg-canvas px-3 py-2.5">
-            <div className="flex flex-wrap items-center justify-between gap-2">
+          <div key={m.key} className="overflow-hidden rounded-[8px] border border-hair bg-canvas">
+            <button
+              type="button"
+              onClick={() => setManaging(m)}
+              className="tap flex w-full flex-wrap items-center justify-between gap-2 px-3 py-2.5 text-left transition-colors hover:bg-surface"
+            >
               <span className="flex min-w-0 items-center gap-2">
                 <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${STATION_DOT[st.state]}`} />
                 <span className="text-body-sm font-semibold text-ink">{m.label}</span>
@@ -1226,166 +1209,224 @@ function StationList({
                     {st.url || st.state === "done" ? "client provided" : "waiting on their file"}
                   </Chip>
                 )}
-                {gated && st.state === "with_us" && !hasFile && m.key !== "delivery" && (
-                  <span className="font-mono text-label uppercase text-dim">needs its link</span>
-                )}
+                {gated && <Chip tone="neutral">approval gate</Chip>}
                 {st.eta && st.state !== "done" && (
                   <span className="font-mono text-label uppercase text-dim">
                     expected {day(st.eta)}
                   </span>
                 )}
               </span>
-              <span className="flex shrink-0 items-center gap-2">
-                {st.url && (
-                  <a
-                    href={st.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="tap font-mono text-label uppercase text-muted transition-colors hover:text-gold"
-                  >
-                    Open it
-                  </a>
+              <span className="flex shrink-0 items-center gap-3 font-mono text-label uppercase">
+                {st.state === "with_client" && (
+                  <span className="text-gold">with client{st.at ? ` since ${when(st.at)}` : ""}</span>
                 )}
-                {action && (
-                  <Button
-                    size="sm"
-                    variant={action.primary ? "primary" : "secondary"}
-                    disabled={busy !== null}
-                    onClick={action.run}
-                  >
-                    {action.label}
-                  </Button>
-                )}
+                <span className="text-muted">Manage</span>
+              </span>
+            </button>
+
+            {/* the file lives with its station, so there is no second list of
+                links to keep in sync */}
+            {fileUrl && (
+              <div className="flex items-center gap-3 border-t border-hair px-3 py-1.5">
+                <span className="min-w-0 flex-1 truncate font-mono text-label text-dim">{fileUrl}</span>
+                <a
+                  href={fileUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="tap font-mono text-label uppercase text-muted transition-colors hover:text-gold"
+                >
+                  Open
+                </a>
                 <button
                   type="button"
-                  onClick={() => setSettingsFor(m)}
-                  className="tap font-mono text-label uppercase text-dim transition-colors hover:text-gold"
+                  onClick={() => void navigator.clipboard?.writeText(fileUrl)}
+                  className="tap font-mono text-label uppercase text-dim transition-colors hover:text-ink"
                 >
-                  Edit
+                  Copy
                 </button>
-              </span>
-            </div>
-
-            {/* drafts are the daily motion of animation, so its input stays
-                on the row */}
-            {m.key === "animation" && st.state !== "done" && (
-              <div className="mt-2 flex gap-2">
-                <Input
-                  value={draftUrl}
-                  onChange={(e) => setDraftUrl(e.target.value)}
-                  placeholder="New draft link, becomes the next version"
-                />
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  disabled={busy !== null || !draftUrl.trim()}
-                  onClick={async () => {
-                    await onRun("draft", { action: "add_draft", url: draftUrl.trim() });
-                    setDraftUrl("");
-                  }}
-                >
-                  Add draft
-                </Button>
               </div>
-            )}
-
-            {st.state === "with_client" && (
-              <p className="mt-1.5 font-mono text-label uppercase text-gold">
-                with the client{st.at ? ` since ${when(st.at)}` : ""}
-              </p>
             )}
           </div>
         );
       })}
 
-      <StationSettings
-        m={settingsFor}
-        st={settingsFor ? (line[settingsFor.key] ?? { state: "todo" }) : null}
+      <StationModal
+        m={managing}
+        st={managing ? (line[managing.key] ?? { state: "todo" }) : null}
+        mainVideoUrl={p.mainVideo?.videoUrl ?? null}
         busy={busy}
-        onClose={() => setSettingsFor(null)}
-        onSave={(patch) => {
-          if (settingsFor) void station(settingsFor.key, patch);
-        }}
+        onClose={() => setManaging(null)}
+        onRun={onRun}
       />
     </div>
   );
 }
 
-/* the rare knobs, out of the way until asked for */
-function StationSettings({
+/* one station, managed end to end in a single popup */
+function StationModal({
   m,
   st,
+  mainVideoUrl,
   busy,
   onClose,
-  onSave,
+  onRun,
 }: {
   m: (typeof STATION_META)[number] | null;
   st: Station | null;
+  mainVideoUrl: string | null;
   busy: string | null;
   onClose: () => void;
-  onSave: (patch: Record<string, unknown>) => void;
+  onRun: (tag: string, body: Record<string, unknown>) => Promise<void>;
 }) {
   const [url, setUrl] = useState("");
-  useEffect(() => setUrl(st?.url ?? ""), [st?.url, m?.key]);
+  const [draft, setDraft] = useState("");
+  useEffect(() => {
+    setUrl(st?.url ?? "");
+    setDraft("");
+  }, [st?.url, m?.key]);
   if (!m || !st) return <Modal open={false} onClose={onClose} title="">{null}</Modal>;
+
+  const station = (patch: Record<string, unknown>, requestApproval?: boolean) =>
+    void onRun(`st-${m.key}`, { station: { key: m.key, ...patch, requestApproval } });
+
+  const gated = Boolean(st.gate) && !st.provided;
+  const hasFile = m.key === "animation" ? Boolean(st.url || mainVideoUrl) : Boolean(st.url);
+  const busyNow = busy !== null;
+
+  /* the one move that makes sense next, if any */
+  let primary: { label: string; run: () => void } | null = null;
+  if (st.state === "todo") {
+    primary = { label: "Start this station", run: () => station({ state: "with_us" }) };
+  } else if (st.state === "with_us") {
+    if (gated && (hasFile || m.key === "delivery")) {
+      primary = {
+        label: "Send to the client for approval",
+        run: () => station({ state: "with_client" }, true),
+      };
+    } else if (!gated) {
+      primary = { label: "Mark it done", run: () => station({ state: "done" }) };
+    }
+  } else if (st.state === "with_client") {
+    primary = { label: "Bring it back to us", run: () => station({ state: "with_us" }) };
+  }
+
   return (
-    <Modal open onClose={onClose} title={`${m.label} settings`}>
+    <Modal open onClose={onClose} title={m.label}>
       <div className="grid gap-4">
+        {/* where it stands, and the move */}
+        <div className="flex flex-wrap items-center gap-2">
+          <Chip tone={st.state === "with_client" ? "warn" : st.state === "done" ? "good" : "neutral"}>
+            {STATION_STATE_WORD[st.state]}
+          </Chip>
+          {primary && (
+            <Button variant="brand" disabled={busyNow} onClick={primary.run}>
+              {primary.label}
+            </Button>
+          )}
+        </div>
+        {gated && st.state === "with_us" && !hasFile && m.key !== "delivery" && (
+          <p className="text-body-sm text-gold">
+            Add the link below first, then you can send it for their approval.
+          </p>
+        )}
+
+        {/* the file */}
         <Field
-          label={st.provided ? `Link to their ${m.label.toLowerCase()}` : `Link to the ${m.label.toLowerCase()}`}
-          hint="The file or page this station is about. The client can open it."
+          label={st.provided ? `Link to their ${m.label.toLowerCase()}` : `The file or link`}
+          hint="What this station is about. The client can open it."
         >
-          <div className="flex gap-2">
-            <Input
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder={m.key === "design" ? "Figma link" : "https://..."}
-            />
-            {url !== (st.url ?? "") && (
-              <Button size="sm" variant="secondary" disabled={busy !== null} onClick={() => onSave({ url })}>
-                Save
+          <div className="flex flex-wrap gap-2">
+            <div className="min-w-[14rem] flex-1">
+              <Input
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder={m.key === "design" ? "Figma or Drive link" : "https://..."}
+              />
+            </div>
+            {url.trim() !== (st.url ?? "") && (
+              <Button variant="secondary" disabled={busyNow} onClick={() => station({ url: url.trim() || null })}>
+                Save link
               </Button>
+            )}
+            {st.url && (
+              <>
+                <Button variant="ghost" href={st.url} target="_blank">
+                  Open
+                </Button>
+                <Button variant="ghost" onClick={() => void navigator.clipboard?.writeText(st.url!)}>
+                  Copy
+                </Button>
+              </>
             )}
           </div>
         </Field>
 
-        <div className="flex flex-wrap gap-4">
-          {m.providable && (
-            <label className="flex items-center gap-2 text-body-sm text-muted">
-              <input
-                type="checkbox"
-                checked={Boolean(st.provided)}
-                onChange={(e) => onSave({ provided: e.target.checked })}
-                className="h-4 w-4 accent-[var(--gold)]"
-              />
-              The client provides this
-            </label>
-          )}
-          {m.gateable && (
-            <label className="flex items-center gap-2 text-body-sm text-muted">
-              <input
-                type="checkbox"
-                checked={Boolean(st.gate)}
-                onChange={(e) => onSave({ gate: e.target.checked })}
-                className="h-4 w-4 accent-[var(--gold)]"
-              />
-              Needs their approval
-            </label>
-          )}
-        </div>
+        {/* animation drafts are versioned, so each link the client reviews is
+            kept, not overwritten */}
+        {m.key === "animation" && (
+          <Field label="Add a draft" hint="Each link becomes the next version the client reviews.">
+            <div className="flex flex-wrap gap-2">
+              <div className="min-w-[14rem] flex-1">
+                <Input
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  placeholder="New draft link"
+                />
+              </div>
+              <Button
+                variant="secondary"
+                disabled={busyNow || !draft.trim()}
+                onClick={async () => {
+                  await onRun("draft", { action: "add_draft", url: draft.trim() });
+                  setDraft("");
+                }}
+              >
+                Add draft
+              </Button>
+            </div>
+          </Field>
+        )}
+
+        {/* who it is and whether it stops for them */}
+        {(m.providable || m.gateable) && (
+          <div className="flex flex-wrap gap-4 border-t border-hair pt-4">
+            {m.providable && (
+              <label className="flex items-center gap-2 text-body-sm text-muted">
+                <input
+                  type="checkbox"
+                  checked={Boolean(st.provided)}
+                  onChange={(e) => station({ provided: e.target.checked })}
+                  className="h-4 w-4 accent-[var(--gold)]"
+                />
+                The client provides this
+              </label>
+            )}
+            {m.gateable && (
+              <label className="flex items-center gap-2 text-body-sm text-muted">
+                <input
+                  type="checkbox"
+                  checked={Boolean(st.gate)}
+                  onChange={(e) => station({ gate: e.target.checked })}
+                  className="h-4 w-4 accent-[var(--gold)]"
+                />
+                Needs their approval
+              </label>
+            )}
+          </div>
+        )}
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Expected date" hint="The client sees this on their line.">
             <Input
               type="date"
               value={st.eta ? st.eta.slice(0, 10) : ""}
-              onChange={(e) => onSave({ eta: e.target.value || null })}
+              onChange={(e) => station({ eta: e.target.value || null })}
             />
           </Field>
           <Field label="Correct the state" hint="For fixing a slip, not for daily moves.">
             <Select
               value={st.state}
-              onChange={(e) => onSave({ state: e.target.value })}
+              onChange={(e) => station({ state: e.target.value })}
               aria-label={`${m.label} state`}
             >
               {(Object.keys(STATION_STATE_WORD) as Station["state"][]).map((k) => (
@@ -1569,57 +1610,6 @@ function ProjectThread({ projectId }: { projectId: string }) {
 }
 
 /* every link this job has, gathered. Nothing new is stored here. */
-function FilesCard({ p }: { p: Project }) {
-  const rows: { label: string; url: string | null; note?: string }[] = [
-    ...STATION_META.filter((m) => m.key !== "sfx").map((m) => ({
-      label: m.label,
-      url: p.pipeline[m.key]?.url ?? null,
-      note:
-        p.pipeline[m.key]?.provided && !p.pipeline[m.key]?.url
-          ? "the client owes this"
-          : undefined,
-    })),
-    ...p.formats.map((f) => ({ label: f.title, url: f.videoUrl })),
-  ];
-  return (
-    <Card title="Files" description="Every link on this job, in one place.">
-      <ul className="grid gap-1.5">
-        {rows.map((r) => (
-          <li
-            key={r.label}
-            className="flex flex-wrap items-center justify-between gap-2 rounded-[8px] border border-hair bg-canvas px-3 py-2"
-          >
-            <span className="min-w-0 text-body-sm text-ink">{r.label}</span>
-            {r.url ? (
-              <span className="flex shrink-0 items-center gap-2">
-                <a
-                  href={r.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="tap font-mono text-label uppercase text-gold transition-colors hover:text-ink"
-                >
-                  Open it
-                </a>
-                <button
-                  type="button"
-                  onClick={() => void navigator.clipboard?.writeText(r.url!)}
-                  className="tap font-mono text-label uppercase text-dim transition-colors hover:text-ink"
-                >
-                  Copy
-                </button>
-              </span>
-            ) : (
-              <span className="shrink-0 font-mono text-label uppercase text-dim">
-                {r.note ?? "not in yet"}
-              </span>
-            )}
-          </li>
-        ))}
-      </ul>
-    </Card>
-  );
-}
-
 /* what has happened, written by the work itself */
 function ActivityCard({ p }: { p: Project }) {
   const events: { at: string; body: string }[] = [

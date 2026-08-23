@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ArrowLeft, Download, MessageSquarePlus, Play, Share2 } from "lucide-react";
-import { Button, Card, Chip, EmptyState, Input, PageHeader, Textarea } from "@/components/portal/ui";
+import { Button, Card, Chip, EmptyState, Input, Modal, PageHeader, Textarea } from "@/components/portal/ui";
 import { VideoReviewModal } from "./VideoReviewModal";
 import { ShareVideo } from "./ShareVideo";
 import { ConfirmDialog } from "./ConfirmDialog";
@@ -670,6 +670,8 @@ function StationRow({
 }) {
   const [provideOpen, setProvideOpen] = useState(false);
   const [provideUrl, setProvideUrl] = useState("");
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedback, setFeedback] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
@@ -677,6 +679,10 @@ function StationRow({
   const playerGate = st.key === "animation" || st.key === "delivery";
   const providable = st.provided && (st.key === "script" || st.key === "voiceover");
   const needsTheirFile = providable && st.state !== "done";
+  /* a piece WE made and shared, on a station that is not the video: the
+     client can look at it and say what they think, as a comment (owner
+     decision, 23 August 2026, not a formal approval) */
+  const canReact = !playerGate && !st.provided && Boolean(st.url);
 
   async function provide() {
     setBusy(true);
@@ -698,6 +704,31 @@ function StationRow({
     }
     setBusy(false);
   }
+
+  async function sendFeedback() {
+    const text = feedback.trim();
+    if (!text) return;
+    setBusy(true);
+    setErr("");
+    try {
+      const j = await authedFetch(`/api/portal/projects/${p.id}/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ body: `Feedback on ${st.label}: ${text}` }),
+      });
+      if (j.error) setErr(String(j.error));
+      else {
+        setFeedbackOpen(false);
+        setFeedback("");
+        onChanged();
+      }
+    } catch {
+      setErr("That did not go through. Please try again.");
+    }
+    setBusy(false);
+  }
+
+  const provideNoun = st.key === "script" ? "script" : "voiceover";
 
   return (
     <li className="flex flex-wrap items-center justify-between gap-2 rounded-[8px] border border-hair bg-canvas px-3 py-2">
@@ -721,15 +752,20 @@ function StationRow({
             rel="noreferrer"
             className="tap font-mono text-label uppercase text-muted transition-colors hover:text-gold"
           >
-            Open it
+            View
           </a>
         )}
-        {needsTheirFile && (
-          <Button size="sm" variant="brand" onClick={() => setProvideOpen(!provideOpen)}>
-            {st.url ? "Send a new link" : `Add your ${st.key === "script" ? "script" : "voiceover"}`}
+        {canReact && (
+          <Button size="sm" variant="secondary" onClick={() => setFeedbackOpen(true)}>
+            Give feedback
           </Button>
         )}
-        {providable && st.state === "done" && !provideOpen && (
+        {needsTheirFile && (
+          <Button size="sm" variant="brand" onClick={() => setProvideOpen(true)}>
+            {st.url ? "Send a new link" : `Add your ${provideNoun}`}
+          </Button>
+        )}
+        {providable && st.state === "done" && (
           <button
             type="button"
             onClick={() => setProvideOpen(true)}
@@ -738,23 +774,60 @@ function StationRow({
             Send an update
           </button>
         )}
-        {/* no approve buttons live on a station any more: the only thing a
-            client decides is the video, and the player above owns that */}
       </span>
-      {provideOpen && (
-        <span className="flex w-full gap-2">
+
+      {/* their file, in a popup, never expanding the row inline */}
+      <Modal
+        open={provideOpen}
+        onClose={() => setProvideOpen(false)}
+        title={`Your ${provideNoun}`}
+        subtitle={`Paste a link to your ${provideNoun}. A Google Doc, a Drive file, whatever you use.`}
+      >
+        <div className="grid gap-4">
           <Input
             value={provideUrl}
             onChange={(e) => setProvideUrl(e.target.value)}
-            placeholder={`Link to your ${st.key === "script" ? "script" : "voiceover"}, e.g. a Google Doc or Drive file`}
-            aria-label={`Your ${st.key === "script" ? "script" : "voiceover"} link`}
+            placeholder="https://"
+            aria-label={`Your ${provideNoun} link`}
           />
-          <Button size="sm" variant="brand" disabled={busy || !provideUrl.trim()} onClick={provide}>
-            {busy ? "Sending..." : "Send it"}
-          </Button>
-        </span>
-      )}
-      {err && <span className="w-full text-body-sm text-error">{err}</span>}
+          {err && <p className="text-body-sm text-error">{err}</p>}
+          <div className="flex justify-end gap-2 border-t border-hair pt-4">
+            <Button variant="ghost" onClick={() => setProvideOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="brand" disabled={busy || !provideUrl.trim()} onClick={provide}>
+              {busy ? "Sending..." : "Send it"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* feedback on a non-video station, as a comment to the studio */}
+      <Modal
+        open={feedbackOpen}
+        onClose={() => setFeedbackOpen(false)}
+        title={`Feedback on ${st.label}`}
+        subtitle="Tell us what you think. It reaches us in your messages, tagged to this step."
+      >
+        <div className="grid gap-4">
+          <Textarea
+            rows={4}
+            value={feedback}
+            onChange={(e) => setFeedback(e.target.value)}
+            placeholder="What do you like, what would you change?"
+            aria-label={`Feedback on ${st.label}`}
+          />
+          {err && <p className="text-body-sm text-error">{err}</p>}
+          <div className="flex justify-end gap-2 border-t border-hair pt-4">
+            <Button variant="ghost" onClick={() => setFeedbackOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="brand" disabled={busy || !feedback.trim()} onClick={sendFeedback}>
+              {busy ? "Sending..." : "Send feedback"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </li>
   );
 }
