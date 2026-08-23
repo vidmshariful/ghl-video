@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft, Play } from "lucide-react";
+import { ArrowLeft, Download, MessageSquarePlus, Play, Share2 } from "lucide-react";
 import { Button, Card, Chip, EmptyState, Input, PageHeader, Textarea } from "@/components/portal/ui";
 import { VideoReviewModal } from "./VideoReviewModal";
 import { ShareVideo } from "./ShareVideo";
@@ -461,40 +461,6 @@ function ProjectPage({
         </div>
       </div>
 
-      {/* the video is the page the moment there is a video: a clean preview,
-          and the actions below it. Feedback is never inline: it opens the
-          same full-screen review the pre-made videos use (owner rule). */}
-      {p.main?.videoUrl && (
-        <div className="mb-3 grid gap-3">
-          <video
-            controls
-            preload="metadata"
-            playsInline
-            src={p.main.videoUrl}
-            className="max-h-[70vh] w-full rounded-[8px] bg-canvas"
-          />
-          <div className="flex flex-wrap gap-2">
-            {gate && (
-              <Button variant="brand" disabled={busy} onClick={() => setApproving(true)}>
-                Approve {gateLabel}
-              </Button>
-            )}
-            <Button
-              variant="secondary"
-              onClick={() => p.main && onPlay({ ...p.main, title: p.title })}
-            >
-              Give feedback
-            </Button>
-            <Button variant="ghost" href={`/api/portal/videos/${p.main.id}/download`}>
-              Download
-            </Button>
-            <Button variant="ghost" onClick={() => setSharing(true)}>
-              Share with your team
-            </Button>
-          </div>
-        </div>
-      )}
-
       {approving && (
         <ConfirmDialog
           title={`Approve ${gateLabel}?`}
@@ -516,6 +482,57 @@ function ProjectPage({
 
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:items-start">
         <div className="grid min-w-0 gap-3">
+          {/* the video as a contained hero, sized to the column rather than
+              bleeding the full page. Feedback is never inline; it opens the
+              same full-screen review the pre-made videos use (owner rule). */}
+          {p.main?.videoUrl && (
+            <div className="overflow-hidden rounded-[12px] border border-hair bg-surface">
+              <div className="flex aspect-video items-center justify-center bg-black">
+                <video
+                  controls
+                  preload="metadata"
+                  playsInline
+                  src={p.main.videoUrl}
+                  className="h-full w-full object-contain"
+                />
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-hair px-4 py-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  {gate && (
+                    <Button variant="brand" disabled={busy} onClick={() => setApproving(true)}>
+                      Approve {gateLabel}
+                    </Button>
+                  )}
+                  <Button
+                    variant="secondary"
+                    icon={<MessageSquarePlus />}
+                    onClick={() => p.main && onPlay({ ...p.main, title: p.title })}
+                  >
+                    Give feedback
+                  </Button>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    icon={<Download />}
+                    href={`/api/portal/videos/${p.main.id}/download`}
+                  >
+                    Download
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    icon={<Share2 />}
+                    onClick={() => setSharing(true)}
+                  >
+                    Share
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {waiting > 0 && (
             <Card
               tone="dark"
