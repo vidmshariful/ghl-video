@@ -371,13 +371,29 @@ function ProjectPage({
   /* which stage's review room is open, if any */
   const [reviewing, setReviewing] = useState<string | null>(null);
 
-  const approvals = p.pipeline.stations.filter(
-    (s) => (s.key === "animation" || s.key === "delivery") && s.state === "with_client" && s.gated,
-  ).length;
-  const filesOwed = p.pipeline.stations.filter(
-    (s) => s.provided && s.state !== "done" && (s.key === "script" || s.key === "voiceover"),
-  ).length;
-  const waiting = approvals + filesOwed;
+  const scrollToStage = (key: string) => {
+    document.getElementById(`stage-${key}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+
+  /* what actually needs the client: a cut waiting on their approval, or a file
+     only they have. Reviewing the design is optional, so it is not a to do. */
+  const needItems: { key: string; label: string; cta: string; onClick: () => void }[] = [];
+  for (const s of p.pipeline.stations) {
+    if ((s.key === "animation" || s.key === "delivery") && s.state === "with_client" && s.gated)
+      needItems.push({
+        key: s.key,
+        label: `${s.label} is ready for your approval`,
+        cta: "Review",
+        onClick: () => setReviewing(s.key),
+      });
+    if (s.provided && s.state !== "done" && (s.key === "script" || s.key === "voiceover"))
+      needItems.push({
+        key: s.key,
+        label: `We need your ${s.key === "script" ? "script" : "voiceover"}`,
+        cta: "Add",
+        onClick: () => scrollToStage(s.key),
+      });
+  }
 
   return (
     <div>
@@ -428,6 +444,21 @@ function ProjectPage({
           <Fact label="Started">{day(p.createdAt)}</Fact>
           <Fact label="Due">{p.dueAt ? day(p.dueAt) : "To be set"}</Fact>
         </dl>
+
+        {/* the number given something to mean: the line, as a bar */}
+        <div
+          className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-hair"
+          role="progressbar"
+          aria-valuenow={p.pipeline.percent}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="How far through the production line"
+        >
+          <div
+            className="h-full rounded-full bg-brand-gradient"
+            style={{ width: `${Math.max(3, p.pipeline.percent)}%` }}
+          />
+        </div>
       </div>
 
       {/* one review room, whatever the medium, opened from a stage below */}
@@ -442,24 +473,10 @@ function ProjectPage({
         />
       )}
 
-      {/* MIDDLE: the production line on the left, the conversation on the right */}
-      <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:items-start">
+      {/* one grid the whole way down: the work on the left, and a rail on the
+          right that holds your move, the files, and the conversation */}
+      <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,380px)] lg:items-start">
         <div className="grid min-w-0 gap-3">
-          {waiting > 0 && (
-            <Card
-              tone="dark"
-              title={`${waiting} ${waiting === 1 ? "thing needs" : "things need"} you`}
-            >
-              <p className="text-body-sm text-chrome-muted">
-                {filesOwed > 0 && approvals > 0
-                  ? "We are waiting on a file from you, and on your word at a step below. The gold buttons are where."
-                  : filesOwed > 0
-                    ? "We are waiting on a file only you have. Add it at the step below and the work starts moving."
-                    : "Something below is ready for your look. Open it, watch or read it, and tell us what you think."}
-              </p>
-            </Card>
-          )}
-
           <Card
             title="The production line"
             description="Each step of your video. Open one to see our work and tell us what you think."
@@ -533,17 +550,44 @@ function ProjectPage({
               )}
             </Card>
           )}
+
+          <BriefEditor
+            projectId={p.id}
+            brief={p.brief}
+            authedFetch={authedFetch}
+            onChanged={onChanged}
+          />
         </div>
 
+        {/* right rail: your move first, then the shared files, then the talk */}
         <div className="grid min-w-0 gap-3">
+          {needItems.length > 0 && (
+            <Card
+              title={`${needItems.length} ${needItems.length === 1 ? "thing needs" : "things need"} you`}
+            >
+              <ul className="grid gap-1.5">
+                {needItems.map((it) => (
+                  <li key={it.key}>
+                    <button
+                      type="button"
+                      onClick={it.onClick}
+                      className="tap flex w-full items-center justify-between gap-2 rounded-[8px] border border-gold/40 bg-gold/5 px-3 py-2 text-left transition-colors hover:border-gold/70"
+                    >
+                      <span className="text-body-sm font-semibold text-ink">{it.label}</span>
+                      <span className="shrink-0 font-mono text-label uppercase text-gold">
+                        {it.cta}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
+
+          <Attachments projectId={p.id} authedFetch={authedFetch} />
+
           <ClientThread projectId={p.id} authedFetch={authedFetch} system={p.activity} />
         </div>
-      </div>
-
-      {/* BOTTOM: the brief we both keep current, and the files we pass around */}
-      <div className="mt-3 grid gap-3 lg:grid-cols-2 lg:items-start">
-        <BriefEditor projectId={p.id} brief={p.brief} authedFetch={authedFetch} onChanged={onChanged} />
-        <Attachments projectId={p.id} authedFetch={authedFetch} />
       </div>
     </div>
   );
@@ -918,15 +962,22 @@ function StageRow({
 
   return (
     <li
-      className={`flex flex-wrap items-center justify-between gap-2 rounded-[8px] border px-3.5 py-3 ${
-        needsYou ? "border-gold/40 bg-gold/5" : "border-hair bg-canvas"
+      id={`stage-${st.key}`}
+      className={`flex flex-wrap items-center justify-between gap-2 rounded-[8px] border px-3.5 py-2.5 ${
+        needsYou
+          ? "border-gold/40 bg-gold/5"
+          : st.state === "done" || st.state === "todo"
+            ? "border-hair/40 bg-transparent"
+            : "border-hair bg-canvas"
       }`}
     >
       <span className="flex min-w-0 items-center gap-2.5">
         <span aria-hidden="true" className={`h-2.5 w-2.5 shrink-0 rounded-full ${DOT[st.state]}`} />
         <span className="min-w-0">
           <span
-            className={`block text-body-sm font-semibold ${st.state === "todo" ? "text-dim" : "text-ink"}`}
+            className={`block text-body-sm font-semibold ${
+              st.state === "done" ? "text-muted" : st.state === "todo" ? "text-dim" : "text-ink"
+            }`}
           >
             {st.label}
           </span>
@@ -1137,51 +1188,32 @@ function ClientThread({
   return (
     <Card
       title="Message the studio"
-      description="Goes to the same inbox as everything else you have said to us, tagged with this project. Notes about the video itself belong on the player above."
+      description="The same inbox as everywhere else, tagged with this project. For notes on a specific cut, open its review room above."
     >
       {notes === null ? (
         <p className="text-body-sm text-muted">Loading...</p>
+      ) : notes.length === 0 ? (
+        <p className="text-body-sm text-dim">
+          Nothing yet. Anything you write here reaches the people making your video.
+        </p>
       ) : (
-        (() => {
-          const merged: (
-            | { kind: "note"; at: string; n: NonNullable<typeof notes>[number] }
-            | { kind: "system"; at: string; body: string }
-          )[] = [
-            ...notes.map((n) => ({ kind: "note" as const, at: n.at, n })),
-            ...system.map((a) => ({ kind: "system" as const, at: a.at, body: a.body })),
-          ].sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
-          if (merged.length === 0)
-            return (
-              <p className="text-body-sm text-dim">
-                Nothing yet. Anything you write here reaches the people
-                making your video.
-              </p>
-            );
-          return (
-            <ol className="grid max-h-80 gap-2.5 overflow-y-auto pr-1">
-              {merged.map((e, i) =>
-                e.kind === "note" ? (
-                  <li
-                    key={e.n.id}
-                    className={`border-l pl-3 ${e.n.side === "studio" ? "border-gold/50" : "border-blue/50"}`}
-                  >
-                    <p className="text-body-sm text-ink">{e.n.body}</p>
-                    <p className="mt-0.5 font-mono text-label uppercase text-dim">
-                      {e.n.name}
-                      {e.n.stamp ? ` at ${e.n.stamp}` : ""} / {when(e.at)}
-                    </p>
-                  </li>
-                ) : (
-                  <li key={`sys-${i}`} className="pl-3">
-                    <p className="font-mono text-label uppercase text-dim">
-                      {e.body} / {when(e.at)}
-                    </p>
-                  </li>
-                ),
-              )}
-            </ol>
-          );
-        })()
+        <ol className="grid max-h-72 gap-2.5 overflow-y-auto pr-1">
+          {notes
+            .slice()
+            .sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
+            .map((n) => (
+              <li
+                key={n.id}
+                className={`border-l pl-3 ${n.side === "studio" ? "border-gold/50" : "border-blue/50"}`}
+              >
+                <p className="text-body-sm text-ink">{n.body}</p>
+                <p className="mt-0.5 font-mono text-label uppercase text-dim">
+                  {n.name}
+                  {n.stamp ? ` at ${n.stamp}` : ""} / {when(n.at)}
+                </p>
+              </li>
+            ))}
+        </ol>
       )}
       <div className="mt-3 flex gap-2">
         <Input
@@ -1197,6 +1229,26 @@ function ClientThread({
           Send
         </Button>
       </div>
+
+      {/* the machine's own timeline, kept but quieted so the talk leads */}
+      {system.length > 0 && (
+        <div className="mt-4 border-t border-hair pt-3">
+          <p className="mb-2 font-mono text-label uppercase tracking-[0.1em] text-dim">
+            Project updates
+          </p>
+          <ol className="grid max-h-40 gap-1.5 overflow-y-auto pr-1">
+            {system
+              .slice()
+              .sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
+              .map((a, i) => (
+                <li key={`sys-${i}`} className="flex flex-wrap items-baseline gap-x-2">
+                  <span className="text-body-sm text-muted">{a.body}</span>
+                  <span className="font-mono text-label uppercase text-dim">{when(a.at)}</span>
+                </li>
+              ))}
+          </ol>
+        </div>
+      )}
     </Card>
   );
 }
