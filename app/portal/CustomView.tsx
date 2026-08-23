@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { ArrowLeft, Play } from "lucide-react";
 import { Button, Card, Chip, EmptyState, Input, PageHeader, Textarea } from "@/components/portal/ui";
-import { VideoReview } from "./VideoReview";
+import { VideoReviewModal } from "./VideoReviewModal";
+import { ShareVideo } from "./ShareVideo";
+import { ConfirmDialog } from "./ConfirmDialog";
 import { DownloadAll } from "@/components/portal/DownloadAll";
 import { pages } from "@/lib/site";
 
@@ -174,49 +176,39 @@ export function CustomView({
 
   if (!projects) return <p className="text-body text-muted">Loading your projects...</p>;
 
-  /* reviewing takes over the screen, the same way it does everywhere else */
-  if (playing?.videoUrl) {
-    return (
-      <div>
-        <button
-          type="button"
-          onClick={() => setPlaying(null)}
-          className="tap inline-flex items-center gap-2 font-mono text-label uppercase text-muted transition-colors hover:text-gold"
-        >
-          <ArrowLeft size={14} aria-hidden="true" /> Back to the project
-        </button>
-        <div className="mt-4">
-          <VideoReview
-            videoId={playing.id}
-            title={playing.title}
-            videoUrl={playing.videoUrl}
-            status={"ready"}
-            canRequestChanges={playing.canRequestChanges}
-            revisionsIncluded={playing.revisionsIncluded}
-            revisionsUsed={playing.revisionsUsed}
-            authedFetch={authedFetch}
-            onMessageStudio={onMessageStudio}
-            onChanged={() => {
-              void load();
-              setPlaying(null);
-            }}
-          />
-        </div>
-      </div>
-    );
-  }
+  /* reviewing always opens over the page as a popup, never inline (owner
+     rule, final): the same full-screen review the pre-made videos use */
+  const reviewModal = playing?.videoUrl ? (
+    <VideoReviewModal
+      video={{
+        id: playing.id,
+        title: playing.title,
+        videoUrl: playing.videoUrl,
+        status: "ready",
+        canRequestChanges: playing.canRequestChanges,
+        revisionsIncluded: playing.revisionsIncluded,
+        revisionsUsed: playing.revisionsUsed,
+      }}
+      onClose={() => setPlaying(null)}
+      onChanged={() => void load()}
+      authedFetch={authedFetch}
+      onMessageStudio={onMessageStudio}
+    />
+  ) : null;
 
   const project = open ? projects.find((p) => p.id === open) : null;
   if (project) {
     return (
-      <ProjectPage
-        p={project}
-        authedFetch={authedFetch}
-        onBack={() => setOpen(null)}
-        onChanged={() => void load()}
-        onPlay={(r) => setPlaying(r)}
-        onMessageStudio={onMessageStudio}
-      />
+      <>
+        {reviewModal}
+        <ProjectPage
+          p={project}
+          authedFetch={authedFetch}
+          onBack={() => setOpen(null)}
+          onChanged={() => void load()}
+          onPlay={(r) => setPlaying(r)}
+        />
+      </>
     );
   }
 
@@ -356,14 +348,12 @@ function ProjectPage({
   onBack,
   onChanged,
   onPlay,
-  onMessageStudio,
 }: {
   p: Project;
   authedFetch: (path: string, init?: RequestInit) => Promise<Record<string, unknown>>;
   onBack: () => void;
   onChanged: () => void;
   onPlay: (r: Reviewable & { title: string }) => void;
-  onMessageStudio?: () => void;
 }) {
   const playerAsk = Boolean(
     p.main?.videoUrl &&
@@ -381,6 +371,27 @@ function ProjectPage({
     (s) => s.provided && s.state !== "done" && (s.key === "script" || s.key === "voiceover"),
   ).length;
   const waiting = approvals + filesOwed + p.formats.filter((f) => f.canReview).length;
+
+  /* which of the two video gates is waiting on the client, and its word */
+  const gate = p.pipeline.stations.find(
+    (s) => (s.key === "animation" || s.key === "delivery") && s.state === "with_client" && s.gated,
+  );
+  const gateLabel = gate?.key === "delivery" ? "Final delivery" : "Animation";
+  const [sharing, setSharing] = useState(false);
+  const [approving, setApproving] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  async function approveGate() {
+    if (!p.main) return;
+    setBusy(true);
+    await authedFetch(`/api/portal/videos/${p.main.id}/review`, {
+      method: "POST",
+      body: JSON.stringify({ action: "approve" }),
+    }).catch(() => null);
+    setBusy(false);
+    setApproving(false);
+    onChanged();
+  }
 
   return (
     <div>
@@ -450,23 +461,57 @@ function ProjectPage({
         </div>
       </div>
 
-      {/* the video is the page the moment there is a video: watch it, leave
-          notes at the second something happens, approve it right here */}
+      {/* the video is the page the moment there is a video: a clean preview,
+          and the actions below it. Feedback is never inline: it opens the
+          same full-screen review the pre-made videos use (owner rule). */}
       {p.main?.videoUrl && (
-        <div className="mb-3">
-          <VideoReview
-            videoId={p.main.id}
-            title={p.title}
-            videoUrl={p.main.videoUrl}
-            status={"ready"}
-            canRequestChanges={p.main.canRequestChanges}
-            revisionsIncluded={p.main.revisionsIncluded}
-            revisionsUsed={p.main.revisionsUsed}
-            authedFetch={authedFetch}
-            onMessageStudio={onMessageStudio}
-            onChanged={onChanged}
+        <div className="mb-3 grid gap-3">
+          <video
+            controls
+            preload="metadata"
+            playsInline
+            src={p.main.videoUrl}
+            className="max-h-[70vh] w-full rounded-[8px] bg-canvas"
           />
+          <div className="flex flex-wrap gap-2">
+            {gate && (
+              <Button variant="brand" disabled={busy} onClick={() => setApproving(true)}>
+                Approve {gateLabel}
+              </Button>
+            )}
+            <Button
+              variant="secondary"
+              onClick={() => p.main && onPlay({ ...p.main, title: p.title })}
+            >
+              Give feedback
+            </Button>
+            <Button variant="ghost" href={`/api/portal/videos/${p.main.id}/download`}>
+              Download
+            </Button>
+            <Button variant="ghost" onClick={() => setSharing(true)}>
+              Share with your team
+            </Button>
+          </div>
         </div>
+      )}
+
+      {approving && (
+        <ConfirmDialog
+          title={`Approve ${gateLabel}?`}
+          body="This tells the studio it is finished. You will still be able to watch and download it. If you want changes instead, use Give feedback."
+          confirmLabel={busy ? "Approving..." : "Yes, approve it"}
+          tone="green"
+          onConfirm={approveGate}
+          onCancel={() => setApproving(false)}
+        />
+      )}
+      {sharing && p.main && (
+        <ShareVideo
+          videoId={p.main.id}
+          title={p.title}
+          authedFetch={authedFetch}
+          onClose={() => setSharing(false)}
+        />
       )}
 
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:items-start">
