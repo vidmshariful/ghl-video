@@ -65,6 +65,8 @@ type Project = {
   title: string;
   brief: string | null;
   status: ProjectStatus;
+  /* the producer pinned this stage by hand, so the line stops moving it */
+  stageLocked: boolean;
   category: string | null;
   tags: string[];
   pipeline: Pipeline;
@@ -73,6 +75,7 @@ type Project = {
   agreedCents: number | null;
   ownerEmail: string | null;
   dueAt: string | null;
+  contactId: string | null;
   createdAt: string;
   invoices: { id: string; number: string; totalCents: number; paid: boolean }[];
   money: Money;
@@ -286,6 +289,7 @@ export function CustomVideoScreen({
       <ProjectPage
         p={opened}
         team={team}
+        contacts={clients.find((c) => c.email === opened.customerEmail)?.contacts ?? []}
         onBack={() => setOpen(null)}
         onPatch={(body) => patchProject(opened.id, body)}
         onReload={load}
@@ -700,12 +704,14 @@ export function CustomVideoScreen({
 function ProjectPage({
   p,
   team,
+  contacts,
   onBack,
   onPatch,
   onReload,
 }: {
   p: Project;
   team: { email: string; name: string }[];
+  contacts: { id: string; name: string; email: string | null; role: string; title: string | null }[];
   onBack: () => void;
   onPatch: (body: Record<string, unknown>) => Promise<string | null>;
   onReload: () => Promise<void>;
@@ -716,6 +722,48 @@ function ProjectPage({
   const [confirming, setConfirming] = useState<ProjectStatus | null>(null);
   const [tagDraft, setTagDraft] = useState("");
   const [openNotes, setOpenNotes] = useState(0);
+  /* the edit-details popup, per the platform rule that adding or editing a
+     thing opens as a popup rather than editing in place */
+  const [editing, setEditing] = useState(false);
+  const emptyForm = {
+    title: p.title,
+    contactId: p.contactId ?? "",
+    brief: p.brief ?? "",
+    /* dollars in the form, cents on the wire, same as the create modal */
+    quoted: p.quotedCents != null ? String(p.quotedCents / 100) : "",
+    agreed: p.agreedCents != null ? String(p.agreedCents / 100) : "",
+  };
+  const [form, setForm] = useState(emptyForm);
+  const openEdit = () => {
+    /* seed from the live project every open, so a reload never leaves the
+       form showing yesterday's numbers */
+    setForm({
+      title: p.title,
+      contactId: p.contactId ?? "",
+      brief: p.brief ?? "",
+      quoted: p.quotedCents != null ? String(p.quotedCents / 100) : "",
+      agreed: p.agreedCents != null ? String(p.agreedCents / 100) : "",
+    });
+    setEditing(true);
+  };
+  const saveDetails = async () => {
+    if (!form.title.trim()) {
+      setPageErr("A project needs a name.");
+      return;
+    }
+    setBusy("edit");
+    setPageErr("");
+    const e = await onPatch({
+      title: form.title.trim(),
+      contactId: form.contactId || null,
+      brief: form.brief,
+      quotedCents: form.quoted === "" ? null : Math.round(Number(form.quoted) * 100),
+      agreedCents: form.agreed === "" ? null : Math.round(Number(form.agreed) * 100),
+    });
+    setBusy(null);
+    if (e) setPageErr(e);
+    else setEditing(false);
+  };
   useEffect(() => {
     if (!confirming) return;
     const t = setTimeout(() => setConfirming(null), 4000);
@@ -745,6 +793,71 @@ function ProjectPage({
         All custom video
       </Button>
 
+      {/* edit the details that are not quick-edited in the header: the name,
+          who we work with, the brief, and the money */}
+      <Modal open={editing} onClose={() => setEditing(false)} title="Edit project details">
+        <div className="grid gap-4">
+          <Field label="Project name" required hint="What you would call it out loud.">
+            <Input
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              placeholder="Onboarding explainer, 90 sec"
+            />
+          </Field>
+          <Field label="Who we work with" hint="The person at their end running this with us.">
+            <Select
+              value={form.contactId}
+              onChange={(e) => setForm({ ...form, contactId: e.target.value })}
+            >
+              <option value="">
+                {contacts.length ? "Nobody set" : "No contacts on this client yet"}
+              </option>
+              {contacts.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                  {c.title ? `, ${c.title}` : ""} ({c.role})
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="The brief" hint="What they asked for, in their words if you have them.">
+            <Textarea
+              rows={4}
+              value={form.brief}
+              onChange={(e) => setForm({ ...form, brief: e.target.value })}
+            />
+          </Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Quoted" hint="Dollars. What you asked for. Empty for none.">
+              <Input
+                type="number"
+                min={0}
+                value={form.quoted}
+                onChange={(e) => setForm({ ...form, quoted: e.target.value })}
+                placeholder="2500"
+              />
+            </Field>
+            <Field label="Agreed" hint="Dollars. What was settled on. Empty for none.">
+              <Input
+                type="number"
+                min={0}
+                value={form.agreed}
+                onChange={(e) => setForm({ ...form, agreed: e.target.value })}
+                placeholder="1995"
+              />
+            </Field>
+          </div>
+          <div className="flex justify-end gap-2 border-t border-hair pt-4">
+            <Button variant="ghost" onClick={() => setEditing(false)}>
+              Cancel
+            </Button>
+            <Button variant="brand" disabled={busy === "edit"} onClick={saveDetails}>
+              {busy === "edit" ? "Saving..." : "Save details"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
       {/* ---- section 1: the header, everything about this job ---- */}
       <div className="mt-4 rounded-[12px] border border-hair bg-surface p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -759,6 +872,9 @@ function ProjectPage({
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <Button size="sm" variant="secondary" onClick={openEdit}>
+              Edit details
+            </Button>
             {!isOpen(p.status) ? (
               <Button size="sm" variant="secondary" onClick={() => void run("reopen", { status: "backlog" })}>
                 Reopen
@@ -797,11 +913,54 @@ function ProjectPage({
         {/* every fact about the job, in the order it gets asked for */}
         <dl className="mt-4 grid gap-x-6 gap-y-3 border-t border-hair pt-4 sm:grid-cols-2 lg:grid-cols-4">
           <Fact label="Status">
-            <span className="flex items-center gap-2">
-              <span aria-hidden="true" className={`h-2 w-2 rounded-full ${STATUS_DOT[p.status] ?? "bg-hair"}`} />
-              <span className="text-ink">{STUDIO_LABEL[p.status]}</span>
-            </span>
-            <Headline p={p} />
+            {isOpen(p.status) ? (
+              <>
+                <span className="flex items-center gap-2">
+                  <span
+                    aria-hidden="true"
+                    className={`h-2 w-2 shrink-0 rounded-full ${STATUS_DOT[p.status] ?? "bg-hair"}`}
+                  />
+                  <Select
+                    value={p.status}
+                    disabled={busy === "stage"}
+                    aria-label="Project stage"
+                    onChange={(e) => void run("stage", { stage: e.target.value })}
+                  >
+                    {PROJECT_LIST.map((s) => (
+                      <option key={s} value={s}>
+                        {STUDIO_LABEL[s]}
+                      </option>
+                    ))}
+                  </Select>
+                </span>
+                <span className="mt-1 block font-mono text-label uppercase text-dim">
+                  {p.stageLocked ? (
+                    <>
+                      set by you /{" "}
+                      <button
+                        type="button"
+                        disabled={busy === "unlock"}
+                        onClick={() => void run("unlock", { stageLocked: false })}
+                        className="tap text-blue underline underline-offset-2 disabled:opacity-50"
+                      >
+                        follow the line again
+                      </button>
+                    </>
+                  ) : (
+                    "follows the production line"
+                  )}
+                </span>
+                <Headline p={p} />
+              </>
+            ) : (
+              <span className="flex items-center gap-2">
+                <span
+                  aria-hidden="true"
+                  className={`h-2 w-2 rounded-full ${STATUS_DOT[p.status] ?? "bg-hair"}`}
+                />
+                <span className="text-ink">{STUDIO_LABEL[p.status]}</span>
+              </span>
+            )}
           </Fact>
 
           <Fact label="Due">

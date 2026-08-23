@@ -2,7 +2,13 @@ import { NextResponse } from "next/server";
 import { verifyAdmin } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { ballInCourt, normalizePipeline } from "@/lib/pipeline";
-import { PROJECT_STATUSES, normalizeProjectStatus, projectBalance, type ProjectStatus } from "@/lib/projects";
+import {
+  PROJECT_LIST,
+  PROJECT_STATUSES,
+  normalizeProjectStatus,
+  projectBalance,
+  type ProjectStatus,
+} from "@/lib/projects";
 
 export const runtime = "nodejs";
 
@@ -22,6 +28,9 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const str = (v: unknown, max: number) =>
   typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null;
 const cents = (v: unknown) => {
+  /* empty means no price, not zero: clearing the field on an edit has to be
+     able to set it back to nothing */
+  if (v === null || v === undefined || v === "") return null;
   const n = Number(v);
   return Number.isFinite(n) && n >= 0 ? Math.round(n) : null;
 };
@@ -87,6 +96,9 @@ export async function GET(req: Request) {
       title: String(p.title),
       brief: (p.brief as string | null) ?? null,
       status: normalizeProjectStatus(String(p.status)),
+      /* whether a person pinned this stage by hand; undefined column (pre
+         migration) reads as not locked, i.e. still following the line */
+      stageLocked: Boolean(p.stage_locked),
       category: (p.category as string | null) ?? null,
       tags: ((p.tags as string[] | null) ?? []).slice(0, 12),
       pipeline: line,
@@ -210,9 +222,35 @@ export async function PATCH(req: Request) {
   }
 
   const patch: Record<string, unknown> = {};
-  /* the stage computes itself from the line now; the only words a person
-     may still say are closed, cancelled, and backlog to reopen */
-  if (["closed", "cancelled", "backlog"].includes(b.status as string)) patch.status = b.status;
+
+  /*
+   * The stage.
+   *
+   * It normally follows the production line. Three deliberate exceptions,
+   * all a person's word rather than the arithmetic's:
+   *
+   *  - a manual pin: any of the seven open stages, which stops the line from
+   *    moving it until the pin is released (owner decision, 23 August 2026);
+   *  - closed / cancelled, which halt the job entirely;
+   *  - reopen and "follow the line again", which hand control back to the
+   *    arithmetic and re-derive on the spot so the stage is true immediately.
+   */
+  let unlock = false;
+  if (typeof b.stage === "string" && (PROJECT_LIST as string[]).includes(b.stage)) {
+    patch.status = b.stage;
+    patch.stage_locked = true;
+  }
+  if (b.status === "closed" || b.status === "cancelled") patch.status = b.status;
+  if (b.status === "backlog") {
+    /* reopen: back to the top and following the line again */
+    patch.status = "backlog";
+    patch.stage_locked = false;
+    unlock = true;
+  }
+  if (b.stageLocked === false) {
+    patch.stage_locked = false;
+    unlock = true;
+  }
   if ("category" in b) patch.category = str(b.category, 60);
   if (Array.isArray(b.tags))
     patch.tags = (b.tags as unknown[])
@@ -230,7 +268,31 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Nothing to change." }, { status: 400 });
   }
 
-  const { error } = await db.from("projects").update(patch).eq("id", id);
+  let { error } = await db.from("projects").update(patch).eq("id", id);
+  /* graceful until the stage_locked column exists: apply everything else and
+     skip the lock, so pinning a stage still changes it (it just will not
+     stick yet) rather than erroring on the click */
+  if (error && "stage_locked" in patch && /stage_locked/.test(error.message)) {
+    const rest = { ...patch };
+    delete rest.stage_locked;
+    if (Object.keys(rest).length) {
+      ({ error } = await db.from("projects").update(rest).eq("id", id));
+    } else {
+      error = null;
+    }
+  }
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+  /* handing control back to the line means the stored stage may now be
+     stale, so recompute it from the pipeline right away rather than waiting
+     for the next station move */
+  if (unlock) {
+    const { data: proj } = await db.from("projects").select("pipeline").eq("id", id).single();
+    if (proj) {
+      const { normalizePipeline } = await import("@/lib/pipeline");
+      const { syncProjectState } = await import("@/lib/project-station");
+      await syncProjectState(db, id, normalizePipeline((proj as Row).pipeline));
+    }
+  }
   return NextResponse.json({ ok: true });
 }

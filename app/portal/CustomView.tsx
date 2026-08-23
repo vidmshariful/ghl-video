@@ -93,6 +93,34 @@ const DOT: Record<PipelineStation["state"], string> = {
   done: "bg-green",
 };
 
+/* the stage's colour, given a name to sit beside so it is never a mystery */
+const STAGE_TONE: Record<string, "neutral" | "good" | "warn" | "bad" | "info"> = {
+  backlog: "neutral",
+  planning: "info",
+  in_progress: "info",
+  review: "warn",
+  revision: "bad",
+  approved: "good",
+  cutdowns: "warn",
+  closed: "good",
+  cancelled: "neutral",
+};
+
+/* short station names for the compact line, where the full label is long */
+const SHORT: Record<string, string> = {
+  script: "Script",
+  voiceover: "Voice",
+  design: "Design",
+  animation: "Animation",
+  sfx: "Sound",
+  delivery: "Delivery",
+};
+
+/* the station the work sits on now, and how it reads to the client */
+function currentStation(stations: PipelineStation[]): PipelineStation | null {
+  return stations.find((st) => st.state !== "done") ?? null;
+}
+
 export function CustomView({
   authedFetch,
   onMessageStudio,
@@ -266,7 +294,13 @@ export function CustomView({
                           {p.title}
                         </span>
                         <span className="mt-0.5 block truncate font-mono text-label uppercase text-dim">
-                          {p.pipeline.percent}% through the line
+                          {(() => {
+                            const cur = currentStation(p.pipeline.stations);
+                            return cur
+                              ? `${cur.label}: ${cur.word.toLowerCase()}`
+                              : "Finished";
+                          })()}{" "}
+                          / {p.pipeline.percent}%
                         </span>
                       </span>
                       <span className="hidden min-w-0 sm:block">
@@ -367,30 +401,53 @@ function ProjectPage({
         />
       </div>
 
-      {/* the line as one quiet strip: six dots, the current station, how far */}
-      <div className="mb-3 flex flex-wrap items-center gap-3 rounded-[8px] border border-hair bg-surface px-4 py-2.5">
-        <span className="flex items-center gap-1.5">
+      {/* where the whole job stands, said in words first: the stage by name,
+          how far through, and which station it sits on right now. The six
+          dots keep their colour but each carries its station name, so a
+          colour is never shown without the word for it. */}
+      <div className="mb-3 grid gap-2.5 rounded-[8px] border border-hair bg-surface px-4 py-3">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Chip tone={STAGE_TONE[p.status] ?? "neutral"}>{p.statusLabel}</Chip>
+          <span className="font-mono text-label uppercase text-dim">
+            {p.pipeline.percent}% through the line
+          </span>
+          {(() => {
+            const cur = currentStation(p.pipeline.stations);
+            return cur ? (
+              <span className="font-mono text-label uppercase text-muted">
+                now: {cur.label},{" "}
+                <span className={cur.state === "with_client" ? "text-gold" : ""}>
+                  {cur.word.toLowerCase()}
+                </span>
+              </span>
+            ) : (
+              <span className="font-mono text-label uppercase text-green">all finished</span>
+            );
+          })()}
+        </div>
+        <div className="flex flex-wrap gap-x-3.5 gap-y-1.5">
           {p.pipeline.stations.map((st) => (
-            <span
-              key={st.key}
-              title={`${st.label}: ${st.word}`}
-              className={`h-1.5 w-4 rounded-full ${DOT[st.state]}`}
-            />
-          ))}
-        </span>
-        <span className="font-mono text-label uppercase text-dim">
-          {p.pipeline.percent}% through
-        </span>
-        {(() => {
-          const cur = p.pipeline.stations.find((st) => st.state !== "done");
-          return cur ? (
-            <span className="font-mono text-label uppercase text-muted">
-              {cur.label}: <span className={cur.state === "with_client" ? "text-gold" : ""}>{cur.word.toLowerCase()}</span>
+            <span key={st.key} className="inline-flex items-center gap-1.5" title={st.word}>
+              <span
+                aria-hidden="true"
+                className={`h-1.5 w-4 shrink-0 rounded-full ${DOT[st.state]}`}
+              />
+              <span
+                className={`font-mono text-label uppercase ${
+                  st.state === "done"
+                    ? "text-dim"
+                    : st.state === "with_client"
+                      ? "text-gold"
+                      : st.state === "with_us"
+                        ? "text-muted"
+                        : "text-dim"
+                }`}
+              >
+                {SHORT[st.key] ?? st.label}
+              </span>
             </span>
-          ) : (
-            <span className="font-mono text-label uppercase text-green">finished</span>
-          );
-        })()}
+          ))}
+        </div>
       </div>
 
       {/* the video is the page the moment there is a video: watch it, leave

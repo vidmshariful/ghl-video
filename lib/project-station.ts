@@ -93,9 +93,14 @@ export async function syncProjectState(db: DB, projectId: string, line: Pipeline
     .eq("project_id", projectId)
     .eq("category", "format")
     .neq("status", "approved");
-  const { data: proj } = await db.from("projects").select("status").eq("id", projectId).single();
-  const current = String(proj?.status ?? "");
+  /* select * so a project row read here is safe before the stage_locked
+     column exists: a missing column is simply undefined, i.e. not locked */
+  const { data: proj } = await db.from("projects").select("*").eq("id", projectId).single();
+  const current = String((proj as Row | null)?.status ?? "");
   if (current === "closed" || current === "cancelled") return;
+  /* the producer has pinned this stage by hand, so the arithmetic stands
+     down until they hand control back (owner decision, 23 August 2026) */
+  if ((proj as Row | null)?.stage_locked) return;
   const stage = derivedStage(line, { revisionRound: round, openFormats: openFormats ?? 0 });
   if (current !== stage) await db.from("projects").update({ status: stage }).eq("id", projectId);
 }
