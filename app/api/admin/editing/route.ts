@@ -98,7 +98,10 @@ function shape(d: Row) {
     title: String(d.title),
     brief: (d.note as string | null) ?? null,
     status: String(d.status),
-    form: (d.form as "long" | "short" | null) ?? null,
+    editType: (d.edit_type as EditType | null) ?? null,
+    typeLabel: tierFor(String(d.edit_type ?? ""))?.label ?? null,
+    creditCost: Number(d.credit_cost ?? 0),
+    runtimeMinutes: d.runtime_minutes == null ? null : Number(d.runtime_minutes),
     aspect: (d.aspect as string | null) ?? null,
     targetSeconds: (d.target_seconds as number | null) ?? null,
     assetsUrl: (d.assets_url as string | null) ?? null,
@@ -242,7 +245,7 @@ export async function GET(req: Request) {
     const { data: rows } = cycle
       ? await db
           .from("order_deliverables")
-          .select("form, status, assets_ready_at, requested_due_at, cancelled_at, created_at")
+          .select("credit_cost, status, assets_ready_at, requested_due_at, cancelled_at, created_at")
           .eq("cycle_id", cycle.id)
       : { data: [] };
 

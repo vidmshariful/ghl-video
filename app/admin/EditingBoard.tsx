@@ -23,6 +23,7 @@ import {
   type EditingColumn,
   type Qc,
 } from "@/lib/editing-sop";
+import { EDIT_TIERS, creditCost, isPodcast } from "@/lib/editing-credits";
 import {
   Drawer,
   ItemNotes,
@@ -50,7 +51,10 @@ type Req = {
   title: string;
   brief: string | null;
   status: string;
-  form: "long" | "short" | null;
+  editType: string | null;
+  typeLabel: string | null;
+  creditCost: number;
+  runtimeMinutes: number | null;
   aspect: string | null;
   targetSeconds: number | null;
   assetsUrl: string | null;
@@ -79,7 +83,14 @@ type Client = {
   planName: string;
   status: string;
   renewsAt: string | null;
-  slots: { longUsed: number; shortUsed: number; longAllowed: number; shortAllowed: number };
+  credits: {
+    spent: number;
+    allowed: number;
+    planLeft: number;
+    topupLeft: number;
+    left: number;
+    overPlan: boolean;
+  };
   needsUs: number;
   waitingOnThem: number;
   inProgress: number;
@@ -87,9 +98,9 @@ type Client = {
 };
 
 type Board = {
-  client: Omit<Client, "needsUs" | "waitingOnThem" | "inProgress" | "withClient" | "slots">;
+  client: Omit<Client, "needsUs" | "waitingOnThem" | "inProgress" | "withClient" | "credits">;
   month: { id: string; startsAt: string; endsAt: string } | null;
-  slots: Client["slots"];
+  credits: Client["credits"];
   requests: Req[];
   styleGuide: Record<string, unknown> | null;
   team: { email: string; name: string }[];
@@ -128,7 +139,8 @@ const mins = (s: number | null) => (s ? `${Math.round(s / 60)} min` : null);
 type Draft = {
   title: string;
   brief: string;
-  form: "long" | "short";
+  editType: string;
+  runtimeMinutes: string;
   aspect: string;
   targetMinutes: string;
   assetsUrl: string;
@@ -144,7 +156,8 @@ type Draft = {
 const EMPTY_DRAFT: Draft = {
   title: "",
   brief: "",
-  form: "short",
+  editType: "mid",
+  runtimeMinutes: "",
   aspect: "",
   targetMinutes: "",
   assetsUrl: "",
@@ -207,13 +220,13 @@ export function EditingClients({ onOpen }: { onOpen: (id: string) => void }) {
                 {c.renewsAt ? ` / renews ${when(c.renewsAt)}` : ""}
               </p>
               <p className="mt-2 font-mono text-body-sm tabular-nums text-muted">
-                {c.slots.longUsed} of {c.slots.longAllowed} long form, {c.slots.shortUsed} of{" "}
-                {c.slots.shortAllowed} short form this month
+                {c.credits.spent} of {c.credits.allowed} credits this month
+                {c.credits.topupLeft > 0 ? `, plus ${c.credits.topupLeft} bought` : ""}
               </p>
             </div>
             <div className="flex shrink-0 flex-wrap items-center gap-2">
               {c.waitingOnThem > 0 && (
-                <Chip tone="warn">{c.waitingOnThem} needs footage</Chip>
+                <Chip tone="warn">{c.waitingOnThem} footage to check</Chip>
               )}
               {c.needsUs > 0 && <Chip tone="bad">{c.needsUs} needs us</Chip>}
               {c.inProgress > 0 && <Chip tone="info">{c.inProgress} in progress</Chip>}
@@ -331,8 +344,8 @@ export function EditingBoard({ slug, onBack }: { slug: string; onBack: () => voi
         </div>
         <div className="flex flex-wrap items-center gap-4">
           <p className="font-mono text-body-sm tabular-nums text-muted">
-            {b.slots.longUsed} of {b.slots.longAllowed} long, {b.slots.shortUsed} of{" "}
-            {b.slots.shortAllowed} short
+            {b.credits.spent} of {b.credits.allowed} credits
+            {b.credits.topupLeft > 0 ? `, plus ${b.credits.topupLeft} bought` : ""}
           </p>
           <Button
             variant="brand"
@@ -384,14 +397,22 @@ export function EditingBoard({ slug, onBack }: { slug: string; onBack: () => voi
                 title: r.title,
                 meta: [
                   r.parentId ? "cut" : null,
-                  r.form === "long" ? "long" : "short",
+                  r.typeLabel ?? "edit",
+                  r.creditCost ? `${r.creditCost} cr` : null,
                   r.aspect,
                   mins(r.targetSeconds),
                 ]
                   .filter(Boolean)
                   .join(" / "),
                 assignee: r.assignedTo,
-                warn: r.column === "waiting" ? "needs footage" : null,
+                /* the client nearly always sent a link, so the ball is ours
+                   to check it. Only a request with no link at all is on them. */
+                warn:
+                  r.column === "waiting"
+                    ? r.assetsUrl
+                      ? "footage to check"
+                      : "no footage yet"
+                    : null,
                 ...dueChip(r),
               }),
             )}
@@ -477,13 +498,16 @@ function AddRequest({
                 placeholder="March webinar, cut down"
               />
             </Field>
-            <Field label="Length" hint="Which slot it spends.">
+            <Field label="What kind" hint="What it costs them.">
               <Select
-                value={d.form}
-                onChange={(e) => set("form", e.target.value as Draft["form"])}
+                value={d.editType}
+                onChange={(e) => set("editType", e.target.value)}
               >
-                <option value="short">Short form</option>
-                <option value="long">Long form</option>
+                {EDIT_TIERS.map((t) => (
+                  <option key={t.key} value={t.key}>
+                    {t.label}
+                  </option>
+                ))}
               </Select>
             </Field>
           </div>
@@ -497,10 +521,35 @@ function AddRequest({
             />
           </Field>
 
-          {d.form === "long" && (
+          {isPodcast(d.editType) && (
+            <Field
+              label="Finished runtime"
+              required
+              hint="In minutes. Podcasts are priced on the length of the finished episode."
+            >
+              <Input
+                type="number"
+                min="1"
+                step="5"
+                value={d.runtimeMinutes}
+                onChange={(e) => set("runtimeMinutes", e.target.value)}
+                placeholder="60"
+              />
+            </Field>
+          )}
+
+          <p className="rounded-[8px] border border-hair bg-canvas px-4 py-2.5 text-body-sm text-muted">
+            This spends{" "}
+            <span className="font-mono tabular-nums text-gold">
+              {creditCost(d.editType, d.runtimeMinutes ? Number(d.runtimeMinutes) : null)} credits
+            </span>{" "}
+            of their month, before any short cuts.
+          </p>
+
+          {d.editType !== "short" && (
             <Field
               label="Short cuts from it"
-              hint="One per line. Each becomes its own video with its own slot and its own review."
+              hint="One per line. Each becomes its own video costing 1 credit, with its own review."
             >
               <Textarea
                 rows={3}
@@ -646,7 +695,12 @@ function RequestDetail({
             <Chip tone={COLUMN_TONE[r.column]}>
               {EDITING_COLUMNS.find((c) => c.key === r.column)?.label ?? r.status}
             </Chip>
-            <Chip tone="neutral">{r.form === "long" ? "long form" : "short form"}</Chip>
+            {r.typeLabel && <Chip tone="neutral">{r.typeLabel}</Chip>}
+            {r.creditCost > 0 && (
+              <Chip tone="neutral">
+                {r.creditCost} {r.creditCost === 1 ? "credit" : "credits"}
+              </Chip>
+            )}
             {r.aspect && <Chip tone="neutral">{r.aspect}</Chip>}
             {r.revisionRound > 0 && <Chip tone="warn">round {r.revisionRound + 1}</Chip>}
           </div>
