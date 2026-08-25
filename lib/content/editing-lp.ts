@@ -55,24 +55,21 @@ export const editingLp = {
     headline: "You did not run out of ideas.",
     accent: "You ran out of edit time.",
     body: "The recording is the easy part. What stops the schedule is the four hours afterwards: the cuts, the captions, the b roll, the third export because the aspect was wrong. So the file sits on the desktop, the week goes by, and nothing goes out.",
-    /* Three named bottlenecks, said flatly. Each is a real thing the reader
-       has tried, and each is a different reason the schedule stopped, so the
-       section is a diagnosis rather than three lines of agitation. */
+    /* Three things the reader has already tried, each in a line. Numbering
+       them implied an order they do not have: most people have done all
+       three, in any order, and are still stuck. */
     points: [
       {
-        n: "01",
         title: "Editing it yourself",
-        line: "Four hours a video that you are not getting back, on the one task nobody hired you to do. It is the first thing to slip the week anything else goes wrong.",
+        line: "Four hours a video, on the one job nobody hired you to do.",
       },
       {
-        n: "02",
         title: "A freelancer who went quiet",
-        line: "Good for two months, then slower replies, then a week of silence with your footage on their drive. Now you are hiring again instead of publishing.",
+        line: "Good for two months, then slow replies, then your footage on their drive.",
       },
       {
-        n: "03",
-        title: "Hiring an editor in house",
-        line: "Worth it at real volume, and a salary you cannot justify before that. So the footage waits for a hire that keeps getting postponed.",
+        title: "Hiring in house",
+        line: "A salary you cannot justify until the volume is already there.",
       },
     ],
   },
@@ -89,7 +86,7 @@ export const editingLp = {
        be a lie about what the AFTER side came from. */
     before: {
       label: "What you send us",
-      src: null as string | null,
+      src: `${PLACEHOLDER}/6a8d9710048ca9457ca08dbe.mp4` as string | null,
       poster: null as string | null,
       placeholder: "Raw file coming",
     },
@@ -172,8 +169,8 @@ export const editingLp = {
     forYou: {
       title: "This is for you if",
       items: [
+        "You are a HighLevel creator. People who make videos around HighLevel: coaches, creators, affiliates, agencies and SaaS founders.",
         "You publish every week, or you want to and editing is what stops you.",
-        "You are a HighLevel agency, a SaaS founder, or you sell to that world.",
         "You already have the footage. Webinars, demos, talking head, podcasts.",
         "You want the output of an in house editor without the payroll.",
       ],

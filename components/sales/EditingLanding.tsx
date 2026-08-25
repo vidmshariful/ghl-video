@@ -1,5 +1,6 @@
 import { SpVideo } from "@/components/sales/SpVideo";
 import { SectionHead } from "@/components/sales/SectionHead";
+import { BookCall } from "@/components/sales/BookCall";
 import { JsonLd } from "@/components/JsonLd";
 import { faqSchema, serviceSchema } from "@/lib/schema";
 import { editingLp } from "@/lib/content/editing-lp";
@@ -132,9 +133,7 @@ export function EditingLanding() {
             <a href="#plans" className="sp-btn sp-btn--primary">
               See the plans and pricing
             </a>
-            <a href={cta.bookACall.href} className="sp-btn sp-btn--ghost">
-              {cta.bookACall.label}
-            </a>
+            <BookCall className="sp-btn sp-btn--ghost" />
           </div>
           <p className="sp-muted" style={{ marginTop: "1rem", fontSize: "0.92rem" }}>
             {lp.hero.priceNote} {dollars(from)} a month. No contract.
@@ -187,10 +186,9 @@ export function EditingLanding() {
           />
           <div className="sp-necks" style={{ marginTop: "2.5rem" }}>
             {lp.bottleneck.points.map((p) => (
-              <div key={p.n} className="sp-neck">
-                <span className="sp-neck-n">{p.n}</span>
+              <div key={p.title} className="sp-neck">
                 <h3 className="sp-display sp-neck-title">{p.title}</h3>
-                <p className="sp-muted sp-neck-line">{p.line}</p>
+                <p className="sp-neck-line">{p.line}</p>
               </div>
             ))}
           </div>
@@ -242,22 +240,17 @@ export function EditingLanding() {
             accent={lp.how.accent}
             center
           />
-          <div className="sp-steps sp-steps--iconed" style={{ marginTop: "2.5rem" }}>
+          {/* one run rather than three cards with air between them: the
+              connector behind the marks says these happen in order, which is
+              the job the numbers were doing badly next to the icons */}
+          <div className="sp-flow" style={{ marginTop: "2.5rem" }}>
             {lp.how.steps.map((s, i) => (
-              <div key={s.n} className="sp-step">
+              <div key={s.n} className={`sp-flow-step sp-flow-step--${i + 1}`}>
                 <span className="sp-step-icon" aria-hidden="true">
                   {STEP_ICONS[i]}
                 </span>
-                <span className="sp-step-n">{s.n}</span>
-                <p
-                  className="sp-display"
-                  style={{ marginTop: "0.35rem", fontSize: "1.3rem", fontWeight: 600 }}
-                >
-                  {s.title}
-                </p>
-                <p className="sp-muted" style={{ marginTop: "0.4rem" }}>
-                  {s.line}
-                </p>
+                <p className="sp-display sp-flow-title">{s.title}</p>
+                <p className="sp-muted sp-flow-line">{s.line}</p>
               </div>
             ))}
           </div>
@@ -295,7 +288,7 @@ export function EditingLanding() {
                 <p className="sp-muted" style={{ marginTop: "0.3rem" }}>
                   {p.blurb}
                 </p>
-                <p className="sp-price" style={{ marginTop: "1rem" }}>
+                <p className="sp-price" style={{ marginTop: "1rem", fontSize: "2.9rem" }}>
                   {dollars(p.price)}
                   <span className="sp-per">a month</span>
                 </p>
@@ -580,9 +573,7 @@ export function EditingLanding() {
             <a href="#plans" className="sp-btn sp-btn--primary">
               {cta.startEditing}
             </a>
-            <a href={cta.bookACall.href} className="sp-btn sp-btn--ghost">
-              {cta.bookACall.label}
-            </a>
+            <BookCall className="sp-btn sp-btn--ghost" />
           </div>
         </div>
       </section>
