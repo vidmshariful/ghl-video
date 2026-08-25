@@ -18,8 +18,8 @@ import {
 import { VideoReviewModal } from "./VideoReviewModal";
 import { StyleGuideView } from "./StyleGuideView";
 import { DownloadAll } from "@/components/portal/DownloadAll";
-import { stageFor } from "@/lib/editing-sop";
-import { Drawer, StageTimeline, WorkCard } from "@/components/portal/board";
+import { CLIENT_PHASES, needsClient, phaseFor, stageFor } from "@/lib/editing-sop";
+import { StageTimeline, WorkCard } from "@/components/portal/board";
 
 /*
  * An editing client's own screen.
@@ -148,7 +148,7 @@ const JOURNEY = [
   { key: "queued", label: "Requested", tone: "neutral" as const },
   { key: "in_production", label: "Being edited", tone: "info" as const },
   { key: "ready", label: "Your review", tone: "warn" as const },
-  { key: "approved", label: "Done", tone: "good" as const },
+  { key: "approved", label: "Approved", tone: "good" as const },
 ];
 
 const journeyKey = (column: string) =>
@@ -387,6 +387,35 @@ export function EditingView({
   const live = plan.videos.filter((v) => !v.cancelledAt);
   const parents = live.filter((v) => !v.parentId);
 
+  /*
+   * The month, as requests sorted into the three phases.
+   *
+   * Grouped by the REQUEST's own stage, never by some rolled-up state of it
+   * and its cuts. That was tried first and it put a card tagged Approved
+   * under a heading saying In production, which is a card arguing with the
+   * heading above it. The heading groups requests; a short cut is a piece of
+   * one, so it stays nested under its parent wherever the parent lands, still
+   * wearing its own tag, and the progress chip (2/3) is what says the family
+   * is not finished yet.
+   *
+   * Inside a phase, anything waiting on the client comes first, then whatever
+   * is due soonest. The one thing nobody should have to hunt for is the thing
+   * we are waiting on them for.
+   */
+  const families = parents
+    .map((v) => ({
+      v,
+      cuts: live.filter((c) => c.parentId === v.id),
+      phase: phaseFor(v.column),
+    }))
+    .sort((a, b) => {
+      const waiting = (f: typeof a) => ([f.v, ...f.cuts].some(needsClient) ? 0 : 1);
+      if (waiting(a) !== waiting(b)) return waiting(a) - waiting(b);
+      const due = (f: typeof a) => f.v.dueAt ?? f.v.requestedDueAt ?? "";
+      if (due(a) && due(b)) return due(a) < due(b) ? -1 : due(a) > due(b) ? 1 : 0;
+      return due(a) ? -1 : due(b) ? 1 : 0;
+    });
+
   /* finished months still hold real videos, so a past edit opens into the
      same panel a current one does */
   const pastVideos = plan.history.flatMap((h) => h.videos ?? []);
@@ -430,7 +459,10 @@ export function EditingView({
       <div className="mb-3">
         <Tabs
           tabs={[
-            { key: "month" as Tab, label: "This month", count: live.length },
+            /* requests, not videos, so this agrees with the three phase
+               headings below it. A short cut is a piece of a request and is
+               counted inside the one it hangs off. */
+            { key: "month" as Tab, label: "This month", count: parents.length },
             { key: "past" as Tab, label: "Past Edits", count: pastCount },
             { key: "guide" as Tab, label: "How we cut for you" },
             { key: "plan" as Tab, label: "Your plan" },
@@ -738,10 +770,21 @@ export function EditingView({
                   worth using them.
                 </p>
               ) : (
-                <ul className="grid gap-2">
-                  {parents.map((v) => {
-                    const cuts = live.filter((c) => c.parentId === v.id);
+                <div className="grid gap-5">
+                  {CLIENT_PHASES.map((phase) => {
+                    const inPhase = families.filter((f) => f.phase === phase.key);
+                    if (inPhase.length === 0) return null;
                     return (
+                      <section key={phase.key}>
+                        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                          <h3 className="flex items-baseline gap-2 font-mono text-label uppercase tracking-[0.1em] text-muted">
+                            {phase.label}
+                            <span className="tabular-nums text-dim">{inPhase.length}</span>
+                          </h3>
+                          <p className="text-body-sm text-dim">{phase.blurb}</p>
+                        </div>
+                        <ul className="mt-2 grid gap-2">
+                          {inPhase.map(({ v, cuts }) => (
                       <li key={v.id}>
                         <WorkCard
                           item={{
@@ -804,9 +847,12 @@ export function EditingView({
                           </ul>
                         )}
                       </li>
+                          ))}
+                        </ul>
+                      </section>
                     );
                   })}
-                </ul>
+                </div>
               )}
             </Card>
 
@@ -887,7 +933,26 @@ export function EditingView({
         </div>
       )}
 
-      <Drawer open={!!opened} onClose={() => setOpenRequest(null)} title={opened?.title ?? ""}>
+      {/* Opening a request is reading, not filling a form, but it is still one
+          thing over the page rather than a panel shoved in from the side
+          (owner decision, 25 August 2026). Centred, it gets the full width for
+          the brief and the stage line instead of a column. */}
+      <Modal
+        open={!!opened}
+        onClose={() => setOpenRequest(null)}
+        title={opened?.title ?? ""}
+        subtitle={
+          opened ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <Chip tone={stageFor(opened.column).tone}>{stageFor(opened.column).label}</Chip>
+              {opened.typeLabel && <Chip tone="neutral">{opened.typeLabel}</Chip>}
+              {opened.creditCost > 0 && <Chip tone="neutral">{creditWord(opened.creditCost)}</Chip>}
+              {opened.aspect && <Chip tone="neutral">{opened.aspect}</Chip>}
+            </div>
+          ) : undefined
+        }
+        maxWidth="max-w-3xl"
+      >
         {opened && (
           <div className="grid gap-5">
             <StageTimeline
@@ -907,7 +972,17 @@ export function EditingView({
               v={opened}
               cuts={live.filter((c) => c.parentId === opened.id)}
               busy={busy}
-              onReview={(x) => (x.videoUrl ? setReviewing(x) : setOpenRequest(x.id))}
+              /* Into the player means OUT of the detail. The side panel this
+                 replaced let the two sit on top of each other harmlessly; the
+                 Modal traps Tab inside itself, so leaving it open under the
+                 player would put every control in the player out of reach of
+                 a keyboard. A cut with nothing to watch just moves the panel
+                 onto that cut instead. */
+              onReview={(x) => {
+                if (!x.videoUrl) return setOpenRequest(x.id);
+                setOpenRequest(null);
+                setReviewing(x);
+              }}
               onCancel={async (x) => {
                 await cancelRequest(x);
                 setOpenRequest(null);
@@ -915,7 +990,7 @@ export function EditingView({
             />
           </div>
         )}
-      </Drawer>
+      </Modal>
     </div>
   );
 }
@@ -1158,15 +1233,11 @@ function RequestDetail({
     <div>
       <div className="grid gap-3">
         <div className="grid min-w-0 gap-3">
+          {/* no title and no chips here: the popup header above already
+              carries both, and saying it twice on one screen is the sort of
+              thing a side panel got away with and a centred one does not */}
           <Card>
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-h4 font-semibold text-ink">{v.title}</h2>
-              <Chip tone={stage.tone}>{stage.label}</Chip>
-              {v.typeLabel && <Chip tone="neutral">{v.typeLabel}</Chip>}
-              {v.creditCost > 0 && <Chip tone="neutral">{creditWord(v.creditCost)}</Chip>}
-              {v.aspect && <Chip tone="neutral">{v.aspect}</Chip>}
-            </div>
-            <p className="mt-2 text-body-sm text-muted">{stage.blurb}</p>
+            <p className="text-body-sm text-muted">{stage.blurb}</p>
 
             {v.column === "waiting" &&
               (v.assetsUrl ? (

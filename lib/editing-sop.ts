@@ -174,6 +174,61 @@ export const CLIENT_STAGES = [
 
 export type ClientStage = (typeof CLIENT_STAGES)[number]["key"];
 
+/*
+ * The three phases a client's month is read in.
+ *
+ * The six stages above are right on a single card: "Under revisions" and
+ * "Needs your approval" are genuinely different things and the client has to
+ * know which one they are looking at. As a way to ORDER a list they are too
+ * fine. Somebody opening their month asks three questions, in this order:
+ * what have you not started, what is moving, and what is finished. Six
+ * headings answer none of them. Owner decision, 25 August 2026.
+ *
+ * The stage tag stays on every card, so nothing is lost by grouping: the
+ * heading is the coarse answer and the tag is the exact one.
+ */
+export const CLIENT_PHASES = [
+  {
+    key: "backlog",
+    label: "Backlog",
+    blurb: "Asked for. Not started yet.",
+    stages: ["waiting", "queued"],
+  },
+  {
+    key: "production",
+    label: "In production",
+    blurb: "With an editor, or waiting on you.",
+    stages: ["in_production", "ready", "revisions"],
+  },
+  {
+    key: "approved",
+    label: "Approved",
+    blurb: "Finished and yours to use.",
+    stages: ["approved"],
+  },
+] as const;
+
+export type ClientPhase = (typeof CLIENT_PHASES)[number]["key"];
+
+export function phaseFor(stage: string): ClientPhase {
+  const hit = CLIENT_PHASES.find((p) => (p.stages as readonly string[]).includes(stage));
+  return hit?.key ?? "backlog";
+}
+
+/**
+ * Is the ball in the client's court on this one?
+ *
+ * Two cases, and only two: a cut is waiting for them to approve it, or we
+ * never got the footage. Everything else is ours. This is what sorts a list,
+ * because the one thing a client should never have to hunt for is the thing
+ * we are waiting on them for.
+ */
+export function needsClient(r: { status?: string; column?: string; assetsUrl?: string | null }): boolean {
+  const at = r.column ?? r.status;
+  if (at === "ready") return true;
+  return at === "waiting" && !r.assetsUrl;
+}
+
 export const CLIENT_STATUS_WORD: Record<string, string> = Object.fromEntries(
   CLIENT_STAGES.map((s) => [s.key, s.label]),
 );
