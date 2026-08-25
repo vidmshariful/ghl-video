@@ -166,9 +166,9 @@ export const CLIENT_STAGES = [
   },
   {
     key: "approved",
-    label: "Done",
+    label: "Approved",
     tone: "good",
-    blurb: "Approved and yours.",
+    blurb: "Approved and yours. Watch it or download it any time.",
   },
 ] as const;
 

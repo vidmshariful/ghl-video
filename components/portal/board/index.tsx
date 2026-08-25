@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -39,6 +39,10 @@ export type BoardItem = {
   title: string;
   /* the small mono line under the title */
   meta?: string;
+  /* the status in a word, in the column's colour. For a board it is noise,
+     because the column above the card already says it. For a flat list it is
+     the only thing that says where the work stands, so it is optional. */
+  tag?: string | null;
   /* initials avatar; absent means unassigned */
   assignee?: string | null;
   /* the date chip, already worded ("due Aug 24", "asked for Aug 22") */
@@ -58,6 +62,14 @@ const TONE_STRIPE: Record<BoardColumn["tone"], string> = {
   good: "bg-green",
   warn: "bg-gold",
   bad: "bg-error",
+};
+
+const TONE_CHIP: Record<BoardColumn["tone"], string> = {
+  neutral: "border-hair text-dim",
+  info: "border-blue/50 text-blue",
+  good: "border-green/50 text-green",
+  warn: "border-gold/50 text-gold",
+  bad: "border-error/50 text-error",
 };
 
 const TONE_TEXT: Record<BoardColumn["tone"], string> = {
@@ -102,11 +114,15 @@ export function WorkCard({
   item,
   tone,
   onOpen,
+  action,
   dragging = false,
 }: {
   item: BoardItem;
   tone: BoardColumn["tone"];
   onOpen?: (id: string) => void;
+  /* one control that belongs to this card rather than to the card's detail,
+     e.g. "Watch and download". Clicking it does NOT also open the card. */
+  action?: ReactNode;
   dragging?: boolean;
 }) {
   return (
@@ -128,8 +144,15 @@ export function WorkCard({
       {item.meta && (
         <p className="mt-0.5 truncate font-mono text-label uppercase text-dim">{item.meta}</p>
       )}
-      {(item.due || item.warn || item.progress) && (
+      {(item.tag || item.due || item.warn || item.progress || action) && (
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+          {item.tag && (
+            <span
+              className={`rounded-full border px-2 py-0.5 font-mono text-label ${TONE_CHIP[tone]}`}
+            >
+              {item.tag}
+            </span>
+          )}
           {item.warn && (
             <span className="rounded-full border border-gold/50 px-2 py-0.5 font-mono text-label text-gold">
               {item.warn}
@@ -151,6 +174,13 @@ export function WorkCard({
           {item.progress && (
             <span className="rounded-full border border-hair px-2 py-0.5 font-mono text-label tabular-nums text-dim">
               {item.progress}
+            </span>
+          )}
+          {/* the whole card opens the detail, so a control inside it has to
+              stop the click or pressing it would do two things at once */}
+          {action && (
+            <span className="contents" onClick={(e) => e.stopPropagation()}>
+              {action}
             </span>
           )}
         </div>

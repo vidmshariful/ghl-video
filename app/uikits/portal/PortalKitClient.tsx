@@ -158,6 +158,24 @@ export function PortalKitClient() {
               tone="warn"
               onOpen={() => {}}
             />
+            {/* a flat list has no column headers, so the card carries the
+                status itself, and one control that is not "open the card" */}
+            <WorkCard
+              item={{
+                id: "c3",
+                column: "approved",
+                title: "Webinar replay, cut down",
+                meta: "Long form / 3 credits / 16:9",
+                tag: "Approved",
+              }}
+              tone="good"
+              onOpen={() => {}}
+              action={
+                <Button size="sm" variant="secondary">
+                  Watch and download
+                </Button>
+              }
+            />
           </div>
         </Spec>
       </KitSection>

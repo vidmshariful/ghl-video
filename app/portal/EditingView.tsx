@@ -441,7 +441,7 @@ export function EditingView({
       </div>
 
       {tab === "past" ? (
-        <PastEdits months={plan.history} onOpen={setOpenRequest} />
+        <PastEdits months={plan.history} onOpen={setOpenRequest} onWatch={setReviewing} />
       ) : tab === "guide" ? (
         <StyleGuideView authedFetch={authedFetch} aspects={plan.aspects} />
       ) : tab === "plan" ? (
@@ -755,11 +755,13 @@ export function EditingView({
                             ]
                               .filter(Boolean)
                               .join(" / "),
+                            tag: stageFor(v.column).label,
+                            /* the tag already says we are checking it, so
+                               this is only for the rare case where the
+                               client genuinely still owes us the link */
                             warn:
-                              v.column === "waiting"
-                                ? v.assetsUrl
-                                  ? "we are checking your footage"
-                                  : "we need your footage"
+                              v.column === "waiting" && !v.assetsUrl
+                                ? "we need your footage"
                                 : null,
                             due: v.dueAt
                               ? `due ${day(v.dueAt)}`
@@ -779,6 +781,7 @@ export function EditingView({
                           }}
                           tone={stageFor(v.column).tone}
                           onOpen={() => setOpenRequest(v.id)}
+                          action={<WatchButton v={v} onOpen={setReviewing} />}
                         />
                         {cuts.length > 0 && (
                           <ul className="mt-1.5 grid gap-1.5 border-l border-hair pl-4">
@@ -790,9 +793,11 @@ export function EditingView({
                                     column: c.column,
                                     title: c.title,
                                     meta: ["cut", c.aspect].filter(Boolean).join(" / "),
+                                    tag: stageFor(c.column).label,
                                   }}
                                   tone={stageFor(c.column).tone}
                                   onOpen={() => setOpenRequest(c.id)}
+                                  action={<WatchButton v={c} onOpen={setReviewing} />}
                                 />
                               </li>
                             ))}
@@ -902,7 +907,7 @@ export function EditingView({
               v={opened}
               cuts={live.filter((c) => c.parentId === opened.id)}
               busy={busy}
-              onReview={(x) => (x.canReview && x.videoUrl ? setReviewing(x) : setOpenRequest(x.id))}
+              onReview={(x) => (x.videoUrl ? setReviewing(x) : setOpenRequest(x.id))}
               onCancel={async (x) => {
                 await cancelRequest(x);
                 setOpenRequest(null);
@@ -941,9 +946,11 @@ const monthName = (iso: string) =>
 function PastEdits({
   months,
   onOpen,
+  onWatch,
 }: {
   months: Plan["history"];
   onOpen: (id: string) => void;
+  onWatch: (v: Video) => void;
 }) {
   const [pick, setPick] = useState("all");
 
@@ -1015,12 +1022,17 @@ function PastEdits({
                 const cuts = m.kept.filter((c) => c.parentId === v.id);
                 return (
                   <li key={v.id}>
-                    <VideoRow v={v} cuts={cuts.length} onOpen={() => onOpen(v.id)} />
+                    <VideoRow
+                      v={v}
+                      cuts={cuts.length}
+                      onOpen={() => onOpen(v.id)}
+                      onWatch={onWatch}
+                    />
                     {cuts.length > 0 && (
                       <ul className="mt-1.5 grid gap-1.5 border-l border-hair pl-4">
                         {cuts.map((c) => (
                           <li key={c.id}>
-                            <VideoRow v={c} onOpen={() => onOpen(c.id)} />
+                            <VideoRow v={c} onOpen={() => onOpen(c.id)} onWatch={onWatch} />
                           </li>
                         ))}
                       </ul>
@@ -1039,20 +1051,29 @@ function PastEdits({
 function VideoRow({
   v,
   onOpen,
+  onWatch,
   cuts = 0,
 }: {
   v: Video;
   onOpen: (v: Video) => void;
+  onWatch?: (v: Video) => void;
   cuts?: number;
 }) {
   const stage = stageFor(v.column);
   return (
-    <button
-      type="button"
-      onClick={() => onOpen(v)}
-      className={`tap w-full rounded-[8px] border p-3.5 text-left transition-colors hover:border-gold/60 ${ROW[v.column] ?? ROW.queued}`}
+    /* the whole row opens the request, and the player button sits on top of
+       it. A button inside a button is not valid markup, so the row's own
+       click target is an overlay rather than a wrapper. */
+    <div
+      className={`relative rounded-[8px] border p-3.5 text-left transition-colors hover:border-gold/60 ${ROW[v.column] ?? ROW.queued}`}
     >
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <button
+        type="button"
+        onClick={() => onOpen(v)}
+        aria-label={`Open ${v.title}`}
+        className="tap absolute inset-0 rounded-[8px]"
+      />
+      <div className="pointer-events-none relative flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-body-sm font-semibold text-ink">{v.title}</p>
           <p className="mt-0.5 font-mono text-label uppercase text-dim">
@@ -1068,12 +1089,46 @@ function VideoRow({
                 : ""}
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="pointer-events-auto flex items-center gap-2">
           <Chip tone={stage.tone}>{stage.label}</Chip>
-          <ChevronRight size={15} className="text-dim" aria-hidden="true" />
+          {onWatch && <WatchButton v={v} onOpen={onWatch} />}
+          {/* the button is the affordance when there is one, and at 375px the
+              arrow on top of it runs off the row */}
+          {!(onWatch && v.videoUrl) && (
+            <ChevronRight size={15} className="pointer-events-none text-dim" aria-hidden="true" />
+          )}
         </div>
       </div>
-    </button>
+    </div>
+  );
+}
+
+/*
+ * The one way into the player, from anywhere a video is listed.
+ *
+ * Before this, a finished video showed nothing at all on its row: the button
+ * only appeared while it still needed reviewing, so the moment a client
+ * approved something it looked like it had been taken away from them. It is
+ * the same popup either way, because review and rewatch are the same screen
+ * with a different job.
+ */
+function WatchButton({ v, onOpen }: { v: Video; onOpen: (v: Video) => void }) {
+  if (!v.videoUrl) return null;
+  return (
+    <Button
+      size="sm"
+      variant={v.canReview ? "brand" : "secondary"}
+      icon={<Play />}
+      onClick={() => onOpen(v)}
+    >
+      {/* while it is in revisions the cut on screen is still the last one we
+          sent, so this must not promise them the new version */}
+      {v.canReview
+        ? v.status === "revisions"
+          ? "Watch and add notes"
+          : "Review it"
+        : "Watch and download"}
+    </Button>
   );
 }
 
@@ -1154,21 +1209,25 @@ function RequestDetail({
           </Card>
 
           {v.videoUrl ? (
-            <Card title="Your video">
-              <video
-                src={v.videoUrl}
-                controls
-                playsInline
-                preload="metadata"
-                className="w-full rounded-[8px] bg-canvas"
-              />
-              {v.canReview && (
-                <div className="mt-3">
-                  <Button variant="brand" icon={<Play />} onClick={() => onReview(v)}>
-                    {v.status === "revisions" ? "See it and add notes" : "Review and approve"}
-                  </Button>
-                </div>
-              )}
+            <Card
+              title="Your video"
+              description={
+                v.canReview
+                  ? "Opens full screen, with the player and your notes side by side."
+                  : "Approved and yours. Opens full screen, where you can download or share it."
+              }
+            >
+              <Button
+                variant={v.canReview ? "brand" : "secondary"}
+                icon={<Play />}
+                onClick={() => onReview(v)}
+              >
+                {v.canReview
+                  ? v.status === "revisions"
+                    ? "See it and add notes"
+                    : "Review and approve"
+                  : "Watch and download"}
+              </Button>
             </Card>
           ) : (
             <Card title="Your video">

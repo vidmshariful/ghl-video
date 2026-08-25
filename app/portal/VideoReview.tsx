@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Check } from "lucide-react";
 import { Button, Textarea } from "@/components/portal/ui";
 import { ConfirmDialog } from "./ConfirmDialog";
 
@@ -86,14 +87,28 @@ export function VideoReview({
   const [replyText, setReplyText] = useState("");
   const [currentVersion, setCurrentVersion] = useState<number | null>(null);
   const [ask, setAsk] = useState<null | "approve" | "changes">(null);
+  /*
+   * The status this component believes, which is not the same as the one it
+   * was opened with.
+   *
+   * The caller passes a snapshot taken when the row was clicked, and that
+   * snapshot never changes while the modal is open. So approving used to
+   * leave "Approve this video" sitting there, still enabled, inviting a
+   * second press on something already approved. The review endpoint returns
+   * the real status on every read, so it is read from there and the prop is
+   * only the opening guess.
+   */
+  const [liveStatus, setLiveStatus] = useState(status);
 
   const load = useCallback(async () => {
     const j = (await authedFetch(`/api/portal/videos/${videoId}/review`).catch(() => null)) as {
       comments?: Comment[];
       versions?: { version: number }[];
+      status?: string;
     } | null;
     setComments(j?.comments ?? []);
     setCurrentVersion(j?.versions?.[0]?.version ?? null);
+    if (j?.status) setLiveStatus(j.status);
   }, [authedFetch, videoId]);
 
   useEffect(() => {
@@ -133,6 +148,8 @@ export function VideoReview({
     await load();
     onChanged();
   }
+
+  const approved = liveStatus === "approved";
 
   /* Clicking into the note box pauses the video. Otherwise a client types
      while it plays on, and the timestamp they attach is wherever it drifted
@@ -207,7 +224,7 @@ export function VideoReview({
         </div>
       ))}
 
-      {replyTo === c.id ? (
+      {approved ? null : replyTo === c.id ? (
         <div className="mt-2 grid gap-2">
           <Textarea
             rows={2}
@@ -316,24 +333,47 @@ export function VideoReview({
           </div>
         )}
 
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Button variant="brand" disabled={busy} onClick={() => setAsk("approve")}>
-            Approve this video
-          </Button>
-          {canRequestChanges ? (
-            <Button variant="secondary" disabled={busy} onClick={() => setAsk("changes")}>
-              Request changes
-            </Button>
-          ) : onMessageStudio ? (
-            <Button variant="secondary" onClick={onMessageStudio}>
-              Message the studio
-            </Button>
-          ) : null}
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {approved ? (
+            <>
+              <span className="inline-flex items-center gap-2 rounded-[8px] border border-green/40 bg-green/10 px-3.5 py-2 text-body-sm font-semibold text-green">
+                <Check size={15} aria-hidden="true" /> Approved
+              </span>
+              <a
+                href={`/api/portal/videos/${videoId}/download`}
+                className="tap rounded-[8px] border border-hair px-3.5 py-2 text-body-sm font-semibold text-muted transition-colors hover:border-blue/60 hover:text-blue"
+              >
+                Download it
+              </a>
+              {onMessageStudio && (
+                <Button variant="ghost" onClick={onMessageStudio}>
+                  Message the studio
+                </Button>
+              )}
+            </>
+          ) : (
+            <>
+              <Button variant="brand" disabled={busy} onClick={() => setAsk("approve")}>
+                Approve this video
+              </Button>
+              {canRequestChanges ? (
+                <Button variant="secondary" disabled={busy} onClick={() => setAsk("changes")}>
+                  Request changes
+                </Button>
+              ) : onMessageStudio ? (
+                <Button variant="secondary" onClick={onMessageStudio}>
+                  Message the studio
+                </Button>
+              ) : null}
+            </>
+          )}
         </div>
 
         {/* the policy, said before they use it rather than after */}
         <p className="mt-2 text-body-sm text-dim">
-          {status === "revisions"
+          {approved
+            ? "You approved this one, so it is finished and yours to use. If something still needs changing, message us and we will reopen it."
+            : liveStatus === "revisions"
             ? "We are working on your changes. You can still add notes below, and we will pick them up."
             : unlimitedRevisions
               ? "Revisions are unlimited on your plan. Add all of your notes first and we will do them in one pass."
@@ -348,37 +388,50 @@ export function VideoReview({
           Notes{open > 0 ? ` (${open} open)` : ""}
         </p>
 
-        <p className="mt-2 text-body-sm text-dim">
-          Writing pauses the video. Stop on the exact frame you mean.
-        </p>
+        {/* Once it is approved this panel is a record, not an inbox. A box
+            asking "what would you like changed" under a finished video invites
+            a note nobody is going to act on, because approving is what closes
+            the work. Messaging the studio is the way back in, and the line
+            under the player says so. */}
+        {approved ? (
+          <p className="mt-2 text-body-sm text-dim">
+            What you and the studio said while this was being made.
+          </p>
+        ) : (
+          <>
+            <p className="mt-2 text-body-sm text-dim">
+              Writing pauses the video. Stop on the exact frame you mean.
+            </p>
 
-        <div className="mt-2 grid gap-2">
-          <Textarea
-            rows={3}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onFocus={pause}
-            onKeyDown={enterSends(() => send("comment"))}
-            placeholder="What would you like changed? Enter to send."
-          />
-          <label className="flex items-center gap-2 text-body-sm text-muted">
-            <input
-              type="checkbox"
-              checked={pin}
-              onChange={(e) => setPin(e.target.checked)}
-              className="h-4 w-4 accent-[var(--gold)]"
-            />
-            Pin this to {mmss(at)}
-          </label>
-          <button
-            type="button"
-            disabled={busy || !text.trim()}
-            onClick={() => send("comment")}
-            className="tap justify-self-start rounded-[8px] border border-hair px-3.5 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-40"
-          >
-            Add note
-          </button>
-        </div>
+            <div className="mt-2 grid gap-2">
+              <Textarea
+                rows={3}
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                onFocus={pause}
+                onKeyDown={enterSends(() => send("comment"))}
+                placeholder="What would you like changed? Enter to send."
+              />
+              <label className="flex items-center gap-2 text-body-sm text-muted">
+                <input
+                  type="checkbox"
+                  checked={pin}
+                  onChange={(e) => setPin(e.target.checked)}
+                  className="h-4 w-4 accent-[var(--gold)]"
+                />
+                Pin this to {mmss(at)}
+              </label>
+              <button
+                type="button"
+                disabled={busy || !text.trim()}
+                onClick={() => send("comment")}
+                className="tap justify-self-start rounded-[8px] border border-hair px-3.5 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-40"
+              >
+                Add note
+              </button>
+            </div>
+          </>
+        )}
 
         {err && <p className="mt-2 text-body-sm text-error">{err}</p>}
 
@@ -387,7 +440,9 @@ export function VideoReview({
             <p className="text-body-sm text-muted">Loading notes...</p>
           ) : top.length === 0 ? (
             <p className="text-body-sm text-dim">
-              No notes yet. Play the video and add one at the moment you mean.
+              {approved
+                ? "No notes were left on this one."
+                : "No notes yet. Play the video and add one at the moment you mean."}
             </p>
           ) : (
             <>

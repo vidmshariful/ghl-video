@@ -58,10 +58,10 @@ for (const [k, ids] of Object.entries(groups)) {
 console.log(`         ${total} videos in total`);
 
 console.log("\nWHAT THE EDITING BOARD SEES (this month)");
-const { data: cyc } = await db.from("subscription_cycles").select("id, long_form_allowed, short_form_allowed")
+const { data: cyc } = await db.from("subscription_cycles").select("id, credits_allowed")
   .in("subscription_id", subs.map(s=>s.id)).order("period_start",{ascending:false}).limit(1).single();
 const { data: reqs } = await db.from("order_deliverables")
-  .select("title, status, form, assets_ready_at, cancelled_at, parent_id, qc").eq("cycle_id", cyc.id).order("position");
+  .select("title, status, edit_type, credit_cost, assets_ready_at, cancelled_at, parent_id, qc").eq("cycle_id", cyc.id).order("position");
 const col = r => r.status==="queued" && !r.assets_ready_at ? "waiting" : r.status;
 const live = reqs.filter(r=>!r.cancelled_at);
 for (const c of ["waiting","queued","in_production","ready","revisions","approved"]) {
@@ -69,8 +69,10 @@ for (const c of ["waiting","queued","in_production","ready","revisions","approve
   console.log(`         ${c.padEnd(14)} ${n}`);
 }
 need(new Set(live.map(col)).size >= 4, "at least four columns have something in them");
-const used = { long: live.filter(r=>r.form==="long").length, short: live.filter(r=>r.form==="short").length };
-console.log(`         slots: ${used.long} of ${cyc.long_form_allowed} long, ${used.short} of ${cyc.short_form_allowed} short`);
+/* credits, not slots: the plans stopped counting videos in August 2026 */
+const spent = live.reduce((n,r)=>n+(r.credit_cost ?? 0), 0);
+console.log(`         credits: ${spent} of ${cyc.credits_allowed} used`);
+need(live.every(r=>r.credit_cost > 0), "every request costs credits");
 need(live.some(r=>r.parent_id), "a long form with short cuts exists");
 need(reqs.some(r=>r.cancelled_at), "a cancelled request exists, with its slot returned");
 const ready = live.find(r=>r.status==="ready");
