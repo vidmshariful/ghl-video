@@ -19,6 +19,7 @@ import { VideoReviewModal } from "./VideoReviewModal";
 import { StyleGuideView } from "./StyleGuideView";
 import { DownloadAll } from "@/components/portal/DownloadAll";
 import { CLIENT_PHASES, needsClient, phaseFor, stageFor } from "@/lib/editing-sop";
+import { PODCAST_TIERS, VIDEO_TIERS } from "@/lib/editing-credits";
 import { StageTimeline, WorkCard } from "@/components/portal/board";
 
 /*
@@ -171,6 +172,45 @@ function costOf(tier: Tier | null, runtimeMinutes: number | null): number {
   const blocks = Math.max(1, Math.ceil(mins / 30));
   return (
     Math.floor(blocks / 2) * (tier.perHour ?? 0) + (blocks % 2) * (tier.perHalfHour ?? 0)
+  );
+}
+
+/*
+ * What each shape costs, straight off the table the server charges against.
+ *
+ * A balance is only readable next to its price list. "9 credits left" answers
+ * nothing on its own: nine credits is nine short cuts or three long videos,
+ * and a client cannot plan the rest of their month without knowing which.
+ * Imported from lib/editing-credits rather than typed out, so the number here
+ * and the number they are charged cannot drift apart.
+ */
+function CreditPrices() {
+  const row = "flex items-baseline justify-between gap-3 border-t border-hair pt-2.5 first:border-t-0 first:pt-0";
+  const cost = "shrink-0 font-mono text-body-sm font-semibold tabular-nums text-gold";
+  return (
+    <ul className="grid gap-2.5">
+      {VIDEO_TIERS.map((t) => (
+        <li key={t.key} className={row}>
+          <span className="min-w-0">
+            <span className="block text-body-sm font-semibold text-ink">{t.label}</span>
+            <span className="block text-body-sm text-dim">{t.lengthNote}</span>
+          </span>
+          <span className={cost}>{creditWord(t.credits)}</span>
+        </li>
+      ))}
+      {PODCAST_TIERS.map((t) => (
+        <li key={t.key} className={row}>
+          <span className="min-w-0">
+            <span className="block text-body-sm font-semibold text-ink">{t.label}</span>
+            <span className="block text-body-sm text-dim">Or {t.perHalfHour} for a half hour</span>
+          </span>
+          <span className={cost}>{t.perHour} an hour</span>
+        </li>
+      ))}
+      <li className="border-t border-hair pt-2.5 text-body-sm text-dim">
+        Podcasts are priced on the finished runtime, not on the footage you send.
+      </li>
+    </ul>
   );
 }
 
@@ -490,6 +530,18 @@ export function EditingView({
             <p className="mt-4 text-body-sm text-dim">
               Standard turnaround is two to three business days per video,
               counted from when your footage reaches us.
+            </p>
+          </Card>
+
+          <Card
+            title="What things cost"
+            description="Every request is priced by its shape, so you spend the month however you like."
+            className="lg:col-start-1"
+          >
+            <CreditPrices />
+            <p className="mt-4 text-body-sm text-dim">
+              Short cuts made from a video you already asked for cost a credit each,
+              the same as any short form.
             </p>
           </Card>
 
@@ -914,6 +966,15 @@ export function EditingView({
                 <CalendarClock size={15} className="mt-0.5 shrink-0" aria-hidden="true" />
                 Resets {day(plan.cycle.endsAt)}. Unused plan credits do not carry over.
               </p>
+
+              <div className="mt-5 border-t border-hair pt-4">
+                <p className="font-mono text-label uppercase tracking-[0.1em] text-muted">
+                  What things cost
+                </p>
+                <div className="mt-3">
+                  <CreditPrices />
+                </div>
+              </div>
             </Card>
 
             {s.overPlan && (
@@ -1179,6 +1240,53 @@ function VideoRow({
 }
 
 /*
+ * A still from the video itself, as the way in.
+ *
+ * A button alone gives no sign there is anything on the other side of it. A
+ * frame does: you can see it is your video before you open it, which is the
+ * difference between "review and approve" as an instruction and as a thing.
+ *
+ * The frame comes from the file rather than a stored poster, because we do
+ * not cut posters and a missing one would leave a grey box. It is a <video>
+ * tag with no controls, muted, aria-hidden and click-through, seeking one
+ * second in: a picture, not a player. Review still only ever happens in the
+ * full screen popup (owner rule, final), which is what pressing this opens.
+ */
+function VideoThumb({ v, onOpen }: { v: Video; onOpen: (v: Video) => void }) {
+  if (!v.videoUrl) return null;
+  /* a frame a second in. The first frame of a cut is usually black. */
+  const frame = v.videoUrl.includes("#") ? v.videoUrl : `${v.videoUrl}#t=1`;
+  const shape =
+    v.aspect === "9:16" ? "aspect-[9/16] w-32" : v.aspect === "1:1" ? "aspect-square w-44" : "aspect-video w-56";
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen(v)}
+      aria-label={`Watch ${v.title}`}
+      className={`tap group relative block shrink-0 overflow-hidden rounded-[8px] border border-hair bg-canvas transition-colors hover:border-gold/60 ${shape}`}
+    >
+      <video
+        src={frame}
+        muted
+        playsInline
+        preload="metadata"
+        tabIndex={-1}
+        aria-hidden="true"
+        className="pointer-events-none h-full w-full object-cover"
+      />
+      <span
+        aria-hidden="true"
+        className="absolute inset-0 grid place-items-center bg-canvas/40 transition-colors group-hover:bg-canvas/20"
+      >
+        <span className="grid h-11 w-11 place-items-center rounded-full bg-brand-gradient text-canvas shadow-lg transition-transform group-hover:scale-105">
+          <Play size={18} fill="currentColor" />
+        </span>
+      </span>
+    </button>
+  );
+}
+
+/*
  * The one way into the player, from anywhere a video is listed.
  *
  * Before this, a finished video showed nothing at all on its row: the button
@@ -1288,17 +1396,23 @@ function RequestDetail({
                   : "Approved and yours. Opens full screen, where you can download or share it."
               }
             >
-              <Button
-                variant={v.canReview ? "brand" : "secondary"}
-                icon={<Play />}
-                onClick={() => onReview(v)}
-              >
-                {v.canReview
-                  ? v.status === "revisions"
-                    ? "See it and add notes"
-                    : "Review and approve"
-                  : "Watch and download"}
-              </Button>
+              <div className="grid items-start gap-4 sm:grid-cols-[1fr_auto]">
+                <Button
+                  variant={v.canReview ? "brand" : "secondary"}
+                  icon={<Play />}
+                  onClick={() => onReview(v)}
+                  /* on a phone the frame reads first and the button follows
+                     it, which is the order you look at them in anyway */
+                  className="order-last justify-self-start sm:order-none"
+                >
+                  {v.canReview
+                    ? v.status === "revisions"
+                      ? "See it and add notes"
+                      : "Review and approve"
+                    : "Watch and download"}
+                </Button>
+                <VideoThumb v={v} onOpen={onReview} />
+              </div>
             </Card>
           ) : (
             <Card title="Your video">
@@ -1315,8 +1429,10 @@ function RequestDetail({
               description="Each is a video of its own, with its own review and approval."
             >
               <div className="grid gap-2">
+                {/* the same row the month list uses, so a cut carries its own
+                    way into the player here too rather than a bare arrow */}
                 {cuts.map((c) => (
-                  <VideoRow key={c.id} v={c} onOpen={onReview} />
+                  <VideoRow key={c.id} v={c} onOpen={onReview} onWatch={onReview} />
                 ))}
               </div>
             </Card>
