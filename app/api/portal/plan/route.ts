@@ -362,6 +362,18 @@ export async function POST(req: Request) {
     },
   });
 
+  /* the bell alone let a live client's first three requests sit unread with
+     the earliest one wanted the next day. Fail-soft: the request is saved. */
+  const { sendEditRequestedAlert } = await import("@/lib/email/notify");
+  await sendEditRequestedAlert(db, {
+    customerEmail: ctx.ownerEmail,
+    title,
+    brief,
+    assetsUrl,
+    wantedBy: wantedBy ?? null,
+    planLine: `${form} form${cuts.length ? ` plus ${cuts.length} short ${cuts.length === 1 ? "cut" : "cuts"}` : ""}${warnings.length ? ". Over their plan this month." : "."}`,
+  });
+
   return NextResponse.json({
     ok: true,
     warning: warnings[0] ?? null,

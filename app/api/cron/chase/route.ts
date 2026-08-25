@@ -148,8 +148,12 @@ export async function GET(req: Request) {
     .not("cycle_id", "is", null)
     .eq("status", "ready");
   const cycleIds = [...new Set(((editingReady ?? []) as Row[]).map((r) => String(r.cycle_id)))];
+  /* the table is subscription_cycles. `editing_cycles` never existed, and
+     because only `data` was destructured the error was swallowed: the map
+     below stayed empty, every row hit the `continue`, and no editing client
+     was ever reminded to come and watch a cut. */
   const { data: cycles } = cycleIds.length
-    ? await db.from("editing_cycles").select("id, subscription_id").in("id", cycleIds)
+    ? await db.from("subscription_cycles").select("id, subscription_id").in("id", cycleIds)
     : { data: [] };
   const subIds = [...new Set(((cycles ?? []) as Row[]).map((c) => String(c.subscription_id)))];
   const { data: subs } = subIds.length

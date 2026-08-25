@@ -742,7 +742,9 @@ export function EditingView({
                 opened.column === "revisions"
                   ? "Changes in hand"
                   : opened.column === "waiting"
-                    ? "Needs your footage"
+                    ? opened.assetsUrl
+                      ? "Checking your footage"
+                      : "Needs your footage"
                     : undefined
               }
             />
@@ -958,15 +960,23 @@ function RequestDetail({
             </div>
             <p className="mt-2 text-body-sm text-muted">{stage.blurb}</p>
 
-            {v.column === "waiting" && (
-              <div className="mt-3 rounded-[8px] border border-gold/40 bg-gold/[0.06] px-4 py-3">
-                <p className="text-body-sm text-ink">
-                  We have not been able to open your footage yet, so nothing is
-                  promised on this one until it is in. Check the link is shared
-                  with us, or send a new one.
-                </p>
-              </div>
-            )}
+            {v.column === "waiting" &&
+              (v.assetsUrl ? (
+                <div className="mt-3 rounded-[8px] border border-blue/40 bg-blue/[0.06] px-4 py-3">
+                  <p className="text-body-sm text-ink">
+                    Your footage is with us. We open and check every link before we
+                    promise a date, so this one is not scheduled yet. If we cannot
+                    open it we will message you.
+                  </p>
+                </div>
+              ) : (
+                <div className="mt-3 rounded-[8px] border border-gold/40 bg-gold/[0.06] px-4 py-3">
+                  <p className="text-body-sm text-ink">
+                    We do not have footage for this one yet. Message us a link and we
+                    will get started.
+                  </p>
+                </div>
+              ))}
 
             {v.brief && (
               <div className="mt-4">

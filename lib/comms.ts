@@ -212,7 +212,7 @@ export const COMM_ACTIONS: CommAction[] = [
     key: "edit_requested", group: "editing", label: "The client requests an edit",
     when: "A client submits a video request on their plan.",
     mode: "automatic",
-    emails: [],
+    emails: [{ key: "admin_edit_requested", to: "team" }],
     notifications: [{ kind: "edit_requested", audience: "admin", to: "team" }],
   },
   {

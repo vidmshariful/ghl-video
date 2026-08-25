@@ -74,6 +74,7 @@ export const TEMPLATE_VARIABLES: Record<string, string[]> = {
   brief_received: ["customer_name", "product_name", "order_code", "due_line", "due_date", "portal_url"],
   invoice_sent: ["customer_name", "invoice_number", "amount", "due_line", "due_date", "pay_url", "line_items", "notes", "portal_url"],
   admin_project_feedback: ["headline", "customer_name", "customer_email", "project_title", "stage_label", "message", "admin_url"],
+  admin_edit_requested: ["customer_name", "customer_email", "title", "brief", "assets_url", "wanted_line", "plan_line", "admin_url"],
 };
 
 /* shared inline-style shorthands for the default bodies below */
@@ -406,6 +407,19 @@ ${btn("{{portal_url}}", "Open your portal")}`,
 <p style="${P}">{{notes}}</p>
 ${btn("{{pay_url}}", "Pay the invoice")}
 <p style="${SMALL}margin-top:22px;">The link is yours alone and stays open until it is paid. Every invoice also lives in your portal under Orders and Invoices.</p>`,
+  },
+  {
+    key: "admin_edit_requested",
+    name: "Team alert: new edit request",
+    description:
+      "Sent to the team when a client on an editing plan submits a request. Until this existed the only signal was a bell, so three requests from a live client sat unread with the first one due the next day.",
+    subject: "Edit requested: {{title}}",
+    body: `<h1 style="${H}">New edit request.</h1>
+<p style="${P}"><strong style="${STRONG}">{{customer_name}}</strong> ({{customer_email}}) asked for <strong style="${STRONG}">{{title}}</strong>{{wanted_line}}.</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 22px;"><tr><td style="${BOX}">{{brief}}</td></tr></table>
+<p style="${P}">Footage: {{assets_url}}</p>
+<p style="${SMALL}">{{plan_line}}</p>
+${btn("{{admin_url}}", "Open their board")}`,
   },
   {
     key: "admin_project_feedback",

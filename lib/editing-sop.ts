@@ -23,7 +23,7 @@
 
 /** The board, in the studio's words. Derived from status, not stored. */
 export const EDITING_COLUMNS = [
-  { key: "waiting", label: "Needs footage" },
+  { key: "waiting", label: "Footage to check" },
   { key: "queued", label: "Edit request" },
   { key: "in_production", label: "In progress" },
   { key: "ready", label: "Review" },
@@ -36,11 +36,19 @@ export type EditingColumn = (typeof EDITING_COLUMNS)[number]["key"];
 /**
  * Which column a request sits in.
  *
- * "Needs footage" is a queued request with nothing to edit yet. It is a
- * derived column rather than a sixth status on purpose: the five statuses
- * are shared with premade and custom work, and forking that vocabulary for
- * one service line is how two boards start describing the same thing
- * differently.
+ * The first column is a queued request whose footage nobody has opened yet.
+ * It is a derived column rather than a sixth status on purpose: the five
+ * statuses are shared with premade and custom work, and forking that
+ * vocabulary for one service line is how two boards start describing the
+ * same thing differently.
+ *
+ * It used to be called "Needs footage", which was wrong in the only case that
+ * actually happens. The portal REQUIRES a footage link, so a client-made
+ * request always arrives with one, and calling that "needs footage" told a
+ * paying client they owed us something they had already sent, and told the
+ * studio the ball was in the client's court when it was in ours. Whether the
+ * client still owes us a link is a different question, and `owesFootage`
+ * below is the one that answers it.
  */
 export function columnFor(r: {
   status: string;
@@ -48,6 +56,17 @@ export function columnFor(r: {
 }): EditingColumn {
   if (r.status === "queued" && !r.assetsReadyAt) return "waiting";
   return (r.status as EditingColumn) ?? "queued";
+}
+
+/**
+ * Does the client actually still owe us the footage?
+ *
+ * Only true when no link was ever given, which from the portal cannot happen
+ * and from the studio's own "add a request for them" form can. Everything
+ * else in the first column is ours to check, not theirs to send.
+ */
+export function owesFootage(r: { assetsUrl?: string | null; assetsReadyAt: string | null }): boolean {
+  return !r.assetsReadyAt && !r.assetsUrl;
 }
 
 /*
@@ -111,10 +130,15 @@ export const EDITING_REVISIONS_UNLIMITED = true;
  */
 export const CLIENT_STAGES = [
   {
+    /* The client nearly always DID send a link, because the portal will not
+       take a request without one. So this stage is us checking it, not them
+       owing it, and it is blue like the rest of the work in our hands. The
+       "you still owe us a link" case is real but rare, and the screen says
+       that separately when `owesFootage` is true. */
     key: "waiting",
-    label: "Needs your footage",
-    tone: "warn",
-    blurb: "We cannot start until we can open your files.",
+    label: "Checking your footage",
+    tone: "info",
+    blurb: "We open every link before we promise a date.",
   },
   {
     key: "queued",

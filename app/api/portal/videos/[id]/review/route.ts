@@ -10,7 +10,7 @@ import {
 } from "@/lib/pipeline";
 import { addComment, clientVerdict, listComments, stamp } from "@/lib/review";
 import { listVersions } from "@/lib/versions";
-import { pushOrderOwnerNotification } from "@/lib/notifications";
+import { pushAdminNotifications, pushOrderOwnerNotification } from "@/lib/notifications";
 
 export const runtime = "nodejs";
 
@@ -26,19 +26,33 @@ async function guard(req: Request, deliverableId: string) {
   const db = supabaseAdmin();
   const ctx = await resolvePortalContext(db, req, "customer");
   if ("failStatus" in ctx) return { fail: NextResponse.json({ error: "Unauthorized." }, { status: ctx.failStatus }) };
-  if (!contextCan(ctx, "orders"))
-    return { fail: NextResponse.json({ error: "You do not have access to orders." }, { status: 403 }) };
 
   const { data: d } = await db
     .from("order_deliverables")
-    .select("id, order_id, project_id, category, status, title, revision_round")
+    .select("id, order_id, project_id, cycle_id, category, status, title, revision_round")
     .eq("id", deliverableId)
     .maybeSingle();
   if (!d) return { fail: NextResponse.json({ error: "Not found." }, { status: 404 }) };
 
-  /* the video must hang off work this account actually owns: an order, or
-     a custom project. Being signed in is not on its own permission. */
+  /*
+   * The video must hang off work this account actually owns, and a video can
+   * hang off any of THREE things: an order, a custom project, or a month of
+   * an editing plan. Being signed in is not on its own permission.
+   *
+   * The editing branch was missing, which made every delivered editing video
+   * un-approvable: the guard fell through to 404 and the client was shown
+   * "Not found." on their own video. The feature gate moved below the lookup
+   * for the same reason, because which grant applies depends on which kind of
+   * work this is: plan work answers to `subscriptions`, not to `orders`.
+   */
+  const gate = (feature: string) =>
+    contextCan(ctx, feature)
+      ? null
+      : { fail: NextResponse.json({ error: "You do not have access to this." }, { status: 403 }) };
+
   if (d.order_id) {
+    const denied = gate("orders");
+    if (denied) return denied;
     const { data: order } = await db
       .from("orders")
       .select("id, customer_email, status")
@@ -49,6 +63,8 @@ async function guard(req: Request, deliverableId: string) {
     return { db, ctx, deliverable: d, order };
   }
   if (d.project_id) {
+    const denied = gate("orders");
+    if (denied) return denied;
     const { data: project } = await db
       .from("projects")
       .select("id, customer_email")
@@ -56,6 +72,20 @@ async function guard(req: Request, deliverableId: string) {
       .ilike("customer_email", ctx.ownerEmail)
       .maybeSingle();
     if (!project) return { fail: NextResponse.json({ error: "Not found." }, { status: 404 }) };
+    return { db, ctx, deliverable: d, order: null };
+  }
+  if (d.cycle_id) {
+    const denied = gate("subscriptions");
+    if (denied) return denied;
+    const { data: cycle } = await db
+      .from("subscription_cycles")
+      .select("id, subscription:subscriptions!inner(customer_email)")
+      .eq("id", d.cycle_id)
+      .maybeSingle();
+    const owner =
+      (cycle?.subscription as unknown as { customer_email?: string } | null)?.customer_email ?? "";
+    if (!owner || owner.toLowerCase() !== ctx.ownerEmail.toLowerCase())
+      return { fail: NextResponse.json({ error: "Not found." }, { status: 404 }) };
     return { db, ctx, deliverable: d, order: null };
   }
   return { fail: NextResponse.json({ error: "Not found." }, { status: 404 }) };
@@ -145,17 +175,21 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (!res) return NextResponse.json({ error: "Could not post that." }, { status: 400 });
 
     const where = stamp(res.comment.at_seconds);
-    if (g.order) await pushOrderOwnerNotification(g.db, g.order.id as string, {
-      kind: "video_feedback",
+    /* an order routes to whoever owns that job; plan work has no order, so it
+       goes to the whole team rather than nowhere */
+    const bell = {
+      kind: "video_feedback" as const,
       title: `Feedback on ${g.deliverable.title}`,
       body: `${name || who}${where ? ` at ${where}` : ""}: ${text.slice(0, 140)}`,
-      href: "production",
+      href: g.deliverable.cycle_id ? "editing" : "production",
       vars: {
         video_title: String(g.deliverable.title),
         summary: `${name || who}${where ? ` at ${where}` : ""}: ${text.slice(0, 140)}`,
         customer_name: name || who,
       },
-    });
+    };
+    if (g.order) await pushOrderOwnerNotification(g.db, g.order.id as string, bell);
+    else await pushAdminNotifications(g.db, bell);
 
     // The bell alone meant feedback could sit unseen for a day if nobody had
     // the admin open. Fail-soft: a mail problem must not lose the note.
@@ -223,16 +257,18 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         payload: { deliverable_id: id, by: who },
       });
 
-    if (g.order) await pushOrderOwnerNotification(g.db, g.order.id as string, {
+    const verdictBell = {
       kind: action === "approve" ? "video_approved" : "video_changes",
       title:
         action === "approve"
           ? `Approved: ${g.deliverable.title}`
           : `Changes requested: ${g.deliverable.title}`,
       body: `${name || who} ${action === "approve" ? "approved this video." : "asked for changes."}`,
-      href: "production",
+      href: g.deliverable.cycle_id ? "editing" : "production",
       vars: { video_title: String(g.deliverable.title), who: name || who },
-    });
+    };
+    if (g.order) await pushOrderOwnerNotification(g.db, g.order.id as string, verdictBell);
+    else await pushAdminNotifications(g.db, verdictBell);
 
     const { sendVideoFeedbackAlert } = await import("@/lib/email/notify");
     await sendVideoFeedbackAlert(g.db, {

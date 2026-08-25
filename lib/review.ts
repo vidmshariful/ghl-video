@@ -181,7 +181,7 @@ export async function clientVerdict(
 ): Promise<{ ok: true; status: DeliverableStatus } | { ok: false; error: string }> {
   const { data: d } = await db
     .from("order_deliverables")
-    .select("id, order_id, status, revision_round")
+    .select("id, order_id, cycle_id, status, revision_round")
     .eq("id", deliverableId)
     .maybeSingle();
   if (!d) return { ok: false, error: "Video not found." };
@@ -190,13 +190,22 @@ export async function clientVerdict(
   if (!watchable.includes(d.status as string)) {
     return { ok: false, error: "That video is not ready to review yet." };
   }
-  // Approving twice is harmless; asking for a second round is not, so the
-  // limit is enforced here as well as hidden in the UI.
+  /*
+   * Approval is the end of the conversation, on every kind of work: once a
+   * client says a video is right, they cannot then ask for changes to it.
+   *
+   * The round LIMIT is different. A one-off purchase includes one round, which
+   * is what it was sold with. An editing plan sells unlimited revisions
+   * (owner's decision, August 2026: clients rarely use many, and the promise
+   * is what gives them the confidence to approve), so plan work is capped by
+   * approval alone.
+   */
   if (verdict === "changes") {
     if (d.status === "approved") {
       return { ok: false, error: "You have already approved this video. Message us and we will re-open it." };
     }
-    if ((d.revision_round as number) >= REVISIONS_INCLUDED) {
+    const unlimited = Boolean(d.cycle_id);
+    if (!unlimited && (d.revision_round as number) >= REVISIONS_INCLUDED) {
       return {
         ok: false,
         error: "Your included revision round has been used. Message us about anything else and we will sort it out.",
@@ -215,8 +224,12 @@ export async function clientVerdict(
       .update({ resolved_at: now, resolved_by: by })
       .eq("deliverable_id", d.id)
       .is("resolved_at", null);
-    await resyncOrderStage(db, d.order_id as string);
-    await completeIfAllApproved(db, d.order_id as string);
+    /* order-level bookkeeping only means something for order work. Plan work
+       has no order to re-stage or complete. */
+    if (d.order_id) {
+      await resyncOrderStage(db, d.order_id as string);
+      await completeIfAllApproved(db, d.order_id as string);
+    }
     return { ok: true, status: "approved" };
   }
 
@@ -228,7 +241,7 @@ export async function clientVerdict(
       updated_at: now,
     })
     .eq("id", d.id);
-  await resyncOrderStage(db, d.order_id as string);
+  if (d.order_id) await resyncOrderStage(db, d.order_id as string);
   return { ok: true, status: "revisions" };
 }
 

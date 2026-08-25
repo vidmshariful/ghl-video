@@ -814,15 +814,19 @@ export async function sendVideoFeedbackAlert(
   try {
     const { data: d } = await db
       .from("order_deliverables")
-      .select("title, order_id")
+      .select("title, order_id, cycle_id")
       .eq("id", args.deliverableId)
       .maybeSingle();
     if (!d) return;
-    const { data: o } = await db
-      .from("orders")
-      .select("assigned_admin_email")
-      .eq("id", d.order_id)
-      .maybeSingle();
+    /* plan work has no order, so there is no owner to route to and no order
+       row to look up: asking for one with a null id is a malformed query */
+    const { data: o } = d.order_id
+      ? await db
+          .from("orders")
+          .select("assigned_admin_email")
+          .eq("id", d.order_id)
+          .maybeSingle()
+      : { data: null };
     const to = (o?.assigned_admin_email as string | null) || adminAlertEmail();
 
     const headline =
@@ -838,7 +842,7 @@ export async function sendVideoFeedbackAlert(
       video_title: escapeHtml(d.title as string),
       where: args.where ? escapeHtml(` at ${args.where}`) : "",
       message: escapeHtml(args.message.slice(0, 600)),
-      admin_url: `${SITE_URL}/admin/production/`,
+      admin_url: `${SITE_URL}/admin/${d.cycle_id ? "editing" : "production"}/`,
     });
   } catch (e) {
     console.error("[email] admin_video_feedback failed:", e instanceof Error ? e.message : e);
@@ -1007,5 +1011,44 @@ export async function sendProjectFeedbackAlert(
     });
   } catch (e) {
     console.error("[email] admin_project_feedback failed:", e instanceof Error ? e.message : e);
+  }
+}
+
+/**
+ * A client on an editing plan asked for a video.
+ *
+ * Goes to the team address. Before this existed the only signal was a bell,
+ * and a live client's first three requests sat unread with the earliest one
+ * wanted the next day. Fail-soft: the request is already saved.
+ */
+export async function sendEditRequestedAlert(
+  db: SupabaseClient,
+  args: {
+    customerEmail: string;
+    title: string;
+    brief: string;
+    assetsUrl: string;
+    wantedBy: string | null;
+    planLine: string;
+  },
+): Promise<void> {
+  try {
+    const { data: c } = await db
+      .from("customers")
+      .select("name")
+      .ilike("email", args.customerEmail)
+      .maybeSingle();
+    await sendTemplate(db, "admin_edit_requested", adminAlertEmail(), null, {
+      customer_name: escapeHtml((c?.name as string | null) || args.customerEmail),
+      customer_email: escapeHtml(args.customerEmail),
+      title: escapeHtml(args.title),
+      brief: escapeHtml(args.brief.slice(0, 800) || "No brief given."),
+      assets_url: escapeHtml(args.assetsUrl || "not given"),
+      wanted_line: escapeHtml(args.wantedBy ? `, wanted by ${shortDate(args.wantedBy)}` : ""),
+      plan_line: escapeHtml(args.planLine),
+      admin_url: `${SITE_URL}/admin/editing/`,
+    });
+  } catch (e) {
+    console.error("[email] admin_edit_requested failed:", e instanceof Error ? e.message : e);
   }
 }
