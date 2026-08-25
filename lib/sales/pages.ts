@@ -96,15 +96,15 @@ export type SalesPage = PremadeSalesPage | PartnerSalesPage | EditingSalesPage;
 export const salesPages: SalesPage[] = [
   {
     kind: "editing",
-    slug: "video-editing",
-    title: "Video Editing Plans",
+    slug: "video-editing-for-highlevel-creators",
+    title: "Video Editing for HighLevel Creators",
     campaign: "Paid ads, and the link sent on a cold email reply",
     status: "live",
     /* a real funnel page rather than private outreach: we are paying for the
        traffic either way, so organic is upside (owner decision, 25 Aug 2026) */
     indexable: true,
     seo: {
-      title: "HighLevel Video Editing on a Monthly Plan",
+      title: "Video Editing for HighLevel Creators",
       description:
         "Video editing for HighLevel agencies and SaaS founders who publish every week. Send raw footage, get finished edits back in two to three business days. Plans from $595 a month, unlimited revisions, no contract.",
     },

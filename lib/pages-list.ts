@@ -32,7 +32,13 @@ export const sitePages: readonly SitePage[] = [
   { name: "Studio Insights", path: "/studio-insights/", inNav: true },
   { name: "Free Resources", path: "/resources/", inNav: true, noindex: true, note: "stub" },
   { name: "AI First SaaS Pack Launch", path: "/ai-first-launch/", inNav: false, noindex: true, note: "unlisted campaign, email only" },
-  { name: "Video Editing Plans (ads landing)", path: "/lp/video-editing/", inNav: false, note: "paid ads and cold email replies, indexable on purpose" },
+  /* The two indexable sales LPs. Campaign pages are noindex by default, and
+     these two are not: they are real funnel pages we pay for traffic to, so
+     organic is upside. Listed here because the sitemap reads this file and
+     nothing else, which is why white-label was invisible to search despite
+     being flagged indexable in lib/sales/pages.ts. */
+  { name: "White-Label HighLevel Videos (LP)", path: "/lp/white-label-videos/", inNav: false, note: "funnel page, indexable" },
+  { name: "Video Editing for HighLevel Creators (LP)", path: "/lp/video-editing-for-highlevel-creators/", inNav: false, note: "paid ads and cold email replies, indexable" },
   { name: "Shared shortlist", path: "/list/", inNav: false, noindex: true, note: "opened by an unguessable token, one per shared list" },
   { name: "Privacy Policy", path: "/legal/privacy/", inNav: false, note: "footer" },
   { name: "Terms", path: "/legal/terms/", inNav: false, note: "footer" },

@@ -23,6 +23,7 @@ import { salesPageBySlug, salesPages, salesShared } from "@/lib/sales/pages";
 import { SpVideo } from "@/components/sales/SpVideo";
 import { PartnerLanding } from "@/components/sales/PartnerLanding";
 import { EditingLanding } from "@/components/sales/EditingLanding";
+import { SectionHead } from "@/components/sales/SectionHead";
 import { MultiPartnerLanding } from "@/components/sales/MultiPartnerLanding";
 import { JsonLd } from "@/components/JsonLd";
 import { faqSchema, serviceSchema } from "@/lib/schema";
@@ -553,46 +554,6 @@ export default async function SalesLandingPage({
 }
 
 /* ---- local building blocks ---- */
-
-function SectionHead({
-  eyebrow,
-  title,
-  accent,
-  sub,
-  center,
-}: {
-  eyebrow: string;
-  title: string;
-  accent?: string;
-  sub?: string;
-  center?: boolean;
-}) {
-  return (
-    <div
-      style={{
-        maxWidth: center ? "46rem" : "42rem",
-        marginInline: center ? "auto" : undefined,
-        textAlign: center ? "center" : "left",
-      }}
-    >
-      <span className="sp-eyebrow">{eyebrow}</span>
-      <h2 className="sp-display sp-h2" style={{ marginTop: "0.7rem" }}>
-        {title}
-        {accent ? (
-          <>
-            {" "}
-            <span className="sp-grad-text">{accent}</span>
-          </>
-        ) : null}
-      </h2>
-      {sub ? (
-        <p className="sp-lede" style={{ marginTop: "0.9rem" }}>
-          {sub}
-        </p>
-      ) : null}
-    </div>
-  );
-}
 
 function LibraryCard({ v }: { v: SalesLibVideo }) {
   const ready = !v.comingSoon && Boolean(v.preview || v.wistiaId);
