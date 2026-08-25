@@ -1225,7 +1225,7 @@ function VideoRow({
                 : ""}
           </p>
         </div>
-        <div className="pointer-events-auto flex items-center gap-2">
+        <div className="pointer-events-auto flex flex-wrap items-center justify-end gap-2">
           <Chip tone={stage.tone}>{stage.label}</Chip>
           {onWatch && <WatchButton v={v} onOpen={onWatch} />}
           {/* the button is the affordance when there is one, and at 375px the
@@ -1303,6 +1303,7 @@ function WatchButton({ v, onOpen }: { v: Video; onOpen: (v: Video) => void }) {
       variant={v.canReview ? "brand" : "secondary"}
       icon={<Play />}
       onClick={() => onOpen(v)}
+      className="shrink-0 whitespace-nowrap"
     >
       {/* while it is in revisions the cut on screen is still the last one we
           sent, so this must not promise them the new version */}
@@ -1390,28 +1391,42 @@ function RequestDetail({
           {v.videoUrl ? (
             <Card
               title="Your video"
-              description={
-                v.canReview
-                  ? "Opens full screen, with the player and your notes side by side."
-                  : "Approved and yours. Opens full screen, where you can download or share it."
-              }
             >
-              <div className="grid items-start gap-4 sm:grid-cols-[1fr_auto]">
-                <Button
-                  variant={v.canReview ? "brand" : "secondary"}
-                  icon={<Play />}
-                  onClick={() => onReview(v)}
-                  /* on a phone the frame reads first and the button follows
-                     it, which is the order you look at them in anyway */
-                  className="order-last justify-self-start sm:order-none"
-                >
-                  {v.canReview
-                    ? v.status === "revisions"
-                      ? "See it and add notes"
-                      : "Review and approve"
-                    : "Watch and download"}
-                </Button>
-                <VideoThumb v={v} onOpen={onReview} />
+              {/*
+                Two columns of the SAME height, split by a rule.
+                The sentence lives in here rather than in the card header on
+                purpose: with only a button on the left, the column was 39px
+                of content beside a 115px frame and three quarters of it was
+                empty, which is what read as crooked. Both cells stretch to
+                the row, the left one centres what it holds against the frame,
+                and the rule spans the full height because the cell it is on
+                stretches too.
+              */}
+              <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:gap-6">
+                <div className="order-last flex flex-col justify-center gap-3 sm:order-none">
+                  <p className="text-body-sm text-muted">
+                    {v.canReview
+                      ? "Opens full screen, with the player and your notes side by side."
+                      : "Approved and yours. Opens full screen, where you can download or share it."}
+                  </p>
+                  <Button
+                    variant={v.canReview ? "brand" : "secondary"}
+                    icon={<Play />}
+                    onClick={() => onReview(v)}
+                    className="self-start"
+                  >
+                    {v.canReview
+                      ? v.status === "revisions"
+                        ? "See it and add notes"
+                        : "Review and approve"
+                      : "Watch and download"}
+                  </Button>
+                </div>
+                {/* on a phone the frame reads first and the sentence follows
+                    it, and the rule goes away with the second column */}
+                <div className="order-first sm:order-none sm:border-l sm:border-hair sm:pl-6">
+                  <VideoThumb v={v} onOpen={onReview} />
+                </div>
               </div>
             </Card>
           ) : (
