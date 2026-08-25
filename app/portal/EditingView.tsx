@@ -1,7 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { CalendarClock, Check, ChevronRight, Pencil, Play, Plus, Scissors, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  CalendarClock,
+  Check,
+  ChevronRight,
+  Paperclip,
+  Pencil,
+  Play,
+  Plus,
+  Scissors,
+  Trash2,
+} from "lucide-react";
 import {
   Button,
   Card,
@@ -18,6 +28,7 @@ import {
 import { VideoReviewModal } from "./VideoReviewModal";
 import { StyleGuideView } from "./StyleGuideView";
 import { DownloadAll } from "@/components/portal/DownloadAll";
+import { Attachments } from "@/components/portal/Attachments";
 import { CLIENT_PHASES, defaultAspectFor, needsClient, phaseFor, stageFor } from "@/lib/editing-sop";
 import { PODCAST_TIERS, VIDEO_TIERS } from "@/lib/editing-credits";
 import { StageTimeline, WorkCard } from "@/components/portal/board";
@@ -258,6 +269,11 @@ export function EditingView({
   /* which request is open. The list is a set of cards you open, not a set of
    * lines with a small button on the end of each. */
   const [openRequest, setOpenRequest] = useState<string | null>(null);
+  /* files picked before the request exists. Nothing can be attached to a
+     request that has not been created yet, so they wait here and go up the
+     moment it has an id. */
+  const [pending, setPending] = useState<File[]>([]);
+  const pickRef = useRef<HTMLInputElement>(null);
   const [draft, setDraft] = useState({
     title: "",
     brief: "",
@@ -311,6 +327,7 @@ export function EditingView({
       requestedDueAt: "",
     });
     setCuts([]);
+    setPending([]);
   }
 
   async function submit() {
@@ -324,11 +341,37 @@ export function EditingView({
           runtimeMinutes: draft.runtimeMinutes ? Number(draft.runtimeMinutes) : null,
           cuts,
         }),
-      })) as { ok?: boolean; error?: string; warning?: string | null; cuts?: number };
+      })) as {
+        ok?: boolean;
+        error?: string;
+        warning?: string | null;
+        cuts?: number;
+        id?: string;
+      };
       if (j.error) return setErr(j.error);
+      /* the request is in either way. A file that will not upload is worth
+         saying out loud, but never worth losing the request over. */
+      let fileNote = "";
+      if (j.id && pending.length) {
+        const failed: string[] = [];
+        for (const file of pending) {
+          const fd = new FormData();
+          fd.append("file", file);
+          const r = (await authedFetch(`/api/portal/editing/${j.id}/files`, {
+            method: "POST",
+            body: fd,
+          }).catch(() => null)) as { ok?: boolean; error?: string } | null;
+          if (!r?.ok) failed.push(file.name);
+        }
+        fileNote = failed.length
+          ? ` ${failed.join(", ")} did not upload. Open the request and add it there.`
+          : ` ${pending.length} ${pending.length === 1 ? "file" : "files"} attached.`;
+      }
       const extra = j.cuts ? ` Plus ${j.cuts} short ${j.cuts === 1 ? "cut" : "cuts"}.` : "";
       setSent(
-        (j.warning ?? "Got it. It is in the queue and your producer will confirm the date.") + extra,
+        (j.warning ?? "Got it. It is in the queue and your producer will confirm the date.") +
+          extra +
+          fileNote,
       );
       resetDraft();
       setAsking(false);
@@ -712,6 +755,58 @@ export function EditingView({
                     />
                   </Field>
 
+                  {/* optional on the way in, and addable later from the
+                      request itself. The footage is a link; this is the small
+                      stuff that goes IN the video. */}
+                  <Field
+                    label="Anything to use in the video"
+                    hint="Optional. Your logo, images, fonts. Up to 10 MB each."
+                  >
+                    <div className="grid gap-2">
+                      <div>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          icon={<Paperclip />}
+                          onClick={() => pickRef.current?.click()}
+                        >
+                          Choose files
+                        </Button>
+                        <input
+                          ref={pickRef}
+                          type="file"
+                          multiple
+                          className="hidden"
+                          onChange={(e) => {
+                            const picked = Array.from(e.target.files ?? []);
+                            setPending((was) => [...was, ...picked]);
+                            if (pickRef.current) pickRef.current.value = "";
+                          }}
+                        />
+                      </div>
+                      {pending.length > 0 && (
+                        <ul className="grid gap-1.5">
+                          {pending.map((f, i) => (
+                            <li
+                              key={`${f.name}-${i}`}
+                              className="flex items-center justify-between gap-3 rounded-[8px] border border-hair bg-canvas px-3 py-2"
+                            >
+                              <span className="min-w-0 truncate text-body-sm text-ink">{f.name}</span>
+                              <button
+                                type="button"
+                                aria-label={`Remove ${f.name}`}
+                                onClick={() => setPending((was) => was.filter((_, x) => x !== i))}
+                                className="tap grid h-7 w-7 shrink-0 place-items-center rounded-[6px] border border-hair text-dim transition-colors hover:border-error/60 hover:text-error"
+                              >
+                                <Trash2 size={14} aria-hidden="true" />
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </Field>
+
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Field label="A video you want it to feel like" hint="Optional, and it saves a round of changes.">
                       <Input
@@ -1065,6 +1160,7 @@ export function EditingView({
               v={opened}
               cuts={live.filter((c) => c.parentId === opened.id)}
               aspects={plan.aspects}
+              authedFetch={authedFetch}
               busy={busy}
               onSave={saveRequest}
               /* Into the player means OUT of the detail. The side panel this
@@ -1362,6 +1458,7 @@ function RequestDetail({
   v,
   cuts,
   aspects,
+  authedFetch,
   onReview,
   onCancel,
   onSave,
@@ -1370,6 +1467,7 @@ function RequestDetail({
   v: Video;
   cuts: Video[];
   aspects: { key: string; label: string; note: string }[];
+  authedFetch: (path: string, init?: RequestInit) => Promise<Record<string, unknown>>;
   onReview: (v: Video) => void;
   onCancel: (v: Video) => void;
   onSave: (v: Video, patch: Record<string, string>) => Promise<string | null>;
@@ -1597,6 +1695,17 @@ function RequestDetail({
               </p>
             </Card>
           )}
+
+          {/* the footage is a link because footage is gigabytes. This is for
+              the small things that go IN the video and were arriving by
+              email: a logo, a headshot, three product screenshots. */}
+          <Attachments
+            endpoint={`/api/portal/editing/${v.id}/files`}
+            title="Resources for this video"
+            description="Logos, images, fonts, anything you want used in the cut. Up to 10 MB each."
+            empty="Nothing yet. Add your logo or any image you want in the video."
+            authedFetch={authedFetch}
+          />
 
           {cuts.length > 0 && (
             <Card

@@ -400,6 +400,9 @@ export async function POST(req: Request) {
 
   return NextResponse.json({
     ok: true,
+    /* the caller needs it to hang any files they picked on the way in: the
+       request has to exist before anything can be attached to it */
+    id: made.id,
     warning: warnings[0] ?? null,
     cuts: cuts.length,
   });

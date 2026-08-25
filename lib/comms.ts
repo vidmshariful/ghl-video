@@ -223,6 +223,16 @@ export const COMM_ACTIONS: CommAction[] = [
     notifications: [{ kind: "edit_changed", audience: "admin", to: "team" }],
   },
   {
+    key: "editing_file", group: "editing", label: "A file is attached to a request",
+    when: "Either side attaches a logo, an image or another resource to an editing request.",
+    mode: "automatic",
+    emails: [],
+    notifications: [
+      { kind: "editing_file", audience: "admin", to: "team" },
+      { kind: "editing_file", audience: "customer", to: "client" },
+    ],
+  },
+  {
     key: "edit_added", group: "editing", label: "The studio adds a request for them",
     when: "Someone on the team adds an edit the client asked for outside the portal.",
     mode: "manual",
@@ -438,6 +448,8 @@ export const NOTIFICATION_DEFAULTS: Record<string, NotificationDefault> = {
   /* editing */
   "admin:edit_requested": { title: "Edit requested: {{title}}", body: "{{summary}}", variables: ["title", "summary", "customer_email"] },
   "admin:edit_changed": { title: "Request changed: {{title}}", body: "{{summary}}", variables: ["title", "summary", "customer_email"] },
+  "admin:editing_file": { title: "New file on {{title}}", body: "{{who}} added {{file_name}}.", variables: ["title", "who", "file_name"] },
+  "customer:editing_file": { title: "We added a file to {{title}}", body: "{{file_name}} is with your request.", variables: ["title", "file_name"] },
   "customer:edit_added": { title: "We added your request: {{title}}", body: "You asked for this one outside the portal. It is on your plan now, so you can follow it with the rest.", variables: ["title"] },
   "customer:style_guide": { title: "{{headline}}", body: "Open it in Editing, under How we cut for you. Tell us anything you want changed.", variables: ["headline", "version"] },
   "admin:style_guide_note": { title: "Style guide note from {{who}}", body: "{{summary}}", variables: ["who", "summary"] },

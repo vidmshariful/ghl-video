@@ -13,6 +13,27 @@ import {
   Textarea,
 } from "@/components/portal/ui";
 import { authHeader, when } from "./client";
+import { Attachments } from "@/components/portal/Attachments";
+
+/*
+ * The shape the shared Attachments panel asks for, wearing the admin's auth.
+ *
+ * The portal passes its own authedFetch; admin screens carry a bearer header
+ * instead, so this is the adapter rather than a second copy of the panel. A
+ * FormData body sets its own content type, so this must not.
+ */
+async function adminFetch(path: string, init?: RequestInit): Promise<Record<string, unknown>> {
+  const isForm = init?.body instanceof FormData;
+  const r = await fetch(path, {
+    ...init,
+    headers: {
+      ...(isForm ? {} : { "Content-Type": "application/json" }),
+      ...(await authHeader()),
+      ...(init?.headers as Record<string, string> | undefined),
+    },
+  });
+  return (await r.json().catch(() => ({}))) as Record<string, unknown>;
+}
 import { StyleGuideAdmin } from "./StyleGuideAdmin";
 import {
   ASPECTS,
@@ -446,6 +467,19 @@ export function EditingBoard({ slug, onBack }: { slug: string; onBack: () => voi
         {opened && (
           <div className="grid gap-5">
             <RequestDetail req={opened} board={b} busy={busy} onSave={save} />
+            {/* the same list the client sees on the request: their logo and
+                images come in here, and anything we hand back goes out the
+                same way. An editor opening this card should not have to go
+                looking through email for the logo. */}
+            <Attachments
+              endpoint={`/api/admin/projects/files?deliverableId=${opened.id}`}
+              extraFields={{ deliverableId: opened.id }}
+              viewer="studio"
+              title="Resources for this video"
+              description="What the client sent to be used in the cut, and anything we send back."
+              empty="Nothing attached to this one."
+              authedFetch={adminFetch}
+            />
             <ItemNotes target={{ deliverableId: opened.id }} authHeader={authHeader} />
           </div>
         )}
