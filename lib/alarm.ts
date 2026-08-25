@@ -42,6 +42,8 @@ export const ALARM_KINDS = {
   FINALIZE_FAILED: "checkout.finalize_failed",
   /** An order settled but its videos were not created. */
   DELIVERABLES_FAILED: "fulfillment.deliverables_failed",
+  /** Editing credits were paid for and not added to the client's plan. */
+  CREDITS_NOT_GRANTED: "fulfillment.credits_not_granted",
   /** The amount charged is not the amount the order says it is. */
   AMOUNT_MISMATCH: "checkout.amount_mismatch",
   /** The site and checkout disagree about what something costs. */
@@ -209,6 +211,7 @@ const HUMAN: Record<string, string> = {
   [ALARM_KINDS.ORPHAN_UNRECOVERABLE]: "A payment came in that we could not turn into an order",
   [ALARM_KINDS.FINALIZE_FAILED]: "A buyer pressed pay and the order was not written",
   [ALARM_KINDS.DELIVERABLES_FAILED]: "An order was paid but its videos were not created",
+  [ALARM_KINDS.CREDITS_NOT_GRANTED]: "Editing credits were paid for but never added to a plan",
   [ALARM_KINDS.AMOUNT_MISMATCH]: "An order was charged a different amount than it should have been",
   [ALARM_KINDS.PRICE_DRIFT]: "The site and checkout disagree about a price",
   [ALARM_KINDS.DRIFT_CHECK_FAILED]: "The daily price check could not run",

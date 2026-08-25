@@ -162,3 +162,61 @@ export async function topupCreditsLeft(db: DB, subscriptionId: string): Promise<
   }, 0);
   return Math.max(0, granted - overflow);
 }
+
+/**
+ * Turn a paid credit-pack order into credits on the buyer's plan.
+ *
+ * Idempotent by order: the grant row carries the order id and a second call
+ * finds it and stops, so a webhook retry cannot hand out the same pack twice.
+ * Returns the number granted, or 0 when the order was not a credit pack.
+ *
+ * Throws rather than swallowing when the pack cannot be attached to a plan.
+ * Somebody has paid for credits at this point, and a silent no-op would leave
+ * money taken and nothing given, which is the one outcome worth an alarm.
+ */
+export async function grantCreditsForOrder(db: DB, orderId: string): Promise<number> {
+  const { data: order } = await db
+    .from("orders")
+    .select("id, customer_email, product:products(sku, metadata)")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (!order) return 0;
+
+  const product = order.product as { sku?: string; metadata?: Record<string, unknown> } | null;
+  const meta = (product?.metadata ?? {}) as Record<string, unknown>;
+  if (meta.kind !== "editing_credits") return 0;
+  const credits = Number(meta.credits ?? 0);
+  if (!credits) return 0;
+
+  const { data: already } = await db
+    .from("editing_credit_grants")
+    .select("id")
+    .eq("order_id", orderId)
+    .maybeSingle();
+  if (already) return 0;
+
+  /* the plan the credits belong to. A pack with no plan to land on is a real
+     problem rather than a shrug: they bought credits for something. */
+  const { data: sub } = await db
+    .from("subscriptions")
+    .select("id")
+    .ilike("customer_email", String(order.customer_email))
+    .in("status", ["active", "trialing", "past_due"])
+    .order("created_at", { ascending: false })
+    .maybeSingle();
+  if (!sub) {
+    throw new Error(
+      `credit pack ${product?.sku} paid by ${order.customer_email} with no active editing plan to add it to`,
+    );
+  }
+
+  const { error } = await db.from("editing_credit_grants").insert({
+    subscription_id: sub.id,
+    credits,
+    price_cents: 0,
+    order_id: orderId,
+    note: product?.sku ?? null,
+  });
+  if (error) throw new Error(`credit grant failed: ${error.message}`);
+  return credits;
+}

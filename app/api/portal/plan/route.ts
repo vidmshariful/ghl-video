@@ -16,6 +16,7 @@ import {
 import { ASPECTS, CLIENT_STATUS_WORD, columnFor, type Aspect } from "@/lib/editing-sop";
 import {
   EDIT_TIERS,
+  TOPUP_PACKS,
   creditCost,
   isPodcast,
   tierFor,
@@ -181,6 +182,9 @@ export async function GET(req: Request) {
       /* the price list, so the client sees the cost of a shape before they
          pick it rather than after they have spent it */
       tiers: EDIT_TIERS.map((t) => ({ ...t })),
+      /* the way out of a spent month, priced, so "you have run out" is never
+         a dead end on the screen */
+      topups: TOPUP_PACKS.map((t) => ({ ...t })),
       videos: items,
       history: history
         .filter((h) => h.id !== cycle.id)

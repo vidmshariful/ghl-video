@@ -230,6 +230,13 @@ export const COMM_ACTIONS: CommAction[] = [
     notifications: [{ kind: "style_guide", audience: "customer", to: "client" }],
   },
   {
+    key: "editing_topup", group: "editing", label: "A client buys extra credits",
+    when: "A credit pack is paid for. The credits land on their plan straight away and never expire.",
+    mode: "automatic",
+    emails: [{ key: "order_confirmation", to: "client" }, { key: "admin_new_order", to: "team" }],
+    notifications: [{ kind: "order_paid", audience: "customer", to: "client" }, { kind: "order_paid", audience: "admin", to: "team" }],
+  },
+  {
     key: "style_guide_note", group: "editing", label: "The client notes the style guide",
     when: "A client pins a note to a page of the guide.",
     mode: "automatic",

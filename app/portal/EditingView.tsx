@@ -97,6 +97,7 @@ type Plan = {
   };
   /* the price list, so a shape's cost is visible before it is picked */
   tiers: Tier[];
+  topups: { sku: string; credits: number; price: number }[];
   videos: Video[];
   history: {
     id: string;
@@ -835,6 +836,29 @@ export function EditingView({
               <div className="grid gap-4">
                 <CreditMeter credits={s} />
               </div>
+              {s.left <= 3 && plan.topups.length > 0 && (
+                <div className="mt-4 rounded-[8px] border border-gold/40 bg-gold/[0.06] p-3">
+                  <p className="text-body-sm font-semibold text-ink">
+                    {s.left === 0 ? "You are out of credits" : `Only ${creditWord(s.left)} left`}
+                  </p>
+                  <p className="mt-1 text-body-sm text-muted">
+                    Wait for {day(plan.cycle.endsAt)}, or top up now. Topped-up credits do not
+                    expire.
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {plan.topups.map((t) => (
+                      <Button
+                        key={t.sku}
+                        size="sm"
+                        variant="secondary"
+                        href={`/checkout/${t.sku}/`}
+                      >
+                        {t.credits} for ${t.price.toLocaleString("en-US")}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <p className="mt-4 flex items-start gap-2 text-body-sm text-dim">
                 <CalendarClock size={15} className="mt-0.5 shrink-0" aria-hidden="true" />
                 Resets {day(plan.cycle.endsAt)}. Unused plan credits do not carry over.

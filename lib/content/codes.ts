@@ -96,6 +96,10 @@ export const productCodes: Record<string, string> = {
   "editing-starter": "EDIT-01",
   "editing-growth": "EDIT-02",
   "editing-scale": "EDIT-03",
+  /* extra credits, bought when a month runs out */
+  "editing-credits-5": "EDIT-C05",
+  "editing-credits-10": "EDIT-C10",
+  "editing-credits-20": "EDIT-C20",
   /* the collab pitch versions sold individually (Complete Brand
      Customization reuses the standalone pitch's code) */
   "hl-pitch-logo-only": "PITCH-001",

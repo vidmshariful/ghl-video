@@ -97,6 +97,34 @@ export async function settlePaidIntent(
       const { sendOrderPaidEmails } = await import("@/lib/email/notify");
       await sendOrderPaidEmails(db, order.id as string);
 
+      /*
+       * A credit pack buys credits, not videos. Idempotent by order id, so a
+       * webhook retry cannot hand out the same pack twice, and loud when it
+       * fails: money has been taken for credits, and nothing else in this
+       * flow will come back and grant them later.
+       */
+      try {
+        const { grantCreditsForOrder } = await import("@/lib/subscription-cycles");
+        const granted = await grantCreditsForOrder(db, order.id as string);
+        if (granted) {
+          await db.from("order_events").insert({
+            order_id: order.id,
+            event_type: "editing_credits_granted",
+            payload: { credits: granted },
+          });
+        }
+      } catch (e) {
+        console.error(`[settle] credit grant failed for order ${order.id}:`, e);
+        const { ALARM_KINDS, raise } = await import("@/lib/alarm");
+        await raise(db, {
+          kind: ALARM_KINDS.CREDITS_NOT_GRANTED,
+          severity: "critical",
+          message: `Editing credits were paid for but not granted on order ${order.id}. Add them by hand on the client's plan.`,
+          fingerprint: `${ALARM_KINDS.CREDITS_NOT_GRANTED}:${order.id}`,
+          context: { orderId: order.id, error: e instanceof Error ? e.message : String(e) },
+        });
+      }
+
       // Expand what they bought into one row per video, so the studio has a
       // work list and the customer has a My Videos list. Deliberately never
       // throws: a paid order must settle even if the expansion has a bad day,

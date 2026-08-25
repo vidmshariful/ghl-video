@@ -1,4 +1,5 @@
 import { editingPlans, premadePacks, premadeVideos } from "./premade";
+import { TOPUP_PACKS } from "@/lib/editing-credits";
 import { oldVideos } from "./classic";
 import { bundleCategories, collab, videoStack } from "./catalog-extra";
 import { codeFor, skuFor } from "./codes";
@@ -13,7 +14,7 @@ import { codeFor, skuFor } from "./codes";
  * seeds each row's authoritative price). Add a video or pack to the
  * catalog and it appears here; run "Sync from catalog" in admin and it
  * is live for checkout. `kind` lets the checkout page tailor its copy. */
-export type SellableKind = "video" | "pack" | "bundle" | "subscription";
+export type SellableKind = "video" | "pack" | "bundle" | "subscription" | "editing_credits";
 
 export type SellableProduct = {
   sku: string;
@@ -154,9 +155,35 @@ const subscriptionSellables: SellableProduct[] = editingPlans.map(
   }),
 );
 
+/*
+ * Extra editing credits, sold as one-off packs.
+ *
+ * A one_time product so it runs through the ordinary checkout, but it makes
+ * no videos: settling one adds a grant to the buyer's plan instead. Priced
+ * above every plan's own per-credit rate on purpose, so topping up twice is
+ * always dearer than moving up a plan and the upgrade sells itself.
+ */
+const topupSellables: SellableProduct[] = TOPUP_PACKS.map(
+  (t): SellableProduct => ({
+    sku: t.sku,
+    code: codeFor(t.sku),
+    name: `${t.credits} editing credits`,
+    description: `Extra credits for an editing plan. They do not expire.`,
+    priceCents: t.price * 100,
+    type: "one_time",
+    kind: "editing_credits",
+    metadata: {
+      kind: "editing_credits",
+      code: codeFor(t.sku),
+      credits: t.credits,
+    },
+  }),
+);
+
 /* Dedupe by sku (first wins), so a slug shared across the catalog can
  * never produce two conflicting products rows. */
 export const sellableProducts: SellableProduct[] = [
+  ...topupSellables,
   ...oneTimeSellables,
   ...subscriptionSellables,
 ].reduce<SellableProduct[]>((acc, p) => {
