@@ -38,6 +38,19 @@ import { Drawer, StageTimeline, WorkCard } from "@/components/portal/board";
  * paying client is worse than a queue that runs long.
  */
 
+type Tier = {
+  key: string;
+  kind: "video" | "podcast";
+  label: string;
+  credits?: number;
+  perHour?: number;
+  perHalfHour?: number;
+  maxMinutes?: number;
+  lengthNote: string;
+  blurb: string;
+  idealFor: string[];
+};
+
 type Video = {
   id: string;
   parentId: string | null;
@@ -45,7 +58,10 @@ type Video = {
   status: string;
   state: string;
   column: string;
-  form: "long" | "short" | null;
+  editType: string | null;
+  typeLabel: string | null;
+  creditCost: number;
+  runtimeMinutes: number | null;
   aspect: string | null;
   brief: string | null;
   dueAt: string | null;
@@ -70,26 +86,24 @@ type Plan = {
   endingAtPeriodEnd: boolean;
   aspects: { key: string; label: string; note: string }[];
   cycle: { id: string; startsAt: string; endsAt: string };
-  slots: {
-    longUsed: number;
-    shortUsed: number;
-    longLeft: number;
-    shortLeft: number;
-    longAllowed: number;
-    shortAllowed: number;
+  credits: {
+    spent: number;
+    allowed: number;
+    planLeft: number;
+    topupLeft: number;
+    left: number;
     overPlan: boolean;
     summary: string;
   };
-  warnings: { long: string | null; short: string | null };
+  /* the price list, so a shape's cost is visible before it is picked */
+  tiers: Tier[];
   videos: Video[];
   history: {
     id: string;
     startsAt: string;
     endsAt: string;
-    longUsed: number;
-    shortUsed: number;
-    longAllowed: number;
-    shortAllowed: number;
+    creditsUsed: number;
+    creditsAllowed: number;
     /* everything we made them that month */
     videos: Video[];
   }[];
@@ -139,24 +153,49 @@ const JOURNEY = [
 const journeyKey = (column: string) =>
   column === "waiting" ? "queued" : column === "revisions" ? "in_production" : column;
 
-/** A slot counter that reads at a glance, per form. */
-function Slots({ label, used, allowed }: { label: string; used: number; allowed: number }) {
-  if (!allowed) return null;
-  const left = Math.max(0, allowed - used);
+const creditWord = (n: number) => `${n} ${n === 1 ? "credit" : "credits"}`;
+
+/**
+ * What a shape costs, worked out on the client exactly as the server does.
+ *
+ * Duplicated deliberately rather than fetched: the number has to move as they
+ * type a runtime, and a round trip per keystroke to learn the price of a
+ * dropdown is a worse trade than one small function kept honest by the tests
+ * that cover its server twin.
+ */
+function costOf(tier: Tier | null, runtimeMinutes: number | null): number {
+  if (!tier) return 0;
+  if (tier.kind === "video") return tier.credits ?? 0;
+  const mins = Math.max(1, Math.round(runtimeMinutes ?? 0));
+  const blocks = Math.max(1, Math.ceil(mins / 30));
+  return (
+    Math.floor(blocks / 2) * (tier.perHour ?? 0) + (blocks % 2) * (tier.perHalfHour ?? 0)
+  );
+}
+
+/** The month's balance, as one bar rather than two competing ones. */
+function CreditMeter({ credits }: { credits: Plan["credits"] }) {
+  const { spent, allowed, planLeft, topupLeft } = credits;
+  if (!allowed && !topupLeft) return null;
   return (
     <div>
       <div className="flex items-baseline justify-between gap-3">
-        <span className="text-body-sm text-muted">{label}</span>
+        <span className="text-body-sm text-muted">This month</span>
         <span className="font-mono text-body-sm tabular-nums text-ink">
-          {used} of {allowed}
+          {spent} of {allowed}
         </span>
       </div>
       <div className="mt-1.5">
         <Progress
-          percent={Math.min(100, Math.round((used / allowed) * 100))}
-          label={left ? `${left} left this month` : "None left this month"}
+          percent={allowed ? Math.min(100, Math.round((spent / allowed) * 100)) : 100}
+          label={planLeft ? `${creditWord(planLeft)} left this month` : "None left this month"}
         />
       </div>
+      {topupLeft > 0 && (
+        <p className="mt-2 text-body-sm text-muted">
+          Plus {creditWord(topupLeft)} you topped up with. Those stay until you use them.
+        </p>
+      )}
     </div>
   );
 }
@@ -184,9 +223,10 @@ export function EditingView({
   const [draft, setDraft] = useState({
     title: "",
     brief: "",
-    form: "short",
+    editType: "mid",
     aspect: "",
     targetMinutes: "",
+    runtimeMinutes: "",
     assetsUrl: "",
     referenceUrl: "",
     requestedDueAt: "",
@@ -222,9 +262,10 @@ export function EditingView({
     setDraft({
       title: "",
       brief: "",
-      form: "short",
+      editType: "mid",
       aspect: "",
       targetMinutes: "",
+      runtimeMinutes: "",
       assetsUrl: "",
       referenceUrl: "",
       requestedDueAt: "",
@@ -238,7 +279,11 @@ export function EditingView({
     try {
       const j = (await authedFetch("/api/portal/plan", {
         method: "POST",
-        body: JSON.stringify({ ...draft, cuts }),
+        body: JSON.stringify({
+          ...draft,
+          runtimeMinutes: draft.runtimeMinutes ? Number(draft.runtimeMinutes) : null,
+          cuts,
+        }),
       })) as { ok?: boolean; error?: string; warning?: string | null; cuts?: number };
       if (j.error) return setErr(j.error);
       const extra = j.cuts ? ` Plus ${j.cuts} short ${j.cuts === 1 ? "cut" : "cuts"}.` : "";
@@ -254,13 +299,23 @@ export function EditingView({
   }
 
   async function cancelRequest(v: Video) {
-    if (!window.confirm(`Pull "${v.title}" back? The slot goes straight back to this month.`)) return;
+    if (
+      !window.confirm(
+        `Pull "${v.title}" back? Its ${creditWord(v.creditCost)} go straight back to this month.`,
+      )
+    )
+      return;
     setBusy(true);
+    setErr("");
     try {
-      await authedFetch("/api/portal/plan", {
+      /* the server refuses once an editor has started. Throwing that answer
+         away left the client staring at a card that did not disappear, with
+         nothing on screen saying why. */
+      const j = (await authedFetch("/api/portal/plan", {
         method: "POST",
         body: JSON.stringify({ cancel: v.id }),
-      });
+      })) as { ok?: boolean; error?: string };
+      if (j?.error) setErr(j.error);
       await load();
     } finally {
       setBusy(false);
@@ -313,8 +368,21 @@ export function EditingView({
       />
     ) : null;
 
-  const s = plan.slots;
-  const warning = draft.form === "long" ? plan.warnings.long : plan.warnings.short;
+  const s = plan.credits;
+  const tier = plan.tiers.find((t) => t.key === draft.editType) ?? null;
+  const runtime = draft.runtimeMinutes ? Number(draft.runtimeMinutes) : null;
+  /* what this submission spends: the request itself plus a credit for every
+     short cut hung off it */
+  const thisCost = costOf(tier, runtime);
+  const cutsCost = cuts.length * 1;
+  const totalCost = thisCost + cutsCost;
+  const warning =
+    totalCost > s.left
+      ? `This one costs ${creditWord(totalCost)} and your ${plan.planName} plan has ` +
+        `${s.left === 0 ? "no credits" : creditWord(s.left)} left this month, so it is ` +
+        `${totalCost - s.left} over. We will still take it and work through your requests in ` +
+        `order. To have it sooner, top up your credits or move up a plan.`
+      : null;
   const live = plan.videos.filter((v) => !v.cancelledAt);
   const parents = live.filter((v) => !v.parentId);
 
@@ -400,7 +468,7 @@ export function EditingView({
                     <li key={h.id} className="flex items-baseline justify-between gap-3 text-body-sm">
                       <span className="text-muted">{day(h.startsAt)}</span>
                       <span className="font-mono tabular-nums text-ink">
-                        {h.longUsed}/{h.longAllowed} long, {h.shortUsed}/{h.shortAllowed} short
+                        {h.creditsUsed}/{h.creditsAllowed} credits
                       </span>
                     </li>
                   ))}
@@ -433,17 +501,26 @@ export function EditingView({
                         placeholder="March webinar, cut for YouTube"
                       />
                     </Field>
-                    <Field label="Which kind" hint="Long form is up to 15 minutes.">
+                    <Field
+                      label="What kind of edit"
+                      hint={tier ? tier.lengthNote : "Pick the shape and we price it."}
+                    >
                       <Select
-                        value={draft.form}
+                        value={draft.editType}
                         onChange={(e) => {
-                          const form = e.target.value;
-                          setDraft({ ...draft, form });
-                          if (form !== "long") setCuts([]);
+                          const editType = e.target.value;
+                          setDraft({ ...draft, editType });
+                          if (editType === "short") setCuts([]);
                         }}
                       >
-                        <option value="short">Short form</option>
-                        <option value="long">Long form</option>
+                        {plan.tiers.map((t) => (
+                          <option key={t.key} value={t.key}>
+                            {t.label}
+                            {t.kind === "video"
+                              ? `, ${creditWord(t.credits ?? 0)}`
+                              : `, from ${creditWord(t.perHalfHour ?? 0)}`}
+                          </option>
+                        ))}
                       </Select>
                     </Field>
                   </div>
@@ -462,16 +539,38 @@ export function EditingView({
                         ))}
                       </Select>
                     </Field>
-                    <Field label="How long should it be" hint="In minutes. Leave it blank if you do not mind.">
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.5"
-                        value={draft.targetMinutes}
-                        onChange={(e) => setDraft({ ...draft, targetMinutes: e.target.value })}
-                        placeholder="8"
-                      />
-                    </Field>
+                    {tier?.kind === "podcast" ? (
+                      <Field
+                        label="Finished runtime"
+                        required
+                        hint="In minutes, roughly. We price podcasts on the length of the finished episode."
+                      >
+                        <Input
+                          type="number"
+                          min="1"
+                          step="5"
+                          value={draft.runtimeMinutes}
+                          onChange={(e) =>
+                            setDraft({ ...draft, runtimeMinutes: e.target.value })
+                          }
+                          placeholder="60"
+                        />
+                      </Field>
+                    ) : (
+                      <Field
+                        label="How long should it be"
+                        hint="In minutes. Leave it blank if you do not mind."
+                      >
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.5"
+                          value={draft.targetMinutes}
+                          onChange={(e) => setDraft({ ...draft, targetMinutes: e.target.value })}
+                          placeholder="8"
+                        />
+                      </Field>
+                    )}
                   </div>
 
                   <Field
@@ -512,10 +611,10 @@ export function EditingView({
                     </Field>
                   </div>
 
-                  {/* short cuts off a long form. Each is a video in its own
-                      right, so each spends a short form slot, and they are
-                      told that here rather than discovering it. */}
-                  {draft.form === "long" && (
+                  {/* short cuts off a longer edit. Each is a video in its own
+                      right, so each spends a credit, and they are told that
+                      here rather than discovering it. */}
+                  {draft.editType !== "short" && (
                     <div className="rounded-[8px] border border-hair bg-canvas/40 p-4">
                       <p className="flex items-center gap-2 text-body-sm font-semibold text-ink">
                         <Scissors size={14} className="text-gold" aria-hidden="true" />
@@ -523,8 +622,7 @@ export function EditingView({
                       </p>
                       <p className="mt-1 text-body-sm text-muted">
                         Say which part each one comes from. Every cut is its own
-                        video, so each uses one of your {s.shortAllowed} short
-                        form slots. You have {s.shortLeft} left this month.
+                        short form video, so each one costs 1 credit on top.
                       </p>
                       <div className="mt-3 grid gap-2">
                         {cuts.map((c, i) => (
@@ -577,6 +675,25 @@ export function EditingView({
                     </div>
                   )}
 
+                  {/* the price, before they commit to it. The whole reason
+                      credits exist is that a client should never learn what
+                      something cost after they spent it. */}
+                  <div className="flex flex-wrap items-baseline justify-between gap-2 rounded-[8px] border border-hair bg-canvas px-4 py-3">
+                    <span className="text-body-sm text-muted">
+                      This request costs
+                      {cutsCost > 0
+                        ? ` ${creditWord(thisCost)} plus ${creditWord(cutsCost)} for the ${
+                            cuts.length === 1 ? "cut" : "cuts"
+                          }`
+                        : ""}
+                    </span>
+                    <span className="font-mono text-body-sm tabular-nums text-ink">
+                      <span className="text-gold">{creditWord(totalCost)}</span>
+                      {" of "}
+                      {s.left} left
+                    </span>
+                  </div>
+
                   {err && <p className="text-body-sm text-error">{err}</p>}
 
                   <div className="flex gap-2">
@@ -587,6 +704,7 @@ export function EditingView({
                         !draft.title.trim() ||
                         !draft.brief.trim() ||
                         !draft.assetsUrl.trim() ||
+                        (tier?.kind === "podcast" && !draft.runtimeMinutes) ||
                         cuts.some((c) => !c.trim())
                       }
                       onClick={submit}
@@ -614,7 +732,7 @@ export function EditingView({
             >
               {parents.length === 0 ? (
                 <p className="text-body-sm text-muted">
-                  Nothing asked for yet this month. Your slots reset on{" "}
+                  Nothing asked for yet this month. Your credits reset on{" "}
                   {day(plan.cycle.endsAt)}, and they do not carry over, so it is
                   worth using them.
                 </p>
@@ -629,10 +747,19 @@ export function EditingView({
                             id: v.id,
                             column: v.column,
                             title: v.title,
-                            meta: [v.form === "long" ? "long form" : "short form", v.aspect]
+                            meta: [
+                              v.typeLabel ?? null,
+                              v.creditCost ? creditWord(v.creditCost) : null,
+                              v.aspect,
+                            ]
                               .filter(Boolean)
                               .join(" / "),
-                            warn: v.column === "waiting" ? "we need your footage" : null,
+                            warn:
+                              v.column === "waiting"
+                                ? v.assetsUrl
+                                  ? "we are checking your footage"
+                                  : "we need your footage"
+                                : null,
                             due: v.dueAt
                               ? `due ${day(v.dueAt)}`
                               : v.requestedDueAt
@@ -681,7 +808,7 @@ export function EditingView({
                 request that quietly disappears is the thing a client emails
                 about, and if we cancelled it they are owed the why. */}
             {plan.videos.some((v) => v.cancelledAt && !v.parentId) && (
-              <Card title="Cancelled this month" description="Their slots went back to your month.">
+              <Card title="Cancelled this month" description="Their credits went back to your month.">
                 <ul className="grid gap-2">
                   {plan.videos
                     .filter((v) => v.cancelledAt && !v.parentId)
@@ -706,12 +833,11 @@ export function EditingView({
           <div className="grid gap-3">
             <Card title="What is left this month">
               <div className="grid gap-4">
-                <Slots label="Long form" used={s.longUsed} allowed={s.longAllowed} />
-                <Slots label="Short form" used={s.shortUsed} allowed={s.shortAllowed} />
+                <CreditMeter credits={s} />
               </div>
               <p className="mt-4 flex items-start gap-2 text-body-sm text-dim">
                 <CalendarClock size={15} className="mt-0.5 shrink-0" aria-hidden="true" />
-                Resets {day(plan.cycle.endsAt)}. Unused videos do not carry over.
+                Resets {day(plan.cycle.endsAt)}. Unused plan credits do not carry over.
               </p>
             </Card>
 
@@ -851,7 +977,7 @@ function PastEdits({
           <Card
             key={m.id}
             title={monthName(m.startsAt)}
-            description={`${day(m.startsAt)} to ${day(m.endsAt)} / ${m.longUsed} long form, ${m.shortUsed} short form`}
+            description={`${day(m.startsAt)} to ${day(m.endsAt)} / ${m.creditsUsed} of ${m.creditsAllowed} credits`}
             actions={
               <DownloadAll
                 videoIds={m.kept
@@ -906,7 +1032,9 @@ function VideoRow({
         <div className="min-w-0">
           <p className="text-body-sm font-semibold text-ink">{v.title}</p>
           <p className="mt-0.5 font-mono text-label uppercase text-dim">
-            {v.form === "long" ? "Long form" : "Short form"}
+            {v.typeLabel ?? "Edit"}
+            {v.creditCost ? ` / ${creditWord(v.creditCost)}` : ""}
+            {v.runtimeMinutes ? ` / ${v.runtimeMinutes} min` : ""}
             {v.aspect ? ` / ${v.aspect}` : ""}
             {cuts ? ` / ${cuts} short ${cuts === 1 ? "cut" : "cuts"}` : ""}
             {v.dueAt
@@ -955,7 +1083,8 @@ function RequestDetail({
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-h4 font-semibold text-ink">{v.title}</h2>
               <Chip tone={stage.tone}>{stage.label}</Chip>
-              <Chip tone="neutral">{v.form === "long" ? "long form" : "short form"}</Chip>
+              {v.typeLabel && <Chip tone="neutral">{v.typeLabel}</Chip>}
+              {v.creditCost > 0 && <Chip tone="neutral">{creditWord(v.creditCost)}</Chip>}
               {v.aspect && <Chip tone="neutral">{v.aspect}</Chip>}
             </div>
             <p className="mt-2 text-body-sm text-muted">{stage.blurb}</p>
@@ -1075,7 +1204,7 @@ function RequestDetail({
             <Card title="Changed your mind?">
               <p className="text-body-sm text-muted">
                 Nobody has started this one, so you can pull it back and the
-                slot goes straight back to your month.
+                credits go straight back to your month.
               </p>
               <div className="mt-3">
                 <Button variant="ghost" size="sm" disabled={busy} onClick={() => onCancel(v)}>
