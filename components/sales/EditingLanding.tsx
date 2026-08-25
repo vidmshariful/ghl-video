@@ -39,6 +39,37 @@ import {
  * cannot quote a number checkout will not charge.
  */
 
+const ICON = {
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 1.6,
+  strokeLinecap: "round" as const,
+  strokeLinejoin: "round" as const,
+};
+
+/*
+ * One mark per step, in the order the work happens: a file going up, a
+ * timeline with a cut in it, a tick. Drawn here because three shapes is not
+ * worth an icon dependency, and because these three say the specific thing
+ * each step does rather than being decoration.
+ */
+const STEP_ICONS = [
+  <svg key="send" viewBox="0 0 24 24" width="22" height="22" {...ICON}>
+    <path d="M12 16V4" />
+    <path d="m7 9 5-5 5 5" />
+    <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+  </svg>,
+  <svg key="cut" viewBox="0 0 24 24" width="22" height="22" {...ICON}>
+    <rect x="2.5" y="7" width="7" height="10" rx="1.5" />
+    <rect x="14.5" y="7" width="7" height="10" rx="1.5" />
+    <path d="M12 4v16" strokeDasharray="2 2.5" />
+  </svg>,
+  <svg key="approve" viewBox="0 0 24 24" width="22" height="22" {...ICON}>
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="m8.5 12.2 2.4 2.4 4.6-4.9" />
+  </svg>,
+];
+
 const dollars = (n: number) => `$${n.toLocaleString("en-US")}`;
 const lp = editingLp;
 
@@ -74,7 +105,9 @@ export function EditingLanding() {
           <span className="sp-eyebrow">{lp.hero.eyebrow}</span>
           <h1
             className="sp-display sp-h1"
-            style={{ marginTop: "1.1rem", fontSize: "clamp(2.2rem, 5.8vw, 3.6rem)" }}
+            /* larger than the white-label hero on purpose: this page has one
+               promise to make and it is these four words */
+            style={{ marginTop: "1.1rem", fontSize: "clamp(2.6rem, 6.6vw, 4.5rem)" }}
           >
             {lp.hero.headline}{" "}
             <span className="sp-grad-text" style={{ display: "block" }}>
@@ -152,10 +185,12 @@ export function EditingLanding() {
             sub={lp.bottleneck.body}
             center
           />
-          <div className="sp-grid-cards" style={{ marginTop: "2.5rem" }}>
+          <div className="sp-necks" style={{ marginTop: "2.5rem" }}>
             {lp.bottleneck.points.map((p) => (
-              <div key={p} className="sp-review">
-                <p>{p}</p>
+              <div key={p.n} className="sp-neck">
+                <span className="sp-neck-n">{p.n}</span>
+                <h3 className="sp-display sp-neck-title">{p.title}</h3>
+                <p className="sp-muted sp-neck-line">{p.line}</p>
               </div>
             ))}
           </div>
@@ -172,18 +207,28 @@ export function EditingLanding() {
             sub={lp.work.intro}
             center
           />
-          <div className="sp-grid-cards" style={{ marginTop: "2.5rem" }}>
-            {lp.work.samples.map((s) => (
-              <figure key={s.label} className="sp-card sp-card--hover" style={{ margin: 0 }}>
-                <SpVideo src={s.src} poster={s.poster} label={s.label} />
-                <figcaption style={{ padding: "1rem 1.15rem" }}>
-                  <p style={{ fontWeight: 600 }}>{s.label}</p>
-                  <p className="sp-muted" style={{ fontSize: "0.9rem", marginTop: "0.2rem" }}>
-                    {s.sub}
-                  </p>
-                </figcaption>
-              </figure>
-            ))}
+          <div className="sp-ba" style={{ marginTop: "2.5rem" }}>
+            <div>
+              <div className="sp-ba-label sp-muted">
+                <span className="sp-ba-dot" /> {lp.work.before.label}
+              </div>
+              <SpVideo
+                src={lp.work.before.src}
+                poster={lp.work.before.poster}
+                label="the raw file"
+                placeholder={lp.work.before.placeholder}
+              />
+            </div>
+            <div>
+              <div className="sp-ba-label" style={{ color: "var(--sp-gold)" }}>
+                <span className="sp-ba-dot sp-ba-dot--on" /> {lp.work.after.label}
+              </div>
+              <SpVideo
+                src={lp.work.after.src}
+                poster={lp.work.after.poster}
+                label="the finished cut"
+              />
+            </div>
           </div>
         </div>
       </section>
@@ -197,13 +242,16 @@ export function EditingLanding() {
             accent={lp.how.accent}
             center
           />
-          <div className="sp-steps" style={{ marginTop: "2.5rem" }}>
-            {lp.how.steps.map((s) => (
+          <div className="sp-steps sp-steps--iconed" style={{ marginTop: "2.5rem" }}>
+            {lp.how.steps.map((s, i) => (
               <div key={s.n} className="sp-step">
+                <span className="sp-step-icon" aria-hidden="true">
+                  {STEP_ICONS[i]}
+                </span>
                 <span className="sp-step-n">{s.n}</span>
                 <p
                   className="sp-display"
-                  style={{ marginTop: "0.5rem", fontSize: "1.3rem", fontWeight: 600 }}
+                  style={{ marginTop: "0.35rem", fontSize: "1.3rem", fontWeight: 600 }}
                 >
                   {s.title}
                 </p>
@@ -267,10 +315,12 @@ export function EditingLanding() {
             ))}
           </div>
 
-          {/* risk reversal, right under the offer where the decision is made */}
-          <div className="sp-guarantees">
+          {/* risk reversal, right under the offer where the decision is made.
+              One box with rules between the four rather than four floating
+              items, so it reads as a single promise with four parts. */}
+          <div className="sp-promises">
             {lp.plans.includes.map((g) => (
-              <div key={g.title} className="sp-guarantee">
+              <div key={g.title} className="sp-promise-item">
                 <span className="sp-guarantee-check" aria-hidden="true">
                   &#10003;
                 </span>
@@ -295,16 +345,16 @@ export function EditingLanding() {
             center
           />
           <div className="sp-rates" style={{ marginTop: "2.5rem" }}>
-            {VIDEO_TIERS.map((t) => (
-              <div key={t.key} className="sp-rate">
+            {VIDEO_TIERS.map((t, i) => (
+              <div key={t.key} className={`sp-rate sp-rate--${i + 1}`}>
                 <span className="sp-rate-n">{t.credits}</span>
                 <span className="sp-rate-word">{t.credits === 1 ? "credit" : "credits"}</span>
                 <h3>{t.label}</h3>
                 <p>{t.lengthNote}</p>
               </div>
             ))}
-            {PODCAST_TIERS.map((t) => (
-              <div key={t.key} className="sp-rate">
+            {PODCAST_TIERS.map((t, i) => (
+              <div key={t.key} className={`sp-rate sp-rate--${VIDEO_TIERS.length + i + 1}`}>
                 <span className="sp-rate-n">{t.perBlock}</span>
                 <span className="sp-rate-word">per 30 min</span>
                 <h3>{t.label}</h3>
@@ -330,20 +380,33 @@ export function EditingLanding() {
             accent={lp.fit.accent}
             center
           />
+          {/* The two columns are not equals. The one the reader should be in
+              is lit and the other is deliberately dimmed, so a glance tells
+              them which side they are on before they read either. */}
           <div className="sp-fit" style={{ marginTop: "2.5rem" }}>
-            <div className="sp-card sp-fit-col sp-fit-col--yes">
-              <h3 className="sp-display sp-h3">{lp.fit.forYou.title}</h3>
+            <div className="sp-fit-col sp-fit-col--yes">
+              <h3 className="sp-display sp-fit-title">{lp.fit.forYou.title}</h3>
               <ul>
                 {lp.fit.forYou.items.map((i) => (
-                  <li key={i}>{i}</li>
+                  <li key={i}>
+                    <span className="sp-fit-mark" aria-hidden="true">
+                      &#10003;
+                    </span>
+                    <span>{i}</span>
+                  </li>
                 ))}
               </ul>
             </div>
-            <div className="sp-card sp-fit-col sp-fit-col--no">
-              <h3 className="sp-display sp-h3">{lp.fit.notForYou.title}</h3>
+            <div className="sp-fit-col sp-fit-col--no">
+              <h3 className="sp-display sp-fit-title">{lp.fit.notForYou.title}</h3>
               <ul>
                 {lp.fit.notForYou.items.map((i) => (
-                  <li key={i}>{i}</li>
+                  <li key={i}>
+                    <span className="sp-fit-mark" aria-hidden="true">
+                      &times;
+                    </span>
+                    <span>{i}</span>
+                  </li>
                 ))}
               </ul>
             </div>

@@ -33,21 +33,16 @@ import { studioSince } from "./core";
  */
 const PLACEHOLDER = "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media";
 
-/* Several of these open on a black frame, so the card reads as a broken box
-   until it is played. Seeking two seconds in gives every one of them a real
-   still. The campaign clips will ship with proper posters and this goes. */
-const FROM_2S = "#t=2";
-
 export const editingLp = {
   /* -------------------------------------------------- 01. hero */
   hero: {
-    eyebrow: "Video editing on a monthly plan",
-    headline: "Send the footage.",
-    accent: "We do the rest.",
-    lede: `Editing for HighLevel agencies and SaaS founders who publish every week. Send us the raw file, get back a finished cut from a team that already knows the platform. No hiring, no per video quotes, no explaining HighLevel to anybody.`,
-    /* PLACEHOLDER: the campaign showreel goes here. Muted autoplay in view,
-       click for sound, which is what most ad traffic needs. */
-    videoSrc: `${PLACEHOLDER}/6a09af05dbe569a25d999f9f.mp4`,
+    /* the eyebrow asks the qualifying question rather than describing the
+       product, so the right reader knows in three words that this is them */
+    eyebrow: "Creating content around HighLevel?",
+    headline: "Stop editing.",
+    accent: "Start publishing.",
+    lede: `Send us the raw file, get back a finished cut from a team that already knows the platform. No hiring, no per video quotes, no explaining HighLevel to anybody.`,
+    videoSrc: `${PLACEHOLDER}/6a8d90e067ecc8731d23eac3.mp4`,
     videoPoster: null as string | null,
     priceNote: "Plans from",
     cta: { label: "Start editing", href: "#plans" },
@@ -60,11 +55,25 @@ export const editingLp = {
     headline: "You did not run out of ideas.",
     accent: "You ran out of edit time.",
     body: "The recording is the easy part. What stops the schedule is the four hours afterwards: the cuts, the captions, the b roll, the third export because the aspect was wrong. So the file sits on the desktop, the week goes by, and nothing goes out.",
-    /* three lines, said flatly. Agitation theatre reads as a funnel */
+    /* Three named bottlenecks, said flatly. Each is a real thing the reader
+       has tried, and each is a different reason the schedule stopped, so the
+       section is a diagnosis rather than three lines of agitation. */
     points: [
-      "Footage recorded, never published.",
-      "A freelancer who was good and then went quiet.",
-      "An editor you would hire if the volume were steady enough to justify it.",
+      {
+        n: "01",
+        title: "Editing it yourself",
+        line: "Four hours a video that you are not getting back, on the one task nobody hired you to do. It is the first thing to slip the week anything else goes wrong.",
+      },
+      {
+        n: "02",
+        title: "A freelancer who went quiet",
+        line: "Good for two months, then slower replies, then a week of silence with your footage on their drive. Now you are hiring again instead of publishing.",
+      },
+      {
+        n: "03",
+        title: "Hiring an editor in house",
+        line: "Worth it at real volume, and a salary you cannot justify before that. So the footage waits for a hire that keeps getting postponed.",
+      },
     ],
   },
 
@@ -74,35 +83,21 @@ export const editingLp = {
     headline: "Raw in,",
     accent: "published out.",
     intro:
-      "No commentary on this section. The cut is the argument. Every one of these started as a file somebody sent us and a sentence about what they wanted.",
-    /* PLACEHOLDER clips, one per shape we cut. Replace with real before and
-       after pairs; the labels are already the right ones. */
-    samples: [
-      {
-        label: "Long form",
-        sub: "A 40 minute webinar, cut to 11",
-        src: `${PLACEHOLDER}/6a54fdf79c9b37b5fd24a12f.mp4${FROM_2S}`,
-        poster: null as string | null,
-      },
-      {
-        label: "Short form",
-        sub: "One recording, nine vertical cuts",
-        src: `${PLACEHOLDER}/6a54fdf79c9b37b5fd24a134.mp4${FROM_2S}`,
-        poster: null as string | null,
-      },
-      {
-        label: "Podcast",
-        sub: "Two speakers and a screen share, synced",
-        src: `${PLACEHOLDER}/6a54fdf79c9b37b5fd24a140.mp4${FROM_2S}`,
-        poster: null as string | null,
-      },
-      {
-        label: "Ad creative",
-        sub: "Hook, proof, offer, in 30 seconds",
-        src: `${PLACEHOLDER}/6a54fdf7baf5f6da40a950de.mp4${FROM_2S}`,
-        poster: null as string | null,
-      },
-    ],
+      "The same recording, before and after. No commentary on this section, because the cut is the argument.",
+    /* One pair. The raw file is not in yet, so that side renders SpVideo's
+       placeholder rather than a stand-in: a stand-in on the BEFORE side would
+       be a lie about what the AFTER side came from. */
+    before: {
+      label: "What you send us",
+      src: null as string | null,
+      poster: null as string | null,
+      placeholder: "Raw file coming",
+    },
+    after: {
+      label: "What you get back",
+      src: `${PLACEHOLDER}/6a897e9167bb7ac3517e67e4.mp4`,
+      poster: null as string | null,
+    },
   },
 
   /* -------------------------------------------------- 04. how it works */
@@ -264,8 +259,8 @@ export const editingLp = {
 
   /* -------------------------------------------------- 10. close */
   closing: {
-    headline: "Stop editing.",
-    accent: "Start publishing.",
+    headline: "Your next video",
+    accent: "is three days out.",
     sub: "Pick a plan and send your first file today, or book a call and ask anything first.",
   },
 } as const;

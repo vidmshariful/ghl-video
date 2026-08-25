@@ -1597,114 +1597,6 @@
   color: var(--sp-muted);
 }
 
-/* ---- credits ---- */
-.sp-rates {
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: 1fr;
-  margin-top: 2.25rem;
-}
-@media (min-width: 620px) {
-  .sp-rates {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-@media (min-width: 980px) {
-  .sp-rates {
-    grid-template-columns: repeat(5, 1fr);
-  }
-}
-.sp-rate {
-  border: 1px solid var(--sp-line);
-  border-radius: var(--sp-radius-sm);
-  background: var(--sp-panel);
-  padding: 1.25rem;
-}
-.sp-rate-n {
-  display: block;
-  font-size: 2rem;
-  font-weight: 700;
-  line-height: 1;
-  color: var(--sp-gold);
-  font-variant-numeric: tabular-nums;
-}
-.sp-rate-word {
-  display: block;
-  font-size: 0.72rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--sp-dim);
-  margin-top: 0.35rem;
-}
-.sp-rate h3 {
-  font-size: 0.98rem;
-  font-weight: 600;
-  margin: 0.9rem 0 0.2rem;
-  color: var(--sp-text);
-}
-.sp-rate p {
-  margin: 0;
-  font-size: 0.88rem;
-  color: var(--sp-muted);
-}
-.sp-rates-note {
-  margin-top: 1.5rem;
-  max-width: var(--sp-narrow);
-}
-
-/* ---- who it is for ---- */
-.sp-fit {
-  display: grid;
-  gap: 1.25rem;
-  grid-template-columns: 1fr;
-  margin-top: 2.25rem;
-}
-@media (min-width: 780px) {
-  .sp-fit {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-.sp-fit-col {
-  padding: clamp(1.4rem, 3vw, 2rem);
-}
-/* .sp-display sets line-height 1.03, which clips the ascenders of a heading
-   sitting at the top of a padded box. Same fix the partner pages use inline. */
-.sp-fit-col h3 {
-  line-height: 1.3;
-}
-.sp-fit-col ul {
-  list-style: none;
-  margin: 1rem 0 0;
-  padding: 0;
-  display: grid;
-  gap: 0.7rem;
-}
-.sp-fit-col li {
-  position: relative;
-  padding-left: 1.6rem;
-  color: var(--sp-muted);
-  font-size: 0.95rem;
-}
-.sp-fit-col--yes {
-  border-color: rgba(0, 204, 0, 0.3);
-}
-.sp-fit-col--yes li::before {
-  content: "✓";
-  position: absolute;
-  left: 0;
-  top: 0;
-  color: var(--sp-green);
-  font-weight: 700;
-}
-.sp-fit-col--no li::before {
-  content: "×";
-  position: absolute;
-  left: 0.15rem;
-  top: -0.1em;
-  color: var(--sp-dim);
-  font-size: 1.15rem;
-}
-
 /* ---- proof ---- */
 .sp-people {
   display: grid;
@@ -1799,4 +1691,261 @@
   .sp-tiers--three {
     grid-template-columns: repeat(3, 1fr);
   }
+}
+
+/* ---- the bottleneck: three named ones ---- */
+.sp-necks {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 800px) {
+  .sp-necks {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.sp-neck {
+  position: relative;
+  padding: 1.75rem 1.5rem 1.5rem;
+  border: 1px solid var(--sp-line);
+  border-radius: var(--sp-radius-sm);
+  background: var(--sp-panel);
+  overflow: hidden;
+}
+/* a thin bar along the top, warming left to right across the three, so the
+   set reads as one problem getting worse rather than three separate cards */
+.sp-neck::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(252, 192, 0, 0.7), transparent);
+}
+.sp-neck-n {
+  font-family: var(--font-heading), system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  color: var(--sp-dim);
+}
+.sp-neck-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 0.5rem 0 0;
+  color: var(--sp-text);
+}
+.sp-neck-line {
+  margin-top: 0.5rem;
+  font-size: 0.94rem;
+}
+
+/* ---- how it works: a mark per step ---- */
+.sp-steps--iconed .sp-step {
+  padding-top: 1.5rem;
+}
+.sp-step-icon {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin-bottom: 0.9rem;
+  border-radius: 12px;
+  color: var(--sp-gold);
+  background: var(--sp-gold-soft);
+  border: 1px solid rgba(252, 192, 0, 0.3);
+}
+
+/* ---- the four promises, one box split by rules ---- */
+.sp-promises {
+  display: grid;
+  grid-template-columns: 1fr;
+  margin-top: 2.5rem;
+  border: 1px solid var(--sp-line);
+  border-radius: var(--sp-radius);
+  background: var(--sp-panel);
+  overflow: hidden;
+}
+.sp-promise-item {
+  display: flex;
+  gap: 0.7rem;
+  align-items: flex-start;
+  padding: 1.35rem 1.5rem;
+  border-top: 1px solid var(--sp-line);
+}
+.sp-promise-item:first-child {
+  border-top: 0;
+}
+@media (min-width: 720px) {
+  .sp-promises {
+    grid-template-columns: 1fr 1fr;
+  }
+  /* on two columns the rules run between, not above: the top row has no
+     line over it and the left column carries none on its inner edge */
+  .sp-promise-item:nth-child(-n + 2) {
+    border-top: 0;
+  }
+  .sp-promise-item:nth-child(even) {
+    border-left: 1px solid var(--sp-line);
+  }
+}
+@media (min-width: 1040px) {
+  .sp-promises {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  .sp-promise-item {
+    border-top: 0;
+    border-left: 1px solid var(--sp-line);
+  }
+  .sp-promise-item:first-child {
+    border-left: 0;
+  }
+}
+
+/* ---- credits: one tint per rate ---- */
+.sp-rates {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 620px) {
+  .sp-rates {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (min-width: 980px) {
+  .sp-rates {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+.sp-rate {
+  border: 1px solid var(--sp-line);
+  border-radius: var(--sp-radius-sm);
+  padding: 1.25rem;
+  background: var(--sp-panel);
+}
+/*
+ * Five tints, one per rate, so the row reads as five different things at a
+ * glance instead of five identical boxes. Kept very low: at this alpha the
+ * card is still the page's own surface with a hue leaning through it, which
+ * is what "deep light" means on a background this dark. Anything stronger
+ * and five coloured boxes start competing with the offer above them.
+ */
+.sp-rate--1 { background: rgba(252, 192, 0, 0.05); border-color: rgba(252, 192, 0, 0.18); }
+.sp-rate--2 { background: rgba(0, 204, 0, 0.05); border-color: rgba(0, 204, 0, 0.18); }
+.sp-rate--3 { background: rgba(0, 144, 252, 0.055); border-color: rgba(0, 144, 252, 0.2); }
+.sp-rate--4 { background: rgba(168, 120, 255, 0.055); border-color: rgba(168, 120, 255, 0.2); }
+.sp-rate--5 { background: rgba(255, 122, 89, 0.05); border-color: rgba(255, 122, 89, 0.2); }
+.sp-rate-n {
+  display: block;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--sp-text);
+  font-variant-numeric: tabular-nums;
+}
+.sp-rate-word {
+  display: block;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--sp-dim);
+  margin-top: 0.35rem;
+}
+.sp-rate h3 {
+  font-size: 0.98rem;
+  font-weight: 600;
+  margin: 0.9rem 0 0.2rem;
+  color: var(--sp-text);
+}
+.sp-rate p {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--sp-muted);
+}
+
+/* ---- who it is for: one side lit, one side dimmed ---- */
+.sp-fit {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 780px) {
+  .sp-fit {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.sp-fit-col {
+  border: 1px solid var(--sp-line);
+  border-radius: var(--sp-radius);
+  padding: clamp(1.4rem, 3vw, 2rem);
+}
+.sp-fit-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 0;
+}
+.sp-fit-col ul {
+  list-style: none;
+  margin: 1.1rem 0 0;
+  padding: 0;
+}
+/* a rule between every point, so each is its own line to weigh up rather
+   than a run of text */
+.sp-fit-col li {
+  display: flex;
+  gap: 0.7rem;
+  align-items: flex-start;
+  padding: 0.85rem 0;
+  border-top: 1px solid var(--sp-line);
+  font-size: 0.95rem;
+}
+.sp-fit-col li:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.sp-fit-mark {
+  flex-shrink: 0;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+/* the side the reader should be on: lit, and the one that carries the tick */
+.sp-fit-col--yes {
+  border-color: rgba(0, 204, 0, 0.32);
+  background:
+    radial-gradient(120% 100% at 50% 0%, rgba(0, 204, 0, 0.06), transparent 65%),
+    var(--sp-panel);
+}
+.sp-fit-col--yes .sp-fit-title {
+  color: var(--sp-text);
+}
+.sp-fit-col--yes li {
+  color: var(--sp-muted);
+}
+.sp-fit-col--yes .sp-fit-mark {
+  color: var(--sp-green);
+}
+
+/* the other side is turned down on purpose: same shape, no light in it, so
+   the eye reads it as the closed door it is */
+.sp-fit-col--no {
+  background: transparent;
+  border-style: dashed;
+  border-color: var(--sp-line);
+}
+.sp-fit-col--no .sp-fit-title,
+.sp-fit-col--no .sp-fit-mark {
+  color: var(--sp-dim);
+}
+/* the column is turned down, not made unreadable: dim on this ground is
+   about 4.3:1, which is under AA for text this size. The dashed border, the
+   missing glow and the strike already say "not this one". */
+.sp-fit-col--no li {
+  color: var(--sp-muted);
+}
+.sp-fit-col--no li {
+  text-decoration: line-through;
+  text-decoration-color: rgba(255, 255, 255, 0.14);
 }
