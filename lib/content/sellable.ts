@@ -148,8 +148,7 @@ const subscriptionSellables: SellableProduct[] = editingPlans.map(
     metadata: {
       kind: "subscription",
       code: codeFor(p.sku),
-      long_form: p.longForm,
-      short_form: p.shortForm,
+      credits: p.credits,
       featured: p.featured,
     },
   }),

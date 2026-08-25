@@ -1,5 +1,5 @@
 /*
- * What an editing plan promises each month, and what is left of it.
+ * What an editing plan grants each month, and what is left of it.
  *
  * Import-free so the rules can be tested directly. They decide what a paying
  * client is told about their own plan, and the failure modes are opposite and
@@ -8,85 +8,100 @@
  *
  * The decisions encoded here, all settled with Shariful:
  *
- *   - Slots reset every month. Nothing rolls over. A month starts fresh
- *     whether the client used everything or nothing.
- *   - Long form and short form are counted separately, because the plans
- *     promise them separately and one does not substitute for the other.
+ *   - Work is priced in CREDITS, by what it actually is, not by sorting it
+ *     into two fixed video shapes. See lib/editing-credits.ts for why.
+ *   - Plan credits reset every month and do NOT roll over. A month starts
+ *     fresh whether the client used everything or nothing.
+ *   - Top-up credits, bought separately, DO carry until they are used. They
+ *     were paid for on their own and expiring them at a month boundary would
+ *     be taking back something already sold.
  *   - A request is NEVER refused. The client can ask for as much as they
  *     like; we work through them one at a time against the monthly plan.
- *     What over-asking earns is a plain warning and an offer to upgrade,
- *     not a closed door.
- *   - A cancelled or approved video still counts against its month. The work
- *     was done; deleting the count would let a month be spent twice.
+ *     What over-asking earns is a plain warning, an offer to top up and an
+ *     offer to upgrade, not a closed door.
+ *   - A cancelled request returns its credits. The work was not done, so
+ *     charging for it would be charging for nothing.
  */
 
-export type Form = "long" | "short";
-
-export type Allowance = { longForm: number; shortForm: number };
-
-export type SlotUse = {
-  longUsed: number;
-  shortUsed: number;
-  longLeft: number;
-  shortLeft: number;
-  longAllowed: number;
-  shortAllowed: number;
-  /** asked for more than the month holds, in either form */
+export type CreditUse = {
+  /** credits committed this month */
+  spent: number;
+  /** what the plan granted this month */
+  allowed: number;
+  /** plan credits still unspent this month, never negative */
+  planLeft: number;
+  /** bought credits still unspent, net of every month's overflow */
+  topupLeft: number;
+  /** everything they can still spend right now */
+  left: number;
+  /** this month's spend went past what the plan granted */
   overPlan: boolean;
 };
 
 /** A request, as far as counting is concerned. */
-export type Countable = { form: Form | null; cancelledAt?: string | null };
+export type Countable = { creditCost?: number | null; cancelledAt?: string | null };
 
-/** Count what a month has already committed. Cancelled requests do not. */
-export function slotsUsed(items: Countable[], allowance: Allowance): SlotUse {
-  const live = items.filter((i) => !i.cancelledAt);
-  const longUsed = live.filter((i) => i.form === "long").length;
-  const shortUsed = live.filter((i) => i.form === "short").length;
+/**
+ * Count what a month has already committed.
+ *
+ * `topupLeft` arrives already net of every month's overflow, worked out
+ * server-side where the grants and the closed cycles can both be read. Doing
+ * that arithmetic here would mean this function needed the client's whole
+ * history to answer a question about one month.
+ */
+export function creditsUsed(
+  items: Countable[],
+  allowed: number,
+  topupLeft = 0,
+): CreditUse {
+  const spent = items
+    .filter((i) => !i.cancelledAt)
+    .reduce((sum, i) => sum + Math.max(0, Number(i.creditCost ?? 0)), 0);
+  /* never negative: a client who has over-asked is at zero left, not at
+   * minus two, and "minus two remaining" is not a sentence */
+  const planLeft = Math.max(0, allowed - spent);
+  const topup = Math.max(0, topupLeft);
   return {
-    longUsed,
-    shortUsed,
-    longAllowed: allowance.longForm,
-    shortAllowed: allowance.shortForm,
-    /* never negative: a client who has over-asked is at zero left, not at
-     * minus two, and "minus two remaining" is not a sentence */
-    longLeft: Math.max(0, allowance.longForm - longUsed),
-    shortLeft: Math.max(0, allowance.shortForm - shortUsed),
-    overPlan: longUsed > allowance.longForm || shortUsed > allowance.shortForm,
+    spent,
+    allowed,
+    planLeft,
+    topupLeft: topup,
+    left: planLeft + topup,
+    overPlan: spent > allowed,
   };
 }
 
 /**
- * What to tell somebody about to ask for one more.
+ * What to tell somebody about to spend more than they have.
  *
- * Returns null when the request sits inside the plan, and a sentence when it
- * does not. The sentence is shown BEFORE they submit and never blocks it:
- * they are told what the plan holds and offered the upgrade, then the request
- * goes through either way.
+ * Returns null when the request fits, and a sentence when it does not. The
+ * sentence is shown BEFORE they submit and never blocks it: they are told
+ * what is left, offered the two ways forward, then the request goes through
+ * either way.
  */
 export function overPlanWarning(
-  use: SlotUse,
-  form: Form,
+  use: CreditUse,
+  cost: number,
   planName: string,
 ): string | null {
-  const left = form === "long" ? use.longLeft : use.shortLeft;
-  if (left > 0) return null;
-  const allowed = form === "long" ? use.longAllowed : use.shortAllowed;
-  const kind = form === "long" ? "long form" : "short form";
-  const already = form === "long" ? use.longUsed : use.shortUsed;
+  if (cost <= use.left) return null;
+  const short = cost - use.left;
+  const have =
+    use.left === 0
+      ? "no credits left this month"
+      : `${use.left} ${use.left === 1 ? "credit" : "credits"} left this month`;
   return (
-    `Your ${planName} plan covers ${allowed} ${kind} ${allowed === 1 ? "video" : "videos"} a month, ` +
-    `and you have ${already} this month. We will still take this one and work through your ` +
-    `requests in order, but it will run into next month unless you move up a plan.`
+    `This one costs ${cost} ${cost === 1 ? "credit" : "credits"} and your ${planName} plan has ${have}, ` +
+    `so it is ${short} over. We will still take it and work through your requests in order. ` +
+    `To have it sooner, top up your credits or move up a plan.`
   );
 }
 
-/** Plain words for the counter, e.g. "3 of 4 long form used". */
-export function describeSlots(use: SlotUse): string {
-  const bits: string[] = [];
-  if (use.longAllowed) bits.push(`${use.longUsed} of ${use.longAllowed} long form`);
-  if (use.shortAllowed) bits.push(`${use.shortUsed} of ${use.shortAllowed} short form`);
-  return bits.length ? `${bits.join(", ")} used` : "No videos included in this plan";
+/** Plain words for the counter, e.g. "6 of 20 credits used". */
+export function describeCredits(use: CreditUse): string {
+  if (!use.allowed && !use.topupLeft) return "No credits on this plan";
+  const base = `${use.spent} of ${use.allowed} credits used`;
+  return use.topupLeft > 0 ? `${base}, plus ${use.topupLeft} bought` : base;
 }
 
 /**
@@ -96,11 +111,24 @@ export function describeSlots(use: SlotUse): string {
  * plan that renews on the 18th runs the 18th to the 18th. Counting by
  * calendar month would give a client who joined on the 28th four days of
  * their first month's videos.
+ *
+ * Built by subtracting a month from the END rather than by `setMonth`, which
+ * overflows: setMonth(-1) on 31 March lands on 3 March, because 31 February
+ * does not exist and the Date rolls forward. That put a 28 day window on
+ * every plan renewing on a 29th, 30th or 31st, and told those clients their
+ * month started three days late.
  */
 export function cycleWindow(periodEnd: Date): { start: Date; end: Date } {
-  const start = new Date(periodEnd);
-  start.setMonth(start.getMonth() - 1);
-  return { start, end: periodEnd };
+  const end = new Date(periodEnd);
+  const y = end.getUTCFullYear();
+  const m = end.getUTCMonth();
+  const day = end.getUTCDate();
+  /* the last day of the previous month, so a 31st clamps to the 28th, 29th
+     or 30th rather than rolling into this month */
+  const daysInPrev = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const start = new Date(end);
+  start.setUTCFullYear(y, m - 1, Math.min(day, daysInPrev));
+  return { start, end };
 }
 
 /*

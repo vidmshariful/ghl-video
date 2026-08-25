@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { editingPlans } from "@/lib/content/premade";
-import { cycleWindow, type Allowance } from "@/lib/subscription-slots";
+import { cycleWindow } from "@/lib/subscription-slots";
 
 /*
  * The billing month a plan is currently in, created on demand.
@@ -20,10 +20,9 @@ import { cycleWindow, type Allowance } from "@/lib/subscription-slots";
 
 type DB = SupabaseClient;
 
-/** What a plan sku promises each month, from the catalogue. */
-export function allowanceFor(sku: string | null): Allowance {
-  const plan = editingPlans.find((p) => p.sku === sku);
-  return { longForm: plan?.longForm ?? 0, shortForm: plan?.shortForm ?? 0 };
+/** How many credits a plan sku grants each month, from the catalogue. */
+export function creditsFor(sku: string | null): number {
+  return editingPlans.find((p) => p.sku === sku)?.credits ?? 0;
 }
 
 export function planNameFor(sku: string | null): string {
@@ -45,8 +44,7 @@ export type Cycle = {
   id: string;
   periodStart: string;
   periodEnd: string;
-  longFormAllowed: number;
-  shortFormAllowed: number;
+  creditsAllowed: number;
   planSku: string | null;
 };
 
@@ -78,7 +76,7 @@ export async function currentCycle(
   if (existing) return toCycle(existing);
 
   const sku = sub.product?.sku ?? null;
-  const allowance = allowanceFor(sku);
+  const credits = creditsFor(sku);
   /* upsert, not insert: two tabs opening the portal at once would otherwise
    * race and one would fail on the unique pair */
   const { data: made } = await db
@@ -88,8 +86,12 @@ export async function currentCycle(
         subscription_id: sub.id,
         period_start: periodStart,
         period_end: end.toISOString(),
-        long_form_allowed: allowance.longForm,
-        short_form_allowed: allowance.shortForm,
+        credits_allowed: credits,
+        /* the old per-form columns are not null, and they are still what the
+           already-billed history was measured in, so they keep the same
+           arithmetic rather than being zeroed */
+        long_form_allowed: Math.floor(credits / 5),
+        short_form_allowed: Math.floor(credits / 5) * 2,
         plan_sku: sku,
       },
       { onConflict: "subscription_id,period_start" },
@@ -114,8 +116,49 @@ function toCycle(r: Record<string, unknown>): Cycle {
     id: String(r.id),
     periodStart: String(r.period_start),
     periodEnd: String(r.period_end),
-    longFormAllowed: Number(r.long_form_allowed),
-    shortFormAllowed: Number(r.short_form_allowed),
+    creditsAllowed: Number(r.credits_allowed ?? 0),
     planSku: (r.plan_sku as string | null) ?? null,
   };
+}
+
+/**
+ * Bought credits still unspent, across the whole life of the plan.
+ *
+ * Top-ups do not expire, so the balance is everything ever granted minus what
+ * every month spent beyond its own plan grant. Working it out from the rows
+ * rather than keeping a running total means the number can always be
+ * explained, and "where did my credits go" is answerable.
+ */
+export async function topupCreditsLeft(db: DB, subscriptionId: string): Promise<number> {
+  const [{ data: grants }, { data: cycles }] = await Promise.all([
+    db.from("editing_credit_grants").select("credits").eq("subscription_id", subscriptionId),
+    db
+      .from("subscription_cycles")
+      .select("id, credits_allowed")
+      .eq("subscription_id", subscriptionId),
+  ]);
+  const granted = ((grants ?? []) as Record<string, unknown>[]).reduce(
+    (n, g) => n + Number(g.credits ?? 0),
+    0,
+  );
+  if (granted === 0) return 0;
+
+  const rows = (cycles ?? []) as Record<string, unknown>[];
+  if (rows.length === 0) return granted;
+  const { data: work } = await db
+    .from("order_deliverables")
+    .select("cycle_id, credit_cost, cancelled_at")
+    .in("cycle_id", rows.map((c) => String(c.id)));
+
+  const spentByCycle = new Map<string, number>();
+  for (const w of (work ?? []) as Record<string, unknown>[]) {
+    if (w.cancelled_at) continue;
+    const key = String(w.cycle_id);
+    spentByCycle.set(key, (spentByCycle.get(key) ?? 0) + Number(w.credit_cost ?? 0));
+  }
+  const overflow = rows.reduce((n, c) => {
+    const spent = spentByCycle.get(String(c.id)) ?? 0;
+    return n + Math.max(0, spent - Number(c.credits_allowed ?? 0));
+  }, 0);
+  return Math.max(0, granted - overflow);
 }

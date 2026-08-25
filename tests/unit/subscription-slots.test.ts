@@ -1,107 +1,160 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import {
+  creditsUsed,
   cycleWindow,
-  describeSlots,
+  describeCredits,
   overPlanWarning,
   promisedFrom,
   queueOrder,
-  slotsUsed,
-  type Allowance,
 } from "@/lib/subscription-slots";
+import { creditCost, tierForMinutes } from "@/lib/editing-credits";
 
 /*
- * Editing plan slots. Both failure directions are expensive: count too
+ * Editing plan credits. Both failure directions are expensive: count too
  * generously and the studio owes work it never sold, count too meanly and a
  * client is refused something they already paid for.
  */
 
 /* Growth, the plan Extendly is on */
-const GROWTH: Allowance = { longForm: 4, shortForm: 8 };
-const v = (form: "long" | "short" | null) => ({ form });
+const GROWTH = 20;
+const v = (creditCost: number) => ({ creditCost });
 
 describe("counting a month", () => {
   test("an empty month has the whole plan left", () => {
-    const u = slotsUsed([], GROWTH);
-    assert.equal(u.longLeft, 4);
-    assert.equal(u.shortLeft, 8);
+    const u = creditsUsed([], GROWTH);
+    assert.equal(u.left, 20);
+    assert.equal(u.spent, 0);
     assert.equal(u.overPlan, false);
   });
 
-  test("long and short are counted separately, never substituted", () => {
-    const u = slotsUsed([v("long"), v("long"), v("short")], GROWTH);
-    assert.equal(u.longUsed, 2);
-    assert.equal(u.shortUsed, 1);
-    assert.equal(u.longLeft, 2);
-    assert.equal(u.shortLeft, 7);
+  test("credits are one pool, whatever shape the work was", () => {
+    const u = creditsUsed([v(3), v(3), v(1)], GROWTH);
+    assert.equal(u.spent, 7);
+    assert.equal(u.planLeft, 13);
   });
 
   test("a full month is at zero, and is not over plan", () => {
-    const u = slotsUsed([...Array(4)].map(() => v("long")), GROWTH);
-    assert.equal(u.longLeft, 0);
+    const u = creditsUsed([v(10), v(10)], GROWTH);
+    assert.equal(u.planLeft, 0);
     assert.equal(u.overPlan, false, "exactly at the limit is still within it");
   });
 
   test("over-asking never reads as a negative remaining", () => {
-    const u = slotsUsed([...Array(6)].map(() => v("long")), GROWTH);
-    assert.equal(u.longUsed, 6);
-    assert.equal(u.longLeft, 0, "not minus two");
+    const u = creditsUsed([v(15), v(10)], GROWTH);
+    assert.equal(u.spent, 25);
+    assert.equal(u.planLeft, 0, "not minus five");
     assert.equal(u.overPlan, true);
   });
 
-  test("a video with no form recorded counts against neither", () => {
-    const u = slotsUsed([v(null), v("long")], GROWTH);
-    assert.equal(u.longUsed, 1);
-    assert.equal(u.shortUsed, 0);
+  test("a request with no cost recorded spends nothing", () => {
+    const u = creditsUsed([{ creditCost: null }, v(3)], GROWTH);
+    assert.equal(u.spent, 3);
+  });
+
+  test("bought credits sit on top of the monthly grant", () => {
+    const u = creditsUsed([v(20)], GROWTH, 5);
+    assert.equal(u.planLeft, 0);
+    assert.equal(u.topupLeft, 5);
+    assert.equal(u.left, 5, "the month is spent but the bought credits remain");
   });
 });
 
 describe("what somebody is told before they ask for one more", () => {
   test("inside the plan, nothing is said", () => {
-    const u = slotsUsed([v("long")], GROWTH);
-    assert.equal(overPlanWarning(u, "long", "Growth"), null);
-    assert.equal(overPlanWarning(u, "short", "Growth"), null);
+    const u = creditsUsed([v(3)], GROWTH);
+    assert.equal(overPlanWarning(u, 3, "Growth"), null);
   });
 
-  test("at the limit, they are warned and offered the upgrade", () => {
-    const u = slotsUsed([...Array(4)].map(() => v("long")), GROWTH);
-    const w = overPlanWarning(u, "long", "Growth");
+  test("at the limit, they are warned and offered both ways forward", () => {
+    const u = creditsUsed([v(20)], GROWTH);
+    const w = overPlanWarning(u, 3, "Growth");
     assert.ok(w, "there should be a warning");
-    assert.match(w!, /4 long form videos a month/);
-    assert.match(w!, /still take this one/, "it must not read as a refusal");
-    assert.match(w!, /move up a plan/);
+    assert.match(w!, /no credits left this month/);
+    assert.match(w!, /still take it/, "it must not read as a refusal");
+    assert.match(w!, /top up your credits or move up a plan/);
   });
 
-  test("running out of one form does not warn about the other", () => {
-    const u = slotsUsed([...Array(4)].map(() => v("long")), GROWTH);
-    assert.equal(overPlanWarning(u, "short", "Growth"), null);
+  test("a request that exactly fits the remainder is not warned about", () => {
+    const u = creditsUsed([v(18)], GROWTH);
+    assert.equal(overPlanWarning(u, 2, "Growth"), null);
   });
 
-  test("the warning names the plan the client is actually on", () => {
-    const starter: Allowance = { longForm: 2, shortForm: 4 };
-    const u = slotsUsed([v("long"), v("long")], starter);
-    assert.match(overPlanWarning(u, "long", "Starter")!, /Starter plan covers 2 long form videos/);
+  test("bought credits stop the warning", () => {
+    const u = creditsUsed([v(20)], GROWTH, 5);
+    assert.equal(overPlanWarning(u, 3, "Growth"), null);
   });
 
-  test("one video reads as video, not videos", () => {
-    const u = slotsUsed([v("long")], { longForm: 1, shortForm: 0 });
-    assert.match(overPlanWarning(u, "long", "Solo")!, /1 long form video a month/);
+  test("the warning says how far over it is", () => {
+    const u = creditsUsed([v(18)], GROWTH);
+    assert.match(overPlanWarning(u, 5, "Growth")!, /it is 3 over/);
   });
 });
 
 describe("the counter in words", () => {
-  test("says both halves when the plan has both", () => {
+  test("says what the month has spent", () => {
+    assert.equal(describeCredits(creditsUsed([v(3), v(1)], GROWTH)), "4 of 20 credits used");
+  });
+
+  test("bought credits are named separately, because they do not reset", () => {
     assert.equal(
-      describeSlots(slotsUsed([v("long"), v("short")], GROWTH)),
-      "1 of 4 long form, 1 of 8 short form used",
+      describeCredits(creditsUsed([v(3)], GROWTH, 6)),
+      "3 of 20 credits used, plus 6 bought",
     );
   });
 
-  test("a plan with no videos says so rather than showing zeros", () => {
-    assert.equal(
-      describeSlots(slotsUsed([], { longForm: 0, shortForm: 0 })),
-      "No videos included in this plan",
-    );
+  test("a plan with no credits says so rather than showing zeros", () => {
+    assert.equal(describeCredits(creditsUsed([], 0)), "No credits on this plan");
+  });
+});
+
+describe("what a piece of work costs", () => {
+  test("the three video tiers are flat", () => {
+    assert.equal(creditCost("short"), 1);
+    assert.equal(creditCost("mid"), 2);
+    assert.equal(creditCost("long"), 3);
+  });
+
+  test("a video tier ignores runtime, because the tier already names its ceiling", () => {
+    assert.equal(creditCost("mid", 1), 2);
+    assert.equal(creditCost("mid", 5), 2);
+  });
+
+  test("a podcast is priced on finished runtime, in half hour blocks", () => {
+    assert.equal(creditCost("podcast_standard", 30), 3);
+    assert.equal(creditCost("podcast_standard", 60), 5, "the published hourly rate");
+    assert.equal(creditCost("podcast_standard", 90), 8);
+    assert.equal(creditCost("podcast_standard", 120), 10);
+  });
+
+  test("the advanced rate is the published one too", () => {
+    assert.equal(creditCost("podcast_advanced", 30), 4);
+    assert.equal(creditCost("podcast_advanced", 60), 8);
+    assert.equal(creditCost("podcast_advanced", 120), 16);
+  });
+
+  test("a part block rounds up, so 61 minutes costs more than 60", () => {
+    assert.equal(creditCost("podcast_standard", 61), 8);
+  });
+
+  test("the price never goes backwards as the episode gets longer", () => {
+    let prev = 0;
+    for (let m = 1; m <= 240; m += 1) {
+      const c = creditCost("podcast_standard", m);
+      assert.ok(c >= prev, `${m} minutes cost less than ${m - 1}`);
+      prev = c;
+    }
+  });
+
+  test("an unknown shape costs nothing rather than guessing", () => {
+    assert.equal(creditCost("nonsense"), 0);
+  });
+
+  test("a length suggests the tier it belongs in", () => {
+    assert.equal(tierForMinutes(1), "short");
+    assert.equal(tierForMinutes(1.5), "short");
+    assert.equal(tierForMinutes(5), "mid", "the five minute video that started all this");
+    assert.equal(tierForMinutes(12), "long");
   });
 });
 
@@ -112,50 +165,51 @@ describe("which month a plan is in", () => {
     assert.equal(end.toISOString().slice(0, 10), "2026-09-18");
   });
 
-  test("it survives a month end without landing on the wrong day", () => {
+  test("a month end renewal does not roll forward into its own month", () => {
+    /* setMonth(-1) on 31 March lands on 3 March, because 31 February does not
+     * exist. That gave every plan renewing on a 29th, 30th or 31st a 28 day
+     * window starting three days late. */
     const { start } = cycleWindow(new Date("2026-03-31T12:00:00Z"));
-    /* February has no 31st; the point is it stays inside February or the
-     * first days of March rather than jumping a whole month */
-    assert.ok(start < new Date("2026-03-31T12:00:00Z"));
-    assert.ok(start > new Date("2026-02-01T00:00:00Z"));
+    assert.equal(start.toISOString().slice(0, 10), "2026-02-28");
+  });
+
+  test("a 31st clamps to the 30th where the previous month has one", () => {
+    const { start } = cycleWindow(new Date("2026-05-31T12:00:00Z"));
+    assert.equal(start.toISOString().slice(0, 10), "2026-04-30");
   });
 });
 
 /* ---- the rules Shariful settled after the first build ---- */
 
-test("a cancelled request hands its slot back", () => {
-  const use = slotsUsed(
-    [
-      { form: "long" },
-      { form: "long", cancelledAt: "2026-08-20T00:00:00Z" },
-      { form: "short" },
-    ],
-    { longForm: 4, shortForm: 8 },
+test("a cancelled request hands its credits back", () => {
+  const use = creditsUsed(
+    [{ creditCost: 3 }, { creditCost: 3, cancelledAt: "2026-08-20T00:00:00Z" }, { creditCost: 1 }],
+    GROWTH,
   );
-  assert.equal(use.longUsed, 1);
-  assert.equal(use.longLeft, 3);
-  assert.equal(use.shortUsed, 1);
+  assert.equal(use.spent, 4);
+  assert.equal(use.planLeft, 16);
 });
 
-test("an approved video keeps its slot", () => {
-  const use = slotsUsed([{ form: "long", cancelledAt: null }], { longForm: 2, shortForm: 4 });
-  assert.equal(use.longUsed, 1);
+test("an approved video keeps its credits", () => {
+  const use = creditsUsed([{ creditCost: 3, cancelledAt: null }], GROWTH);
+  assert.equal(use.spent, 3);
 });
 
-test("short cuts off a long form each spend a short slot", () => {
+test("short cuts off a long form each spend a credit of their own", () => {
   /* one long form request carrying three cuts: the cuts are rows of their
-     own, so the month sees 1 long and 3 short */
-  const items = [
-    { form: "long" as const },
-    { form: "short" as const },
-    { form: "short" as const },
-    { form: "short" as const },
-  ];
-  const use = slotsUsed(items, { longForm: 4, shortForm: 8 });
-  assert.equal(use.longUsed, 1);
-  assert.equal(use.shortUsed, 3);
-  assert.equal(use.shortLeft, 5);
+     own, so the month sees 3 + 1 + 1 + 1 */
+  const use = creditsUsed([v(3), v(1), v(1), v(1)], GROWTH);
+  assert.equal(use.spent, 6);
+  assert.equal(use.planLeft, 14);
   assert.equal(use.overPlan, false);
+});
+
+test("the plans are the old ones priced through the same table", () => {
+  /* nobody loses anything in the move to credits: 2 long + 4 short was 10,
+     4 + 8 was 20, 8 + 16 was 40 */
+  assert.equal(2 * creditCost("long") + 4 * creditCost("short"), 10);
+  assert.equal(4 * creditCost("long") + 8 * creditCost("short"), 20);
+  assert.equal(8 * creditCost("long") + 16 * creditCost("short"), 40);
 });
 
 test("the promise is three business days and skips the weekend", () => {

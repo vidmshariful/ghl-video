@@ -49,7 +49,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const { data: made } = months.length
     ? await db
         .from("order_deliverables")
-        .select("cycle_id, form, status, cancelled_at")
+        .select("cycle_id, credit_cost, status, cancelled_at")
         .in("cycle_id", months.map((m) => m.id))
     : { data: [] };
 
@@ -93,10 +93,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         id: m.id,
         startsAt: m.periodStart,
         endsAt: m.periodEnd,
-        longUsed: mine.filter((d) => d.form === "long").length,
-        shortUsed: mine.filter((d) => d.form === "short").length,
-        longAllowed: m.longFormAllowed,
-        shortAllowed: m.shortFormAllowed,
+        creditsUsed: mine.reduce((n, d) => n + Number(d.credit_cost ?? 0), 0),
+        creditsAllowed: m.creditsAllowed,
         delivered: mine.filter((d) => d.status === "approved").length,
       };
     }),

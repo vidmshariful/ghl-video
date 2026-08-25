@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import { verifyAdmin } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
-import { currentCycle, planNameFor, planPriority } from "@/lib/subscription-cycles";
-import { queueOrder, slotsUsed, type Form } from "@/lib/subscription-slots";
+import {
+  currentCycle,
+  planNameFor,
+  planPriority,
+  topupCreditsLeft,
+} from "@/lib/subscription-cycles";
+import { creditsUsed, queueOrder } from "@/lib/subscription-slots";
+import { creditCost, tierFor, type EditType } from "@/lib/editing-credits";
 import { ASPECTS, columnFor, qcPassed, type Aspect, type Qc } from "@/lib/editing-sop";
 import { DELIVERABLE_STATUSES, type DeliverableStatus } from "@/lib/deliverable-status";
 
@@ -169,10 +175,8 @@ export async function GET(req: Request) {
     }));
 
     const thisMonth = cycle ? all.filter((r) => r.cycleId === cycle.id) : [];
-    const use = slotsUsed(thisMonth, {
-      longForm: cycle?.longFormAllowed ?? 0,
-      shortForm: cycle?.shortFormAllowed ?? 0,
-    });
+    const topup = await topupCreditsLeft(db, String(sub.id));
+    const use = creditsUsed(thisMonth, cycle?.creditsAllowed ?? 0, topup);
 
     const { data: guide } = await db
       .from("editing_style_guides")
@@ -208,7 +212,7 @@ export async function GET(req: Request) {
       month: cycle
         ? { id: cycle.id, startsAt: cycle.periodStart, endsAt: cycle.periodEnd }
         : null,
-      slots: use,
+      credits: use,
       requests: all,
       styleGuide: guide ?? null,
       /* production only, and the producers first: the picker on this screen
@@ -244,12 +248,13 @@ export async function GET(req: Request) {
 
     const items = (rows ?? []) as Row[];
     const live = items.filter((r) => !r.cancelled_at);
-    const use = slotsUsed(
+    const use = creditsUsed(
       items.map((r) => ({
-        form: r.form as "long" | "short" | null,
+        creditCost: Number(r.credit_cost ?? 0),
         cancelledAt: (r.cancelled_at as string | null) ?? null,
       })),
-      { longForm: cycle?.longFormAllowed ?? 0, shortForm: cycle?.shortFormAllowed ?? 0 },
+      cycle?.creditsAllowed ?? 0,
+      await topupCreditsLeft(db, String(sub.id)),
     );
 
     clients.push({
@@ -264,7 +269,7 @@ export async function GET(req: Request) {
       status: String(sub.status),
       renewsAt: (sub.current_period_end as string | null) ?? null,
       priority: planPriority(sku),
-      slots: use,
+      credits: use,
       /* the number somebody scans this list for */
       needsUs: live.filter((r) => r.status === "queued" || r.status === "revisions").length,
       waitingOnThem: live.filter((r) => r.status === "queued" && !r.assets_ready_at).length,
@@ -411,7 +416,13 @@ export async function POST(req: Request) {
 
   const title = str("title", 160);
   const brief = str("brief", 4000);
-  const form: Form = b.form === "long" ? "long" : "short";
+  const editType = (tierFor(typeof b.editType === "string" ? b.editType : "")?.key ??
+    "mid") as EditType;
+  const runtimeMinutes =
+    Number.isFinite(Number(b.runtimeMinutes)) && Number(b.runtimeMinutes) > 0
+      ? Math.min(600, Math.round(Number(b.runtimeMinutes) * 10) / 10)
+      : null;
+  const cost = creditCost(editType, runtimeMinutes);
   const assetsUrl = str("assetsUrl", 1000);
   const referenceUrl = str("referenceUrl", 1000);
   const aspect = ASPECTS.some((a) => a.key === b.aspect) ? (b.aspect as Aspect) : null;
@@ -433,7 +444,7 @@ export async function POST(req: Request) {
   /* short cuts, only ever off a long form request, exactly as the client form
      builds them: each one is its own video with its own slot */
   const cuts =
-    form === "long" && Array.isArray(b.cuts)
+    editType !== "short" && Array.isArray(b.cuts)
       ? (b.cuts as unknown[])
           .map((c) => (typeof c === "string" ? c.trim().slice(0, 400) : ""))
           .filter(Boolean)
@@ -442,15 +453,16 @@ export async function POST(req: Request) {
 
   const { data: existing } = await db
     .from("order_deliverables")
-    .select("id, form, cancelled_at")
+    .select("id, credit_cost, cancelled_at")
     .eq("cycle_id", cycle.id);
 
-  const before = slotsUsed(
+  const before = creditsUsed(
     ((existing ?? []) as Row[]).map((v) => ({
-      form: v.form as Form | null,
+      creditCost: Number(v.credit_cost ?? 0),
       cancelledAt: (v.cancelled_at as string | null) ?? null,
     })),
-    { longForm: cycle.longFormAllowed, shortForm: cycle.shortFormAllowed },
+    cycle.creditsAllowed,
+    await topupCreditsLeft(db, String(sub.id)),
   );
   const planName = (sub.plan_name as string | null) ?? planNameFor(skuOf(sub as Row));
 
@@ -463,18 +475,12 @@ export async function POST(req: Request) {
    * the conversation to have, so the sentence is written again here rather
    * than borrowed. Nothing is refused either way.
    */
-  const overBy = (kind: Form, extra: number) => {
-    const left = kind === "long" ? before.longLeft : before.shortLeft;
-    if (left >= extra) return null;
-    const allowed = kind === "long" ? before.longAllowed : before.shortAllowed;
-    const used = kind === "long" ? before.longUsed : before.shortUsed;
-    const word = kind === "long" ? "long form" : "short form";
-    return (
-      `This is ${used + extra} ${word} this month and ${planName} covers ${allowed}. ` +
-      `It is in either way. Tell them it runs into next month, or have the upgrade conversation.`
-    );
-  };
-  const warning = overBy(form, 1) ?? (cuts.length ? overBy("short", cuts.length) : null);
+  const totalCost = cost + cuts.length * creditCost("short");
+  const warning =
+    totalCost <= before.left
+      ? null
+      : `This spends ${totalCost} ${totalCost === 1 ? "credit" : "credits"} and they have ${before.left} left on ${planName}. ` +
+        `It is in either way. Tell them it runs into next month, or sell them a top-up.`;
 
   const now = new Date().toISOString();
   /* footage we already have starts the promise clock now, the same stamp the
@@ -487,7 +493,10 @@ export async function POST(req: Request) {
       cycle_id: cycle.id,
       title,
       note: brief,
-      form,
+      edit_type: editType,
+      credit_cost: cost,
+      runtime_minutes: runtimeMinutes,
+      form: editType === "short" ? "short" : "long",
       status: "queued",
       aspect,
       target_seconds: targetSeconds,

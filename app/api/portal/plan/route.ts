@@ -1,14 +1,26 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { contextCan, resolvePortalContext } from "@/lib/account-team";
-import { currentCycle, cycleHistory, planFeatures, planNameFor } from "@/lib/subscription-cycles";
 import {
-  describeSlots,
+  currentCycle,
+  cycleHistory,
+  planFeatures,
+  planNameFor,
+  topupCreditsLeft,
+} from "@/lib/subscription-cycles";
+import {
+  creditsUsed,
+  describeCredits,
   overPlanWarning,
-  slotsUsed,
-  type Form,
 } from "@/lib/subscription-slots";
 import { ASPECTS, CLIENT_STATUS_WORD, columnFor, type Aspect } from "@/lib/editing-sop";
+import {
+  EDIT_TIERS,
+  creditCost,
+  isPodcast,
+  tierFor,
+  type EditType,
+} from "@/lib/editing-credits";
 
 export const runtime = "nodejs";
 
@@ -51,7 +63,7 @@ const skuOf = (sub: Row | null) =>
 
 /* every column a video is described by, current month or long finished */
 const VIDEO_FIELDS =
-  "id, parent_id, title, status, form, aspect, note, due_at, requested_due_at, assets_ready_at, assets_url, reference_url, video_url, revision_round, cancelled_at, cancelled_reason, created_at";
+  "id, parent_id, title, status, edit_type, credit_cost, runtime_minutes, aspect, note, due_at, requested_due_at, assets_ready_at, assets_url, reference_url, video_url, revision_round, cancelled_at, cancelled_reason, created_at";
 
 /*
  * One video, as the client reads it.
@@ -75,7 +87,10 @@ function shapeVideo(v: Row) {
     /* the word THEY read, which is not always our word for it */
     state: CLIENT_STATUS_WORD[column] ?? status,
     column,
-    form: (v.form as Form | null) ?? null,
+    editType: (v.edit_type as EditType | null) ?? null,
+    typeLabel: tierFor(String(v.edit_type ?? ""))?.label ?? null,
+    creditCost: Number(v.credit_cost ?? 0),
+    runtimeMinutes: v.runtime_minutes == null ? null : Number(v.runtime_minutes),
     aspect: (v.aspect as string | null) ?? null,
     brief: (v.note as string | null) ?? null,
     dueAt: (v.due_at as string | null) ?? null,
@@ -126,10 +141,8 @@ export async function GET(req: Request) {
 
   const items = ((videos ?? []) as Row[]).map(shapeVideo);
 
-  const use = slotsUsed(items, {
-    longForm: cycle.longFormAllowed,
-    shortForm: cycle.shortFormAllowed,
-  });
+  const topup = await topupCreditsLeft(db, String(sub.id));
+  const use = creditsUsed(items, cycle.creditsAllowed, topup);
 
   const sku = skuOf(sub as Row);
   const planName = (sub.plan_name as string | null) ?? planNameFor(sku);
@@ -164,12 +177,10 @@ export async function GET(req: Request) {
       endingAtPeriodEnd: Boolean(sub.cancel_at_period_end),
       aspects: ASPECTS.map((a) => ({ ...a })),
       cycle: { id: cycle.id, startsAt: cycle.periodStart, endsAt: cycle.periodEnd },
-      slots: { ...use, summary: describeSlots(use) },
-      /* what they would be told if they asked for one more of each */
-      warnings: {
-        long: overPlanWarning(use, "long", planName),
-        short: overPlanWarning(use, "short", planName),
-      },
+      credits: { ...use, summary: describeCredits(use) },
+      /* the price list, so the client sees the cost of a shape before they
+         pick it rather than after they have spent it */
+      tiers: EDIT_TIERS.map((t) => ({ ...t })),
       videos: items,
       history: history
         .filter((h) => h.id !== cycle.id)
@@ -181,10 +192,8 @@ export async function GET(req: Request) {
             id: h.id,
             startsAt: h.periodStart,
             endsAt: h.periodEnd,
-            longUsed: mine.filter((v) => v.form === "long").length,
-            shortUsed: mine.filter((v) => v.form === "short").length,
-            longAllowed: h.longFormAllowed,
-            shortAllowed: h.shortFormAllowed,
+            creditsUsed: mine.reduce((n, v) => n + Number(v.credit_cost ?? 0), 0),
+            creditsAllowed: h.creditsAllowed,
             /* what we actually made them that month */
             videos: ((pastVideos ?? []) as Row[])
               .filter((v) => String(v.cycle_id) === h.id)
@@ -224,7 +233,13 @@ export async function POST(req: Request) {
 
   const title = typeof b.title === "string" ? b.title.trim().slice(0, 160) : "";
   const brief = typeof b.brief === "string" ? b.brief.trim().slice(0, 4000) : "";
-  const form: Form = b.form === "long" ? "long" : "short";
+  const editType = (tierFor(typeof b.editType === "string" ? b.editType : "")?.key ??
+    "mid") as EditType;
+  const runtimeMinutes =
+    typeof b.runtimeMinutes === "number" && Number.isFinite(b.runtimeMinutes) && b.runtimeMinutes > 0
+      ? Math.min(600, Math.round(b.runtimeMinutes * 10) / 10)
+      : null;
+  const cost = creditCost(editType, runtimeMinutes);
   const assetsUrl = typeof b.assetsUrl === "string" ? b.assetsUrl.trim().slice(0, 1000) : "";
   const referenceUrl =
     typeof b.referenceUrl === "string" ? b.referenceUrl.trim().slice(0, 1000) : "";
@@ -236,9 +251,10 @@ export async function POST(req: Request) {
   const wantedBy =
     typeof b.requestedDueAt === "string" && b.requestedDueAt ? b.requestedDueAt : null;
 
-  /* short cuts, only ever off a long form request */
+  /* short cuts, only ever off a long form or podcast request: there is
+     nothing to cut down from a video that is already short */
   const cuts =
-    form === "long" && Array.isArray(b.cuts)
+    (editType === "long" || editType === "mid" || isPodcast(editType)) && Array.isArray(b.cuts)
       ? (b.cuts as unknown[])
           .map((c) =>
             typeof c === "string"
@@ -270,33 +286,30 @@ export async function POST(req: Request) {
 
   const { data: existing } = await db
     .from("order_deliverables")
-    .select("id, form, cancelled_at")
+    .select("id, credit_cost, cancelled_at")
     .eq("cycle_id", cycle.id);
-  const allowance = {
-    longForm: cycle.longFormAllowed,
-    shortForm: cycle.shortFormAllowed,
-  };
-  const before = slotsUsed(
+  const topup = await topupCreditsLeft(db, String(sub.id));
+  const before = creditsUsed(
     ((existing ?? []) as Row[]).map((v) => ({
-      form: v.form as Form | null,
+      creditCost: Number(v.credit_cost ?? 0),
       cancelledAt: (v.cancelled_at as string | null) ?? null,
     })),
-    allowance,
+    cycle.creditsAllowed,
+    topup,
   );
 
   const planName = (sub.plan_name as string | null) ?? planNameFor(skuOf(sub as Row));
 
   /*
    * The warning covers everything this one submission spends, not just the
-   * parent. Somebody asking for a long form with four cuts when two short
-   * slots are left needs telling before they press it, not after.
+   * parent. Somebody asking for a long form with four cuts when three
+   * credits are left needs telling before they press it, not after.
    */
-  const warnings = [
-    overPlanWarning(before, form, planName),
-    cuts.length && before.shortLeft < cuts.length
-      ? overPlanWarning(before, "short", planName)
-      : null,
-  ].filter(Boolean) as string[];
+  const cutsCost = cuts.length * creditCost("short");
+  const totalCost = cost + cutsCost;
+  const warnings = [overPlanWarning(before, totalCost, planName)].filter(
+    Boolean,
+  ) as string[];
 
   const now = new Date().toISOString();
   const { data: made, error } = await db
@@ -305,7 +318,12 @@ export async function POST(req: Request) {
       cycle_id: cycle.id,
       title,
       note: brief,
-      form,
+      edit_type: editType,
+      credit_cost: cost,
+      runtime_minutes: runtimeMinutes,
+      /* the old two-value column, still written so anything reading the
+         previous vocabulary keeps working through the changeover */
+      form: editType === "short" ? "short" : "long",
       status: "queued",
       aspect,
       target_seconds: targetSeconds,
@@ -327,6 +345,8 @@ export async function POST(req: Request) {
         parent_id: made.id,
         title: `${title}, short cut ${i + 1}`,
         note: instruction,
+        edit_type: "short",
+        credit_cost: creditCost("short"),
         form: "short",
         status: "queued",
         aspect: "9:16",
@@ -353,12 +373,12 @@ export async function POST(req: Request) {
   await pushAdminNotifications(db, {
     kind: "edit_requested",
     title: `Edit requested: ${title}`,
-    body: `${ctx.ownerEmail}, ${form} form${cuts.length ? ` plus ${cuts.length} short ${cuts.length === 1 ? "cut" : "cuts"}` : ""}${wantedBy ? `, wants it by ${wantedBy.slice(0, 10)}` : ""}${warnings.length ? ". Over their plan this month." : ""}`,
+    body: `${ctx.ownerEmail}, ${tierFor(editType)?.label ?? editType}, ${totalCost} ${totalCost === 1 ? "credit" : "credits"}${cuts.length ? ` including ${cuts.length} short ${cuts.length === 1 ? "cut" : "cuts"}` : ""}${wantedBy ? `, wants it by ${wantedBy.slice(0, 10)}` : ""}${warnings.length ? ". Over their plan this month." : ""}`,
     href: "editing",
     vars: {
       title,
       customer_email: ctx.ownerEmail,
-      summary: `${ctx.ownerEmail}, ${form} form${cuts.length ? ` plus ${cuts.length} short ${cuts.length === 1 ? "cut" : "cuts"}` : ""}${wantedBy ? `, wants it by ${wantedBy.slice(0, 10)}` : ""}${warnings.length ? ". Over their plan this month." : ""}`,
+      summary: `${ctx.ownerEmail}, ${tierFor(editType)?.label ?? editType}, ${totalCost} ${totalCost === 1 ? "credit" : "credits"}${cuts.length ? ` including ${cuts.length} short ${cuts.length === 1 ? "cut" : "cuts"}` : ""}${wantedBy ? `, wants it by ${wantedBy.slice(0, 10)}` : ""}${warnings.length ? ". Over their plan this month." : ""}`,
     },
   });
 
@@ -371,7 +391,7 @@ export async function POST(req: Request) {
     brief,
     assetsUrl,
     wantedBy: wantedBy ?? null,
-    planLine: `${form} form${cuts.length ? ` plus ${cuts.length} short ${cuts.length === 1 ? "cut" : "cuts"}` : ""}${warnings.length ? ". Over their plan this month." : "."}`,
+    planLine: `${tierFor(editType)?.label ?? editType}, ${totalCost} ${totalCost === 1 ? "credit" : "credits"}${cuts.length ? ` including ${cuts.length} short ${cuts.length === 1 ? "cut" : "cuts"}` : ""}${warnings.length ? ". Over their plan this month." : "."}`,
   });
 
   return NextResponse.json({

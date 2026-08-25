@@ -324,21 +324,35 @@ export const customFormats = [
  * A struck-through number is a claim about a former price, so these are
  * list prices to stand behind, not decoration. Chosen so all three read
  * "save 25%" rather than a ragged 25 / 23 / 22. */
+/*
+ * Plans are sold in CREDITS, not in a fixed count of two video shapes
+ * (owner's decision, 25 August 2026, replacing "N long form and M short
+ * form"). Every client's videos are a different length, so asking them to
+ * sort their own work into our two buckets made them guess, and they guessed
+ * wrong: see the note at the top of lib/editing-credits.ts.
+ *
+ * The credit counts are the old plans priced through the same table, so
+ * nobody on an existing plan loses anything: 2 long and 4 short is 10
+ * credits, 4 and 8 is 20, 8 and 16 is 40. What changes is that the client
+ * can now spend them on a five minute video without calling it "short".
+ *
+ * The "Everything in Starter, plus:" ladder line is deliberately gone. Each
+ * plan restates its own credits rather than adding to the one below, so the
+ * ladder read as 10 + 20 = 30 and promised capacity that never existed.
+ */
 export const editingPlans = [
   {
     name: "Starter",
     sku: "editing-starter",
     price: 595,
     anchorPrice: 795,
-    longForm: 2,
-    longFormNote: "up to 15 min each",
-    shortForm: 4,
+    credits: 10,
     featured: false,
     blurb: "One channel, publishing steadily.",
     features: [
-      "2 long-form videos, up to 15 min each",
-      "4 short-form videos",
-      "Unlimited revisions",
+      "10 editing credits a month",
+      "Around 2 long form and 4 short, or any mix you like",
+      "Unlimited revisions until you approve",
       "No contract, cancel anytime",
       "A HighLevel-fluent editing team",
     ],
@@ -348,16 +362,14 @@ export const editingPlans = [
     sku: "editing-growth",
     price: 995,
     anchorPrice: 1325,
-    longForm: 4,
-    shortForm: 8,
+    credits: 20,
     featured: true,
     blurb: "The weekly publishing engine.",
     features: [
-      "Everything in Starter, plus:",
-      "4 long-form videos, up to 15 min each",
-      "8 short-form videos",
+      "20 editing credits a month",
+      "Around 4 long form and 8 short, or any mix you like",
       "Enough volume for a weekly schedule",
-      "Unlimited revisions",
+      "Unlimited revisions until you approve",
       "No contract, cancel anytime",
     ],
   },
@@ -366,17 +378,15 @@ export const editingPlans = [
     sku: "editing-scale",
     price: 1795,
     anchorPrice: 2395,
-    longForm: 8,
-    shortForm: 16,
+    credits: 40,
     featured: false,
     note: "priority queue",
     blurb: "Multiple channels at full volume.",
     features: [
-      "Everything in Growth, plus:",
-      "8 long-form videos, up to 15 min each",
-      "16 short-form videos",
+      "40 editing credits a month",
+      "Around 8 long form and 16 short, or any mix you like",
       "Priority queue, your edits jump the line",
-      "Unlimited revisions",
+      "Unlimited revisions until you approve",
       "No contract, cancel anytime",
     ],
   },
