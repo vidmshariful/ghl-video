@@ -216,6 +216,13 @@ export const COMM_ACTIONS: CommAction[] = [
     notifications: [{ kind: "edit_requested", audience: "admin", to: "team" }],
   },
   {
+    key: "edit_changed", group: "editing", label: "The client changes a request already in",
+    when: "A client edits a request they already submitted: the name, the notes, the shape, the date, or the footage link.",
+    mode: "automatic",
+    emails: [],
+    notifications: [{ kind: "edit_changed", audience: "admin", to: "team" }],
+  },
+  {
     key: "edit_added", group: "editing", label: "The studio adds a request for them",
     when: "Someone on the team adds an edit the client asked for outside the portal.",
     mode: "manual",
@@ -430,6 +437,7 @@ export const NOTIFICATION_DEFAULTS: Record<string, NotificationDefault> = {
 
   /* editing */
   "admin:edit_requested": { title: "Edit requested: {{title}}", body: "{{summary}}", variables: ["title", "summary", "customer_email"] },
+  "admin:edit_changed": { title: "Request changed: {{title}}", body: "{{summary}}", variables: ["title", "summary", "customer_email"] },
   "customer:edit_added": { title: "We added your request: {{title}}", body: "You asked for this one outside the portal. It is on your plan now, so you can follow it with the rest.", variables: ["title"] },
   "customer:style_guide": { title: "{{headline}}", body: "Open it in Editing, under How we cut for you. Tell us anything you want changed.", variables: ["headline", "version"] },
   "admin:style_guide_note": { title: "Style guide note from {{who}}", body: "{{summary}}", variables: ["who", "summary"] },

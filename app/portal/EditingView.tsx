@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { CalendarClock, Check, ChevronRight, Play, Plus, Scissors, Trash2 } from "lucide-react";
+import { CalendarClock, Check, ChevronRight, Pencil, Play, Plus, Scissors, Trash2 } from "lucide-react";
 import {
   Button,
   Card,
@@ -333,6 +333,28 @@ export function EditingView({
       resetDraft();
       setAsking(false);
       await load();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /*
+   * Save a change to a request that is already in.
+   *
+   * Returns the error rather than setting it, because the message belongs
+   * next to the fields being edited and not at the top of a screen the
+   * client cannot see behind the popup.
+   */
+  async function saveRequest(v: Video, patch: Record<string, string>): Promise<string | null> {
+    setBusy(true);
+    try {
+      const j = (await authedFetch("/api/portal/plan", {
+        method: "POST",
+        body: JSON.stringify({ edit: v.id, ...patch }),
+      }).catch(() => null)) as { ok?: boolean; error?: string } | null;
+      if (!j?.ok) return j?.error ?? "Could not save that.";
+      await load();
+      return null;
     } finally {
       setBusy(false);
     }
@@ -1042,7 +1064,9 @@ export function EditingView({
             <RequestDetail
               v={opened}
               cuts={live.filter((c) => c.parentId === opened.id)}
+              aspects={plan.aspects}
               busy={busy}
+              onSave={saveRequest}
               /* Into the player means OUT of the detail. The side panel this
                  replaced let the two sit on top of each other harmlessly; the
                  Modal traps Tab inside itself, so leaving it open under the
@@ -1337,17 +1361,65 @@ function WatchButton({ v, onOpen }: { v: Video; onOpen: (v: Video) => void }) {
 function RequestDetail({
   v,
   cuts,
+  aspects,
   onReview,
   onCancel,
+  onSave,
   busy,
 }: {
   v: Video;
   cuts: Video[];
+  aspects: { key: string; label: string; note: string }[];
   onReview: (v: Video) => void;
   onCancel: (v: Video) => void;
+  onSave: (v: Video, patch: Record<string, string>) => Promise<string | null>;
   busy: boolean;
 }) {
   const stage = stageFor(v.column);
+  /*
+   * Changing a request after it is in.
+   *
+   * The thing this replaces is a message to a producer and somebody in admin
+   * retyping a link. A wrong Drive link is the single most common one, and
+   * the client is the only person who can fix it.
+   *
+   * Editing happens in place rather than in a second popup: this panel is
+   * already a dialog with a focus trap, and stacking another inside it is
+   * how the keyboard ends up somewhere nobody can see.
+   */
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({
+    title: v.title,
+    brief: v.brief ?? "",
+    assetsUrl: v.assetsUrl ?? "",
+    referenceUrl: "",
+    aspect: v.aspect ?? "",
+    requestedDueAt: v.requestedDueAt ? v.requestedDueAt.slice(0, 10) : "",
+  });
+  const [saveErr, setSaveErr] = useState("");
+  /* approved is finished. Everything before that is still ours to change. */
+  const canEdit = v.status !== "approved" && !v.cancelledAt;
+
+  function startEditing() {
+    setForm({
+      title: v.title,
+      brief: v.brief ?? "",
+      assetsUrl: v.assetsUrl ?? "",
+      referenceUrl: "",
+      aspect: v.aspect ?? "",
+      requestedDueAt: v.requestedDueAt ? v.requestedDueAt.slice(0, 10) : "",
+    });
+    setSaveErr("");
+    setEditing(true);
+  }
+
+  async function save() {
+    setSaveErr("");
+    const err = await onSave(v, form);
+    if (err) return setSaveErr(err);
+    setEditing(false);
+  }
+
   return (
     <div>
       <div className="grid gap-3">
@@ -1355,7 +1427,83 @@ function RequestDetail({
           {/* no title and no chips here: the popup header above already
               carries both, and saying it twice on one screen is the sort of
               thing a side panel got away with and a centred one does not */}
-          <Card>
+          <Card
+            actions={
+              canEdit && !editing ? (
+                <Button size="sm" variant="ghost" icon={<Pencil />} onClick={startEditing}>
+                  Change this
+                </Button>
+              ) : undefined
+            }
+          >
+            {editing ? (
+              <div className="grid gap-4">
+                <p className="text-body-sm text-muted">
+                  Change anything here and we pick it up. The type and the length
+                  set what this costs, so those are a message to your producer
+                  rather than a field.
+                </p>
+                <Field label="Video title" required>
+                  <Input
+                    value={form.title}
+                    onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  />
+                </Field>
+                <Field
+                  label="Link to your footage"
+                  required
+                  hint="Changing this puts it back in the queue to be checked, and the date moves with it."
+                >
+                  <Input
+                    value={form.assetsUrl}
+                    onChange={(e) => setForm({ ...form, assetsUrl: e.target.value })}
+                    placeholder="https://drive.google.com/..."
+                  />
+                </Field>
+                <Field label="Editing instructions or notes">
+                  <Textarea
+                    rows={4}
+                    value={form.brief}
+                    onChange={(e) => setForm({ ...form, brief: e.target.value })}
+                  />
+                </Field>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="Video dimension">
+                    <Select
+                      value={form.aspect}
+                      onChange={(e) => setForm({ ...form, aspect: e.target.value })}
+                    >
+                      {aspects.map((a) => (
+                        <option key={a.key} value={a.key}>
+                          {a.label}, {a.note}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                  <Field label="When would you like it">
+                    <Input
+                      type="date"
+                      value={form.requestedDueAt}
+                      onChange={(e) => setForm({ ...form, requestedDueAt: e.target.value })}
+                    />
+                  </Field>
+                </div>
+                {saveErr && <p className="text-body-sm text-error">{saveErr}</p>}
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="brand"
+                    disabled={busy || !form.title.trim() || !form.assetsUrl.trim()}
+                    onClick={save}
+                  >
+                    {busy ? "Saving..." : "Save the changes"}
+                  </Button>
+                  <Button variant="ghost" onClick={() => setEditing(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <>
             <p className="text-body-sm text-muted">{stage.blurb}</p>
 
             {v.column === "waiting" &&
@@ -1395,6 +1543,8 @@ function RequestDetail({
                   {v.assetsUrl}
                 </a>
               </div>
+            )}
+              </>
             )}
           </Card>
 

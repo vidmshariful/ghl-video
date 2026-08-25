@@ -234,6 +234,7 @@ export async function POST(req: Request) {
 
   /* cancelling a request is a POST too, so the client needs one route */
   if (typeof b.cancel === "string") return cancel(db, ctx.ownerEmail, b.cancel);
+  if (typeof b.edit === "string") return edit(db, ctx.ownerEmail, b.edit, b);
 
   const title = typeof b.title === "string" ? b.title.trim().slice(0, 160) : "";
   const brief = typeof b.brief === "string" ? b.brief.trim().slice(0, 4000) : "";
@@ -404,6 +405,153 @@ export async function POST(req: Request) {
   });
 }
 
+/**
+ * Is this deliverable on a cycle this email owns?
+ *
+ * Both cancel and edit have to prove it before touching a row, and proving
+ * it twice in two slightly different ways is how one of them ends up wrong.
+ */
+async function ownedRequest(
+  db: ReturnType<typeof supabaseAdmin>,
+  email: string,
+  id: string,
+) {
+  const { data: row } = await db
+    .from("order_deliverables")
+    .select(
+      "id, status, cycle_id, cancelled_at, title, note, assets_url, assets_ready_at, reference_url, aspect, requested_due_at",
+    )
+    .eq("id", id)
+    .maybeSingle();
+  if (!row?.cycle_id) return null;
+  const { data: cyc } = await db
+    .from("subscription_cycles")
+    .select("subscription:subscriptions!inner(customer_email)")
+    .eq("id", row.cycle_id)
+    .maybeSingle();
+  const owner = (cyc?.subscription as { customer_email?: string } | null)?.customer_email ?? "";
+  return owner.toLowerCase() === email.toLowerCase() ? row : null;
+}
+
+/*
+ * Change a request that is already in.
+ *
+ * A wrong footage link used to mean a message, a reply, and somebody in
+ * admin typing it in. The client can fix their own now, along with the name,
+ * the notes, the reference and the date they were hoping for.
+ *
+ * What is NOT here is the type, the runtime and therefore the price. Those
+ * decide what the month is charged, and letting a form re-charge a client
+ * mid-flight is a money path that deserves its own thinking rather than a
+ * field on an edit sheet. While a request is still queued they can pull it
+ * back, which returns the credits, and ask again. After that it is a
+ * conversation with their producer, which is the right shape for "we have
+ * already started and now it is a different video".
+ *
+ * The shape (dimension) IS editable, because it costs nothing to change.
+ *
+ * Editing re-opens the footage check: a new link is a link nobody has
+ * opened, so the turnaround clock starts again from when we look at it,
+ * which is the same rule the request itself runs on.
+ */
+async function edit(
+  db: ReturnType<typeof supabaseAdmin>,
+  email: string,
+  id: string,
+  b: Record<string, unknown>,
+) {
+  const row = await ownedRequest(db, email, id);
+  if (!row) return NextResponse.json({ error: "Not found." }, { status: 404 });
+  if (row.cancelled_at)
+    return NextResponse.json({ error: "That request was cancelled." }, { status: 400 });
+  if (row.status === "approved")
+    return NextResponse.json(
+      { error: "You have approved this one, so it is finished. Message us and we will reopen it." },
+      { status: 400 },
+    );
+
+  /*
+   * Only what actually moved.
+   *
+   * The form posts every field whether it was touched or not, so patching
+   * all of them would rewrite a row with its own values and, worse, tell the
+   * studio the client "changed the instructions, the reference, the shape
+   * and the date" when they fixed a typo in the name. A diff is the honest
+   * version, and it is also the one that does not churn the row.
+   */
+  const patch: Record<string, unknown> = {};
+  const set = (col: string, next: unknown, current: unknown) => {
+    if (next !== current) patch[col] = next;
+  };
+
+  if (typeof b.title === "string") {
+    const title = b.title.trim().slice(0, 160);
+    if (!title) return NextResponse.json({ error: "Give the video a name." }, { status: 400 });
+    set("title", title, row.title);
+  }
+  if (typeof b.brief === "string") set("note", b.brief.trim().slice(0, 4000), row.note ?? "");
+  if (typeof b.referenceUrl === "string")
+    set("reference_url", b.referenceUrl.trim().slice(0, 1000) || null, row.reference_url ?? null);
+  if (ASPECTS.some((a) => a.key === b.aspect)) set("aspect", b.aspect, row.aspect);
+  if (typeof b.requestedDueAt === "string") {
+    const wanted = b.requestedDueAt ? new Date(b.requestedDueAt).toISOString() : null;
+    /* stored with a time, entered as a day, so compare the day */
+    const had = (row.requested_due_at as string | null) ?? null;
+    if ((wanted ?? "").slice(0, 10) !== (had ?? "").slice(0, 10)) patch.requested_due_at = wanted;
+  }
+
+  const footageChanged =
+    typeof b.assetsUrl === "string" && b.assetsUrl.trim().slice(0, 1000) !== (row.assets_url ?? "");
+  if (typeof b.assetsUrl === "string") {
+    const assetsUrl = b.assetsUrl.trim().slice(0, 1000);
+    if (!assetsUrl)
+      return NextResponse.json({ error: "We need a link to your footage." }, { status: 400 });
+    if (footageChanged) {
+      patch.assets_url = assetsUrl;
+      /* a link nobody has opened is not a checked link, whatever we had
+         already decided about the old one */
+      patch.assets_ready_at = null;
+      patch.due_at = null;
+    }
+  }
+
+  if (Object.keys(patch).length === 0) return NextResponse.json({ ok: true });
+
+  patch.updated_at = new Date().toISOString();
+  const { error } = await db.from("order_deliverables").update(patch).eq("id", id);
+  if (error) return NextResponse.json({ error: "Could not save that." }, { status: 400 });
+
+  /* the studio has to hear about it, because the thing they were told to
+     make is not quite the thing any more */
+  const changed = Object.keys(patch)
+    .filter((k) => k !== "updated_at" && k !== "assets_ready_at" && k !== "due_at")
+    .map((k) => FIELD_WORDS[k] ?? k)
+    .join(", ");
+  const summary = `${email} changed ${changed}.${
+    footageChanged ? " New footage link, so it needs checking again." : ""
+  }`;
+  const { pushAdminNotifications } = await import("@/lib/notifications");
+  await pushAdminNotifications(db, {
+    kind: "edit_changed",
+    title: `Request changed: ${patch.title ?? row.title}`,
+    body: summary,
+    href: "editing",
+    vars: { title: String(patch.title ?? row.title), summary, customer_email: email },
+  });
+
+  return NextResponse.json({ ok: true, footageChanged });
+}
+
+/** The studio reads these, so they are said in words rather than columns. */
+const FIELD_WORDS: Record<string, string> = {
+  title: "the name",
+  note: "the instructions",
+  assets_url: "the footage link",
+  reference_url: "the reference",
+  aspect: "the shape",
+  requested_due_at: "the date they want it",
+};
+
 /*
  * Pull a request back.
  *
@@ -417,23 +565,9 @@ async function cancel(
   email: string,
   id: string,
 ) {
-  const { data: row } = await db
-    .from("order_deliverables")
-    .select("id, status, cycle_id, cancelled_at")
-    .eq("id", id)
-    .maybeSingle();
-  if (!row?.cycle_id) return NextResponse.json({ error: "Not found." }, { status: 404 });
+  const row = await ownedRequest(db, email, id);
+  if (!row) return NextResponse.json({ error: "Not found." }, { status: 404 });
   if (row.cancelled_at) return NextResponse.json({ ok: true });
-
-  /* prove it is theirs before touching it */
-  const { data: cyc } = await db
-    .from("subscription_cycles")
-    .select("subscription:subscriptions!inner(customer_email)")
-    .eq("id", row.cycle_id)
-    .maybeSingle();
-  const owner = (cyc?.subscription as { customer_email?: string } | null)?.customer_email ?? "";
-  if (owner.toLowerCase() !== email.toLowerCase())
-    return NextResponse.json({ error: "Not found." }, { status: 404 });
 
   if (row.status !== "queued")
     return NextResponse.json(
