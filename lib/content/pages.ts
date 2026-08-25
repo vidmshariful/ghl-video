@@ -622,6 +622,20 @@ export const pages = {
       accent: "monthly capacity.",
       featuredLabel: "Most chosen",
     },
+    /* What a credit buys. The NUMBERS are not written here on purpose: the
+       section reads them from lib/editing-credits.ts, the same table the
+       portal charges against, so a published price and a charged price
+       cannot drift apart. */
+    credits: {
+      chip: "How credits work",
+      headline: "One balance,",
+      accent: "any mix of video.",
+      intro:
+        "Your credits are not tied to a format. Ten shorts this month, four YouTube videos the next, a podcast after that. Spend them however your content calendar actually runs.",
+      videoLead: "Video, priced by length",
+      podcastLead: "Podcast and interview, priced by finished runtime",
+      note: "Credits reset on your renewal date and do not carry over. If a month runs out you can wait for the reset or top up, and topped-up credits stay until you use them.",
+    },
     /* 3. name the pain before the price. A subscription buyer needs the
        argument before the number. */
     bottleneck: {
@@ -767,8 +781,12 @@ export const pages = {
       accent: "every subscription.",
       items: [
         {
-          q: "What counts as long-form and short-form?",
-          a: "Long-form is up to 15 minutes: YouTube videos, trainings, webinar cuts. Short-form is under 60 seconds: Reels, Shorts, TikTok. Your plan sets the monthly count of each.",
+          q: "How do editing credits work?",
+          a: "Every plan comes with a monthly balance and you spend it however you like. Short form up to 90 seconds is 1 credit, mid form up to 5 minutes is 2, long form up to 15 minutes is 3. Podcasts and interviews are priced on finished runtime, from 5 credits an hour. Nothing is tied to a format, so ten Shorts one month and four YouTube videos the next both work.",
+        },
+        {
+          q: "What happens if I run out of credits?",
+          a: "Nothing stops. We take the request and work through your queue in order. To have it sooner you can top up your credits or move up a plan. Plan credits reset on your renewal date and do not carry over, but credits you top up with stay until you use them.",
         },
         {
           q: "How fast do edits come back?",

@@ -22,6 +22,7 @@ import { ChaseHeroReviewer } from "@/components/home/ChaseHeroReviewer";
 import { ProcessSection } from "@/components/pages/ProcessSection";
 import { TrustStrip } from "@/components/home/TrustStrip";
 import { faqSchema, serviceSchema } from "@/lib/schema";
+import { PODCAST_TIERS, VIDEO_TIERS, creditWord } from "@/lib/editing-credits";
 import {
   clips,
   clipWindows,
@@ -167,6 +168,81 @@ export default function EditingPage() {
               }))}
             />
           </div>
+        </div>
+      </section>
+
+      {/* 5b. what a credit buys. The numbers come from lib/editing-credits,
+          the same table the portal charges against, so the published price
+          and the charged price cannot drift apart. */}
+      <section data-bp-idx="5" className="relative section-pad">
+        <DrawnBorder />
+        <div className="shell">
+          <SectionHead
+            index={5}
+            chip={p.credits.chip}
+            headline={p.credits.headline}
+            accent={p.credits.accent}
+            intro={p.credits.intro}
+          />
+
+          <p className="mt-12 font-mono text-label uppercase tracking-[0.1em] text-dim">
+            {p.credits.videoLead}
+          </p>
+          <Reveal className="mt-4 grid gap-px overflow-hidden rounded-card border border-hair bg-hair sm:grid-cols-3">
+            {VIDEO_TIERS.map((t) => (
+              <RevealItem key={t.key} className="h-full">
+                <div className="flex h-full flex-col bg-canvas px-6 py-7">
+                  <p className="font-mono text-price font-bold leading-none text-gold [font-variant-numeric:tabular-nums]">
+                    {t.credits}
+                  </p>
+                  <p className="mt-1 font-mono text-label uppercase text-dim">
+                    {t.credits === 1 ? "credit" : "credits"}
+                  </p>
+                  <p className="mt-4 font-display text-h4 text-ink">{t.label}</p>
+                  <p className="mt-1 text-body-sm text-muted">{t.lengthNote}</p>
+                  <p className="mt-3 text-body-sm text-muted">{t.blurb}</p>
+                  <ul className="mt-4 flex flex-wrap gap-1.5">
+                    {t.idealFor.map((x) => (
+                      <li
+                        key={x}
+                        className="rounded-full border border-hair px-2.5 py-0.5 font-mono text-label uppercase text-dim"
+                      >
+                        {x}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </RevealItem>
+            ))}
+          </Reveal>
+
+          <p className="mt-10 font-mono text-label uppercase tracking-[0.1em] text-dim">
+            {p.credits.podcastLead}
+          </p>
+          <Reveal className="mt-4 grid gap-px overflow-hidden rounded-card border border-hair bg-hair sm:grid-cols-2">
+            {PODCAST_TIERS.map((t) => (
+              <RevealItem key={t.key} className="h-full">
+                <div className="flex h-full flex-col bg-canvas px-6 py-7">
+                  <p className="font-display text-h4 text-ink">{t.label}</p>
+                  <p className="mt-2 font-mono text-body-sm text-gold">
+                    {creditWord(t.perHour)} an hour, {t.perHalfHour} a half hour
+                  </p>
+                  <p className="mt-3 text-body-sm text-muted">{t.blurb}</p>
+                  <ul className="mt-4 grid gap-1.5">
+                    {t.idealFor.map((x) => (
+                      <li key={x} className="text-body-sm text-muted">
+                        {x}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </RevealItem>
+            ))}
+          </Reveal>
+
+          <p className="mt-6 max-w-[var(--measure-body)] text-body-sm text-dim">
+            {p.credits.note}
+          </p>
         </div>
       </section>
 
