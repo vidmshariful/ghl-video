@@ -108,6 +108,19 @@ export const ASPECTS = [
 export type Aspect = (typeof ASPECTS)[number]["key"];
 
 /**
+ * The shape a kind of edit is cut in unless the client says otherwise.
+ *
+ * Short form is made for a phone held upright, and everything longer is
+ * watched on a screen that is wider than it is tall. Asking somebody to pick
+ * that every time is asking them to restate the obvious, and "Not sure, you
+ * choose" was the option most of them took. So the shape is chosen for them
+ * and the other two stay on the menu for when the obvious is wrong.
+ */
+export function defaultAspectFor(editType: string): Aspect {
+  return editType === "short" ? "9:16" : "16:9";
+}
+
+/**
  * How many rounds of changes are included.
  *
  * Premade videos include one, which is what that page sells. The editing

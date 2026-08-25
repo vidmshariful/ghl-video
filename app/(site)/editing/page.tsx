@@ -225,7 +225,7 @@ export default function EditingPage() {
                 <div className="flex h-full flex-col bg-canvas px-6 py-7">
                   <p className="font-display text-h4 text-ink">{t.label}</p>
                   <p className="mt-2 font-mono text-body-sm text-gold">
-                    {creditWord(t.perHour)} an hour, {t.perHalfHour} a half hour
+                    {creditWord(t.perBlock)} for every 30 minutes
                   </p>
                   <p className="mt-3 text-body-sm text-muted">{t.blurb}</p>
                   <ul className="mt-4 grid gap-1.5">

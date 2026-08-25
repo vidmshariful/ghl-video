@@ -37,11 +37,16 @@ type RuntimeTier = {
   key: EditType;
   kind: "podcast";
   label: string;
-  /** credits for a full hour of finished runtime */
-  perHour: number;
-  /** credits for a half hour, which costs proportionally more because the
-      setup is the same whether the episode is 25 minutes or 55 */
-  perHalfHour: number;
+  /**
+   * Credits for every 30 minutes of finished runtime, rounded up.
+   *
+   * One rate, not an hourly one with a half hour beside it (owner decision,
+   * 25 August 2026). The two-rate table made the client do arithmetic to
+   * find out that 90 minutes was an hour plus a half, and the answer was
+   * never the one they guessed. A flat block rate they can multiply in their
+   * head is worth more than the discount the hourly rate was expressing.
+   */
+  perBlock: number;
   lengthNote: string;
   blurb: string;
   idealFor: string[];
@@ -84,8 +89,7 @@ export const EDIT_TIERS: EditTier[] = [
     key: "podcast_standard",
     kind: "podcast",
     label: "Podcast or interview, standard",
-    perHour: 5,
-    perHalfHour: 3,
+    perBlock: 4,
     lengthNote: "Priced on finished runtime",
     blurb: "Clean, professional editing without heavy post.",
     idealFor: [
@@ -103,8 +107,7 @@ export const EDIT_TIERS: EditTier[] = [
     key: "podcast_advanced",
     kind: "podcast",
     label: "Podcast or interview, advanced",
-    perHour: 8,
-    perHalfHour: 4,
+    perBlock: 5,
     lengthNote: "Priced on finished runtime",
     blurb: "Everything in standard, cut for a more engaging watch.",
     idealFor: [
@@ -131,13 +134,15 @@ export const PODCAST_TIERS = EDIT_TIERS.filter((t): t is RuntimeTier => t.kind =
  *
  * A video tier is flat: the tier already names its ceiling, so a 40 second
  * short and an 80 second short cost the same. A podcast is billed on FINISHED
- * runtime in half hour blocks, rounded up, because "an hour of podcast" is
- * the only number a client can state without guessing: source footage depends
- * on how many people recorded and for how long, and they should not have to
- * work that out to know what they are spending.
+ * runtime in blocks of 30 minutes, rounded up, because "an hour of podcast"
+ * is the only number a client can state without guessing: source footage
+ * depends on how many people recorded and for how long, and they should not
+ * have to work that out to know what they are spending.
  *
- * Blocks pair into hours so the price never goes backwards: 30 min costs 3,
- * 60 costs 5, 90 costs 8, 120 costs 10. Runtime is ignored for video tiers.
+ * One rate per block, so the sum is the client's own multiplication: standard
+ * 30 min costs 4, 60 costs 8, 90 costs 12. Runtime is ignored for video
+ * tiers. Note that a stored credit_cost is what an existing request was
+ * charged, so changing a rate here never reprices work already asked for.
  */
 export function creditCost(type: string, runtimeMinutes?: number | null): number {
   const tier = tierFor(type);
@@ -145,7 +150,7 @@ export function creditCost(type: string, runtimeMinutes?: number | null): number
   if (tier.kind === "video") return tier.credits;
   const mins = Math.max(1, Math.round(runtimeMinutes ?? 0));
   const blocks = Math.max(1, Math.ceil(mins / 30));
-  return Math.floor(blocks / 2) * tier.perHour + (blocks % 2) * tier.perHalfHour;
+  return blocks * tier.perBlock;
 }
 
 /** "2 credits", "1 credit". Said the way a person says it. */

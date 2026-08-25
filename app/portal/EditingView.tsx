@@ -18,7 +18,7 @@ import {
 import { VideoReviewModal } from "./VideoReviewModal";
 import { StyleGuideView } from "./StyleGuideView";
 import { DownloadAll } from "@/components/portal/DownloadAll";
-import { CLIENT_PHASES, needsClient, phaseFor, stageFor } from "@/lib/editing-sop";
+import { CLIENT_PHASES, defaultAspectFor, needsClient, phaseFor, stageFor } from "@/lib/editing-sop";
 import { PODCAST_TIERS, VIDEO_TIERS } from "@/lib/editing-credits";
 import { StageTimeline, WorkCard } from "@/components/portal/board";
 
@@ -44,8 +44,7 @@ type Tier = {
   kind: "video" | "podcast";
   label: string;
   credits?: number;
-  perHour?: number;
-  perHalfHour?: number;
+  perBlock?: number;
   maxMinutes?: number;
   lengthNote: string;
   blurb: string;
@@ -170,9 +169,7 @@ function costOf(tier: Tier | null, runtimeMinutes: number | null): number {
   if (tier.kind === "video") return tier.credits ?? 0;
   const mins = Math.max(1, Math.round(runtimeMinutes ?? 0));
   const blocks = Math.max(1, Math.ceil(mins / 30));
-  return (
-    Math.floor(blocks / 2) * (tier.perHour ?? 0) + (blocks % 2) * (tier.perHalfHour ?? 0)
-  );
+  return blocks * (tier.perBlock ?? 0);
 }
 
 /*
@@ -202,9 +199,9 @@ function CreditPrices() {
         <li key={t.key} className={row}>
           <span className="min-w-0">
             <span className="block text-body-sm font-semibold text-ink">{t.label}</span>
-            <span className="block text-body-sm text-dim">Or {t.perHalfHour} for a half hour</span>
+            <span className="block text-body-sm text-dim">{t.lengthNote}</span>
           </span>
-          <span className={cost}>{t.perHour} an hour</span>
+          <span className={cost}>{t.perBlock} per 30 min</span>
         </li>
       ))}
       <li className="border-t border-hair pt-2.5 text-body-sm text-dim">
@@ -265,7 +262,9 @@ export function EditingView({
     title: "",
     brief: "",
     editType: "mid",
-    aspect: "",
+    /* widened on purpose: the select hands back a plain string, and the
+       default is only where it starts */
+    aspect: defaultAspectFor("mid") as string,
     targetMinutes: "",
     runtimeMinutes: "",
     assetsUrl: "",
@@ -304,7 +303,7 @@ export function EditingView({
       title: "",
       brief: "",
       editType: "mid",
-      aspect: "",
+      aspect: defaultAspectFor("mid"),
       targetMinutes: "",
       runtimeMinutes: "",
       assetsUrl: "",
@@ -476,7 +475,7 @@ export function EditingView({
         }`}
         actions={
           <Button variant="brand" icon={<Plus />} onClick={() => setAsking((v) => !v)}>
-            Request a video
+            Request new edit
           </Button>
         }
       />
@@ -571,7 +570,7 @@ export function EditingView({
       ) : (
         <div className="grid gap-3 lg:grid-cols-[1fr_20rem] lg:items-start">
           <div className="grid min-w-0 gap-3">
-            <Modal open={asking} onClose={() => setAsking(false)} title="Request a video">
+            <Modal open={asking} onClose={() => setAsking(false)} title="Request new edit">
               {asking && (
                 <div className="grid gap-4">
                   <p className="text-body-sm text-muted">
@@ -579,7 +578,7 @@ export function EditingView({
                     through requests in order.
                   </p>
                   <div className="grid gap-4 sm:grid-cols-2">
-                    <Field label="What is it" required hint="Something you will recognize later.">
+                    <Field label="Video title" required hint="Something you will recognize later.">
                       <Input
                         value={draft.title}
                         onChange={(e) => setDraft({ ...draft, title: e.target.value })}
@@ -587,14 +586,17 @@ export function EditingView({
                       />
                     </Field>
                     <Field
-                      label="What kind of edit"
+                      label="Video type"
                       hint={tier ? tier.lengthNote : "Pick the shape and we price it."}
                     >
                       <Select
                         value={draft.editType}
                         onChange={(e) => {
                           const editType = e.target.value;
-                          setDraft({ ...draft, editType });
+                          /* the shape follows the type, because a short is
+                             cut for a phone and everything longer is not.
+                             They can still say otherwise underneath. */
+                          setDraft({ ...draft, editType, aspect: defaultAspectFor(editType) });
                           if (editType === "short") setCuts([]);
                         }}
                       >
@@ -603,7 +605,7 @@ export function EditingView({
                             {t.label}
                             {t.kind === "video"
                               ? `, ${creditWord(t.credits ?? 0)}`
-                              : `, from ${creditWord(t.perHalfHour ?? 0)}`}
+                              : `, ${creditWord(t.perBlock ?? 0)} per 30 min`}
                           </option>
                         ))}
                       </Select>
@@ -611,12 +613,18 @@ export function EditingView({
                   </div>
 
                   <div className="grid gap-4 sm:grid-cols-2">
-                    <Field label="Where is it going" hint="So we cut it the right shape.">
+                    <Field
+                      label="Video dimension"
+                      hint={
+                        draft.aspect === defaultAspectFor(draft.editType)
+                          ? "Set for you from the type. Change it if you want it another way."
+                          : "Not the usual shape for this type, which is fine if it is what you want."
+                      }
+                    >
                       <Select
                         value={draft.aspect}
                         onChange={(e) => setDraft({ ...draft, aspect: e.target.value })}
                       >
-                        <option value="">Not sure, you choose</option>
                         {plan.aspects.map((a) => (
                           <option key={a.key} value={a.key}>
                             {a.label}, {a.note}
@@ -670,7 +678,10 @@ export function EditingView({
                     />
                   </Field>
 
-                  <Field label="What do you want done" required hint="How you want it cut, in your words.">
+                  <Field
+                    label="Editing instructions or notes"
+                    hint="Optional. Anything you leave out, we cut to your style guide."
+                  >
                     <Textarea
                       rows={4}
                       value={draft.brief}
@@ -787,7 +798,6 @@ export function EditingView({
                       disabled={
                         busy ||
                         !draft.title.trim() ||
-                        !draft.brief.trim() ||
                         !draft.assetsUrl.trim() ||
                         (tier?.kind === "podcast" && !draft.runtimeMinutes) ||
                         cuts.some((c) => !c.trim())

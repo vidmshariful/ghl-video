@@ -272,11 +272,10 @@ export async function POST(req: Request) {
       : [];
 
   if (!title) return NextResponse.json({ error: "Give the video a name." }, { status: 400 });
-  if (!brief)
-    return NextResponse.json(
-      { error: "Tell us what you want done with it." },
-      { status: 400 },
-    );
+  /* No brief required (owner decision, 25 August 2026). A client who has a
+     style guide on file has already told us how they want things cut, and
+     making them retype it every request is friction for nothing. The footage
+     and a name are what we cannot work without. */
   if (!assetsUrl)
     return NextResponse.json(
       { error: "Paste the link to your footage. Drive, Dropbox, Frame.io, whatever you use." },

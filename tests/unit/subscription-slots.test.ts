@@ -120,21 +120,30 @@ describe("what a piece of work costs", () => {
     assert.equal(creditCost("mid", 5), 2);
   });
 
-  test("a podcast is priced on finished runtime, in half hour blocks", () => {
-    assert.equal(creditCost("podcast_standard", 30), 3);
-    assert.equal(creditCost("podcast_standard", 60), 5, "the published hourly rate");
-    assert.equal(creditCost("podcast_standard", 90), 8);
-    assert.equal(creditCost("podcast_standard", 120), 10);
+  test("a podcast is one published rate for every 30 minutes", () => {
+    assert.equal(creditCost("podcast_standard", 30), 4);
+    assert.equal(creditCost("podcast_standard", 60), 8);
+    assert.equal(creditCost("podcast_standard", 90), 12);
+    assert.equal(creditCost("podcast_standard", 120), 16);
   });
 
   test("the advanced rate is the published one too", () => {
-    assert.equal(creditCost("podcast_advanced", 30), 4);
-    assert.equal(creditCost("podcast_advanced", 60), 8);
-    assert.equal(creditCost("podcast_advanced", 120), 16);
+    assert.equal(creditCost("podcast_advanced", 30), 5);
+    assert.equal(creditCost("podcast_advanced", 60), 10);
+    assert.equal(creditCost("podcast_advanced", 120), 20);
+  });
+
+  /* the whole point of one block rate: a client can multiply it themselves
+     and land on the number we charge */
+  test("the rate multiplies, so a client can work it out in their head", () => {
+    for (const blocks of [1, 2, 3, 4, 6, 8]) {
+      assert.equal(creditCost("podcast_standard", blocks * 30), blocks * 4);
+      assert.equal(creditCost("podcast_advanced", blocks * 30), blocks * 5);
+    }
   });
 
   test("a part block rounds up, so 61 minutes costs more than 60", () => {
-    assert.equal(creditCost("podcast_standard", 61), 8);
+    assert.equal(creditCost("podcast_standard", 61), 12);
   });
 
   test("the price never goes backwards as the episode gets longer", () => {
