@@ -81,9 +81,34 @@ export type PartnerSalesPage = SalesPageBase & {
   closing: { headline: string; accent: string; sub: string };
 };
 
-export type SalesPage = PremadeSalesPage | PartnerSalesPage;
+/* The editing service on its own page, for paid ads and for the link we send
+ * when somebody replies to a cold email. Every word of it lives in
+ * lib/content/editing-lp.ts and the render in components/sales/EditingLanding.
+ * There is nothing to configure per page, so this kind carries no fields of
+ * its own: it is a registry entry so the admin Sales Pages screen lists it and
+ * the route builds it, like every other LP. */
+export type EditingSalesPage = SalesPageBase & {
+  kind: "editing";
+};
+
+export type SalesPage = PremadeSalesPage | PartnerSalesPage | EditingSalesPage;
 
 export const salesPages: SalesPage[] = [
+  {
+    kind: "editing",
+    slug: "video-editing",
+    title: "Video Editing Plans",
+    campaign: "Paid ads, and the link sent on a cold email reply",
+    status: "live",
+    /* a real funnel page rather than private outreach: we are paying for the
+       traffic either way, so organic is upside (owner decision, 25 Aug 2026) */
+    indexable: true,
+    seo: {
+      title: "HighLevel Video Editing on a Monthly Plan",
+      description:
+        "Video editing for HighLevel agencies and SaaS founders who publish every week. Send raw footage, get finished edits back in two to three business days. Plans from $595 a month, unlimited revisions, no contract.",
+    },
+  },
   {
     slug: "white-label-videos",
     title: "White-Label HighLevel Videos",

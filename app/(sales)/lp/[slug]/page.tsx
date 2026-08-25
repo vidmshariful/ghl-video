@@ -22,6 +22,7 @@ import { salesBundles, type SalesBundle } from "@/lib/bundles";
 import { salesPageBySlug, salesPages, salesShared } from "@/lib/sales/pages";
 import { SpVideo } from "@/components/sales/SpVideo";
 import { PartnerLanding } from "@/components/sales/PartnerLanding";
+import { EditingLanding } from "@/components/sales/EditingLanding";
 import { MultiPartnerLanding } from "@/components/sales/MultiPartnerLanding";
 import { JsonLd } from "@/components/JsonLd";
 import { faqSchema, serviceSchema } from "@/lib/schema";
@@ -40,13 +41,22 @@ export async function generateMetadata({
   const { slug } = await params;
   const page = salesPageBySlug(slug);
   if (!page) return { title: "GHL Video" };
+  /* the editing LP carries no hero of its own (its words live in
+     lib/content/editing-lp.ts), so it relies on its seo block */
   const title =
     page.seo?.title ??
     (page.kind === "partner"
       ? `${page.partner.name} and GHL Video`
-      : `${page.hero.headline} ${page.hero.accent}`);
+      : page.kind === "editing"
+        ? "Video editing on a monthly plan"
+        : `${page.hero.headline} ${page.hero.accent}`);
   const description =
-    page.seo?.description ?? (page.kind === "partner" ? page.partner.offer : page.hero.sub);
+    page.seo?.description ??
+    (page.kind === "partner"
+      ? page.partner.offer
+      : page.kind === "editing"
+        ? "Send raw footage, get finished edits back from a HighLevel fluent team."
+        : page.hero.sub);
   return {
     title: `${title} | GHL Video`,
     description,
@@ -158,6 +168,7 @@ export default async function SalesLandingPage({
   if (page.kind === "partner") {
     return page.full ? <MultiPartnerLanding page={page} /> : <PartnerLanding page={page} />;
   }
+  if (page.kind === "editing") return <EditingLanding />;
 
   const ft = featuredTestimonial; // Chase Buckner
 
