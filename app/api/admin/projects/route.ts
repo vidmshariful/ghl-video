@@ -70,6 +70,22 @@ export async function GET(req: Request) {
   const { data: team } = await db.from("admins").select("email, name");
   const contactById = new Map(((contacts ?? []) as Row[]).map((c) => [String(c.id), c]));
 
+  /*
+   * What to call the client on the board. A project is filed under an email
+   * because that is what ties it to an account, but an email is not how
+   * anybody here refers to a client: nobody says "the chase at gohighlevel
+   * job". Company first, then their name, and the email only when we know
+   * nothing else, which happens for a project opened before the customer row
+   * existed.
+   */
+  const { data: customers } = await db.from("customers").select("email, name, company");
+  const nameByEmail = new Map(
+    ((customers ?? []) as Row[]).map((c) => [
+      String(c.email).toLowerCase(),
+      (c.company as string | null) || (c.name as string | null) || null,
+    ]),
+  );
+
   const items = ((projects ?? []) as Row[]).map((p) => {
     const id = String(p.id);
     const mine = ((invoices ?? []) as Row[])
@@ -92,6 +108,7 @@ export async function GET(req: Request) {
     return {
       id,
       customerEmail: String(p.customer_email),
+      customerName: nameByEmail.get(String(p.customer_email).toLowerCase()) ?? null,
       customerId: (p.customer_id as string | null) ?? null,
       title: String(p.title),
       brief: (p.brief as string | null) ?? null,

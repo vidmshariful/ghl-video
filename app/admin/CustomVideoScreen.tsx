@@ -78,6 +78,8 @@ type Money = {
 type Project = {
   id: string;
   customerEmail: string;
+  /* company, or their name, or null when we only have the email */
+  customerName: string | null;
   title: string;
   brief: string | null;
   script: string | null;
@@ -109,6 +111,18 @@ type Client = {
   company: string | null;
   contacts: { id: string; name: string; email: string | null; role: string; title: string | null }[];
 };
+
+/*
+ * What we call a client on this screen.
+ *
+ * Projects are filed under an email because that is what ties one to an
+ * account, but nobody in the studio refers to a client that way. Falls back
+ * to the email only when there is no customer row yet, which happens for a
+ * project opened before the client bought anything.
+ */
+function nameOf(p: { customerName: string | null; customerEmail: string }): string {
+  return p.customerName ?? p.customerEmail;
+}
 
 type Enquiry = {
   id: string;
@@ -207,6 +221,9 @@ export function CustomVideoScreen({
   onOpenProject?: (id: string | null) => void;
 }) {
   const [tab, setTab] = useState<"projects" | "enquiries">("projects");
+  /* "" is everyone; otherwise the client's account email, which is the key
+     a project is actually filed under */
+  const [onlyClient, setOnlyClient] = useState("");
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [enquiries, setEnquiries] = useState<Enquiry[] | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
@@ -301,7 +318,19 @@ export function CustomVideoScreen({
 
   const chosen = clients.find((c) => c.email === draft?.customerEmail) ?? null;
   const openEnquiries = enquiries.filter((e) => e.status !== "won" && e.status !== "lost");
-  const live = projects.filter((p) => isOpen(p.status));
+
+  /*
+   * The board, narrowed to one client. Filtered at the source rather than
+   * per group, so the status groups, the Finished list and the count on the
+   * Projects tab all agree about what is on screen.
+   */
+  const shown = onlyClient ? projects.filter((p) => p.customerEmail === onlyClient) : projects;
+  const live = shown.filter((p) => isOpen(p.status));
+
+  /* every client with work on the board, by the name we call them */
+  const clientOptions = [
+    ...new Map(projects.map((p) => [p.customerEmail, nameOf(p)] as const)).entries(),
+  ].sort((a, b) => a[1].localeCompare(b[1]));
 
   /* ---- one project, opened as a full screen ---- */
   const opened = open ? projects.find((x) => x.id === open) ?? null : null;
@@ -329,14 +358,33 @@ export function CustomVideoScreen({
           </Button>
         }
       >
-        <Tabs
-          tabs={[
-            { key: "projects" as const, label: "Projects", count: live.length },
-            { key: "enquiries" as const, label: "Enquiries", count: openEnquiries.length },
-          ]}
-          active={tab}
-          onChange={setTab}
-        />
+        <div className="flex flex-wrap items-center gap-3">
+          <Tabs
+            tabs={[
+              { key: "projects" as const, label: "Projects", count: live.length },
+              { key: "enquiries" as const, label: "Enquiries", count: openEnquiries.length },
+            ]}
+            active={tab}
+            onChange={setTab}
+          />
+          {/* Only on Projects, and only once there is more than one client to
+              choose between: a filter with a single option is furniture. */}
+          {tab === "projects" && clientOptions.length > 1 && (
+            <Select
+              aria-label="Show one client"
+              value={onlyClient}
+              onChange={(e) => setOnlyClient(e.target.value)}
+              className="w-full sm:w-56"
+            >
+              <option value="">All clients</option>
+              {clientOptions.map(([email, label]) => (
+                <option key={email} value={email}>
+                  {label}
+                </option>
+              ))}
+            </Select>
+          )}
+        </div>
       </PageHeader>
 
       {err && <p className="mb-3 text-body-sm text-error">{err}</p>}
@@ -551,7 +599,7 @@ export function CustomVideoScreen({
                                   {p.title}
                                 </span>
                                 <span className="mt-0.5 block truncate font-mono text-label uppercase text-dim">
-                                  {p.customerEmail}
+                                  {nameOf(p)}
                                 </span>
                               </span>
                               <span className="hidden min-w-0 lg:block">
@@ -625,13 +673,13 @@ export function CustomVideoScreen({
               })}
 
               {/* closing a job must never make it vanish */}
-              {projects.some((p) => !isOpen(p.status)) && (
+              {shown.some((p) => !isOpen(p.status)) && (
                 <div className="mt-5">
                   <p className="font-mono text-label uppercase tracking-[0.1em] text-dim">
                     Finished
                   </p>
                   <div className="mt-2 grid gap-2">
-                    {projects
+                    {shown
                       .filter((p) => !isOpen(p.status))
                       .map((p) => (
                         <div
@@ -647,7 +695,7 @@ export function CustomVideoScreen({
                               {p.title}
                             </span>
                             <span className="mt-0.5 block truncate font-mono text-label uppercase text-dim">
-                              {p.customerEmail} / {money(p.money.valueCents)}
+                              {nameOf(p)} / {money(p.money.valueCents)}
                             </span>
                           </button>
                           <span className="flex shrink-0 items-center gap-2">
@@ -922,7 +970,7 @@ function ProjectPage({
           <div className="min-w-0">
             <h1 className="font-display text-h3 text-ink">{p.title}</h1>
             <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-body-sm text-muted">
-              <span className="text-ink">{p.customerEmail}</span>
+              <span className="text-ink">{p.customerName ?? p.customerEmail}</span>
               {p.category && <span className="text-dim">/ {p.category}</span>}
               <span className="font-mono text-label uppercase text-dim">
                 opened {when(p.createdAt)}
