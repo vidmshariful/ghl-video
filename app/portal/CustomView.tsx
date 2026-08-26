@@ -384,7 +384,7 @@ export function CustomView({
           not every format we make, and the prices are the answer to what
           anything else would cost. */}
       {projects.length > 0 && (
-        <div className="mt-10">
+        <div className="mt-40">
           <QuoteFormats
             authedFetch={authedFetch}
             heading={quoteCopy(canSubmit).heading}
