@@ -963,12 +963,21 @@ function SubmitProject({
           />
         </Field>
 
+        {/* A link, not the words. Nobody drafts a script in a modal, and
+            the doc is where the client is already writing it, so the box
+            that invited a paste was inviting a stale copy of it. The hint
+            names the sharing setting because that is what actually goes
+            wrong: the link arrives and we cannot open it. */}
         <Field
           label="Script"
           required
-          hint="The words to be recorded. Paste it in, a draft is fine."
+          hint="A link to the doc. Check the sharing lets us open it."
         >
-          <Textarea rows={8} value={f.script} onChange={(e) => set("script", e.target.value)} />
+          <Input
+            value={f.script}
+            onChange={(e) => set("script", e.target.value)}
+            placeholder="https://docs.google.com/..."
+          />
         </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">

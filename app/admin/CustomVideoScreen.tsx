@@ -414,7 +414,7 @@ export function CustomVideoScreen({
             {/* kept apart from the brief: this is the words that get
                 recorded, and on a client-submitted job it is the thing the
                 producer opens first */}
-            <Field label="The script" hint="The words to be recorded. A client on a retainer sends this themselves.">
+            <Field label="The script" hint="The words, or a link to the doc. A retainer client sends a link themselves.">
               <Textarea
                 rows={6}
                 value={draft.script}
@@ -871,7 +871,7 @@ function ProjectPage({
               onChange={(e) => setForm({ ...form, brief: e.target.value })}
             />
           </Field>
-          <Field label="The script" hint="The words to be recorded. A retainer client sends this themselves.">
+          <Field label="The script" hint="The words, or a link to the doc. A retainer client sends a link themselves.">
             <Textarea
               rows={8}
               value={form.script}
