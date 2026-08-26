@@ -572,10 +572,20 @@ export function PortalSidebar({
         onSelect(it.key);
         onNavigated?.();
       }}
+      /*
+       * Three states that have to read apart at a glance. They used to be
+       * three shades of the same grey: the active row was chrome-2 on the
+       * chrome rail, about a tenth of a step of lightness, and hover was
+       * that same colour at 70%, so where you are and where the pointer is
+       * looked alike. Active is gold now, which is what the settings tabs
+       * already do for the same job, and hover stays neutral so it cannot
+       * be mistaken for it. The bar is an inset shadow rather than a border
+       * so the label does not shift two pixels when you navigate.
+       */
       className={`tap group flex w-full items-center gap-2.5 rounded-[8px] px-3 py-2 text-left text-body-sm transition-colors ${
         active === it.key
-          ? "bg-chrome-2 font-semibold text-chrome-text"
-          : "text-chrome-muted hover:bg-chrome-2/70 hover:text-chrome-text"
+          ? "bg-gold/15 font-semibold text-gold shadow-[inset_2px_0_0_var(--gold)]"
+          : "text-chrome-muted hover:bg-chrome-2 hover:text-chrome-text"
       }`}
     >
       <span
