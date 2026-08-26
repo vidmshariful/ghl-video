@@ -98,6 +98,43 @@ export async function settlePaidIntent(
       await sendOrderPaidEmails(db, order.id as string);
 
       /*
+       * Tell Affixo a sale happened, so a partner gets paid for it.
+       *
+       * We do this ourselves rather than letting Affixo's Stripe listener
+       * find it: our checkout builds PaymentIntents by hand, and their
+       * listener is watching for Checkout Sessions and invoices that this
+       * flow never creates. Every one-time order in the catalogue would
+       * otherwise attribute to nobody.
+       *
+       * Sits inside the flip, which is the exactly-once branch, and is
+       * idempotent on the order id at their end too, so a Stripe retry
+       * cannot pay a partner twice. Fail-soft on purpose: a commission is
+       * not worth failing a customer's paid order over, and an order that
+       * did not reach Affixo can be replayed by hand from the record.
+       */
+      try {
+        const { trackSale } = await import("@/lib/affixo");
+        const m = (pi.metadata ?? {}) as Record<string, string | undefined>;
+        const sent = await trackSale({
+          orderId: order.id as string,
+          amountCents: chargedCents,
+          currency: pi.currency,
+          ref: m.ref ?? null,
+          email: (order.customer_email as string | null) ?? m.customer_email ?? null,
+          visitorId: m.sa_vid ?? null,
+        });
+        if (sent) {
+          await db.from("order_events").insert({
+            order_id: order.id,
+            event_type: "affiliate_sale_recorded",
+            payload: { platform: "affixo", ref: m.ref ?? null },
+          });
+        }
+      } catch (e) {
+        console.error(`[settle] affixo sale failed for order ${order.id}:`, e);
+      }
+
+      /*
        * A credit pack buys credits, not videos. Idempotent by order id, so a
        * webhook retry cannot hand out the same pack twice, and loud when it
        * fails: money has been taken for credits, and nothing else in this

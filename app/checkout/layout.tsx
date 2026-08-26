@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getChrome } from "@/lib/chrome";
 import { CheckoutHeader } from "@/components/checkout/CheckoutHeader";
 import { PageFrame } from "@/components/PageFrame";
+import { AffixoTag } from "@/components/AffixoTag";
 
 /* Checkout lives outside the (site) route group: no marketing nav, no
  * footer, never indexed. Its own minimal chrome is a header with the logo,
@@ -17,6 +18,7 @@ export default async function CheckoutLayout({
   const chrome = await getChrome();
   return (
     <div data-surface="checkout" className="flex min-h-screen w-full flex-col bg-canvas text-ink">
+      <AffixoTag />
       {/* hard-coded tracking (GTM, Google Ads, Hotjar) so the checkout step of
           the funnel fires the same events as the rest of the site */}
       {chrome.headScripts ? (

@@ -79,6 +79,23 @@ export function refFromCookieHeader(cookieHeader: string | null | undefined): st
 /** FirstPromoter's visitor tracking id, set by its fpr.js on the public
  *  pages. Passed to Stripe as fp_tid metadata so FP attributes the sale to
  *  the clicked link even before any email match. */
+/**
+ * Affixo's visitor id, set first-party by their sa.js as `_sa_vid`.
+ *
+ * The strongest attribution signal they take: it ties a paid order back to
+ * the exact click, which survives a buyer who arrives on a partner link,
+ * leaves, and comes back a fortnight later from a bookmark. Carried onto
+ * the PaymentIntent at finalize so the webhook, which never sees a browser
+ * cookie, can still name the visit that earned the commission.
+ */
+export function saVidFromCookieHeader(cookieHeader: string | null | undefined): string | null {
+  if (!cookieHeader) return null;
+  const m = cookieHeader.match(/(?:^|;\s*)_sa_vid=([^;]+)/);
+  if (!m) return null;
+  const vid = decodeURIComponent(m[1]).trim().slice(0, 100);
+  return vid || null;
+}
+
 export function fpTidFromCookieHeader(cookieHeader: string | null | undefined): string | null {
   if (!cookieHeader) return null;
   const m = cookieHeader.match(/(?:^|;\s*)_fprom_tid=([^;]+)/);

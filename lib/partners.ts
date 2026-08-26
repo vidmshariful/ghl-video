@@ -34,6 +34,9 @@ export type PartnerRow = {
   stripe_coupon_id: string | null;
   fp_ref: string | null;
   fp_promoter_id: string | null;
+  /* their id in Affixo, which replaced FirstPromoter. The fp_* pair above
+     stays until Affixo has run a full payout cycle worth reconciling against. */
+  affixo_affiliate_id: string | null;
   application: Record<string, unknown> | null;
   notes: string | null;
   created_at: string;

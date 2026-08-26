@@ -3,7 +3,11 @@ import { getActiveProductBySku } from "@/lib/checkout/products";
 import { resolveSelectedBumps } from "@/lib/checkout/bumps";
 import { checkCoupon } from "@/lib/checkout/coupons";
 import { orderTotalCents } from "@/lib/checkout/money-rules";
-import { fpTidFromCookieHeader, refFromCookieHeader } from "@/lib/affiliates";
+import {
+  fpTidFromCookieHeader,
+  refFromCookieHeader,
+  saVidFromCookieHeader,
+} from "@/lib/affiliates";
 import { firstTouchFromCookieHeader } from "@/lib/first-touch";
 import { ensureAuthAccount } from "@/lib/checkout/account";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
@@ -64,6 +68,10 @@ export async function POST(req: Request) {
   // FirstPromoter's visitor id: stamped on Stripe so FP attributes the sale
   // to the clicked link (fp_ref rides along as the fallback match).
   let fpTid = fpTidFromCookieHeader(req.headers.get("cookie"));
+  /* Affixo's visitor id, stamped so the webhook can attribute the sale. It
+     is read here and never validated: an id we cannot match just means the
+     sale attributes on ref or email instead, which is Affixo's job to sort. */
+  const saVid = saVidFromCookieHeader(req.headers.get("cookie"));
 
   // No self-referral (program rule): a partner's own link never applies to
   // their own order. Drop the attribution entirely so neither our records
@@ -288,6 +296,7 @@ export async function POST(req: Request) {
       discount_cents: couponMeta ? String(discountCents) : "",
       ...(ref ? { ref, fp_ref: ref } : {}),
       ...(fpTid ? { fp_tid: fpTid } : {}),
+      ...(saVid ? { sa_vid: saVid } : {}),
     },
   });
 

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireActivePartner } from "@/lib/partners";
-import { fpConfigured, getReferrals, resolvePromoter } from "@/lib/firstpromoter";
+import { affixoConfigured, getConversions, resolveAffiliate } from "@/lib/affixo";
 
 export const runtime = "nodejs";
 
@@ -20,13 +20,13 @@ export async function GET(req: Request) {
   const gate = await requireActivePartner(req, "referrals");
   if ("failStatus" in gate)
     return NextResponse.json({ error: "Unauthorized" }, { status: gate.failStatus });
-  if (!fpConfigured()) return NextResponse.json({ configured: false });
+  if (!affixoConfigured()) return NextResponse.json({ configured: false });
 
   try {
-    const promoter = await resolvePromoter(gate.partner);
-    if (!promoter) return NextResponse.json({ configured: true, found: false });
+    const affiliate = await resolveAffiliate(gate.partner);
+    if (!affiliate) return NextResponse.json({ configured: true, found: false });
 
-    const rows = await getReferrals(promoter.id);
+    const rows = await getConversions(affiliate.id);
     const referrals = rows
       .slice()
       .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""))
@@ -34,9 +34,11 @@ export async function GET(req: Request) {
       .map((r) => ({
         id: r.id,
         who: mask(r.email),
-        state: r.state ?? "unknown",
+        state: r.status ?? "unknown",
         createdAt: r.created_at ?? null,
-        customerSince: r.customer_since ?? null,
+        /* Affixo records the sale, not a customer-since date. The portal
+           treats null as "no date to show" rather than printing a guess. */
+        customerSince: null,
       }));
     return NextResponse.json({ configured: true, found: true, referrals });
   } catch {

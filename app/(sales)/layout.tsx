@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Logo } from "@/components/Logo";
+import { AffixoTag } from "@/components/AffixoTag";
 import { BookCall } from "@/components/sales/BookCall";
 import { getChrome } from "@/lib/chrome";
 import "./sales.css";
@@ -24,6 +25,7 @@ export default async function SalesLayout({ children }: { children: React.ReactN
   const chrome = await getChrome();
   return (
     <>
+      <AffixoTag />
       {/* Hard-coded tracking (GTM, Google Ads, Hotjar), injected at body start
           just like the marketing site so the sales funnel is measured too. */}
       {chrome.headScripts ? (

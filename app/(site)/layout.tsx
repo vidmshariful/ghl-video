@@ -4,6 +4,7 @@ import { Header } from "@/components/Header";
 import { NoticeBar } from "@/components/NoticeBar";
 import { Footer } from "@/components/Footer";
 import { JsonLd } from "@/components/JsonLd";
+import { AffixoTag } from "@/components/AffixoTag";
 import { PageFrame } from "@/components/PageFrame";
 import { ScrollRuler } from "@/components/ScrollRuler";
 import { organizationSchema, websiteSchema } from "@/lib/schema";
@@ -33,6 +34,7 @@ export default async function SiteLayout({
   const chrome = await getChrome();
   return (
     <>
+      <AffixoTag />
       {/* tracking + verification snippets, managed in the /admin backend.
           Server-rendered into the static HTML at body start (Google's
           supported placement for GTM when head injection is unavailable);
