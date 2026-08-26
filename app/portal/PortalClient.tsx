@@ -32,6 +32,7 @@ import { Button, Card, Chip, EmptyState, Table, Td, Th } from "@/components/port
 import {
   actForHeader,
   getActFor,
+  clearActFor,
   hasChosenAccount,
   initActFor,
   setActFor,
@@ -1179,7 +1180,12 @@ function Portal({
     initActFor(ACT_FOR_KEY);
     let j = await authedFetch("/api/portal/me").catch(() => null);
     if ((!j || j.error) && getActFor()) {
-      setActFor(ACT_FOR_KEY, null);
+      /* the saved account would not load: forget it rather than RECORD a
+         choice of "my own account". setActFor(null) writes "self", which
+         counts as chosen and permanently disables the auto-pick below, and
+         that is how a teammate ends up staring at an empty portal of their
+         own with no idea another one exists. */
+      clearActFor(ACT_FOR_KEY);
       j = await authedFetch("/api/portal/me").catch(() => null);
     }
     if (j?.email) {
@@ -1600,6 +1606,10 @@ function Portal({
               onOpenOrder={openOrderById}
               onOpenVideo={openVideo}
               onGo={(s) => go(s as PortalSection)}
+              /* only when they are in their OWN account and belong to
+                 somebody else's; acting already says where they are */
+              otherAccounts={acting ? [] : profile.memberships}
+              onSwitchAccount={(e) => switchAccount(e)}
             />
           ) : view === "orders" && can("orders") ? (
             openOrder ? (
@@ -1719,6 +1729,10 @@ function Portal({
               onOpenOrder={openOrderById}
               onOpenVideo={openVideo}
               onGo={(s) => go(s as PortalSection)}
+              /* only when they are in their OWN account and belong to
+                 somebody else's; acting already says where they are */
+              otherAccounts={acting ? [] : profile.memberships}
+              onSwitchAccount={(e) => switchAccount(e)}
             />
           )}
           </div>

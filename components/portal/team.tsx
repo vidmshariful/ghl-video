@@ -128,12 +128,16 @@ function MemberForm({
         </label>
         <label className="grid gap-2">
           <span className="font-mono text-label uppercase text-muted">Their email</span>
-          <input
+          {/* the styled Input, same as the name beside it. This was a bare
+              <input> with no class, so on a dark panel it rendered as an
+              invisible box with no border. */}
+          <Input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
             disabled={isEdit}
+            placeholder="them@company.com"
           />
         </label>
       </div>

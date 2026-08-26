@@ -382,10 +382,18 @@ export function DashboardView({
   onOpenOrder,
   onOpenVideo,
   onGo,
+  otherAccounts = [],
+  onSwitchAccount,
 }: {
   firstName: string | null;
   /** who they are, or whose portal they are working in */
   subtitle: string;
+  /* Accounts this person can work in but is not currently in. Only ever
+     non-empty when they are sitting in their OWN account while belonging to
+     somebody else's, which is exactly the state that looks like a broken
+     portal: everything empty, and the only way out buried in a menu. */
+  otherAccounts?: { ownerEmail: string; ownerName: string | null }[];
+  onSwitchAccount?: (ownerEmail: string) => void;
   can: (key: string) => boolean;
   authedFetch: (path: string, init?: RequestInit) => Promise<Record<string, unknown>>;
   onOpenOrder: (id: string) => void;
@@ -525,6 +533,32 @@ export function DashboardView({
         title={firstName ? `Welcome back, ${firstName}.` : "Welcome back."}
         description={subtitle}
       />
+
+      {/* An empty screen is the correct render for an account with nothing
+          in it, and it is indistinguishable from a broken one. If they have
+          somewhere else to be, say so here rather than only in the menu. */}
+      {otherAccounts.length > 0 && onSwitchAccount && (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-[12px] border border-gold/40 bg-gold/[0.06] px-4 py-3">
+          <p className="text-body-sm text-ink">
+            You are in your own account.{" "}
+            {otherAccounts.length === 1
+              ? `You also have access to ${otherAccounts[0].ownerName || otherAccounts[0].ownerEmail}'s portal.`
+              : "You also have access to other portals."}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {otherAccounts.map((a) => (
+              <Button
+                key={a.ownerEmail}
+                size="sm"
+                variant="brand"
+                onClick={() => onSwitchAccount(a.ownerEmail)}
+              >
+                Go to {a.ownerName || a.ownerEmail}
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {onboarding && (
         <div className="mb-3">

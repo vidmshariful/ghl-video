@@ -35,6 +35,23 @@ export function hasChosenAccount(storageKey: string): boolean {
   }
 }
 
+/**
+ * Forget the choice entirely, so the next load is treated as a first visit.
+ *
+ * Different from setActFor(key, null), which RECORDS "I chose my own
+ * account" and permanently disables the auto-pick. Error recovery must use
+ * this one: a member whose saved account failed to load once should not be
+ * pinned to an empty account of their own forever.
+ */
+export function clearActFor(storageKey: string): void {
+  current = null;
+  try {
+    localStorage.removeItem(storageKey);
+  } catch {
+    /* private mode */
+  }
+}
+
 export function setActFor(storageKey: string, ownerEmail: string | null): void {
   current = ownerEmail;
   try {
