@@ -311,10 +311,29 @@ export async function createAffiliate(input: {
  * counts once. That id is our order id, which is also what makes this safe to
  * call from a handler that is itself retried.
  *
- * Returns true only when Affixo accepted it. Callers must treat false as
- * "nothing happened" and carry on: a partner's commission is not worth
- * failing a customer's paid order over.
+ * Returns what Affixo actually did, not merely whether it answered.
+ *
+ * This used to return true on any 2xx, and that hid a live failure. Affixo
+ * answers 200 with {"ok":true,"attributed":false} when it cannot credit
+ * anybody, and an unattributed sale is not persisted at all: no conversion,
+ * no commission, and no memory of the external_id. So a real order carrying
+ * ref=jonah went through, wrote an "affiliate sale recorded" line in its own
+ * history, and paid nobody. Whoever reads that history would have had no
+ * reason to look twice.
+ *
+ * Callers still must not fail an order over this. A partner's commission is
+ * not worth a customer's paid order. But they must record what happened
+ * truthfully and shout when a sale that named a partner credited no one.
  */
+export type TrackSaleResult = {
+  /** Affixo answered at all */
+  sent: boolean;
+  /** Affixo credited somebody. false means no conversion exists. */
+  attributed: boolean;
+  /** their conversion id, when there is one */
+  conversionId: string | null;
+};
+
 export async function trackSale(input: {
   orderId: string;
   amountCents: number;
@@ -323,9 +342,10 @@ export async function trackSale(input: {
   ref?: string | null;
   email?: string | null;
   visitorId?: string | null;
-}): Promise<boolean> {
-  if (!affixoConfigured()) return false;
-  if (!input.ref && !input.email && !input.visitorId) return false;
+}): Promise<TrackSaleResult> {
+  const nothing = { sent: false, attributed: false, conversionId: null };
+  if (!affixoConfigured()) return nothing;
+  if (!input.ref && !input.email && !input.visitorId) return nothing;
 
   const r = await afx(
     "/track/sale",
@@ -345,7 +365,18 @@ export async function trackSale(input: {
   );
   if (!r.ok) {
     console.error("[affixo] track sale failed for order", input.orderId);
-    return false;
+    return nothing;
   }
-  return true;
+  const body = (r.body ?? {}) as { attributed?: unknown; conversion_id?: unknown };
+  const attributed = body.attributed === true;
+  if (!attributed) {
+    console.error(
+      `[affixo] sale NOT attributed for order ${input.orderId} (ref=${input.ref ?? "none"})`,
+    );
+  }
+  return {
+    sent: true,
+    attributed,
+    conversionId: typeof body.conversion_id === "string" ? body.conversion_id : null,
+  };
 }

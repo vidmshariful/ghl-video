@@ -44,6 +44,8 @@ export const ALARM_KINDS = {
   DELIVERABLES_FAILED: "fulfillment.deliverables_failed",
   /** Editing credits were paid for and not added to the client's plan. */
   CREDITS_NOT_GRANTED: "fulfillment.credits_not_granted",
+  /** A sale carrying a partner ref was not credited to anybody. */
+  AFFILIATE_NOT_ATTRIBUTED: "fulfillment.affiliate_not_attributed",
   /** The amount charged is not the amount the order says it is. */
   AMOUNT_MISMATCH: "checkout.amount_mismatch",
   /** The site and checkout disagree about what something costs. */

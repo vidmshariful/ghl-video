@@ -115,19 +115,47 @@ export async function settlePaidIntent(
       try {
         const { trackSale } = await import("@/lib/affixo");
         const m = (pi.metadata ?? {}) as Record<string, string | undefined>;
-        const sent = await trackSale({
+        const ref = m.ref ?? null;
+        const result = await trackSale({
           orderId: order.id as string,
           amountCents: chargedCents,
           currency: pi.currency,
-          ref: m.ref ?? null,
+          ref,
           email: (order.customer_email as string | null) ?? m.customer_email ?? null,
           visitorId: m.sa_vid ?? null,
         });
-        if (sent) {
+        if (result.sent) {
+          /* what actually happened, not that we managed to ask. An earlier
+             version wrote this line on any 2xx, so an order that credited
+             nobody left a history saying the affiliate sale was recorded. */
           await db.from("order_events").insert({
             order_id: order.id,
-            event_type: "affiliate_sale_recorded",
-            payload: { platform: "affixo", ref: m.ref ?? null },
+            event_type: result.attributed
+              ? "affiliate_sale_recorded"
+              : "affiliate_sale_not_attributed",
+            payload: {
+              platform: "affixo",
+              ref,
+              attributed: result.attributed,
+              conversion_id: result.conversionId,
+            },
+          });
+        }
+        /*
+         * A sale that NAMED a partner and credited nobody is a partner not
+         * being paid for a sale they made, and it is silent by nature: the
+         * customer is happy, the order is fine, and the only sign is an
+         * absence in somebody else's dashboard. Worth waking somebody for.
+         * A sale with no ref attributing to nobody is just a direct sale.
+         */
+        if (ref && result.sent && !result.attributed) {
+          const { ALARM_KINDS, raise } = await import("@/lib/alarm");
+          await raise(db, {
+            kind: ALARM_KINDS.AFFILIATE_NOT_ATTRIBUTED,
+            severity: "warn",
+            message: `Order ${order.id} came through partner link "${ref}" and Affixo credited nobody. Record the sale by hand in Affixo, or the partner loses the commission.`,
+            fingerprint: `${ALARM_KINDS.AFFILIATE_NOT_ATTRIBUTED}:${order.id}`,
+            context: { orderId: order.id, ref, amountCents: chargedCents },
           });
         }
       } catch (e) {
