@@ -1,6 +1,7 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import type { PartnerRow } from "@/lib/partners";
+import { site } from "@/lib/site";
 
 /*
  * Affixo, the affiliate platform. Replaces lib/firstpromoter.ts.
@@ -25,11 +26,11 @@ import type { PartnerRow } from "@/lib/partners";
  * is the only place that conversion happens on the way in, and `trackSale`
  * is the only place it happens on the way out. Do not scatter more.
  *
- * FILTERING. The list endpoints accept limit and offset but ignore every
- * other query parameter: asking for ?affiliate_id=x returns the whole
- * program. So the filtering is done here, after paging. Fine at this size,
- * and `pageAll` caps itself so a growing program cannot turn one portal
- * load into an unbounded crawl.
+ * FILTERING. The list endpoints take limit and offset. /v1/affiliates also
+ * takes `q` and `status`, but nothing else filters: asking commissions for
+ * ?affiliate_id=x returns the whole programme. So the filtering is done
+ * here, after paging. Fine at this size, and `pageAll` caps itself so a
+ * growing programme cannot turn one portal load into an unbounded crawl.
  */
 
 const BASE = "https://go.affixo.dev/v1";
@@ -234,6 +235,70 @@ export async function getLinks(
 }
 
 /* --------------------------------------------------------------- writes */
+
+/* Where a self-serve signup lands. Looked up by name rather than pinned to
+   an id, so this keeps working if the campaign is rebuilt over there. */
+const DEFAULT_CAMPAIGN_NAME = "GHL Video Affiliate Program";
+
+/**
+ * Create an affiliate for a newly approved partner, with the referral link
+ * that makes their ?ref= actually resolve.
+ *
+ * Both halves are needed and the second is the one that is easy to miss.
+ * Attribution matches an incoming ?ref= against a LINK, not against the
+ * affiliate: an unknown value comes back link_not_found. An affiliate
+ * created without a link is a partner whose every referral earns nothing,
+ * and nothing about their record would look wrong.
+ *
+ * ref_code is asked for but not depended on. Affixo mints a variant of its
+ * own when the code collides with an existing one, which is exactly what
+ * happened to Jonah in the migration. The link carries our slug either way,
+ * so the link is what we check.
+ *
+ * Fail-soft, like the FirstPromoter call it replaces: on any error the
+ * partner still exists with their row and their portal, and the studio
+ * links them by hand. A signup must never fail because a third party did.
+ */
+export async function createAffiliate(input: {
+  email: string;
+  name: string;
+  ref: string;
+}): Promise<{ id: string; refCode: string | null } | null> {
+  if (!affixoConfigured()) return null;
+
+  const made = await afx("/affiliates", undefined, {
+    method: "POST",
+    body: JSON.stringify({ email: input.email, name: input.name, ref_code: input.ref }),
+  });
+  const affiliate = (made.body as { data?: AffixoAffiliate })?.data;
+  if (!made.ok || !affiliate?.id) {
+    console.error("[affixo] could not create affiliate for", input.email);
+    return null;
+  }
+
+  const campaigns = await pageAll<AffixoCampaign>("campaigns");
+  const campaign = campaigns.find((c) => c.name === DEFAULT_CAMPAIGN_NAME);
+  if (!campaign) {
+    console.error(`[affixo] no campaign named "${DEFAULT_CAMPAIGN_NAME}"; link not created`);
+    return { id: affiliate.id, refCode: affiliate.ref_code ?? null };
+  }
+
+  const link = await afx("/links", undefined, {
+    method: "POST",
+    body: JSON.stringify({
+      affiliate_id: affiliate.id,
+      ref_param: input.ref,
+      destination_url: `${site.url}/?ref=${encodeURIComponent(input.ref)}`,
+      campaign_id: campaign.id,
+    }),
+  });
+  if (!link.ok) {
+    /* loud: the affiliate exists but nothing they send us will attribute */
+    console.error("[affixo] affiliate created WITHOUT a link:", input.email, input.ref);
+  }
+
+  return { id: affiliate.id, refCode: affiliate.ref_code ?? null };
+}
 
 /**
  * Record a settled sale.

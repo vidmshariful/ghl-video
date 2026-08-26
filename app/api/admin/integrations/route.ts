@@ -30,8 +30,11 @@ export async function GET(req: Request) {
       highlevel: {
         configured: has("HIGHLEVEL_API_TOKEN") && has("HIGHLEVEL_LOCATION_ID"),
       },
-      firstpromoter: {
-        configured: has("FIRSTPROMOTER_API_KEY") && has("FIRSTPROMOTER_ACCOUNT_ID"),
+      /* the server key drives the partner portal; the public one is what
+         puts the click tracker on the page. Either missing is a half
+         connected programme, so both have to be there to call it on. */
+      affixo: {
+        configured: has("AFFIXO_API_KEY") && has("NEXT_PUBLIC_AFFIXO_KEY"),
       },
       brevo: {
         configured: has("BREVO_API_KEY"),

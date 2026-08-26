@@ -97,19 +97,22 @@ export async function POST(req: Request) {
   const { ensureAuthAccount } = await import("@/lib/checkout/account");
   await ensureAuthAccount(email);
 
-  // their FirstPromoter promoter, same ref token as the link; fail-soft
-  // (the portal shows its graceful not-linked card until the team fixes it)
-  const { createPromoter } = await import("@/lib/firstpromoter");
-  const promoter = await createPromoter({ email, name, ref: row.ref });
-  if (promoter) {
+  /*
+   * Their Affixo affiliate, carrying the same ref as their link. Fail-soft:
+   * the portal shows its graceful not-linked card until the team fixes it.
+   *
+   * This created a FirstPromoter promoter until FirstPromoter was retired.
+   * Left alone it would have been the worst kind of leftover: a partner who
+   * applied would have been set up correctly in a platform we no longer pay
+   * from, and would have had no affiliate at all in the one we do. Every
+   * referral they sent would have resolved to nobody.
+   */
+  const { createAffiliate } = await import("@/lib/affixo");
+  const affiliate = await createAffiliate({ email, name, ref: row.ref });
+  if (affiliate) {
     await db
       .from("partners")
-      .update({
-        fp_promoter_id: promoter.id,
-        ...(promoter.refToken && promoter.refToken !== row.ref
-          ? { fp_ref: promoter.refToken }
-          : {}),
-      })
+      .update({ affixo_affiliate_id: affiliate.id })
       .eq("id", row.id);
   }
 

@@ -28,7 +28,7 @@ type IntegrationsPayload = {
     stripe: { configured: boolean; mode: "live" | "test" | null };
     supabase: { configured: boolean };
     highlevel: { configured: boolean };
-    firstpromoter: { configured: boolean };
+    affixo: { configured: boolean };
     brevo: { configured: boolean; from: string };
     regionGate: { configured: boolean };
   };
@@ -233,10 +233,11 @@ const INTEGRATION_META: {
     env: "HIGHLEVEL_API_TOKEN, HIGHLEVEL_LOCATION_ID",
   },
   {
-    key: "firstpromoter",
-    name: "FirstPromoter",
-    powers: "Partner stats in the partner portal: clicks, referrals, earnings, payouts.",
-    env: "FIRSTPROMOTER_API_KEY, FIRSTPROMOTER_ACCOUNT_ID",
+    key: "affixo",
+    name: "Affixo",
+    powers:
+      "The affiliate programme: click tracking on the site, partner stats in their portal, and the sale reported when an order settles. Replaced FirstPromoter, August 2026.",
+    env: "AFFIXO_API_KEY, NEXT_PUBLIC_AFFIXO_KEY",
   },
   {
     key: "brevo",

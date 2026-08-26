@@ -3,6 +3,13 @@ import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import type { PartnerRow } from "@/lib/partners";
 
 /*
+ * RETIRED, 26 August 2026. Affixo replaced FirstPromoter; nothing in the
+ * app imports this any more. Kept, not deleted, because the fp_* columns on
+ * partners are the only record of who was who over there, and this is the
+ * only way to read FirstPromoter back if a partner ever disputes a number
+ * from before the move. Delete it once a full payout cycle has run on
+ * Affixo and nobody needs to look back.
+ *
  * FirstPromoter admin API v2 client, read-only. The portal shows each
  * partner THEIR OWN numbers; commissions and payouts still run inside
  * FirstPromoter. Docs: docs.firstpromoter.com, api-reference-v2.

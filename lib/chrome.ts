@@ -100,14 +100,12 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <script async src="https://www.googletagmanager.com/gtag/js?id=AW-16454943179">
 </script>
 
-<!-- FirstPromoter (affiliate click tracking; cid = the FP account id).
-     Standard fpr.js on purpose: the fpr.highlevel.js variant from FP's
-     HighLevel instructions is for HL funnel pages and needs jQuery. -->
-<script>(function(w){w.fpr=w.fpr||function(){w.fpr.q = w.fpr.q||[];w.fpr.q[arguments[0]=='set'?'unshift':'push'](arguments);};})(window);
-fpr("init", {cid:"ri063sv0"});
-fpr("click");
-</script>
-<script src="https://cdn.firstpromoter.com/fpr.js" async></script>`;
+<!-- Affiliate click tracking is NOT here any more. FirstPromoter was
+     retired in favour of Affixo, whose tag is a real component,
+     components/AffixoTag.tsx, so it can be kept off /admin and /portal
+     where there is no visitor to attribute. Do not paste an affiliate
+     snippet back into this block: two trackers on one page count every
+     click twice. -->`;
 
 /* Injected at body end: the LeadConnector chat widget and the GTM
  * noscript fallback. */
