@@ -43,6 +43,9 @@ export async function GET(req: Request) {
     avatarUrl: profile.avatarUrl,
     isOwner: ctx.isOwner,
     features: ctx.features,
+    /* the portal renders a standing banner off this, so nobody forgets
+       whose screen they are looking at */
+    viewingAsAdmin: Boolean(ctx.viewingAsAdmin),
     memberships: memberships.map((m) => ({
       ownerEmail: m.owner_email,
       ownerName: ownerNames[m.owner_email] ?? null,
@@ -70,10 +73,12 @@ export async function GET(req: Request) {
 
   const { data: owner } = await db
     .from("customers")
-    .select("id, name, hidden_sections, disabled_sections")
+    .select("id, name, company, hidden_sections, disabled_sections")
     .ilike("email", ctx.ownerEmail)
     .maybeSingle();
-  if (owner?.id) void touchLastSeen(db, String(owner.id));
+  /* staff looking is not the client visiting: stamping last seen here would
+     tell us a client had been in the portal when nobody had */
+  if (owner?.id && !ctx.viewingAsAdmin) void touchLastSeen(db, String(owner.id));
   return NextResponse.json({
     ...base,
     name: profile.displayName ?? null,
@@ -86,6 +91,7 @@ export async function GET(req: Request) {
     actingFor: {
       email: ctx.ownerEmail,
       name: (owner?.name as string | null) ?? null,
+      company: (owner?.company as string | null) ?? null,
     },
   });
 }

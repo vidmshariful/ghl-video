@@ -92,6 +92,13 @@ const day = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: 
 
 const ACT_FOR_KEY = "ghlv-portal-act-for";
 
+/*
+ * True while staff are looking at a client's portal. authedFetch is module
+ * level and takes no props, so the one bit of session it needs lives here,
+ * set from /api/portal/me on every load.
+ */
+let readOnlyView = false;
+
 async function authedFetch(path: string, init?: RequestInit) {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
@@ -109,7 +116,17 @@ async function authedFetch(path: string, init?: RequestInit) {
     },
     cache: "no-store",
   });
-  return r.json();
+  const body = await r.json();
+  /* Every write is refused while staff are viewing. The routes all answer a
+     bare "Unauthorized.", which reads like the client's account is broken
+     rather than like the tool doing its job, so say what happened. */
+  if (r.status === 403 && readOnlyView && (init?.method ?? "GET") !== "GET") {
+    return {
+      ...(body && typeof body === "object" ? body : {}),
+      error: "Read only. You are looking at this client's portal, not working in it.",
+    };
+  }
+  return body;
 }
 
 type MyProfile = {
@@ -122,7 +139,8 @@ type MyProfile = {
   features: string[] | null;
   hiddenSections?: string[] | null;
   disabledSections?: string[] | null;
-  actingFor: { email: string; name: string | null } | null;
+  actingFor: { email: string; name: string | null; company?: string | null } | null;
+  viewingAsAdmin?: boolean;
   memberships: { ownerEmail: string; ownerName: string | null; status: string }[];
 };
 
@@ -1178,6 +1196,24 @@ function Portal({
   // and a member's first sign-in (auto-enter their only membership).
   const loadProfile = async () => {
     initActFor(ACT_FOR_KEY);
+    /*
+     * Arriving from admin's "View their portal". The email rides in the URL
+     * and is saved like any other account choice, so every later fetch
+     * carries it; the server decides whether this person may look, and the
+     * param is wiped from the address bar so a shared link or a bookmark
+     * does not quietly reopen somebody else's portal.
+     */
+    try {
+      const as = new URLSearchParams(window.location.search).get("as");
+      if (as) {
+        setActFor(ACT_FOR_KEY, as.trim().toLowerCase());
+        const url = new URL(window.location.href);
+        url.searchParams.delete("as");
+        window.history.replaceState({}, "", url.toString());
+      }
+    } catch {
+      /* no window search, nothing to enter */
+    }
     let j = await authedFetch("/api/portal/me").catch(() => null);
     if ((!j || j.error) && getActFor()) {
       /* the saved account would not load: forget it rather than RECORD a
@@ -1198,10 +1234,12 @@ function Portal({
         setActFor(ACT_FOR_KEY, p.memberships[0].ownerEmail);
         const acted = await authedFetch("/api/portal/me").catch(() => null);
         if (acted?.email) {
+          readOnlyView = Boolean((acted as MyProfile).viewingAsAdmin);
           setProfile(acted as MyProfile);
           return;
         }
       }
+      readOnlyView = Boolean(p.viewingAsAdmin);
       setProfile(p);
       return;
     }
@@ -1573,6 +1611,34 @@ function Portal({
         />
 
         <section className="min-w-0 flex-1 p-4 md:p-8">
+          {/* On every screen, not just the dashboard. The whole risk of
+              View as client is forgetting whose portal you are standing in,
+              and the one place that is easiest to forget is three clicks
+              deep into somebody's videos. */}
+          {profile.viewingAsAdmin && profile.actingFor ? (
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[8px] border border-gold/40 bg-gold/[0.06] px-4 py-3">
+              <p className="min-w-0 text-body-sm text-ink">
+                You are looking at{" "}
+                <span className="font-semibold">
+                  {profile.actingFor.company ||
+                    profile.actingFor.name ||
+                    profile.actingFor.email}
+                </span>
+                &apos;s portal. Read only: nothing you do here reaches them,
+                and it does not count as a visit on their account.
+              </p>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  clearActFor(ACT_FOR_KEY);
+                  window.location.href = "/admin/";
+                }}
+              >
+                Back to admin
+              </Button>
+            </div>
+          ) : null}
           <div key={section + (openOrder ?? "") + (focusVideo ?? "")} className="portal-view">
           {view !== "dashboard" && isDisabled(view) ? (
             /* a bookmark or a typed URL must not walk around the lock the

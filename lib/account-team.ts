@@ -258,10 +258,25 @@ export type PortalContext = {
   isOwner: boolean;
   /* null = everything (owner, or a member with full access) */
   features: string[] | null;
+  /* staff looking at a client's portal rather than working in it */
+  viewingAsAdmin?: boolean;
 };
 
 export function contextCan(ctx: PortalContext, feature: string): boolean {
   return ctx.isOwner || memberCan(ctx.features, feature);
+}
+
+/* what View as client is allowed to do: look, and nothing else */
+const READ_ONLY_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
+/*
+ * Is this a studio email? Read whole and compared case-insensitively, the
+ * same way lib/checkout/admin-auth.ts does it, because the allowlist is a
+ * handful of rows and the RLS is_admin() function folds case too.
+ */
+async function isStaff(db: SupabaseClient, email: string): Promise<boolean> {
+  const { data } = await db.from("admins").select("email");
+  return (data ?? []).some((r) => (r.email ?? "").toLowerCase() === email.toLowerCase());
 }
 
 /**
@@ -284,7 +299,31 @@ export async function resolvePortalContext(
   }
 
   const membership = await membershipFor(db, accountType, actFor, user.email);
-  if (!membership || membership.status === "paused") return { failStatus: 403 };
+  if (!membership || membership.status === "paused") {
+    /*
+     * View as client.
+     *
+     * Staff open a client's portal to see exactly what the client sees.
+     * Deliberately NOT done by adding ourselves to their team: that writes a
+     * row on their account, puts a studio email in the team list they read,
+     * spends one of their ten seats, and has to be remembered and removed.
+     * This leaves no trace on the client at all.
+     *
+     * Reads only, and gated here rather than route by route. A studio person
+     * browsing a client's portal must not be able to approve a video, send a
+     * message or brief a project as them by accident, and one gate is also
+     * one thing to keep right as portal routes get added.
+     */
+    if (!(await isStaff(db, user.email))) return { failStatus: 403 };
+    if (!READ_ONLY_METHODS.has(req.method.toUpperCase())) return { failStatus: 403 };
+    return {
+      ownerEmail: actFor,
+      selfEmail: user.email,
+      isOwner: false,
+      features: null,
+      viewingAsAdmin: true,
+    };
+  }
   await activateMembership(db, membership);
   return {
     ownerEmail: membership.owner_email,

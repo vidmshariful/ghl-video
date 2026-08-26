@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft, ExternalLink, MessageSquare, Plus } from "lucide-react";
+import { ArrowLeft, Eye, ExternalLink, MessageSquare, Plus } from "lucide-react";
 import { Button, Card, Chip, Input, Modal, Select, Table, Tabs, Td, Th } from "@/components/portal/ui";
 import { authHeader, money, when } from "./client";
 import { TeamCard } from "@/components/portal/team";
@@ -309,6 +309,16 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
           </div>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
+          {/* the client's portal, exactly as they see it. Read only, and it
+              leaves nothing behind on their account. */}
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={<Eye />}
+            href={`/portal/?as=${encodeURIComponent(c.email)}`}
+          >
+            View their portal
+          </Button>
           {c.highlevelContactId && (
             <Button
               variant="secondary"
