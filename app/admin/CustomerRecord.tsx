@@ -144,6 +144,11 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
     { id: string; subject: string; status: string; error: string | null; at: string; templateKey: string | null; source: string }[] | null
   >(null);
   const [openEmail, setOpenEmail] = useState<string | null>(null);
+  /* who is in their portal, and who has been */
+  const [activity, setActivity] = useState<{
+    people: { email: string; lastSeenAt: string; online: boolean }[];
+    events: { id: string; email: string; kind: "signed_in" | "signed_out"; at: string }[];
+  } | null>(null);
 
   const load = useCallback(async () => {
     setErr("");
@@ -160,6 +165,31 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
   useEffect(() => {
     void load();
   }, [load]);
+
+  /*
+   * Portal activity, refreshed on a timer so "online now" means now rather
+   * than whenever this screen was opened. Thirty seconds against a two
+   * minute window, so somebody arriving shows up well before they would
+   * have been marked stale.
+   */
+  useEffect(() => {
+    let live = true;
+    const pull = async () => {
+      try {
+        const r = await fetch(`/api/admin/customers/${id}/activity`, { headers: await authHeader() });
+        const j = await r.json();
+        if (live && r.ok) setActivity(j);
+      } catch {
+        /* the rest of the record is more important than this card */
+      }
+    };
+    void pull();
+    const t = window.setInterval(pull, 30_000);
+    return () => {
+      live = false;
+      window.clearInterval(t);
+    };
+  }, [id]);
 
   /* the log already answers "what did this person get": one query, theirs */
   useEffect(() => {
@@ -736,6 +766,85 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
                 to do it for them. Same card and same routes their Settings
                 screen uses, so a member we add is not a different kind of
                 member. */}
+            {/*
+             * Who is in the portal right now, and who has been.
+             *
+             * Sits under Access because it answers the other half of the same
+             * question: that card says who MAY sign in, this one says who
+             * does. Deliberately its own card rather than a column on the
+             * team rows, because TeamCard is shared with the client portal
+             * and the partner portal, and neither of those should grow a
+             * surveillance column.
+             */}
+            <Card
+              title="Portal activity"
+              description="Who is signed in now, and the sign ins before this one. Studio staff using View as client are never counted."
+            >
+              {!activity ? (
+                <p className="text-body-sm text-muted">Loading...</p>
+              ) : activity.people.length === 0 && activity.events.length === 0 ? (
+                <p className="text-body-sm text-muted">
+                  Nobody from this account has signed in yet.
+                </p>
+              ) : (
+                <>
+                  {activity.people.length > 0 && (
+                    <ul className="grid grid-cols-[minmax(0,1fr)] gap-2">
+                      {activity.people.map((p) => (
+                        <li
+                          key={p.email}
+                          className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1"
+                        >
+                          <span className="flex min-w-0 items-center gap-2">
+                            <span
+                              aria-hidden="true"
+                              className={`h-2 w-2 shrink-0 rounded-full ${
+                                p.online ? "bg-green" : "bg-hair"
+                              }`}
+                            />
+                            <span className="min-w-0 truncate text-body-sm text-ink">
+                              {p.email}
+                            </span>
+                          </span>
+                          <span
+                            className={`shrink-0 font-mono text-label uppercase ${
+                              p.online ? "text-green" : "text-dim"
+                            }`}
+                          >
+                            {p.online ? "In the portal now" : `last seen ${when(p.lastSeenAt)}`}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {activity.events.length > 0 && (
+                    <div className={activity.people.length > 0 ? "mt-5 border-t border-hair pt-4" : ""}>
+                      <p className="font-mono text-label uppercase tracking-[0.08em] text-dim">
+                        The log
+                      </p>
+                      <ul className="mt-3 grid grid-cols-[minmax(0,1fr)] gap-2">
+                        {activity.events.map((e) => (
+                          <li
+                            key={e.id}
+                            className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1"
+                          >
+                            <span className="min-w-0 truncate text-body-sm text-muted">
+                              {e.email}
+                            </span>
+                            <span className="shrink-0 font-mono text-label uppercase text-dim">
+                              {e.kind === "signed_in" ? "signed in" : "signed out"} /{" "}
+                              {when(e.at)}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </>
+              )}
+            </Card>
+
             <TeamCard
               endpoint={`/api/admin/customers/${data.customer.id}/team`}
               accountType="customer"

@@ -101,6 +101,32 @@ const ACT_FOR_KEY = "ghlv-portal-act-for";
  */
 let readOnlyView = false;
 
+/*
+ * Tell the server the person is here, or has gone.
+ *
+ * Deliberately silent about failure. Nobody should ever see an error because
+ * we could not write down that they arrived.
+ */
+async function tellPortal(kind: "signed_in" | "signed_out" | "ping") {
+  try {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) return;
+    await fetch("/api/portal/activity", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        ...actForHeader(),
+      },
+      body: JSON.stringify({ kind }),
+      keepalive: true,
+    });
+  } catch {
+    /* bookkeeping, never a blocker */
+  }
+}
+
 async function authedFetch(path: string, init?: RequestInit) {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
@@ -2052,9 +2078,39 @@ export function PortalClient({
       setSession(data.session);
       setReady(true);
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
+    const { data: sub } = supabase.auth.onAuthStateChange((e, s) => {
+      setSession(s);
+      /* the two moments worth logging. SIGNED_IN also fires on a token
+         refresh, which is why the server records presence on it rather than
+         the client trying to tell a fresh sign in from a renewed one. */
+      if (e === "SIGNED_IN") void tellPortal("signed_in");
+      if (e === "SIGNED_OUT") void tellPortal("signed_out");
+    });
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  /*
+   * The heartbeat, so "still open in a tab" is answerable.
+   *
+   * Only while the tab is actually visible: a portal left open on a second
+   * monitor overnight is not somebody using it, and counting it would make
+   * the presence list say the opposite of the truth. Fires once on becoming
+   * visible so switching back shows up immediately rather than up to a
+   * minute later.
+   */
+  useEffect(() => {
+    if (!session) return;
+    const beat = () => {
+      if (document.visibilityState === "visible") void tellPortal("ping");
+    };
+    beat();
+    const id = window.setInterval(beat, 45_000);
+    document.addEventListener("visibilitychange", beat);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", beat);
+    };
+  }, [session]);
 
   return (
     <div className="flex min-h-screen flex-col">
