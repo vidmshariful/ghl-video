@@ -129,6 +129,20 @@ async function authedFetch(path: string, init?: RequestInit) {
   return body;
 }
 
+/*
+ * Who the dashboard says hello to.
+ *
+ * Normally the signed-in person. While staff are looking at a client's
+ * portal it is the client, because the whole point of that screen is to
+ * show what they see, and "Welcome back, Shariful" is not what Chase reads.
+ * Only the greeting swaps: the profile menu still names whoever is signed
+ * in, which is the honest answer to whose session this is.
+ */
+function greetingName(p: MyProfile): string | null {
+  const who = p.viewingAsAdmin ? (p.actingFor?.name ?? null) : p.name;
+  return who?.split(" ")[0] ?? null;
+}
+
 type MyProfile = {
   email: string;
   name: string | null;
@@ -1661,7 +1675,7 @@ function Portal({
             </div>
           ) : view === "dashboard" ? (
             <DashboardView
-              firstName={profile.name?.split(" ")[0] ?? null}
+              firstName={greetingName(profile)}
               subtitle={
                 acting
                   ? `Working in ${acting.name || acting.email}'s portal`
@@ -1784,7 +1798,7 @@ function Portal({
             />
           ) : (
             <DashboardView
-              firstName={profile.name?.split(" ")[0] ?? null}
+              firstName={greetingName(profile)}
               subtitle={
                 acting
                   ? `Working in ${acting.name || acting.email}'s portal`
