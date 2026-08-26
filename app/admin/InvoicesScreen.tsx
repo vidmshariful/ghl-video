@@ -2,7 +2,15 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Plus, X } from "lucide-react";
-import { Button, Field, Input, Modal, PageHeader, Select } from "@/components/portal/ui";
+import {
+  Button,
+  Field,
+  Input,
+  Modal,
+  PageHeader,
+  Select,
+  Textarea,
+} from "@/components/portal/ui";
 import { authHeader, money, supabase, when } from "./client";
 
 /*
@@ -30,6 +38,9 @@ type Invoice = {
   dueDate: string | null;
   sentAt: string | null;
   createdAt: string;
+  projectIds: string[];
+  discountKind: "percent" | "flat" | null;
+  discountValue: number | null;
 };
 
 const STATUS_STYLE: Record<string, string> = {
@@ -77,6 +88,10 @@ const EMPTY_ROW: Row = { description: "", quantity: "1", unit: "" };
 export function InvoicesScreen() {
   const [invoices, setInvoices] = useState<Invoice[] | null>(null);
   const [open, setOpen] = useState(false);
+  /* the invoice being rewritten, or null when raising a new one. Holds the
+     whole row rather than an id so the client name and company survive an
+     edit even when the email does not match a customer record. */
+  const [editing, setEditing] = useState<Invoice | null>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerEmail, setCustomerEmail] = useState("");
   const [dueDate, setDueDate] = useState("");
@@ -163,6 +178,7 @@ export function InvoicesScreen() {
   const total = subtotal - discountCents;
 
   function reset() {
+    setEditing(null);
     setCustomerEmail("");
     setDueDate("");
     setNotes("");
@@ -172,6 +188,37 @@ export function InvoicesScreen() {
     setParentOrderId("");
     setProjectIds([]);
     setErr("");
+  }
+
+  /* Fill the form from an invoice so it can be corrected in place. The
+     stored figures come back as the strings the form works in: cents to
+     dollars, and a flat discount back out of cents. */
+  function startEdit(inv: Invoice) {
+    setEditing(inv);
+    setCustomerEmail(inv.customerEmail ?? "");
+    setDueDate(inv.dueDate ?? "");
+    setNotes(inv.notes ?? "");
+    setRows(
+      inv.lineItems.length
+        ? inv.lineItems.map((li) => ({
+            description: li.description,
+            quantity: String(li.quantity ?? 1),
+            unit: ((li.unit_cents ?? li.amount_cents) / 100).toString(),
+          }))
+        : [{ ...EMPTY_ROW }],
+    );
+    setDiscountKind(inv.discountKind ?? "");
+    setDiscountValue(
+      inv.discountValue == null
+        ? ""
+        : inv.discountKind === "flat"
+          ? (inv.discountValue / 100).toString()
+          : String(inv.discountValue),
+    );
+    setParentOrderId("");
+    setProjectIds(inv.projectIds ?? []);
+    setErr("");
+    setOpen(true);
   }
 
   async function create(e: React.FormEvent) {
@@ -186,13 +233,18 @@ export function InvoicesScreen() {
         unitCents: cents(r.unit),
       }))
       .filter((r) => r.description && r.unitCents > 0);
-    const res = await fetch("/api/admin/invoices", {
-      method: "POST",
+    const res = await fetch(
+      editing ? `/api/admin/invoices/${editing.id}` : "/api/admin/invoices",
+      {
+      method: editing ? "PATCH" : "POST",
       headers: { ...(await authHeader()), "Content-Type": "application/json" },
       body: JSON.stringify({
-        customerName: chosen?.name ?? "",
+        ...(editing ? { action: "edit" } : {}),
+        /* a customer record is the better source, but an invoice written for
+           somebody who is not one yet keeps the name it was raised with */
+        customerName: chosen?.name ?? editing?.customerName ?? "",
         customerEmail,
-        customerCompany: chosen?.company ?? "",
+        customerCompany: chosen?.company ?? editing?.customerCompany ?? "",
         dueDate,
         notes,
         lineItems,
@@ -205,7 +257,8 @@ export function InvoicesScreen() {
         parentOrderId: parentOrderId || null,
         projectIds,
       }),
-    });
+      },
+    );
     const j = await res.json();
     setBusy(false);
     if (j.error) return setErr(j.error);
@@ -232,13 +285,24 @@ export function InvoicesScreen() {
         title="Invoices"
         description="Itemized invoices for custom work and one-off deals. Create one, send the link, and it is marked paid the moment the client pays."
         actions={
-          <Button variant="brand" icon={<Plus />} onClick={() => setOpen(true)}>
+          <Button variant="brand" icon={<Plus />} onClick={() => {
+              reset();
+              setOpen(true);
+            }}>
             New invoice
           </Button>
         }
       />
 
-      <Modal open={open} onClose={() => setOpen(false)} title="New invoice" maxWidth="max-w-3xl">
+      <Modal
+        open={open}
+        onClose={() => {
+          setOpen(false);
+          reset();
+        }}
+        title={editing ? `Edit ${editing.number}` : "New invoice"}
+        maxWidth="max-w-3xl"
+      >
         <form onSubmit={create} className="grid gap-4">
           {/* who it is for: picked once, never typed again */}
           <Field
@@ -409,8 +473,19 @@ export function InvoicesScreen() {
             <Field label="Due date" hint="Optional.">
               <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
             </Field>
-            <Field label="Note on the invoice" hint="The client reads this.">
-              <Input value={notes} onChange={(e) => setNotes(e.target.value)} />
+            {/* Was a single line input, which is why nobody used it for what
+                it is for. Anything the line descriptions cannot carry belongs
+                here: the extra cuts included, what was agreed on the call. */}
+            <Field
+              label="Description"
+              hint="The client reads this on the invoice. Anything extra included in the price."
+            >
+              <Textarea
+                rows={4}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Also included: vertical version, and white label in both horizontal and vertical."
+              />
             </Field>
           </div>
 
@@ -448,7 +523,11 @@ export function InvoicesScreen() {
               disabled={busy || !customerEmail || total < 50}
               onClick={(e) => create(e as unknown as React.FormEvent)}
             >
-              {busy ? "Creating..." : `Create invoice for ${money(total)}`}
+              {busy
+                ? "Saving"
+                : editing
+                  ? `Save ${editing.number} at ${money(total)}`
+                  : `Create invoice for ${money(total)}`}
             </Button>
           </div>
         </form>
@@ -505,6 +584,15 @@ export function InvoicesScreen() {
                 </a>
                 {inv.status === "open" ? (
                   <>
+                    {/* only while it is unpaid and not void. The API checks
+                        the same thing again, because a button is not a gate. */}
+                    <button
+                      type="button"
+                      onClick={() => startEdit(inv)}
+                      className="tap shrink-0 rounded-[8px] border border-hair px-3.5 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
+                    >
+                      Edit
+                    </button>
                     {!inv.sentAt ? (
                       <button
                         type="button"

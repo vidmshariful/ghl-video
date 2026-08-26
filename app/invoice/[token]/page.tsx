@@ -35,6 +35,7 @@ type Invoice = {
   due_date: string | null;
   status: "open" | "void";
   created_at: string;
+  project_ids: string[] | null;
 };
 
 const money = (cents: number, cur = "usd") =>
@@ -72,6 +73,34 @@ export default async function InvoicePage({ params }: { params: Promise<{ token:
     if (order) paidAt = order.paid_at;
   }
   const paid = !!paidAt;
+
+  /*
+   * The jobs this bill is for, by name.
+   *
+   * The invoice already recorded which custom projects it covered, but only
+   * we could see it: the client got a list of line descriptions and no way to
+   * tell which of the four things in flight they were paying for. On a
+   * retainer account with several projects running at once that is the first
+   * question they ask, and it should not need an email to answer.
+   */
+  let projects: { id: string; title: string; category: string | null }[] = [];
+  const projectIds = (inv.project_ids ?? []).filter(Boolean);
+  if (projectIds.length) {
+    const { data: rows } = await db
+      .from("projects")
+      .select("id, title, category")
+      .in("id", projectIds);
+    /* keep the order the invoice recorded, not whatever the database returns */
+    const byId = new Map((rows ?? []).map((r) => [r.id as string, r]));
+    projects = projectIds
+      .map((pid) => byId.get(pid))
+      .filter(Boolean)
+      .map((r) => ({
+        id: String((r as Record<string, unknown>).id),
+        title: String((r as Record<string, unknown>).title ?? "Project"),
+        category: ((r as Record<string, unknown>).category as string | null) ?? null,
+      }));
+  }
 
   const badge = paid
     ? { label: "Paid", cls: "border-green/40 text-green" }
@@ -191,9 +220,32 @@ export default async function InvoicePage({ params }: { params: Promise<{ token:
             </div>
           </div>
 
+          {projects.length > 0 ? (
+            <div className="px-6 py-4">
+              <p className="font-mono text-label uppercase text-dim">
+                {projects.length === 1 ? "The project this covers" : "The projects this covers"}
+              </p>
+              <ul className="mt-3 grid gap-2">
+                {projects.map((p) => (
+                  <li
+                    key={p.id}
+                    className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-[8px] border border-hair bg-canvas px-4 py-2.5"
+                  >
+                    <span className="min-w-0 text-body-sm text-ink">{p.title}</span>
+                    {p.category ? (
+                      <span className="shrink-0 font-mono text-label uppercase text-dim">
+                        {p.category}
+                      </span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
           {inv.notes ? (
             <div className="px-6 py-4">
-              <p className="font-mono text-label uppercase text-dim">Notes</p>
+              <p className="font-mono text-label uppercase text-dim">What is included</p>
               <p className="mt-2 whitespace-pre-wrap text-body-sm text-muted">{inv.notes}</p>
             </div>
           ) : null}

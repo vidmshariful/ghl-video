@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { verifyAdmin } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
+import { parseInvoiceInput, type InvoiceLineItem } from "@/lib/invoices";
 
 export const runtime = "nodejs";
 
@@ -10,17 +11,8 @@ export const runtime = "nodejs";
  * the invoice; GET lists them with "paid" derived from a paid order on the
  * backing product. Admin-gated (allowlist).
  */
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/* amount_cents is the LINE TOTAL, always. quantity and unit_cents are
-   optional detail, so every screen that already renders invoices keeps
-   working without knowing they exist. */
-type LineItem = {
-  description: string;
-  amount_cents: number;
-  quantity?: number;
-  unit_cents?: number;
-};
+type LineItem = InvoiceLineItem;
 type InvoiceRow = {
   id: string;
   number: string;
@@ -95,73 +87,9 @@ export async function POST(req: Request) {
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
-  const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
-  const name = str(body.customerName, 120);
-  const email = str(body.customerEmail, 254).toLowerCase();
-  const company = str(body.customerCompany, 120);
-  const notes = str(body.notes, 4000);
-  const dueDate = /^\d{4}-\d{2}-\d{2}$/.test(str(body.dueDate, 10)) ? str(body.dueDate, 10) : null;
-  // optional: attach this invoice (extra work) to an existing order
-  const projectIds = (Array.isArray(body.projectIds) ? body.projectIds : [])
-    .filter((v): v is string => typeof v === "string" && /^[0-9a-f-]{36}$/i.test(v))
-    .slice(0, 20);
-  /* the first job stays in project_id, so everything that already reads one
-     job per invoice keeps reading the right one */
-  const projectId =
-    projectIds[0] ??
-    (typeof body.projectId === "string" && /^[0-9a-f-]{36}$/i.test(body.projectId)
-      ? body.projectId
-      : null);
-  const parentOrderId =
-    typeof body.parentOrderId === "string" && /^[0-9a-f-]{36}$/i.test(body.parentOrderId)
-      ? body.parentOrderId
-      : null;
-
-  const rawItems = Array.isArray(body.lineItems) ? body.lineItems : [];
-  const lineItems: LineItem[] = rawItems
-    .map((it) => {
-      const r = it as Record<string, unknown>;
-      const qtyRaw = Math.round(Number(r.quantity));
-      const quantity = Number.isFinite(qtyRaw) && qtyRaw > 0 ? Math.min(999, qtyRaw) : 1;
-      const unit = Math.round(Number(r.unitCents ?? r.amountCents));
-      return {
-        description: str(r.description, 200),
-        quantity,
-        unit_cents: Number.isFinite(unit) ? unit : 0,
-        amount_cents: Number.isFinite(unit) ? unit * quantity : 0,
-      };
-    })
-    .filter((it) => it.description && it.amount_cents > 0)
-    .slice(0, 20);
-
-  if (!email || !EMAIL_RE.test(email)) {
-    return NextResponse.json({ error: "A valid client email is required." }, { status: 400 });
-  }
-  if (lineItems.length === 0) {
-    return NextResponse.json({ error: "Add at least one line item." }, { status: 400 });
-  }
-  const subtotal = lineItems.reduce((s, i) => s + i.amount_cents, 0);
-
-  /* a discount is either a percentage of the lines or a flat amount off,
-     and it can never carry a bill below nothing */
-  const discountKind =
-    body.discountKind === "percent" || body.discountKind === "flat" ? body.discountKind : null;
-  const rawDiscount = Math.round(Number(body.discountValue));
-  const discountValue =
-    discountKind && Number.isFinite(rawDiscount) && rawDiscount > 0 ? rawDiscount : null;
-  const discountCents = !discountValue
-    ? 0
-    : discountKind === "percent"
-      ? Math.min(subtotal, Math.round((subtotal * Math.min(100, discountValue)) / 100))
-      : Math.min(subtotal, discountValue);
-  const total = subtotal - discountCents;
-
-  if (total < 50) {
-    return NextResponse.json(
-      { error: "After the discount, the total must be at least $0.50." },
-      { status: 400 },
-    );
-  }
+  const parsed = parseInvoiceInput(body);
+  if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
+  const inv = parsed.invoice;
 
   const db = supabaseAdmin();
   const sku = `inv-${Math.random().toString(36).slice(2, 8)}`;
@@ -169,8 +97,8 @@ export async function POST(req: Request) {
     .from("products")
     .insert({
       sku,
-      name: lineItems[0].description.slice(0, 120),
-      price_cents: total,
+      name: inv.lineItems[0].description.slice(0, 120),
+      price_cents: inv.totalCents,
       currency: "usd",
       type: "one_time",
       active: true,
@@ -187,20 +115,20 @@ export async function POST(req: Request) {
     .insert({
       product_id: product.id,
       product_sku: product.sku,
-      customer_name: name || null,
-      customer_email: email,
-      customer_company: company || null,
-      line_items: lineItems,
+      customer_name: inv.customerName || null,
+      customer_email: inv.customerEmail,
+      customer_company: inv.customerCompany || null,
+      line_items: inv.lineItems,
       currency: "usd",
-      subtotal_cents: subtotal,
-      discount_kind: discountValue ? discountKind : null,
-      discount_value: discountValue,
-      total_cents: total,
-      notes: notes || null,
-      due_date: dueDate,
-      parent_order_id: parentOrderId,
-      project_id: projectId,
-      project_ids: projectIds.length ? projectIds : projectId ? [projectId] : [],
+      subtotal_cents: inv.subtotalCents,
+      discount_kind: inv.discountValue ? inv.discountKind : null,
+      discount_value: inv.discountValue,
+      total_cents: inv.totalCents,
+      notes: inv.notes || null,
+      due_date: inv.dueDate,
+      parent_order_id: inv.parentOrderId,
+      project_id: inv.projectId,
+      project_ids: inv.projectIds.length ? inv.projectIds : inv.projectId ? [inv.projectId] : [],
       created_by: admin.email,
     })
     .select("*")
