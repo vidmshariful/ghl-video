@@ -38,9 +38,11 @@ import {
   setActFor,
 } from "@/components/portal/act-for";
 import { memberCan } from "@/lib/team-features";
+import Image from "next/image";
 import {
   LibraryBig,
   Palette,
+  Play,
   ArrowLeft,
   Clapperboard,
   Handshake,
@@ -181,19 +183,39 @@ function Shell({ children }: { children: React.ReactNode }) {
 
 /* ---- login ---- */
 const LOGIN_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const altBtnCls =
+  "tap rounded-[8px] border border-hair bg-canvas px-4 py-3 text-body-sm text-ink transition-colors hover:border-gold/50 hover:text-gold";
 const authFieldCls =
-  "w-full rounded-[8px] border border-hair bg-surface px-4 py-3.5 text-body text-ink placeholder:text-dim focus:border-gold focus:outline-none";
+  "w-full rounded-[8px] border border-hair bg-canvas px-4 py-3.5 text-body text-ink placeholder:text-dim transition-colors focus:border-gold focus:outline-none";
 
 const LOGIN_HEADINGS = {
   signin: "Sign in to your portal.",
-  reset: "Set or reset your password.",
-  link: "Email me a sign-in link.",
+  reset: "Set your password.",
+  link: "Sign in without a password.",
 } as const;
 const LOGIN_INTROS = {
-  signin: "Use the email from your order. New here? Set your password with the link below.",
-  reset: "Enter your email and we will send a link to set your password.",
-  link: "Enter your email and we will send a one-click sign-in link, no password needed.",
+  /* NOT "the email from your order": half the people signing in here were
+     added by a teammate and never placed one. */
+  signin: "Use the email your account is on. First time here? Take one of the two options below the button.",
+  reset: "Give us your email and we will send a link to set a password.",
+  link: "Give us your email and we will send a link that signs you straight in. No password to remember.",
 } as const;
+
+/*
+ * The production line, in the order a video moves through it. Real station
+ * names from lib/pipeline.ts, because the panel beside the form should show
+ * what this portal actually is rather than a stock illustration of a person
+ * at a laptop. Somebody arriving here for the first time can see, before
+ * they are even in, that this is where their video gets tracked.
+ */
+const LOGIN_LINE = [
+  "Scripting",
+  "Voiceover",
+  "Concept and Design",
+  "Animation",
+  "Sound Design",
+  "Final delivery",
+] as const;
 
 function LoginView() {
   const [mode, setMode] = useState<"signin" | "reset" | "link">("signin");
@@ -223,7 +245,7 @@ function LoginView() {
       const { error } = await supabase.auth.signInWithPassword({ email: cleanEmail(), password });
       setBusy(false);
       if (error)
-        setErr("That email and password did not match. New here or forgot it? Use the link below.");
+        setErr("That email and password did not match. New here or forgot it? Use an option below.");
       // success: onAuthStateChange swaps this view for the portal
     } else if (mode === "reset") {
       const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail(), {
@@ -244,102 +266,243 @@ function LoginView() {
   }
 
   const submitLabel = busy
-    ? "Sending..."
+    ? "Sending"
     : mode === "signin"
       ? "Sign in"
       : mode === "reset"
-        ? "Send reset link"
-        : "Send sign-in link";
+        ? "Send the link"
+        : "Send the link";
 
   return (
-    <Shell>
-      <div className="mx-auto max-w-md">
-        <p className="font-mono text-label uppercase text-gold">[ Your portal ]</p>
-        <h1 className="mt-4 font-display text-h2 text-ink">{LOGIN_HEADINGS[mode]}</h1>
+    <section className="relative flex flex-1 items-center justify-center overflow-hidden px-4 py-10 sm:px-6">
+      {/* One ambient glow behind the whole card. The signature, used once. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute left-1/2 top-1/2 h-[44rem] w-[72rem] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-[0.07] blur-[130px]"
+        style={{ background: "var(--brand-gradient)" }}
+      />
 
-        {notice ? (
-          <div className="mt-8 rounded-[12px] border border-gold/40 bg-gold/[0.06] px-6 py-8">
-            <p className="font-display text-h4 text-ink">Check your email.</p>
-            <p className="mt-2 text-body text-muted">{notice}</p>
-            <button
-              type="button"
-              onClick={() => switchMode("signin")}
-              className="tap mt-4 font-mono text-label uppercase text-muted transition-colors hover:text-gold"
-            >
-              Back to sign in
-            </button>
-          </div>
-        ) : (
-          <>
-            <form onSubmit={submit} className="mt-8 grid gap-4">
-              <p className="text-body text-muted">{LOGIN_INTROS[mode]}</p>
-              <label className="grid gap-2">
-                <span className="font-mono text-label uppercase text-muted">Email</span>
-                <input
-                  type="email"
-                  required
-                  autoComplete="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className={authFieldCls}
-                />
-              </label>
-              {mode === "signin" && (
-                <label className="grid gap-2">
-                  <span className="font-mono text-label uppercase text-muted">Password</span>
-                  <input
-                    type="password"
-                    required
-                    autoComplete="current-password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className={authFieldCls}
-                  />
-                </label>
-              )}
-              {err && <p className="text-body-sm text-error">{err}</p>}
-              <button
-                type="submit"
-                disabled={busy}
-                className="tap mt-1 rounded-[8px] bg-brand-gradient px-8 py-3.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60"
-              >
-                {submitLabel}
-              </button>
-            </form>
+      {/*
+       * One contained card rather than a form loose on the page. The old
+       * screen was a narrow column adrift in a wide dark field, which is
+       * what made it feel unfinished: nothing framed it and nothing on the
+       * other two thirds of the screen said what this place was.
+       */}
+      <div className="relative w-full max-w-[64rem] overflow-hidden rounded-[12px] border border-hair bg-surface">
+        <div className="grid lg:grid-cols-2">
+          {/* ---------------------------------------------- the form */}
+          <div className="flex flex-col justify-center px-6 py-10 sm:px-10 sm:py-12">
+            <p className="font-mono text-label uppercase tracking-[0.1em] text-gold">
+              [ Your portal ]
+            </p>
+            <h1 className="mt-3 font-display text-h3 leading-[1.15] text-ink">
+              {LOGIN_HEADINGS[mode]}
+            </h1>
 
-            <div className="mt-6 grid gap-3 border-t border-hair pt-6">
-              {mode !== "signin" && (
+            {notice ? (
+              <div className="mt-6 rounded-[12px] border border-gold/40 bg-gold/[0.06] p-5">
+                <p className="font-display text-h4 text-ink">Check your email.</p>
+                <p className="mt-2 text-body-sm text-muted">{notice}</p>
                 <button
                   type="button"
                   onClick={() => switchMode("signin")}
-                  className="tap text-left text-body-sm text-muted transition-colors hover:text-gold"
+                  className="tap mt-5 font-mono text-label uppercase tracking-[0.08em] text-muted transition-colors hover:text-gold"
                 >
-                  Back to sign in with a password
+                  Back to sign in
                 </button>
-              )}
-              {mode !== "reset" && (
-                <button
-                  type="button"
-                  onClick={() => switchMode("reset")}
-                  className="tap text-left text-body-sm text-muted transition-colors hover:text-gold"
-                >
-                  First time here, or forgot your password? Set it by email
-                </button>
-              )}
-              {mode !== "link" && (
-                <button
-                  type="button"
-                  onClick={() => switchMode("link")}
-                  className="tap text-left text-body-sm text-muted transition-colors hover:text-gold"
-                >
-                  Prefer no password? Email me a one-click sign-in link
-                </button>
-              )}
+              </div>
+            ) : (
+              <>
+                <p className="mt-3 text-body-sm text-muted">{LOGIN_INTROS[mode]}</p>
+
+                <form onSubmit={submit} className="mt-7 grid gap-4">
+                  <label className="grid gap-2">
+                    <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">
+                      Email
+                    </span>
+                    <input
+                      type="email"
+                      required
+                      autoFocus
+                      autoComplete="email"
+                      placeholder="you@company.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className={authFieldCls}
+                    />
+                  </label>
+                  {mode === "signin" && (
+                    <label className="grid gap-2">
+                      <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">
+                        Password
+                      </span>
+                      <input
+                        type="password"
+                        required
+                        autoComplete="current-password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className={authFieldCls}
+                      />
+                    </label>
+                  )}
+                  {err && <p className="text-body-sm text-error">{err}</p>}
+                  <button
+                    type="submit"
+                    disabled={busy}
+                    className="tap mt-1 rounded-[8px] bg-brand-gradient px-8 py-3.5 text-body font-semibold text-canvas transition-all hover:brightness-110 disabled:opacity-60"
+                  >
+                    {submitLabel}
+                  </button>
+                </form>
+
+                {/*
+                 * The two passwordless routes, as real buttons rather than the
+                 * grey text they used to be. Anybody the studio has just set
+                 * up has an account and no password, so one of these is their
+                 * only way in, and they were the quietest thing on the page.
+                 */}
+                <div className="mt-6 flex items-center gap-3">
+                  <span className="h-px flex-1 bg-hair" />
+                  <span className="font-mono text-label uppercase tracking-[0.1em] text-dim">or</span>
+                  <span className="h-px flex-1 bg-hair" />
+                </div>
+                <div className="mt-5 grid gap-2.5">
+                  {mode !== "link" && (
+                    <button type="button" onClick={() => switchMode("link")} className={altBtnCls}>
+                      Email me a one-click sign-in link
+                    </button>
+                  )}
+                  {mode !== "reset" && (
+                    <button type="button" onClick={() => switchMode("reset")} className={altBtnCls}>
+                      First time here, or forgot your password? Set it by email
+                    </button>
+                  )}
+                  {mode !== "signin" && (
+                    <button type="button" onClick={() => switchMode("signin")} className={altBtnCls}>
+                      Back to signing in with a password
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+
+            <p className="mt-8 text-body-sm text-dim">
+              Trouble getting in? Write to{" "}
+              <a
+                href="mailto:hi@ghlvideo.com"
+                className="tap text-muted underline underline-offset-4 transition-colors hover:text-gold"
+              >
+                hi@ghlvideo.com
+              </a>
+              .
+            </p>
+          </div>
+
+          {/* --------------------------------- what is on the other side */}
+          <div className="relative hidden overflow-hidden border-l border-hair bg-canvas lg:block">
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 opacity-[0.14]"
+              style={{ background: "var(--brand-gradient)" }}
+            />
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 bg-gradient-to-b from-canvas/40 via-canvas/75 to-canvas"
+            />
+
+            <div className="relative flex h-full flex-col justify-center gap-14 px-10 py-12">
+              {/*
+               * A frame with its production line overlapping the corner.
+               *
+               * The overlap is the point: it gives the panel depth instead of
+               * a flat stack. What was wrong the first time was the geometry,
+               * not the idea. The line card sat over the middle of the video
+               * and buried the play button and the title, so the composition
+               * hid the one thing it was meant to show.
+               *
+               * Now the frame is right aligned and the line card is narrow and
+               * pinned to the bottom left, so it laps the corner and nothing
+               * else. Everything that has to stay readable is deliberately
+               * kept out of its path: the chip sits top left ABOVE it, the
+               * play button is centred in the frame WELL right of it, and the
+               * title is right aligned. Those three positions are load
+               * bearing, not decoration. Move one and something gets covered.
+               */}
+              <div className="relative pb-16">
+                <div className="ml-auto w-[82%] overflow-hidden rounded-[12px] border border-hair bg-surface shadow-[0_28px_70px_-24px_rgba(0,0,0,0.95)]">
+                  <div className="relative aspect-video">
+                    <Image
+                      src="/posters/hl-full-pitch.jpg"
+                      alt=""
+                      fill
+                      sizes="400px"
+                      className="object-cover"
+                    />
+                    {/* the still is a bright screenshot; a scrim sits it into
+                        the dark panel instead of punching a hole through it */}
+                    <span aria-hidden="true" className="absolute inset-0 bg-canvas/12" />
+                    <span className="absolute left-3 top-3 rounded-full border border-gold/50 bg-canvas/80 px-2.5 py-0.5 font-mono text-label uppercase text-gold backdrop-blur-sm">
+                      Ready for you
+                    </span>
+                    <span aria-hidden="true" className="absolute inset-0 grid place-items-center">
+                      <span className="grid h-12 w-12 place-items-center rounded-full border border-hair bg-canvas/75 backdrop-blur-sm">
+                        <Play className="h-4 w-4 translate-x-[1px] text-ink" />
+                      </span>
+                    </span>
+                    <span
+                      aria-hidden="true"
+                      className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-canvas/95 to-transparent"
+                    />
+                    <span className="absolute bottom-3 right-3 max-w-[60%] truncate text-right text-body-sm font-semibold text-ink">
+                      Full Platform Pitch
+                    </span>
+                  </div>
+                </div>
+
+                <div className="absolute bottom-0 left-0 w-[11.75rem] rounded-[12px] border border-hair bg-surface p-4 shadow-[0_28px_70px_-24px_rgba(0,0,0,0.95)]">
+                  <p className="font-mono text-label uppercase tracking-[0.1em] text-dim">
+                    On the line
+                  </p>
+                  <ol className="mt-3 grid gap-2">
+                    {LOGIN_LINE.map((station, i) => {
+                      const last = i === LOGIN_LINE.length - 1;
+                      return (
+                        <li key={station} className="flex items-center gap-2.5">
+                          <span
+                            aria-hidden="true"
+                            className={`h-1 w-4 shrink-0 rounded-full ${last ? "bg-gold" : "bg-gold/30"}`}
+                          />
+                          <span
+                            className={`truncate text-body-sm ${last ? "text-ink" : "text-muted"}`}
+                          >
+                            {station}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                </div>
+              </div>
+
+              <div>
+                <p className="font-display text-h4 leading-snug text-ink">
+                  Every video we make for you,{" "}
+                  <span className="text-gradient">in one place</span>.
+                </p>
+                <p className="mt-3 max-w-[36ch] text-body-sm text-muted">
+                  Watch a cut and approve it, or leave a note on the exact second
+                  something is off.
+                </p>
+                <p className="mt-6 font-mono text-label uppercase tracking-[0.1em] text-dim">
+                  Creating HighLevel videos since 2020
+                </p>
+              </div>
             </div>
-          </>
-        )}
+          </div>
+        </div>
       </div>
-    </Shell>
+    </section>
   );
 }
 
