@@ -31,7 +31,7 @@ export async function GET(req: Request) {
   const { data } = await db
     .from("invoices")
     .select(
-      "id, number, token, product_sku, line_items, currency, total_cents, status, due_date, notes, created_at, sent_at, parent_order_id, project_id",
+      "id, number, token, product_sku, line_items, currency, total_cents, subtotal_cents, discount_kind, discount_value, status, due_date, notes, created_at, sent_at, parent_order_id, project_id, project_ids",
     )
     .ilike("customer_email", ctx.ownerEmail)
     .order("created_at", { ascending: false });
@@ -58,6 +58,25 @@ export async function GET(req: Request) {
     ]),
   );
 
+  /*
+   * The jobs each invoice bills for, by name.
+   *
+   * The client can see the same list on the public invoice page. Having it
+   * here too means the portal answers "what is this nine thousand for"
+   * without them opening anything, which on an account with six projects
+   * running is the whole question.
+   */
+  const allProjectIds = [
+    ...new Set(rows.flatMap((r) => ((r.project_ids as string[] | null) ?? []).filter(Boolean))),
+  ];
+  const projectTitles = new Map<string, string>();
+  if (allProjectIds.length) {
+    const { data: projs } = await db.from("projects").select("id, title").in("id", allProjectIds);
+    for (const pr of (projs ?? []) as Row[]) {
+      projectTitles.set(String(pr.id), String(pr.title ?? "Project"));
+    }
+  }
+
   const now = Date.now();
 
   return NextResponse.json({
@@ -71,12 +90,33 @@ export async function GET(req: Request) {
         number: (r.number as string | null) ?? null,
         /* the public pay page, which is where they actually settle it */
         payUrl: !settled && !voided ? `/invoice/${String(r.token)}/` : null,
+        /*
+         * `description` is the field invoices are actually written with.
+         * This read `l.label`, which no invoice has ever had, so every line
+         * on every client's screen fell through to the literal word "Item".
+         * A nine thousand dollar bill described as "Item" is why this block
+         * read like a table with a header and no data.
+         */
         lineItems: Array.isArray(r.line_items)
-          ? (r.line_items as { label?: string; amount_cents?: number }[]).map((l) => ({
-              label: String(l.label ?? "Item"),
+          ? (
+              r.line_items as {
+                description?: string;
+                amount_cents?: number;
+                quantity?: number;
+                unit_cents?: number;
+              }[]
+            ).map((l) => ({
+              label: String(l.description ?? "").trim() || "Item",
               amountCents: Number(l.amount_cents ?? 0),
+              /* carried so "6 x $1,500" can be said out loud rather than
+                 collapsed into a total nobody can check */
+              quantity: Number(l.quantity ?? 1),
+              unitCents: Number(l.unit_cents ?? l.amount_cents ?? 0),
             }))
           : [],
+        projects: ((r.project_ids as string[] | null) ?? [])
+          .map((pid) => projectTitles.get(pid))
+          .filter((t): t is string => Boolean(t)),
         totalCents: Number(r.total_cents ?? 0),
         currency: String(r.currency ?? "usd"),
         notes: (r.notes as string | null) ?? null,

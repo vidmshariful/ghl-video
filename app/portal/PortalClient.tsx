@@ -788,7 +788,8 @@ type Invoice = {
   id: string;
   number: string | null;
   payUrl: string | null;
-  lineItems: { label: string; amountCents: number }[];
+  lineItems: { label: string; amountCents: number; quantity: number; unitCents: number }[];
+  projects: string[];
   totalCents: number;
   currency: string;
   notes: string | null;
@@ -827,38 +828,83 @@ function OpenInvoices() {
         tone="dark"
         title={owing.length === 1 ? "One invoice to pay" : `${owing.length} invoices to pay`}
       >
-        <p className="text-body-sm text-chrome-muted">
-          {money(total, owing[0].currency)} outstanding.
-        </p>
-        <ul className="mt-4 grid gap-3">
+        {/* With one invoice the total below is the same number, said twice.
+            Only worth a summary line when there is more than one. */}
+        {owing.length > 1 && (
+          <p className="text-body-sm text-chrome-muted">
+            {money(total, owing[0].currency)} outstanding.
+          </p>
+        )}
+        <ul className={`grid gap-4 ${owing.length > 1 ? "mt-4" : "mt-1"}`}>
           {owing.map((i) => (
             <li
               key={i.id}
-              className="flex flex-wrap items-start justify-between gap-3 border-t border-white/10 pt-3 first:border-t-0 first:pt-0"
+              className="border-t border-white/10 pt-4 first:border-t-0 first:pt-0"
             >
-              <div className="min-w-0">
-                <p className="text-body-sm font-semibold text-chrome-text">
-                  {i.lineItems[0]?.label ?? "Invoice"}
-                  {i.lineItems.length > 1 ? ` and ${i.lineItems.length - 1} more` : ""}
-                </p>
-                <p className="mt-0.5 font-mono text-label uppercase text-chrome-muted">
-                  {i.number ?? "invoice"}
-                  {i.dueDate ? ` / due ${day(i.dueDate)}` : ""}
-                </p>
-                {i.overdue && (
-                  <p className="mt-1 text-body-sm text-error">This one is past its date.</p>
-                )}
+              <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+                <div className="min-w-0">
+                  {i.lineItems.length === 0 ? (
+                    <p className="text-body-sm font-semibold text-chrome-text">Invoice</p>
+                  ) : (
+                    <ul className="grid gap-1">
+                      {i.lineItems.map((li, n) => (
+                        <li key={n} className="text-body-sm text-chrome-text">
+                          <span className="font-semibold">{li.label}</span>
+                          {li.quantity > 1 ? (
+                            <span className="text-chrome-muted">
+                              {" "}
+                              {li.quantity} &times; {money(li.unitCents, i.currency)}
+                            </span>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <p className="mt-1.5 font-mono text-label uppercase text-chrome-muted">
+                    {i.number ?? "invoice"}
+                    {i.dueDate ? ` / due ${day(i.dueDate)}` : ""}
+                  </p>
+                  {i.overdue && (
+                    <p className="mt-1 text-body-sm text-error">This one is past its date.</p>
+                  )}
+                </div>
+                <div className="flex shrink-0 items-center gap-3">
+                  <span className="font-mono text-price font-bold tabular-nums text-chrome-text">
+                    {money(i.totalCents, i.currency)}
+                  </span>
+                  {i.payUrl && (
+                    <Button variant="brand" size="sm" href={i.payUrl}>
+                      Pay it
+                    </Button>
+                  )}
+                </div>
               </div>
-              <div className="flex shrink-0 items-center gap-3">
-                <span className="font-mono text-price font-bold tabular-nums text-chrome-text">
-                  {money(i.totalCents, i.currency)}
-                </span>
-                {i.payUrl && (
-                  <Button variant="brand" size="sm" href={i.payUrl}>
-                    Pay it
-                  </Button>
-                )}
-              </div>
+
+              {/* what the money is for: the jobs it bills, and anything we
+                  agreed on top of them. Both were already recorded and both
+                  were only visible on the public invoice page. */}
+              {i.projects.length > 0 && (
+                <div className="mt-3">
+                  <p className="font-mono text-label uppercase tracking-[0.08em] text-chrome-muted">
+                    {i.projects.length === 1 ? "The project" : "The projects"}
+                  </p>
+                  <ul className="mt-1.5 flex flex-wrap gap-1.5">
+                    {i.projects.map((t) => (
+                      <li
+                        key={t}
+                        className="rounded-full border border-white/15 px-2.5 py-0.5 text-body-sm text-chrome-muted"
+                      >
+                        {t}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {i.notes && (
+                <p className="mt-3 whitespace-pre-wrap text-body-sm text-chrome-muted">
+                  {i.notes}
+                </p>
+              )}
             </li>
           ))}
         </ul>
@@ -898,11 +944,13 @@ function OrdersList({ onOpen }: { onOpen: (id: string) => void }) {
     );
 
   if (orders.length === 0)
+    /* A quiet line, not a 200px box. On this screen the empty state used to
+       outweigh the one thing that needs doing, which is the unpaid invoice
+       sitting above it. */
     return (
-      <EmptyState
-        title="Nothing paid yet"
-        description="Everything you buy shows up here, whether you ordered it from the library or paid an invoice for it, with its receipt and where it is up to."
-      />
+      <p className="rounded-[12px] border border-dashed border-hair px-5 py-6 text-center text-body-sm text-dim">
+        Nothing paid yet. Everything you buy lands here with its receipt.
+      </p>
     );
 
   return (
