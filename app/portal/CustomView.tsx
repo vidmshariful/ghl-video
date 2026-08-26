@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft, Play } from "lucide-react";
-import { Button, Card, Chip, EmptyState, Input, Modal, PageHeader, Textarea } from "@/components/portal/ui";
+import { ArrowLeft, Play, Plus } from "lucide-react";
+import { Button, Card, Chip, EmptyState, Field, Input, Modal, PageHeader, Select, Textarea } from "@/components/portal/ui";
 import { VideoReviewModal } from "./VideoReviewModal";
 import { StageReview } from "./StageReview";
 import { DownloadAll } from "@/components/portal/DownloadAll";
@@ -159,10 +159,15 @@ export function CustomView({
     onOpenProject?.(id);
   };
   const [playing, setPlaying] = useState<(Reviewable & { title: string }) | null>(null);
+  /* retainer accounts brief us directly. The server decides; this only says
+     whether to offer the button. */
+  const [canSubmit, setCanSubmit] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const load = useCallback(async () => {
     const j = await authedFetch("/api/portal/projects").catch(() => null);
     setProjects((j?.projects as Project[] | undefined) ?? []);
+    setCanSubmit(Boolean(j?.canSubmit));
   }, [authedFetch]);
 
   useEffect(() => {
@@ -250,12 +255,34 @@ export function CustomView({
       <PageHeader
         title="Custom"
         description="Video made for you from scratch. Open a project for its production line, its files, and what has happened."
+        actions={
+          canSubmit ? (
+            <Button variant="brand" icon={<Plus />} onClick={() => setSubmitting(true)}>
+              Submit a new project
+            </Button>
+          ) : undefined
+        }
       />
 
+      {canSubmit && (
+        <SubmitProject
+          open={submitting}
+          onClose={() => setSubmitting(false)}
+          authedFetch={authedFetch}
+          onDone={() => {
+            setSubmitting(false);
+            void load();
+          }}
+        />
+      )}
+
       {projects.length === 0 ? (
-        <StartModule authedFetch={authedFetch} />
+        <StartModule authedFetch={authedFetch} canSubmit={canSubmit} />
       ) : (
-        <div className="grid gap-1">
+        /* the same dashed frame the empty state wears, so a list of projects
+           and no projects at all read as the same container rather than two
+           different screens */
+        <div className="grid gap-1 rounded-[12px] border border-dashed border-hair bg-surface/40 p-3 sm:p-4">
           <div className={`${GRID} px-3.5 pb-1`}>
             <span className="font-mono text-label uppercase tracking-[0.08em] text-dim">
               Project
@@ -347,6 +374,20 @@ export function CustomView({
               </ul>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Under the list, not only on an empty screen. Somebody with three
+          projects running is the likeliest person to want a fourth, and the
+          formats used to be visible only to people who had never bought one.
+          Retainer accounts do not need it: they have the button above. */}
+      {projects.length > 0 && !canSubmit && (
+        <div className="mt-6">
+          <QuoteFormats
+            authedFetch={authedFetch}
+            heading="Need another custom video?"
+            blurb="Pick the format closest to what you have in mind and we will come back with an exact quote."
+          />
         </div>
       )}
     </div>
@@ -816,10 +857,175 @@ function StageRow({
 
 /* ---------------- no custom work yet: the four formats, ask for one ---------------- */
 
+/*
+ * The empty Custom screen.
+ *
+ * A client with a retainer sees the door they actually use; everyone else
+ * sees the formats and their prices. Both sit under the same explanation of
+ * what custom work is, because on an empty screen that is the first question.
+ */
 function StartModule({
   authedFetch,
+  canSubmit,
 }: {
   authedFetch: (path: string, init?: RequestInit) => Promise<Record<string, unknown>>;
+  canSubmit: boolean;
+}) {
+  return (
+    <div>
+      <EmptyState
+        title="No custom projects yet"
+        description={
+          canSubmit
+            ? "Custom video is anything made from scratch for you: a brand film, a launch video, an explainer nobody else has. Your account is set up to brief them directly, so send the first one whenever you are ready."
+            : "Custom video is anything made from scratch for you: a brand film, a launch video, an explainer nobody else has. These are the four formats and their published starting prices; every project gets an exact quote before production starts."
+        }
+      />
+      {!canSubmit && (
+        <div className="mt-4">
+          <QuoteFormats
+            authedFetch={authedFetch}
+            heading="Pick a format to start from"
+            blurb="Every project gets an exact quote before production starts."
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/*
+ * A retainer client briefing a new video.
+ *
+ * Five fields and no money. Everything about scoping and quoting is missing
+ * on purpose: for these accounts that conversation already happened, and
+ * asking them to have it again for the eleventh video is the friction this
+ * removes. The name and the script are what the studio genuinely cannot
+ * start without; the rest sharpens the first cut and can wait.
+ */
+function SubmitProject({
+  open,
+  onClose,
+  authedFetch,
+  onDone,
+}: {
+  open: boolean;
+  onClose: () => void;
+  authedFetch: (path: string, init?: RequestInit) => Promise<Record<string, unknown>>;
+  onDone: () => void;
+}) {
+  const formats = pages.custom.formats.items;
+  const [f, setF] = useState({ title: "", script: "", category: "", reference: "", brief: "" });
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const set = (k: keyof typeof f, v: string) => setF((was) => ({ ...was, [k]: v }));
+
+  async function send() {
+    setBusy(true);
+    setErr("");
+    try {
+      const j = (await authedFetch("/api/portal/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(f),
+      })) as { ok?: boolean; error?: string };
+      if (!j?.ok) {
+        setErr(j?.error ?? "Could not send that.");
+        return;
+      }
+      setF({ title: "", script: "", category: "", reference: "", brief: "" });
+      onDone();
+    } catch {
+      setErr("Could not send that. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} title="Submit a new project">
+      <div className="grid gap-4">
+        <p className="text-body-sm text-muted">
+          Your account is set up for this, so there is no quote to wait on. Send
+          it and it goes into the line.
+        </p>
+
+        <Field label="Project name" required hint="What you will call it when you ask us about it.">
+          <Input
+            value={f.title}
+            onChange={(e) => set("title", e.target.value)}
+            placeholder="Workflows AI, launch explainer"
+          />
+        </Field>
+
+        <Field
+          label="Script"
+          required
+          hint="The words to be recorded. Paste it in, a draft is fine."
+        >
+          <Textarea rows={8} value={f.script} onChange={(e) => set("script", e.target.value)} />
+        </Field>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Category" hint="Which of our formats it is closest to.">
+            <Select value={f.category} onChange={(e) => set("category", e.target.value)}>
+              <option value="">Not sure, you decide</option>
+              {formats.map((x) => (
+                <option key={x.name} value={x.name}>
+                  {x.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Reference" hint="A video you want this one to feel like.">
+            <Input
+              value={f.reference}
+              onChange={(e) => set("reference", e.target.value)}
+              placeholder="https://youtube.com/..."
+            />
+          </Field>
+        </div>
+
+        <Field label="Project brief" hint="Anything around the script: who watches it, where it runs, what it has to do.">
+          <Textarea rows={4} value={f.brief} onChange={(e) => set("brief", e.target.value)} />
+        </Field>
+
+        {err && <p className="text-body-sm text-error">{err}</p>}
+
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="brand"
+            disabled={busy || !f.title.trim() || !f.script.trim()}
+            onClick={send}
+          >
+            {busy ? "Sending..." : "Submit the project"}
+          </Button>
+          <Button variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+/*
+ * The four formats and their starting prices.
+ *
+ * Shown under an existing list as well as on an empty screen: a client with
+ * three projects running is the MOST likely person to want a fourth, and
+ * before this the only place the formats appeared was the screen belonging to
+ * somebody who had never bought one.
+ */
+function QuoteFormats({
+  authedFetch,
+  heading,
+  blurb,
+}: {
+  authedFetch: (path: string, init?: RequestInit) => Promise<Record<string, unknown>>;
+  heading: string;
+  blurb: string;
 }) {
   const formats = pages.custom.formats.items;
   const [picked, setPicked] = useState<string | null>(null);
@@ -849,40 +1055,40 @@ function StartModule({
     return (
       <Card title="It is with us" description="Your request landed with the studio.">
         <p className="text-body-sm text-muted">
-          We read every one the day it arrives. Expect a reply here and by
-          email within one working day, usually faster.
+          We read every one the day it arrives. Expect a reply here and by email
+          within one working day, usually faster.
         </p>
       </Card>
     );
 
   return (
     <div>
-      <EmptyState
-        title="No custom projects yet"
-        description="Custom video is anything made from scratch for you: a brand film, a launch video, an explainer nobody else has. These are the four formats and their published starting prices; every project gets an exact quote before production starts."
-      />
+      <div className="max-w-[var(--measure-body)]">
+        <h2 className="font-display text-h4 text-ink">{heading}</h2>
+        <p className="mt-1 text-body-sm text-muted">{blurb}</p>
+      </div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {formats.map((f) => (
+        {formats.map((x) => (
           <div
-            key={f.name}
+            key={x.name}
             className={`flex flex-col rounded-[8px] border p-4 transition-colors ${
-              picked === f.name ? "border-gold/70 bg-surface" : "border-hair bg-surface"
+              picked === x.name ? "border-gold/70 bg-surface" : "border-hair bg-surface"
             }`}
           >
-            <p className="text-body font-semibold text-ink">{f.name}</p>
+            <p className="text-body font-semibold text-ink">{x.name}</p>
             <p className="mt-1 font-display text-h4 text-gold">
-              ${f.from.toLocaleString("en-US")}
+              ${x.from.toLocaleString("en-US")}
               <span className="ml-1 font-mono text-label uppercase text-dim">starting</span>
             </p>
-            <p className="mt-2 flex-1 text-body-sm text-muted">{f.line}</p>
+            <p className="mt-2 flex-1 text-body-sm text-muted">{x.line}</p>
             <div className="mt-3">
               <Button
                 size="sm"
-                variant={picked === f.name ? "brand" : "secondary"}
+                variant={picked === x.name ? "brand" : "secondary"}
                 full
-                onClick={() => setPicked(picked === f.name ? null : f.name)}
+                onClick={() => setPicked(picked === x.name ? null : x.name)}
               >
-                {picked === f.name ? "Picked" : "Request a Quote"}
+                {picked === x.name ? "Picked" : "Request a Quote"}
               </Button>
             </div>
           </div>

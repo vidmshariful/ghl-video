@@ -207,6 +207,14 @@ export const COMM_ACTIONS: CommAction[] = [
     notifications: [],
   },
 
+  {
+    key: "project_submitted", group: "custom", label: "A retainer client submits a project",
+    when: "A client with direct submission turned on briefs a new custom video from their portal, with no quote in between.",
+    mode: "automatic",
+    emails: [],
+    notifications: [{ kind: "project_submitted", audience: "admin", to: "team" }],
+  },
+
   /* ---- editing ---- */
   {
     key: "edit_requested", group: "editing", label: "The client requests an edit",
@@ -446,6 +454,7 @@ export const NOTIFICATION_DEFAULTS: Record<string, NotificationDefault> = {
   "customer:project_file": { title: "We added a file to {{project_title}}", body: "{{file_name}} is in your attachments.", variables: ["project_title", "file_name"] },
 
   /* editing */
+  "admin:project_submitted": { title: "New project from {{who}}: {{title}}", body: "Submitted from their portal, with a script. No quote needed on this account.", variables: ["title", "who", "customer_email"] },
   "admin:edit_requested": { title: "Edit requested: {{title}}", body: "{{summary}}", variables: ["title", "summary", "customer_email"] },
   "admin:edit_changed": { title: "Request changed: {{title}}", body: "{{summary}}", variables: ["title", "summary", "customer_email"] },
   "admin:editing_file": { title: "New file on {{title}}", body: "{{who}} added {{file_name}}.", variables: ["title", "who", "file_name"] },

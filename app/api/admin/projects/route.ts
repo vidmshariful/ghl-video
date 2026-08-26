@@ -95,6 +95,11 @@ export async function GET(req: Request) {
       customerId: (p.customer_id as string | null) ?? null,
       title: String(p.title),
       brief: (p.brief as string | null) ?? null,
+      /* a client-submitted job carries its own script and reference, and the
+         board has to be able to read them without opening the database */
+      script: (p.script as string | null) ?? null,
+      referenceUrl: (p.reference_url as string | null) ?? null,
+      source: (p.source as string | null) ?? null,
       status: normalizeProjectStatus(String(p.status)),
       /* whether a person pinned this stage by hand; undefined column (pre
          migration) reads as not locked, i.e. still following the line */
@@ -176,6 +181,8 @@ export async function POST(req: Request) {
       title,
       category: str(b.category, 60),
       brief: str(b.brief, 8000),
+      script: str(b.script, 40000),
+      reference_url: str(b.reference, 1000),
       status: PROJECT_STATUSES.includes(b.status as ProjectStatus) ? b.status : "backlog",
       quoted_cents: cents(b.quotedCents),
       agreed_cents: cents(b.agreedCents),
@@ -259,6 +266,8 @@ export async function PATCH(req: Request) {
       .slice(0, 12);
   if ("title" in b) patch.title = str(b.title, 160);
   if ("brief" in b) patch.brief = str(b.brief, 8000);
+  if ("script" in b) patch.script = str(b.script, 40000);
+  if ("reference" in b) patch.reference_url = str(b.reference, 1000);
   if ("quotedCents" in b) patch.quoted_cents = cents(b.quotedCents);
   if ("agreedCents" in b) patch.agreed_cents = cents(b.agreedCents);
   if ("ownerEmail" in b) patch.owner_email = str(b.ownerEmail, 200);

@@ -148,6 +148,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       tags: (c.tags as string[] | null) ?? [],
       hiddenSections: (c.hidden_sections as string[] | null) ?? [],
       disabledSections: (c.disabled_sections as string[] | null) ?? [],
+      canSubmitProjects: Boolean(c.can_submit_projects),
       lastSeenAt: (c.last_seen_at as string | null) ?? null,
       createdAt: String(c.created_at),
       highlevelContactId: (c.highlevel_contact_id as string | null) ?? null,
@@ -279,6 +280,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       .filter((t): t is string => typeof t === "string" && t.trim().length > 0)
       .map((t) => t.trim().slice(0, 40))
       .slice(0, 20);
+  }
+  /* a commercial decision about this account: they brief us directly with no
+     quote in between. Deliberately not part of the section toggles, which are
+     about what a client can SEE. */
+  if (typeof b.canSubmitProjects === "boolean") {
+    patch.can_submit_projects = b.canSubmitProjects;
   }
   if (Array.isArray(b.hiddenSections)) {
     patch.hidden_sections = (b.hiddenSections as unknown[])

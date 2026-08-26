@@ -41,6 +41,7 @@ type Record_ = {
     tags: string[];
     hiddenSections: string[];
     disabledSections: string[];
+    canSubmitProjects: boolean;
     lastSeenAt: string | null;
     createdAt: string;
     highlevelContactId: string | null;
@@ -881,6 +882,32 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
             blurb="Who can sign in to this client's portal. The primary account holder is always in; anyone below is a teammate they added, or one you added for them. Each gets their own login and the updates for the areas they are granted."
             owner={{ email: data.customer.email, name: data.customer.name }}
           />
+
+          {/* A commercial switch, not a visibility one, which is why it is
+              its own card above the section toggles rather than a row in
+              them. */}
+          <Card title="Custom video">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-body-sm font-semibold text-ink">
+                  Let them submit projects directly
+                </p>
+                <p className="mt-1 text-body-sm text-muted">
+                  For accounts on a retainer, where the rate is already agreed.
+                  They brief a video straight from their portal with a script
+                  and it lands in the backlog, with no quote in between. Off,
+                  they request a quote like everyone else.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant={c.canSubmitProjects ? "brand" : "secondary"}
+                onClick={() => void patch({ canSubmitProjects: !c.canSubmitProjects })}
+              >
+                {c.canSubmitProjects ? "On" : "Off"}
+              </Button>
+            </div>
+          </Card>
 
           {/* the access control Shariful asked for */}
           <Card title="What they see">

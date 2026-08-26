@@ -80,6 +80,9 @@ type Project = {
   customerEmail: string;
   title: string;
   brief: string | null;
+  script: string | null;
+  referenceUrl: string | null;
+  source: string | null;
   status: ProjectStatus;
   /* the producer pinned this stage by hand, so the line stops moving it */
   stageLocked: boolean;
@@ -188,6 +191,8 @@ const EMPTY_DRAFT = {
   title: "",
   category: "",
   brief: "",
+  script: "",
+  reference: "",
   quotedCents: "",
   agreedCents: "",
   dueAt: "",
@@ -404,6 +409,23 @@ export function CustomVideoScreen({
                 rows={3}
                 value={draft.brief}
                 onChange={(e) => setDraft({ ...draft, brief: e.target.value })}
+              />
+            </Field>
+            {/* kept apart from the brief: this is the words that get
+                recorded, and on a client-submitted job it is the thing the
+                producer opens first */}
+            <Field label="The script" hint="The words to be recorded. A client on a retainer sends this themselves.">
+              <Textarea
+                rows={6}
+                value={draft.script}
+                onChange={(e) => setDraft({ ...draft, script: e.target.value })}
+              />
+            </Field>
+            <Field label="Reference" hint="A video they want this one to feel like.">
+              <Input
+                value={draft.reference}
+                onChange={(e) => setDraft({ ...draft, reference: e.target.value })}
+                placeholder="https://youtube.com/..."
               />
             </Field>
             <div className="grid gap-4 sm:grid-cols-3">
@@ -745,6 +767,8 @@ function ProjectPage({
     title: p.title,
     contactId: p.contactId ?? "",
     brief: p.brief ?? "",
+    script: p.script ?? "",
+    reference: p.referenceUrl ?? "",
     /* dollars in the form, cents on the wire, same as the create modal */
     quoted: p.quotedCents != null ? String(p.quotedCents / 100) : "",
     agreed: p.agreedCents != null ? String(p.agreedCents / 100) : "",
@@ -757,6 +781,8 @@ function ProjectPage({
       title: p.title,
       contactId: p.contactId ?? "",
       brief: p.brief ?? "",
+    script: p.script ?? "",
+    reference: p.referenceUrl ?? "",
       quoted: p.quotedCents != null ? String(p.quotedCents / 100) : "",
       agreed: p.agreedCents != null ? String(p.agreedCents / 100) : "",
     });
@@ -773,6 +799,8 @@ function ProjectPage({
       title: form.title.trim(),
       contactId: form.contactId || null,
       brief: form.brief,
+      script: form.script,
+      reference: form.reference,
       quotedCents: form.quoted === "" ? null : Math.round(Number(form.quoted) * 100),
       agreedCents: form.agreed === "" ? null : Math.round(Number(form.agreed) * 100),
     });
@@ -841,6 +869,20 @@ function ProjectPage({
               rows={4}
               value={form.brief}
               onChange={(e) => setForm({ ...form, brief: e.target.value })}
+            />
+          </Field>
+          <Field label="The script" hint="The words to be recorded. A retainer client sends this themselves.">
+            <Textarea
+              rows={8}
+              value={form.script}
+              onChange={(e) => setForm({ ...form, script: e.target.value })}
+            />
+          </Field>
+          <Field label="Reference" hint="A video they want this one to feel like.">
+            <Input
+              value={form.reference}
+              onChange={(e) => setForm({ ...form, reference: e.target.value })}
+              placeholder="https://youtube.com/..."
             />
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
