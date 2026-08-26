@@ -99,13 +99,19 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <!-- gtag loader -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=AW-16454943179">
 </script>
-
-<!-- Affiliate click tracking is NOT here any more. FirstPromoter was
-     retired in favour of Affixo, whose tag is a real component,
-     components/AffixoTag.tsx, so it can be kept off /admin and /portal
-     where there is no visitor to attribute. Do not paste an affiliate
-     snippet back into this block: two trackers on one page count every
-     click twice. -->`;
+`;
+/*
+ * No affiliate tracker in that block, deliberately.
+ *
+ * FirstPromoter was retired in favour of Affixo, whose tag is a real
+ * component (components/AffixoTag.tsx) so it can be kept off /admin and
+ * /portal where there is no visitor to attribute. Do not paste an affiliate
+ * snippet back in here: two trackers on one page count every click twice.
+ *
+ * This note is a TS comment rather than an HTML one on purpose. Everything
+ * in the string above is injected raw into the page, so a comment written
+ * there ships to every visitor and reads our file paths out loud.
+ */
 
 /* Injected at body end: the LeadConnector chat widget and the GTM
  * noscript fallback. */
