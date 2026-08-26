@@ -29,6 +29,48 @@ export async function loadTemplate(db: SupabaseClient, key: string) {
   return def ? { subject: def.subject, body: def.body, enabled: true } : null;
 }
 
+/*
+ * Send one client template to the WHOLE account: the owner plus every
+ * teammate whose grants cover `feature`.
+ *
+ * Why this exists: the bell has fanned out to team members since the team
+ * feature shipped, but the emails never did, so a teammate saw a dot in the
+ * portal and nothing in their inbox. For an account where the work is
+ * actually run by three people, the email is the one that gets read.
+ *
+ * Each recipient goes through sendTemplate individually and on purpose: that
+ * is where the per-person email preferences are checked, so a teammate who
+ * has muted a category stays muted, and every send gets its own log row.
+ * The owner's name only makes sense in the owner's copy, so a member's copy
+ * greets them neutrally.
+ */
+async function sendTemplateToTeam(
+  db: SupabaseClient,
+  key: string,
+  owner: { email: string; name: string | null },
+  vars: Record<string, string>,
+  feature: string,
+  meta?: Record<string, unknown>,
+): Promise<boolean> {
+  const sent = await sendTemplate(db, key, owner.email, owner.name, vars, meta);
+  try {
+    const { teamRecipients } = await import("@/lib/account-team");
+    const others = (await teamRecipients(db, "customer", owner.email, feature)).filter(
+      (e) => e !== owner.email.toLowerCase(),
+    );
+    for (const email of others) {
+      await sendTemplate(db, key, email, null, { ...vars, customer_name: "there" }, meta).catch(
+        () => false,
+      );
+    }
+  } catch (e) {
+    /* the owner's copy is already away; a team fan-out problem must not
+       turn one failed extra send into a failed notification */
+    console.error(`[email] ${key} team fan-out failed:`, e instanceof Error ? e.message : e);
+  }
+  return sent;
+}
+
 /* the shared send path every helper below goes through */
 async function sendTemplate(
   db: SupabaseClient,
@@ -328,14 +370,14 @@ export async function sendOrderDeliveredEmail(db: SupabaseClient, orderId: strin
       : "";
 
     const name = (o.customers as any)?.name ?? "there";
-    await sendTemplate(db, "order_delivered", o.customer_email as string, name, {
+    await sendTemplateToTeam(db, "order_delivered", { email: o.customer_email as string, name: name }, {
       customer_name: escapeHtml(name),
       product_name: escapeHtml(productLabel((o.products as any) ?? null)),
       order_code: escapeHtml((o.invoice_number as string) ?? ""),
       video_list: videoList,
       review_ask: reviewAsk,
       portal_url: `${SITE_URL}/portal/videos/`,
-    });
+    }, "orders");
   } catch (e) {
     console.error("[email] order_complete failed:", e instanceof Error ? e.message : e);
   }
@@ -348,13 +390,13 @@ export async function sendOrderRefundedEmail(
 ): Promise<void> {
   const o = await orderFor(db, orderId);
   if (!o) return;
-  await sendTemplate(db, "order_refunded", o.email, o.name, {
+  await sendTemplateToTeam(db, "order_refunded", { email: o.email, name: o.name }, {
     customer_name: escapeHtml(o.name || "there"),
     product_name: escapeHtml(o.productName),
     order_code: escapeHtml(o.code),
     amount: money(refundedCents || o.amountCents, o.currency),
     portal_url: `${SITE_URL}/portal`,
-  });
+  }, "billing");
   const refunded = money(refundedCents || o.amountCents, o.currency);
   const bell = { amount: refunded, product_name: o.productName, customer_email: o.email, order_code: o.code };
   await pushNotification(db, {
@@ -398,12 +440,12 @@ async function subscriptionFor(db: SupabaseClient, rowId: string) {
 export async function sendSubscriptionStartedEmail(db: SupabaseClient, rowId: string): Promise<void> {
   const s = await subscriptionFor(db, rowId);
   if (!s) return;
-  await sendTemplate(db, "subscription_started", s.email, s.name, {
+  await sendTemplateToTeam(db, "subscription_started", { email: s.email, name: s.name }, {
     customer_name: escapeHtml(s.name || "there"),
     plan_name: escapeHtml(s.planName),
     amount: money(s.amountCents, s.currency),
     portal_url: `${SITE_URL}/portal`,
-  });
+  }, "subscriptions");
   const bell = { plan_name: s.planName, amount: money(s.amountCents, s.currency), customer_email: s.email };
   await pushNotification(db, {
     audience: "customer",
@@ -440,7 +482,7 @@ export async function sendSubscriptionPriceChangedEmail(
   const s = await subscriptionFor(db, rowId);
   if (!s) return;
   const newAmount = money(opts.newCents, s.currency);
-  await sendTemplate(db, "subscription_price_changed", s.email, s.name, {
+  await sendTemplateToTeam(db, "subscription_price_changed", { email: s.email, name: s.name }, {
     customer_name: escapeHtml(s.name || "there"),
     plan_name: escapeHtml(s.planName),
     old_amount: money(opts.oldCents, s.currency),
@@ -448,7 +490,7 @@ export async function sendSubscriptionPriceChangedEmail(
     effective_date: escapeHtml(opts.effective),
     reason: escapeHtml(opts.reason),
     portal_url: `${SITE_URL}/portal`,
-  });
+  }, "billing");
   await pushNotification(db, {
     audience: "customer",
     email: s.email,
@@ -465,11 +507,11 @@ export async function sendSubscriptionPriceChangedEmail(
 export async function sendSubscriptionCanceledEmail(db: SupabaseClient, rowId: string): Promise<void> {
   const s = await subscriptionFor(db, rowId);
   if (!s) return;
-  await sendTemplate(db, "subscription_canceled", s.email, s.name, {
+  await sendTemplateToTeam(db, "subscription_canceled", { email: s.email, name: s.name }, {
     customer_name: escapeHtml(s.name || "there"),
     plan_name: escapeHtml(s.planName),
     portal_url: `${SITE_URL}/portal`,
-  });
+  }, "subscriptions");
   const bell = { plan_name: s.planName, customer_email: s.email };
   await pushNotification(db, {
     audience: "customer",
@@ -590,12 +632,12 @@ export async function sendApprovalRequestEmail(
   db: SupabaseClient,
   input: { email: string; name: string | null; videoTitle: string; stageLabel: string },
 ): Promise<void> {
-  await sendTemplate(db, "approval_request", input.email, input.name, {
+  await sendTemplateToTeam(db, "approval_request", { email: input.email, name: input.name }, {
     customer_name: escapeHtml(input.name || "there"),
     video_title: escapeHtml(input.videoTitle),
     stage_label: escapeHtml(input.stageLabel),
     portal_url: `${SITE_URL}/portal`,
-  });
+  }, "orders");
 }
 
 /**
@@ -752,11 +794,11 @@ export async function sendVideoReadyEmail(
       .maybeSingle();
     if (!o?.customer_email) return;
     const name = (o.customers as any)?.name ?? "there";
-    await sendTemplate(db, "video_ready", o.customer_email as string, name, {
+    await sendTemplateToTeam(db, "video_ready", { email: o.customer_email as string, name: name }, {
       customer_name: escapeHtml(name),
       video_title: escapeHtml(d.title as string),
       portal_url: videosUrl(),
-    });
+    }, "orders");
   } catch (e) {
     console.error("[email] video_ready failed:", e instanceof Error ? e.message : e);
   }
@@ -782,12 +824,12 @@ export async function sendVideoReplyEmail(
       .maybeSingle();
     if (!o?.customer_email) return;
     const name = (o.customers as any)?.name ?? "there";
-    await sendTemplate(db, "video_reply", o.customer_email as string, name, {
+    await sendTemplateToTeam(db, "video_reply", { email: o.customer_email as string, name: name }, {
       customer_name: escapeHtml(name),
       video_title: escapeHtml(d.title as string),
       message: escapeHtml(message.slice(0, 600)),
       portal_url: videosUrl(),
-    });
+    }, "messages");
   } catch (e) {
     console.error("[email] video_reply failed:", e instanceof Error ? e.message : e);
   }
@@ -877,14 +919,14 @@ export async function sendBriefReceivedEmail(db: SupabaseClient, orderId: string
     const dueDate = shortDate((due?.due_at as string | null) ?? null);
     const dueLine = dueDate ? `, due by ${dueDate}` : "";
 
-    await sendTemplate(db, "brief_received", o.email, o.name, {
+    await sendTemplateToTeam(db, "brief_received", { email: o.email, name: o.name }, {
       customer_name: escapeHtml(o.name || "there"),
       product_name: escapeHtml(o.productName),
       order_code: escapeHtml(o.code),
       due_line: escapeHtml(dueLine),
       due_date: escapeHtml(dueDate),
       portal_url: `${SITE_URL}/portal`,
-    });
+    }, "orders");
 
     const bell = {
       product_name: o.productName,
@@ -942,7 +984,7 @@ export async function sendInvoiceSentEmail(db: SupabaseClient, invoiceId: string
       .join("<br>");
     const payUrl = `${SITE_URL}/invoice/${String(inv.token)}/`;
 
-    await sendTemplate(db, "invoice_sent", email, name, {
+    await sendTemplateToTeam(db, "invoice_sent", { email: email, name: name }, {
       customer_name: escapeHtml(name || "there"),
       invoice_number: escapeHtml(String(inv.number)),
       amount,
@@ -952,7 +994,7 @@ export async function sendInvoiceSentEmail(db: SupabaseClient, invoiceId: string
       line_items: items || "See the invoice for the breakdown.",
       notes: escapeHtml(String(inv.notes ?? "")),
       portal_url: `${SITE_URL}/portal`,
-    });
+    }, "billing");
     await pushNotification(db, {
       audience: "customer",
       email,

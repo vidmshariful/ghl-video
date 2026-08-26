@@ -159,10 +159,21 @@ function MemberForm({
 export function TeamCard({
   endpoint,
   accountType,
+  heading = "Your team",
+  blurb = "Give a VA or teammate their own sign-in to work in this portal. You choose what they can use; they get every update and notification for the areas you grant.",
+  owner = null,
 }: {
   /* e.g. "/api/portal/team" */
   endpoint: string;
   accountType: "customer" | "partner";
+  /* the studio renders this same card on a client's admin record, where it
+     is THEIR team rather than ours, so the wording is a prop */
+  heading?: string;
+  blurb?: string;
+  /* shown as the primary account holder above the members. The portal owner
+     is looking at their own screen and does not need telling who they are;
+     the studio, looking at somebody else's account, very much does. */
+  owner?: { email: string; name: string | null } | null;
 }) {
   const defs = teamFeaturesFor(accountType);
   const [members, setMembers] = useState<Member[] | null>(null);
@@ -238,12 +249,8 @@ export function TeamCard({
     <div className="rounded-[12px] border border-hair bg-surface p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="font-mono text-label uppercase text-muted">Your team</p>
-          <p className="mt-1 max-w-xl text-body-sm text-muted">
-            Give a VA or teammate their own sign-in to work in this portal. You
-            choose what they can use; they get every update and notification for
-            the areas you grant.
-          </p>
+          <p className="font-mono text-label uppercase text-muted">{heading}</p>
+          <p className="mt-1 max-w-xl text-body-sm text-muted">{blurb}</p>
         </div>
         {editing === null ? (
           <Button variant="brand" onClick={() => setEditing("new")}>
@@ -280,6 +287,20 @@ export function TeamCard({
           />
         )}
       </Modal>
+
+      {owner && (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[8px] border border-gold/30 bg-gold/[0.05] px-4 py-3">
+          <div className="min-w-0">
+            <p className="truncate text-body-sm font-semibold text-ink">
+              {owner.name || owner.email}
+            </p>
+            <p className="truncate font-mono text-label uppercase text-dim">{owner.email}</p>
+          </div>
+          <span className="shrink-0 rounded-full border border-gold/50 px-2.5 py-0.5 font-mono text-label uppercase text-gold">
+            Primary
+          </span>
+        </div>
+      )}
 
       <div className="mt-4">
         {members === null ? (

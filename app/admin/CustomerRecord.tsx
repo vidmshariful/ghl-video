@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ArrowLeft, ExternalLink, MessageSquare, Plus } from "lucide-react";
 import { Button, Card, Chip, Input, Modal, Select, Table, Td, Th } from "@/components/portal/ui";
 import { authHeader, money, when } from "./client";
+import { TeamCard } from "@/components/portal/team";
 import { HIDEABLE_SECTIONS } from "./customer-sections";
 
 /*
@@ -869,25 +870,17 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
             </Modal>
           </Card>
 
-          <Card title="Portal access">
-            {data.team.length === 0 ? (
-              <p className="text-body-sm text-muted">Nobody else on this account.</p>
-            ) : (
-              <ul className="grid gap-2.5">
-                {data.team.map((m) => (
-                  <li key={m.id} className="text-body-sm">
-                    <span className="text-ink">{m.name || m.email}</span>
-                    <span className="ml-2">
-                      <Chip tone={m.status === "active" ? "good" : "neutral"}>{m.status}</Chip>
-                    </span>
-                    <p className="mt-0.5 font-mono text-label uppercase text-dim">
-                      {m.features === null ? "everything" : m.features.join(", ") || "nothing"}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Card>
+          {/* the client's own portal team, managed from here when they ask us
+              to do it for them. Same card and same routes their Settings
+              screen uses, so a member we add is not a different kind of
+              member. */}
+          <TeamCard
+            endpoint={`/api/admin/customers/${data.customer.id}/team`}
+            accountType="customer"
+            heading="Portal access"
+            blurb="Who can sign in to this client's portal. The primary account holder is always in; anyone below is a teammate they added, or one you added for them. Each gets their own login and the updates for the areas they are granted."
+            owner={{ email: data.customer.email, name: data.customer.name }}
+          />
 
           {/* the access control Shariful asked for */}
           <Card title="What they see">

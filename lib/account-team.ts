@@ -213,8 +213,20 @@ async function activateMembership(db: SupabaseClient, m: MemberRow): Promise<voi
   await db.from("account_members").update({ status: "active" }).eq("id", m.id);
 }
 
-/** Everyone a portal event should reach: the owner plus every ACTIVE member
- *  whose grants include the feature (undefined feature = the whole team). */
+/**
+ * Everyone a portal event should reach: the owner plus every member whose
+ * grants include the feature (undefined feature = the whole team).
+ *
+ * INVITED MEMBERS COUNT (owner decision, 26 August 2026). They used to be
+ * skipped until they had signed in once, which meant a client could add
+ * three people in the morning and none of them heard anything until each
+ * happened to log in, about work that was already moving. Being invited is
+ * the decision; access starts there. Only a PAUSED member is silenced,
+ * because pausing is the deliberate act of taking access away.
+ *
+ * The status still reads Invited until first use, so the owner and the
+ * studio can both see who has actually turned up.
+ */
 export async function teamRecipients(
   db: SupabaseClient,
   accountType: AccountType,
@@ -225,10 +237,12 @@ export async function teamRecipients(
   try {
     const members = await listMembers(db, accountType, owner);
     const extra = members
-      .filter((m) => m.status === "active")
+      .filter((m) => m.status !== "paused")
       .filter((m) => (feature ? memberCan(m.features, feature) : true))
-      .map((m) => m.member_email);
-    return [owner, ...extra];
+      .map((m) => m.member_email)
+      /* an owner who is also listed as a member would otherwise get two */
+      .filter((e) => e.toLowerCase() !== owner);
+    return [owner, ...new Set(extra)];
   } catch {
     return [owner];
   }
