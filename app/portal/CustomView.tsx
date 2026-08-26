@@ -325,14 +325,21 @@ export function CustomView({
                         <span className="block truncate text-body-sm font-semibold text-ink">
                           {p.title}
                         </span>
+                        {/* The station and its state, with no percentage
+                            beside it. The number was a count of stations
+                            passed, which is not what a client reads it as:
+                            83% looked like five sixths of the work done when
+                            it meant five of six stations touched, and the
+                            last one is usually the longest. The dots already
+                            show how far along it is, honestly, without
+                            claiming a precision we do not have. */}
                         <span className="mt-0.5 block truncate font-mono text-label uppercase text-dim">
                           {(() => {
                             const cur = currentStation(p.pipeline.stations);
                             return cur
                               ? `${cur.label}: ${cur.word.toLowerCase()}`
                               : "Finished";
-                          })()}{" "}
-                          / {p.pipeline.percent}%
+                          })()}
                         </span>
                       </span>
                       <span className="hidden min-w-0 sm:block">
