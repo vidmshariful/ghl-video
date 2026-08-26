@@ -314,7 +314,10 @@ export function TeamCard({
             No teammates yet. Add one and they get an email with their way in.
           </p>
         ) : (
-          <ul className="grid gap-2">
+          /* the track must be allowed to shrink: an `auto` one is sized to a
+             row's max-content, which is the whole row on a single line, so the
+             list grew wider than the card instead of wrapping inside it */
+          <ul className="grid grid-cols-[minmax(0,1fr)] gap-2">
             {members.map((m) => (
                 <li
                   key={m.id}
@@ -330,7 +333,10 @@ export function TeamCard({
                       {m.email} / added {addedOn(m.addedAt)}
                     </p>
                   </div>
-                  <div className="flex shrink-0 flex-wrap items-center gap-2">
+                  {/* not shrink-0: refusing to shrink also stops flex-wrap
+                      firing, so on a narrow screen the row ran off the side
+                      instead of the buttons dropping to a second line */}
+                  <div className="flex flex-wrap items-center gap-2">
                     <span
                       className={`rounded-full border px-2.5 py-0.5 font-mono text-label uppercase ${STATUS_CHIP[m.status].cls}`}
                     >

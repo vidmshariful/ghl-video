@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ArrowLeft, ExternalLink, MessageSquare, Plus } from "lucide-react";
-import { Button, Card, Chip, Input, Modal, Select, Table, Td, Th } from "@/components/portal/ui";
+import { Button, Card, Chip, Input, Modal, Select, Table, Tabs, Td, Th } from "@/components/portal/ui";
 import { authHeader, money, when } from "./client";
 import { TeamCard } from "@/components/portal/team";
 import { HIDEABLE_SECTIONS } from "./customer-sections";
@@ -125,8 +125,12 @@ const PAY_TONE: Record<string, "good" | "warn" | "bad" | "neutral"> = {
 
 const ago = (iso: string | null) => (iso ? when(iso) : "never");
 
+/* the five groups the record splits into, in the order they are read */
+type TabKey = "orders" | "videos" | "messages" | "access" | "profile";
+
 export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void }) {
   const [data, setData] = useState<Record_ | null>(null);
+  const [tab, setTab] = useState<TabKey>("orders");
   const [err, setErr] = useState("");
   const [note, setNote] = useState("");
   const [tagDraft, setTagDraft] = useState("");
@@ -269,6 +273,9 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
   const title = c.company || c.name || c.email;
   const hidden = new Set(c.hiddenSections);
   const disabledSet = new Set(c.disabledSections);
+  /* add-ons are extra work billed against a project, not projects of their
+     own, so the tab counts what they actually bought */
+  const projectOrders = data.orders.filter((o) => o.kind !== "addon");
 
   return (
     <div className="w-full">
@@ -367,8 +374,28 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
         </Card>
       </div>
 
-      <div className="mt-6 grid gap-3 lg:grid-cols-[1fr_22rem] lg:items-start">
-        <div className="grid min-w-0 gap-3">
+      {/* One client is more than one screen. It all used to stack into a
+          page where you scrolled past every order to reach the access
+          controls, so it is grouped now: what they bought, what they got,
+          what we have said, who can sign in, and who they are. The name and
+          the money stay above the tabs, because they are the context for
+          all five. */}
+      <div className="mt-6">
+        <Tabs
+          tabs={[
+            { key: "orders", label: "Orders", count: projectOrders.length },
+            { key: "videos", label: "Videos", count: data.videos.length },
+            { key: "messages", label: "Messages", count: data.conversations.length },
+            { key: "access", label: "Access" },
+            { key: "profile", label: "Profile" },
+          ]}
+          active={tab}
+          onChange={setTab}
+        />
+      </div>
+
+      {tab === "orders" && (
+        <div className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-3">
           {/* orders */}
           <Card title="Orders" padded={false}>
             <div className="px-5 pb-5">
@@ -548,7 +575,11 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
               </div>
             </Card>
           )}
+        </div>
+      )}
 
+      {tab === "videos" && (
+        <div className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-3">
           {/* videos */}
           <Card title={`Videos (${data.videos.length})`} padded={false}>
             <div className="px-5 pb-5">
@@ -557,8 +588,8 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
                   Nothing delivered yet.
                 </p>
               ) : (
-                <ul className="grid gap-1.5">
-                  {data.videos.slice(0, 12).map((vd) => (
+                <ul className="grid grid-cols-[minmax(0,1fr)] gap-1.5">
+                  {data.videos.map((vd) => (
                     <li key={vd.id} className="flex items-center justify-between gap-3 text-body-sm">
                       <span className="min-w-0 truncate text-ink">{vd.title}</span>
                       <Chip tone={vd.status === "approved" ? "good" : "info"}>
@@ -566,446 +597,465 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
                       </Chip>
                     </li>
                   ))}
-                  {data.videos.length > 12 && (
-                    <li className="pt-1 text-body-sm text-dim">
-                      and {data.videos.length - 12} more
-                    </li>
-                  )}
                 </ul>
               )}
             </div>
           </Card>
-
-          {/* internal notes */}
-          <Card title="Internal notes">
-            <p className="text-body-sm text-muted">
-              Only the team sees these. The client never does.
-            </p>
-            <div className="mt-3 flex gap-2">
-              <Input
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder="Context worth keeping. Who introduced them, what they care about."
-              />
-              <Button
-                variant="brand"
-                size="sm"
-                disabled={busy || !note.trim()}
-                onClick={async () => {
-                  await patch({ note });
-                  setNote("");
-                }}
-              >
-                Add
-              </Button>
-            </div>
-            {data.notes.length > 0 && (
-              <ul className="mt-4 grid gap-3">
-                {data.notes.map((n) => (
-                  <li key={n.id} className="border-t border-hair pt-3 first:border-t-0 first:pt-0">
-                    <p className="text-body-sm text-ink">{n.body}</p>
-                    <p className="mt-1 font-mono text-label uppercase text-dim">
-                      {n.author} / {when(n.createdAt)}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Card>
         </div>
+      )}
 
-        {/* right rail: the account itself */}
-        <div className="grid gap-3">
-          <Card title="Messages">
-            {data.conversations.length === 0 ? (
-              <p className="text-body-sm text-muted">No conversation yet.</p>
-            ) : (
-              <ul className="grid gap-2.5">
-                {data.conversations.slice(0, 4).map((v2) => (
-                  <li key={v2.id} className="text-body-sm">
-                    <p className="truncate text-ink">{v2.preview ?? "No messages"}</p>
-                    <p className="mt-0.5 font-mono text-label uppercase text-dim">
-                      {v2.lastSender ?? "-"} / {ago(v2.lastMessageAt)}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <div className="mt-3">
-              <Button variant="secondary" size="sm" full icon={<MessageSquare />} href="/admin/messages/">
-                Open messages
-              </Button>
-            </div>
-          </Card>
-
-          <Card title="Emails" description="What this person was sent, and what happened to each.">
-            {/* the welcome, for accounts the studio created by hand: nothing
-                else ever tells these people their portal exists. A contact
-                gets a seat on the account first, then the invite. */}
-            <div className="mb-3 flex flex-wrap items-center gap-2">
-              <div className="min-w-0 flex-1">
-                <Select
-                  value={welcomeTo || data.customer.email}
-                  onChange={(e) => setWelcomeTo(e.target.value)}
-                  aria-label="Who gets the welcome email"
+      {tab === "messages" && (
+        <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_22rem] lg:items-start">
+          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3">
+            <Card title="Emails" description="What this person was sent, and what happened to each.">
+              {/* the welcome, for accounts the studio created by hand: nothing
+                  else ever tells these people their portal exists. A contact
+                  gets a seat on the account first, then the invite. */}
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  <Select
+                    value={welcomeTo || data.customer.email}
+                    onChange={(e) => setWelcomeTo(e.target.value)}
+                    aria-label="Who gets the welcome email"
+                  >
+                    <option value={data.customer.email}>{data.customer.email} (account)</option>
+                    {data.contacts
+                      .filter(
+                        (ct) =>
+                          ct.email &&
+                          ct.email.toLowerCase() !== data.customer.email.toLowerCase(),
+                      )
+                      .map((ct) => (
+                        <option key={ct.id} value={ct.email ?? ""}>
+                          {ct.email} ({ct.name})
+                        </option>
+                      ))}
+                  </Select>
+                </div>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={sending?.startsWith("welcome:") ?? false}
+                  onClick={() => sendWelcome(welcomeTo || data.customer.email)}
                 >
-                  <option value={data.customer.email}>{data.customer.email} (account)</option>
-                  {data.contacts
-                    .filter(
-                      (ct) =>
-                        ct.email &&
-                        ct.email.toLowerCase() !== data.customer.email.toLowerCase(),
-                    )
-                    .map((ct) => (
-                      <option key={ct.id} value={ct.email ?? ""}>
-                        {ct.email} ({ct.name})
-                      </option>
-                    ))}
-                </Select>
+                  {sending?.startsWith("welcome:") ? "Sending..." : "Send welcome"}
+                </Button>
               </div>
-              <Button
-                size="sm"
-                variant="secondary"
-                disabled={sending?.startsWith("welcome:") ?? false}
-                onClick={() => sendWelcome(welcomeTo || data.customer.email)}
-              >
-                {sending?.startsWith("welcome:") ? "Sending..." : "Send welcome"}
-              </Button>
-            </div>
-            {emails === null ? (
-              <p className="text-body-sm text-muted">Loading...</p>
-            ) : emails.length === 0 ? (
-              <p className="text-body-sm text-muted">
-                Nothing recorded. The log started on 20 August 2026, so older
-                sends are not in it.
-              </p>
-            ) : (
-              <ul className="grid gap-2">
-                {emails.slice(0, 8).map((e) => (
-                  <li key={e.id}>
-                    <button
-                      type="button"
-                      onClick={() => setOpenEmail(openEmail === e.id ? null : e.id)}
-                      className="tap w-full text-left"
-                    >
-                      <span className="flex items-start justify-between gap-2">
-                        <span className="min-w-0 flex-1 truncate text-body-sm text-ink">
-                          {e.subject}
+              {emails === null ? (
+                <p className="text-body-sm text-muted">Loading...</p>
+              ) : emails.length === 0 ? (
+                <p className="text-body-sm text-muted">
+                  Nothing recorded. The log started on 20 August 2026, so older
+                  sends are not in it.
+                </p>
+              ) : (
+                <ul className="grid grid-cols-[minmax(0,1fr)] gap-2">
+                  {emails.slice(0, 8).map((e) => (
+                    <li key={e.id}>
+                      <button
+                        type="button"
+                        onClick={() => setOpenEmail(openEmail === e.id ? null : e.id)}
+                        className="tap w-full text-left"
+                      >
+                        <span className="flex items-start justify-between gap-2">
+                          <span className="min-w-0 flex-1 truncate text-body-sm text-ink">
+                            {e.subject}
+                          </span>
+                          <Chip
+                            tone={
+                              e.status === "sent"
+                                ? "good"
+                                : e.status === "failed"
+                                  ? "bad"
+                                  : e.status === "skipped"
+                                    ? "warn"
+                                    : "neutral"
+                            }
+                          >
+                            {e.status}
+                          </Chip>
                         </span>
-                        <Chip
-                          tone={
-                            e.status === "sent"
-                              ? "good"
-                              : e.status === "failed"
-                                ? "bad"
-                                : e.status === "skipped"
-                                  ? "warn"
-                                  : "neutral"
-                          }
-                        >
-                          {e.status}
-                        </Chip>
+                        <span className="mt-0.5 block font-mono text-label uppercase text-dim">
+                          {e.templateKey ?? e.source} / {when(e.at)}
+                        </span>
+                        {openEmail === e.id && e.error && (
+                          <span className="mt-1 block whitespace-pre-wrap text-body-sm text-error">
+                            {e.error}
+                          </span>
+                        )}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          </div>
+          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3">
+            <Card title="Messages">
+              {data.conversations.length === 0 ? (
+                <p className="text-body-sm text-muted">No conversation yet.</p>
+              ) : (
+                /* the track has to be allowed to shrink, or the preview line,
+                   which is nowrap so it can end in an ellipsis, sizes the
+                   column to the whole message instead of being clipped by it */
+                <ul className="grid grid-cols-[minmax(0,1fr)] gap-2.5">
+                  {data.conversations.slice(0, 4).map((v2) => (
+                    <li key={v2.id} className="text-body-sm">
+                      <p className="truncate text-ink">{v2.preview ?? "No messages"}</p>
+                      <p className="mt-0.5 font-mono text-label uppercase text-dim">
+                        {v2.lastSender ?? "-"} / {ago(v2.lastMessageAt)}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div className="mt-3">
+                <Button variant="secondary" size="sm" full icon={<MessageSquare />} href="/admin/messages/">
+                  Open messages
+                </Button>
+              </div>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {tab === "access" && (
+        <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_22rem] lg:items-start">
+          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3">
+            {/* the client's own portal team, managed from here when they ask us
+                to do it for them. Same card and same routes their Settings
+                screen uses, so a member we add is not a different kind of
+                member. */}
+            <TeamCard
+              endpoint={`/api/admin/customers/${data.customer.id}/team`}
+              accountType="customer"
+              heading="Portal access"
+              blurb="Who can sign in to this client's portal. The primary account holder is always in; anyone below is a teammate they added, or one you added for them. Each gets their own login and the updates for the areas they are granted."
+              owner={{ email: data.customer.email, name: data.customer.name }}
+            />
+
+            {/* the access control Shariful asked for */}
+            <Card title="What they see">
+              <p className="text-body-sm text-muted">
+                Visible is normal. Disabled stays in their menu but locked, with
+                a note on hover, which says this exists and you do not have it.
+                Hidden removes it entirely.
+              </p>
+              {/* shrinkable track again: each row's max-content is its label
+                  plus the three-way switch on one line, and an `auto` track
+                  would size to that instead of letting the label truncate */}
+              <div className="mt-3 grid grid-cols-[minmax(0,1fr)] gap-2">
+                {HIDEABLE_SECTIONS.map((s) => {
+                  const state = hidden.has(s.key)
+                    ? "hidden"
+                    : disabledSet.has(s.key)
+                      ? "disabled"
+                      : "visible";
+                  /* one home per key: choosing a state clears the other list,
+                     so a section can never be hidden AND disabled at once */
+                  const set = (next: "visible" | "disabled" | "hidden") => {
+                    const hiddenNext = c.hiddenSections.filter((k) => k !== s.key);
+                    const disabledNext = c.disabledSections.filter((k) => k !== s.key);
+                    if (next === "hidden") hiddenNext.push(s.key);
+                    if (next === "disabled") disabledNext.push(s.key);
+                    void patch({ hiddenSections: hiddenNext, disabledSections: disabledNext });
+                  };
+                  return (
+                    <div key={s.key} className="flex items-center justify-between gap-3">
+                      <span className="min-w-0 truncate text-body-sm text-ink">{s.label}</span>
+                      <span className="flex shrink-0 overflow-hidden rounded-[6px] border border-hair">
+                        {(
+                          [
+                            ["visible", "On"],
+                            ["disabled", "Locked"],
+                            ["hidden", "Off"],
+                          ] as const
+                        ).map(([k, label]) => (
+                          <button
+                            key={k}
+                            type="button"
+                            disabled={busy}
+                            onClick={() => set(k)}
+                            aria-pressed={state === k}
+                            className={`tap px-2 py-1 font-mono text-label uppercase transition-colors ${
+                              state === k
+                                ? k === "visible"
+                                  ? "bg-green/15 text-green"
+                                  : k === "disabled"
+                                    ? "bg-gold/15 text-gold"
+                                    : "bg-hair/60 text-muted"
+                                : "text-dim hover:text-ink"
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        ))}
                       </span>
-                      <span className="mt-0.5 block font-mono text-label uppercase text-dim">
-                        {e.templateKey ?? e.source} / {when(e.at)}
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          </div>
+          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3">
+            {/* who we actually deal with. Distinct from Team below, which is who
+                can log in: most contacts never sign in at all. */}
+            <Card
+              title="Who we work with"
+              actions={
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  icon={<Plus />}
+                  onClick={() =>
+                    setContact({ name: "", email: "", phone: "", title: "", role: "production" })
+                  }
+                >
+                  Add
+                </Button>
+              }
+            >
+              {data.contacts.length === 0 && !contact && (
+                <p className="text-body-sm text-muted">
+                  Nobody named yet. Add the person who runs projects with you.
+                </p>
+              )}
+              {data.contacts.length > 0 && (
+                <ul className="grid gap-2.5">
+                  {data.contacts.map((c) => (
+                    <li key={c.id} className="text-body-sm">
+                      <span className="flex flex-wrap items-center gap-2">
+                        <span className="text-ink">{c.name}</span>
+                        <Chip tone={c.role === "primary" ? "good" : "info"}>{c.role}</Chip>
                       </span>
-                      {openEmail === e.id && e.error && (
-                        <span className="mt-1 block whitespace-pre-wrap text-body-sm text-error">
-                          {e.error}
+                      <p className="mt-0.5 font-mono text-label uppercase text-dim">
+                        {[c.title, c.email, c.phone].filter(Boolean).join(" / ") || "no details"}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <Modal open={!!contact} onClose={() => setContact(null)} title="Add a contact">
+                {contact && (
+                  <div className="grid gap-2">
+                  <Input
+                    value={contact.name}
+                    onChange={(e) => setContact({ ...contact, name: e.target.value })}
+                    placeholder="Name"
+                  />
+                  <Input
+                    value={contact.title}
+                    onChange={(e) => setContact({ ...contact, title: e.target.value })}
+                    placeholder="What they do, e.g. Head of Content"
+                  />
+                  <Input
+                    value={contact.email}
+                    onChange={(e) => setContact({ ...contact, email: e.target.value })}
+                    placeholder="Email"
+                  />
+                  <Input
+                    value={contact.phone}
+                    onChange={(e) => setContact({ ...contact, phone: e.target.value })}
+                    placeholder="Phone"
+                  />
+                  <Select
+                    value={contact.role}
+                    onChange={(e) => setContact({ ...contact, role: e.target.value })}
+                    aria-label="What this contact is for"
+                  >
+                    <option value="primary">Primary, the relationship</option>
+                    <option value="production">Production, the day to day</option>
+                    <option value="billing">Billing</option>
+                    <option value="other">Other</option>
+                  </Select>
+                  <div className="flex justify-end gap-2 border-t border-hair pt-3">
+                    <Button variant="ghost" size="sm" onClick={() => setContact(null)}>
+                      Cancel
+                    </Button>
+                    <Button variant="brand" size="sm" disabled={busy || !contact.name.trim()} onClick={addContact}>
+                      Save
+                    </Button>
+                  </div>
+                  </div>
+                )}
+              </Modal>
+            </Card>
+
+            {/* A commercial switch, not a visibility one, which is why it is
+                its own card above the section toggles rather than a row in
+                them. */}
+            <Card title="Custom video">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-body-sm font-semibold text-ink">
+                    Let them submit projects directly
+                  </p>
+                  <p className="mt-1 text-body-sm text-muted">
+                    For accounts on a retainer, where the rate is already agreed.
+                    They brief a video straight from their portal with a script
+                    and it lands in the backlog, with no quote in between. Off,
+                    they request a quote like everyone else.
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant={c.canSubmitProjects ? "brand" : "secondary"}
+                  onClick={() => void patch({ canSubmitProjects: !c.canSubmitProjects })}
+                >
+                  {c.canSubmitProjects ? "On" : "Off"}
+                </Button>
+              </div>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {tab === "profile" && (
+        <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_22rem] lg:items-start">
+          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3">
+            {/* internal notes */}
+            <Card title="Internal notes">
+              <p className="text-body-sm text-muted">
+                Only the team sees these. The client never does.
+              </p>
+              <div className="mt-3 flex gap-2">
+                <Input
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="Context worth keeping. Who introduced them, what they care about."
+                />
+                <Button
+                  variant="brand"
+                  size="sm"
+                  disabled={busy || !note.trim()}
+                  onClick={async () => {
+                    await patch({ note });
+                    setNote("");
+                  }}
+                >
+                  Add
+                </Button>
+              </div>
+              {data.notes.length > 0 && (
+                <ul className="mt-4 grid gap-3">
+                  {data.notes.map((n) => (
+                    <li key={n.id} className="border-t border-hair pt-3 first:border-t-0 first:pt-0">
+                      <p className="text-body-sm text-ink">{n.body}</p>
+                      <p className="mt-1 font-mono text-label uppercase text-dim">
+                        {n.author} / {when(n.createdAt)}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          </div>
+          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3">
+            <Card title="Brand">
+              {data.brandKit.kit?.brandName ? (
+                <div className="grid gap-1.5 text-body-sm">
+                  <span className="text-ink">{data.brandKit.kit.brandName}</span>
+                  <span className="flex items-center gap-2 text-muted">
+                    {data.brandKit.kit.primaryColor && (
+                      <span
+                        aria-hidden="true"
+                        className="inline-block h-4 w-4 rounded-[3px] border border-hair"
+                        style={{ background: data.brandKit.kit.primaryColor }}
+                      />
+                    )}
+                    {data.brandKit.kit.primaryColor ?? "no colour"}
+                  </span>
+                  {data.brandKit.kit.pronunciation && (
+                    <span className="text-muted">said: {data.brandKit.kit.pronunciation}</span>
+                  )}
+                  <span className="mt-1 font-mono text-label uppercase text-dim">
+                    {data.brandKit.completeness.percent}% complete
+                  </span>
+                  {(data.brandKit.logoDarkUrl || data.brandKit.logoLightUrl || data.brandKit.logoUrl) && (
+                    <span className="mt-1 grid grid-cols-2 gap-2">
+                      {(data.brandKit.logoDarkUrl || (!data.brandKit.logoLightUrl && data.brandKit.logoUrl)) && (
+                        <span className="flex h-14 items-center justify-center rounded-[8px] border border-hair bg-white p-2">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={data.brandKit.logoDarkUrl ?? data.brandKit.logoUrl ?? undefined}
+                            alt="Dark logo on white"
+                            className="max-h-full max-w-full object-contain"
+                          />
                         </span>
                       )}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Card>
-
-          <Card title="Brand">
-            {data.brandKit.kit?.brandName ? (
-              <div className="grid gap-1.5 text-body-sm">
-                <span className="text-ink">{data.brandKit.kit.brandName}</span>
-                <span className="flex items-center gap-2 text-muted">
-                  {data.brandKit.kit.primaryColor && (
-                    <span
-                      aria-hidden="true"
-                      className="inline-block h-4 w-4 rounded-[3px] border border-hair"
-                      style={{ background: data.brandKit.kit.primaryColor }}
-                    />
-                  )}
-                  {data.brandKit.kit.primaryColor ?? "no colour"}
-                </span>
-                {data.brandKit.kit.pronunciation && (
-                  <span className="text-muted">said: {data.brandKit.kit.pronunciation}</span>
-                )}
-                <span className="mt-1 font-mono text-label uppercase text-dim">
-                  {data.brandKit.completeness.percent}% complete
-                </span>
-                {(data.brandKit.logoDarkUrl || data.brandKit.logoLightUrl || data.brandKit.logoUrl) && (
-                  <span className="mt-1 grid grid-cols-2 gap-2">
-                    {(data.brandKit.logoDarkUrl || (!data.brandKit.logoLightUrl && data.brandKit.logoUrl)) && (
-                      <span className="flex h-14 items-center justify-center rounded-[8px] border border-hair bg-white p-2">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={data.brandKit.logoDarkUrl ?? data.brandKit.logoUrl ?? undefined}
-                          alt="Dark logo on white"
-                          className="max-h-full max-w-full object-contain"
-                        />
-                      </span>
-                    )}
-                    {data.brandKit.logoLightUrl && (
-                      <span className="flex h-14 items-center justify-center rounded-[8px] border border-hair bg-[#08090D] p-2">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={data.brandKit.logoLightUrl}
-                          alt="White logo on dark"
-                          className="max-h-full max-w-full object-contain"
-                        />
-                      </span>
-                    )}
-                  </span>
-                )}
-                {(data.brandKit.guidelines ?? []).length > 0 && (
-                  <span className="mt-1 grid gap-1">
-                    {(data.brandKit.guidelines ?? []).map((g) => (
-                      <a
-                        key={g.path}
-                        href={g.url ?? undefined}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="tap truncate text-body-sm text-muted transition-colors hover:text-gold"
-                      >
-                        {g.name}
-                      </a>
-                    ))}
-                  </span>
-                )}
-              </div>
-            ) : (
-              <p className="text-body-sm text-muted">
-                No brand kit yet. Their first brief fills it.
-              </p>
-            )}
-          </Card>
-
-          {/* who we actually deal with. Distinct from Team below, which is who
-              can log in: most contacts never sign in at all. */}
-          <Card
-            title="Who we work with"
-            actions={
-              <Button
-                variant="ghost"
-                size="sm"
-                icon={<Plus />}
-                onClick={() =>
-                  setContact({ name: "", email: "", phone: "", title: "", role: "production" })
-                }
-              >
-                Add
-              </Button>
-            }
-          >
-            {data.contacts.length === 0 && !contact && (
-              <p className="text-body-sm text-muted">
-                Nobody named yet. Add the person who runs projects with you.
-              </p>
-            )}
-            {data.contacts.length > 0 && (
-              <ul className="grid gap-2.5">
-                {data.contacts.map((c) => (
-                  <li key={c.id} className="text-body-sm">
-                    <span className="flex flex-wrap items-center gap-2">
-                      <span className="text-ink">{c.name}</span>
-                      <Chip tone={c.role === "primary" ? "good" : "info"}>{c.role}</Chip>
+                      {data.brandKit.logoLightUrl && (
+                        <span className="flex h-14 items-center justify-center rounded-[8px] border border-hair bg-[#08090D] p-2">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={data.brandKit.logoLightUrl}
+                            alt="White logo on dark"
+                            className="max-h-full max-w-full object-contain"
+                          />
+                        </span>
+                      )}
                     </span>
-                    <p className="mt-0.5 font-mono text-label uppercase text-dim">
-                      {[c.title, c.email, c.phone].filter(Boolean).join(" / ") || "no details"}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <Modal open={!!contact} onClose={() => setContact(null)} title="Add a contact">
-              {contact && (
-                <div className="grid gap-2">
-                <Input
-                  value={contact.name}
-                  onChange={(e) => setContact({ ...contact, name: e.target.value })}
-                  placeholder="Name"
-                />
-                <Input
-                  value={contact.title}
-                  onChange={(e) => setContact({ ...contact, title: e.target.value })}
-                  placeholder="What they do, e.g. Head of Content"
-                />
-                <Input
-                  value={contact.email}
-                  onChange={(e) => setContact({ ...contact, email: e.target.value })}
-                  placeholder="Email"
-                />
-                <Input
-                  value={contact.phone}
-                  onChange={(e) => setContact({ ...contact, phone: e.target.value })}
-                  placeholder="Phone"
-                />
-                <Select
-                  value={contact.role}
-                  onChange={(e) => setContact({ ...contact, role: e.target.value })}
-                  aria-label="What this contact is for"
-                >
-                  <option value="primary">Primary, the relationship</option>
-                  <option value="production">Production, the day to day</option>
-                  <option value="billing">Billing</option>
-                  <option value="other">Other</option>
-                </Select>
-                <div className="flex justify-end gap-2 border-t border-hair pt-3">
-                  <Button variant="ghost" size="sm" onClick={() => setContact(null)}>
-                    Cancel
-                  </Button>
-                  <Button variant="brand" size="sm" disabled={busy || !contact.name.trim()} onClick={addContact}>
-                    Save
-                  </Button>
-                </div>
-                </div>
-              )}
-            </Modal>
-          </Card>
-
-          {/* the client's own portal team, managed from here when they ask us
-              to do it for them. Same card and same routes their Settings
-              screen uses, so a member we add is not a different kind of
-              member. */}
-          <TeamCard
-            endpoint={`/api/admin/customers/${data.customer.id}/team`}
-            accountType="customer"
-            heading="Portal access"
-            blurb="Who can sign in to this client's portal. The primary account holder is always in; anyone below is a teammate they added, or one you added for them. Each gets their own login and the updates for the areas they are granted."
-            owner={{ email: data.customer.email, name: data.customer.name }}
-          />
-
-          {/* A commercial switch, not a visibility one, which is why it is
-              its own card above the section toggles rather than a row in
-              them. */}
-          <Card title="Custom video">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-body-sm font-semibold text-ink">
-                  Let them submit projects directly
-                </p>
-                <p className="mt-1 text-body-sm text-muted">
-                  For accounts on a retainer, where the rate is already agreed.
-                  They brief a video straight from their portal with a script
-                  and it lands in the backlog, with no quote in between. Off,
-                  they request a quote like everyone else.
-                </p>
-              </div>
-              <Button
-                size="sm"
-                variant={c.canSubmitProjects ? "brand" : "secondary"}
-                onClick={() => void patch({ canSubmitProjects: !c.canSubmitProjects })}
-              >
-                {c.canSubmitProjects ? "On" : "Off"}
-              </Button>
-            </div>
-          </Card>
-
-          {/* the access control Shariful asked for */}
-          <Card title="What they see">
-            <p className="text-body-sm text-muted">
-              Visible is normal. Disabled stays in their menu but locked, with
-              a note on hover, which says this exists and you do not have it.
-              Hidden removes it entirely.
-            </p>
-            <div className="mt-3 grid gap-2">
-              {HIDEABLE_SECTIONS.map((s) => {
-                const state = hidden.has(s.key)
-                  ? "hidden"
-                  : disabledSet.has(s.key)
-                    ? "disabled"
-                    : "visible";
-                /* one home per key: choosing a state clears the other list,
-                   so a section can never be hidden AND disabled at once */
-                const set = (next: "visible" | "disabled" | "hidden") => {
-                  const hiddenNext = c.hiddenSections.filter((k) => k !== s.key);
-                  const disabledNext = c.disabledSections.filter((k) => k !== s.key);
-                  if (next === "hidden") hiddenNext.push(s.key);
-                  if (next === "disabled") disabledNext.push(s.key);
-                  void patch({ hiddenSections: hiddenNext, disabledSections: disabledNext });
-                };
-                return (
-                  <div key={s.key} className="flex items-center justify-between gap-3">
-                    <span className="min-w-0 truncate text-body-sm text-ink">{s.label}</span>
-                    <span className="flex shrink-0 overflow-hidden rounded-[6px] border border-hair">
-                      {(
-                        [
-                          ["visible", "On"],
-                          ["disabled", "Locked"],
-                          ["hidden", "Off"],
-                        ] as const
-                      ).map(([k, label]) => (
-                        <button
-                          key={k}
-                          type="button"
-                          disabled={busy}
-                          onClick={() => set(k)}
-                          aria-pressed={state === k}
-                          className={`tap px-2 py-1 font-mono text-label uppercase transition-colors ${
-                            state === k
-                              ? k === "visible"
-                                ? "bg-green/15 text-green"
-                                : k === "disabled"
-                                  ? "bg-gold/15 text-gold"
-                                  : "bg-hair/60 text-muted"
-                              : "text-dim hover:text-ink"
-                          }`}
+                  )}
+                  {(data.brandKit.guidelines ?? []).length > 0 && (
+                    <span className="mt-1 grid gap-1">
+                      {(data.brandKit.guidelines ?? []).map((g) => (
+                        <a
+                          key={g.path}
+                          href={g.url ?? undefined}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="tap truncate text-body-sm text-muted transition-colors hover:text-gold"
                         >
-                          {label}
-                        </button>
+                          {g.name}
+                        </a>
                       ))}
                     </span>
-                  </div>
-                );
-              })}
-            </div>
-          </Card>
+                  )}
+                </div>
+              ) : (
+                <p className="text-body-sm text-muted">
+                  No brand kit yet. Their first brief fills it.
+                </p>
+              )}
+            </Card>
 
-          <Card title="Tags">
-            <div className="flex flex-wrap gap-1.5">
-              {c.tags.length === 0 && <p className="text-body-sm text-muted">No tags yet.</p>}
-              {c.tags.map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => void patch({ tags: c.tags.filter((x) => x !== t) })}
-                  className="tap rounded-full border border-hair px-2.5 py-1 font-mono text-label uppercase text-muted transition-colors hover:border-error/60 hover:text-error"
-                  aria-label={`Remove tag ${t}`}
+            <Card title="Tags">
+              <div className="flex flex-wrap gap-1.5">
+                {c.tags.length === 0 && <p className="text-body-sm text-muted">No tags yet.</p>}
+                {c.tags.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => void patch({ tags: c.tags.filter((x) => x !== t) })}
+                    className="tap rounded-full border border-hair px-2.5 py-1 font-mono text-label uppercase text-muted transition-colors hover:border-error/60 hover:text-error"
+                    aria-label={`Remove tag ${t}`}
+                  >
+                    {t} &times;
+                  </button>
+                ))}
+              </div>
+              <div className="mt-3 flex gap-2">
+                <Input
+                  value={tagDraft}
+                  onChange={(e) => setTagDraft(e.target.value)}
+                  placeholder="agency, priority"
+                />
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon={<Plus />}
+                  disabled={busy || !tagDraft.trim()}
+                  onClick={async () => {
+                    await patch({ tags: [...c.tags, tagDraft.trim()] });
+                    setTagDraft("");
+                  }}
                 >
-                  {t} &times;
-                </button>
-              ))}
-            </div>
-            <div className="mt-3 flex gap-2">
-              <Input
-                value={tagDraft}
-                onChange={(e) => setTagDraft(e.target.value)}
-                placeholder="agency, priority"
-              />
-              <Button
-                variant="secondary"
-                size="sm"
-                icon={<Plus />}
-                disabled={busy || !tagDraft.trim()}
-                onClick={async () => {
-                  await patch({ tags: [...c.tags, tagDraft.trim()] });
-                  setTagDraft("");
-                }}
-              >
-                Add
-              </Button>
-            </div>
-          </Card>
+                  Add
+                </Button>
+              </div>
+            </Card>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

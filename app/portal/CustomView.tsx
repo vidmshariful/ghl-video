@@ -380,13 +380,15 @@ export function CustomView({
       {/* Under the list, not only on an empty screen. Somebody with three
           projects running is the likeliest person to want a fourth, and the
           formats used to be visible only to people who had never bought one.
-          Retainer accounts do not need it: they have the button above. */}
-      {projects.length > 0 && !canSubmit && (
-        <div className="mt-6">
+          Retainer accounts see it too: their deal covers the work we agreed,
+          not every format we make, and the prices are the answer to what
+          anything else would cost. */}
+      {projects.length > 0 && (
+        <div className="mt-10">
           <QuoteFormats
             authedFetch={authedFetch}
-            heading="Need another custom video?"
-            blurb="Pick the format closest to what you have in mind and we will come back with an exact quote."
+            heading={quoteCopy(canSubmit).heading}
+            blurb={quoteCopy(canSubmit).blurb}
           />
         </div>
       )}
@@ -881,15 +883,17 @@ function StartModule({
             : "Custom video is anything made from scratch for you: a brand film, a launch video, an explainer nobody else has. These are the four formats and their published starting prices; every project gets an exact quote before production starts."
         }
       />
-      {!canSubmit && (
-        <div className="mt-4">
-          <QuoteFormats
-            authedFetch={authedFetch}
-            heading="Pick a format to start from"
-            blurb="Every project gets an exact quote before production starts."
-          />
-        </div>
-      )}
+      <div className="mt-4">
+        <QuoteFormats
+          authedFetch={authedFetch}
+          heading={canSubmit ? quoteCopy(true).heading : "Pick a format to start from"}
+          blurb={
+            canSubmit
+              ? quoteCopy(true).blurb
+              : "Every project gets an exact quote before production starts."
+          }
+        />
+      </div>
     </div>
   );
 }
@@ -1018,6 +1022,27 @@ function SubmitProject({
  * before this the only place the formats appeared was the screen belonging to
  * somebody who had never bought one.
  */
+/*
+ * What the formats section says, which depends on who is reading it.
+ *
+ * A retainer client is not shopping for a quote on the work we already
+ * agreed, so for them the four prices answer a different question: what
+ * anything outside the deal would cost.
+ */
+function quoteCopy(canSubmit: boolean) {
+  return canSubmit
+    ? {
+        heading: "Something outside your plan?",
+        blurb:
+          "These are the four formats and what each one starts at. Pick the closest and we will come back with an exact quote.",
+      }
+    : {
+        heading: "Need another custom video?",
+        blurb:
+          "Pick the format closest to what you have in mind and we will come back with an exact quote.",
+      };
+}
+
 function QuoteFormats({
   authedFetch,
   heading,
