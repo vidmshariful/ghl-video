@@ -33,6 +33,7 @@ type PipelineStation = {
 
 type Reviewable = {
   id: string;
+  status: string;
   videoUrl: string | null;
   canReview: boolean;
   canRequestChanges: boolean;
@@ -40,7 +41,7 @@ type Reviewable = {
   revisionsUsed: number;
 };
 
-type Format = Reviewable & { title: string; status: string; word: string };
+type Format = Reviewable & { title: string; word: string };
 
 type Project = {
   id: string;
@@ -202,7 +203,7 @@ export function CustomView({
         id: playing.id,
         title: playing.title,
         videoUrl: playing.videoUrl,
-        status: "ready",
+        status: playing.status,
         canRequestChanges: playing.canRequestChanges,
         revisionsIncluded: playing.revisionsIncluded,
         revisionsUsed: playing.revisionsUsed,
@@ -534,14 +535,20 @@ function ProjectPage({
                       </span>
                       <span className="flex shrink-0 items-center gap-2">
                         <Chip
+                          /* revisions BEFORE canReview: canReview is true for
+                             ready and revisions both, so the revisions branch
+                             below it could never be reached and changes in
+                             hand wore the same gold as ready to watch */
                           tone={
                             f.status === "approved"
                               ? "good"
-                              : f.canReview
-                                ? "warn"
-                                : f.status === "revisions"
-                                  ? "bad"
-                                  : "neutral"
+                              : f.status === "revisions"
+                                ? "bad"
+                                : f.canReview
+                                  ? "warn"
+                                  : f.status === "in_production"
+                                    ? "info"
+                                    : "neutral"
                           }
                         >
                           {f.word}
@@ -752,6 +759,8 @@ function StageRow({
   const providable = st.provided && (st.key === "script" || st.key === "voiceover");
   const needsTheirFile = providable && st.state !== "done";
   const provideNoun = st.key === "script" ? "script" : "voiceover";
+  /* finished, a video, and the last one: the file the client actually keeps */
+  const keepable = st.state === "done" && medium === "video" && st.key === "delivery";
 
   async function provide() {
     setBusy(true);
@@ -822,17 +831,15 @@ function StageRow({
         {reviewable && (
           <Button
             size="sm"
-            variant={needsYou ? "brand" : "secondary"}
+            variant={needsYou ? "brand" : keepable ? "info" : "secondary"}
             onClick={() => onReview(st.key)}
           >
             {/* "Review" on something already approved asks for a verdict that
-                has been given. Once a cut is signed off the only things left
-                to do with it are watch it and take it. */}
-            {needsYou
-              ? "Review and approve"
-              : st.state === "done" && medium === "video"
-                ? "Watch and download"
-                : "Review"}
+                has been given. But only the final delivery is theirs to keep:
+                the animation is a stage they sign off on the way through, with
+                sound still to come, so offering that file hands them an
+                unfinished cut of their own video. */}
+            {needsYou ? "Review and approve" : keepable ? "Watch and download" : "Review"}
           </Button>
         )}
         {needsTheirFile && (

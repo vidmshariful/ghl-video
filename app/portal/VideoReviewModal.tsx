@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { VideoReview } from "./VideoReview";
 import { ShareVideo } from "./ShareVideo";
+import { DownloadButton } from "@/components/portal/download";
 
 /*
  * The one and only place a client reviews a video: full screen, over
@@ -138,18 +139,11 @@ export function VideoReviewModal({
               <button
                 type="button"
                 onClick={() => setSharing(true)}
-                className="tap rounded-[8px] border border-hair px-3 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-green/60 hover:text-green"
+                className="tap rounded-[8px] border border-green/50 px-3 py-1.5 font-mono text-label uppercase text-green transition-colors hover:border-green hover:bg-green/10"
               >
                 Share
               </button>
-              {/* our own route: the download attribute is ignored across
-                  origins, so a plain link just opens the file in a tab */}
-              <a
-                href={`/api/portal/videos/${video.id}/download`}
-                className="tap rounded-[8px] border border-hair px-3 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-blue/60 hover:text-blue"
-              >
-                Download
-              </a>
+              <DownloadButton videoId={video.id} />
               <button
                 type="button"
                 onClick={onClose}

@@ -10,6 +10,7 @@ import {
 import { PlayCircle, Search } from "lucide-react";
 import { Card, Chip, EmptyState, Tabs } from "@/components/portal/ui";
 import { DownloadAll } from "@/components/portal/DownloadAll";
+import { DownloadButton } from "@/components/portal/download";
 import { VideoReview } from "./VideoReview";
 
 /*
@@ -459,12 +460,7 @@ function VideoCard({
             >
               {v.canReview ? "Watch and review" : "Watch"}
             </button>
-            <a
-              href={`/api/portal/videos/${v.id}/download`}
-              className="font-mono text-label uppercase tracking-[0.1em] text-blue hover:underline"
-            >
-              Download
-            </a>
+            <DownloadButton videoId={v.id} variant="link" />
           </div>
         )}
       </div>
@@ -547,14 +543,7 @@ function VideoPopup({
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-2">
-              {/* Through our own route, because the download attribute is
-                  ignored across origins and the file just opened in a tab. */}
-              <a
-                href={`/api/portal/videos/${v.id}/download`}
-                className="tap rounded-[8px] border border-hair px-3 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-blue/60 hover:text-blue"
-              >
-                Download
-              </a>
+              <DownloadButton videoId={v.id} />
               <button
                 type="button"
                 onClick={onClose}

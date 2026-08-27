@@ -169,6 +169,10 @@ export async function GET(req: Request) {
           main: main
             ? {
                 id: String(main.id),
+                /* the popup needs the real state to know an approved cut from
+                   one still waiting on them; without it every video opened as
+                   "ready" and asked for feedback on work already signed off */
+                status: mainStatus,
                 videoUrl: isWatchable(mainStatus)
                   ? ((main.video_url as string | null) ?? null)
                   : null,

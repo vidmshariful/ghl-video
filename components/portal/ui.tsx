@@ -275,6 +275,10 @@ const BUTTON_TONES = {
   secondary: "border border-hair bg-surface text-ink hover:border-gold/60 hover:text-gold",
   ghost: "border border-transparent text-muted hover:bg-hair/50 hover:text-ink",
   danger: "border border-hair text-error hover:border-error/60 hover:bg-error/5",
+  /* a real action that is not THE action: getting a finished file, next to a
+     gradient button that is still asking for a decision. Blue because that is
+     what every download control in the portal already wears. */
+  info: "border border-blue/50 bg-blue/10 text-blue hover:border-blue hover:bg-blue/20",
 } as const;
 
 const BUTTON_SIZES = {

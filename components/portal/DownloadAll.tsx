@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Download } from "lucide-react";
 import { Button } from "@/components/portal/ui";
+import { startVideoDownload } from "@/components/portal/download";
 
 /*
  * Every finished video in one press.
@@ -25,19 +26,20 @@ export function DownloadAll({
 }) {
   const [done, setDone] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
 
   if (videoIds.length < 2) return null;
 
   async function run() {
     setBusy(true);
     setDone(0);
+    setErr("");
     for (let i = 0; i < videoIds.length; i++) {
-      const a = document.createElement("a");
-      a.href = `/api/portal/videos/${videoIds[i]}/download`;
-      a.download = "";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+      const problem = await startVideoDownload(videoIds[i]);
+      if (problem) {
+        setErr(problem);
+        break;
+      }
       setDone(i + 1);
       /* spaced out on purpose: fired in one tick, a browser treats the run
        * as a popup storm and silently drops most of it */
@@ -47,8 +49,11 @@ export function DownloadAll({
   }
 
   return (
-    <Button variant="secondary" size="sm" icon={<Download />} disabled={busy} onClick={run}>
-      {busy ? `Starting ${done} of ${videoIds.length}...` : `${label} (${videoIds.length})`}
-    </Button>
+    <span className="inline-flex flex-wrap items-center gap-2">
+      <Button variant="secondary" size="sm" icon={<Download />} disabled={busy} onClick={run}>
+        {busy ? `Starting ${done} of ${videoIds.length}...` : `${label} (${videoIds.length})`}
+      </Button>
+      {err && <span className="text-body-sm text-error">{err}</span>}
+    </span>
   );
 }

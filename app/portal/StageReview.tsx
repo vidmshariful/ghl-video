@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Button, Textarea } from "@/components/portal/ui";
 import { ShareVideo } from "./ShareVideo";
+import { DownloadButton } from "@/components/portal/download";
 import { ConfirmDialog } from "./ConfirmDialog";
 
 /*
@@ -112,6 +113,8 @@ export function StageReview({
    * an inbox. Same rule the pre-made review screen already follows.
    */
   const finished = d?.state === "done";
+  const downloadable = d?.medium === "video" && Boolean(videoId) && stageKey === "delivery";
+
 
   async function send(action: "comment" | "approve" | "changes", opts?: { parentId?: string; body?: string }) {
     const body = opts?.body ?? text;
@@ -253,20 +256,21 @@ export function StageReview({
                 <button
                   type="button"
                   onClick={() => setSharing(true)}
-                  className="tap rounded-[8px] border border-hair px-3 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-green/60 hover:text-green"
+                  className="tap rounded-[8px] border border-green/50 px-3 py-1.5 font-mono text-label uppercase text-green transition-colors hover:border-green hover:bg-green/10"
                 >
                   Share
                 </button>
               )}
               {/* our own route: the download attribute is ignored across
                   origins, so a plain link just opens the file in a tab */}
-              {d?.medium === "video" && videoId && (
-                <a
-                  href={`/api/portal/videos/${videoId}/download`}
-                  className="tap rounded-[8px] border border-hair px-3 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-blue/60 hover:text-blue"
-                >
-                  Download
-                </a>
+              {/*
+                * Only the final delivery is the client's to keep. The
+                * animation is a stage they sign off on the way through, with
+                * sound still to come, so handing them that file gives them an
+                * unfinished cut of their own video.
+                */}
+              {downloadable && (
+                <DownloadButton videoId={videoId as string} />
               )}
               {d?.url && (
                 <a

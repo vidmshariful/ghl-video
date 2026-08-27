@@ -1,3 +1,4 @@
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { contextCan, resolvePortalContext } from "@/lib/account-team";
@@ -14,62 +15,62 @@ export const runtime = "nodejs";
  * file here and hand it back with a filename attached.
  *
  * Streamed, not buffered: a 200MB video must not sit in this process's memory
- * on the way through.
+ * on the way through. The largest video a client currently owns is 696MB,
+ * which is also why the browser must not buffer it either: fetching it into a
+ * blob to attach a token would hold the whole thing in a tab's memory and
+ * show no progress for minutes.
+ *
+ * WHY A TICKET
+ *
+ * Every portal request authenticates with a Bearer header, because the
+ * session lives in localStorage rather than a cookie. A download is a plain
+ * navigation, which carries neither, so an <a href> straight at this route
+ * arrived with no session and answered {"error":"Unauthorized."} on screen.
+ * Every download button in the portal was broken this way, including
+ * "Download them all".
+ *
+ * So POST here, with the session, to mint a short-lived ticket, then GET with
+ * it. The ticket names one video and expires in five minutes. Ownership is
+ * checked when it is minted, which is what the signature then stands for.
+ * The email is deliberately NOT in the URL: a link gets pasted into a chat
+ * and logged by every hop it passes, and the video id is already opaque.
  */
+const TICKET_TTL_MS = 5 * 60 * 1000;
+
+/* Its own secret if there is one, otherwise derived from the service role key,
+   which is server-only and always present. The fallback matters: a download
+   must not start failing because an env var was missed on a deploy. */
+function ticketSecret(): string {
+  return (
+    process.env.PORTAL_DOWNLOAD_SECRET ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    ""
+  );
+}
+
+function sign(id: string, expiresAt: number): string {
+  return createHmac("sha256", ticketSecret())
+    .update(`portal-download.v1.${id}.${expiresAt}`)
+    .digest("hex");
+}
+
+function ticketValid(id: string, exp: string | null, sig: string | null): boolean {
+  if (!exp || !sig || !ticketSecret()) return false;
+  const expiresAt = Number(exp);
+  if (!Number.isFinite(expiresAt) || Date.now() > expiresAt) return false;
+  const expected = Buffer.from(sign(id, expiresAt));
+  const given = Buffer.from(sig);
+  /* length check first: timingSafeEqual throws on a mismatch rather than
+     returning false, and a wrong-length signature is just a wrong signature */
+  return expected.length === given.length && timingSafeEqual(expected, given);
+}
+
 function safeName(title: string): string {
   const base = title
     .replace(/[^a-z0-9]+/gi, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 80);
   return `${base || "video"}.mp4`;
-}
-
-export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const db = supabaseAdmin();
-  const ctx = await resolvePortalContext(db, req, "customer");
-  if ("failStatus" in ctx)
-    return NextResponse.json({ error: "Unauthorized." }, { status: ctx.failStatus });
-  if (!contextCan(ctx, "orders"))
-    return NextResponse.json({ error: "No access." }, { status: 403 });
-
-  const { id } = await params;
-  const { data: d } = await db
-    .from("order_deliverables")
-    .select("id, title, status, video_url, order_id, project_id, cycle_id")
-    .eq("id", id)
-    .maybeSingle();
-  if (!d?.video_url) return NextResponse.json({ error: "Not found." }, { status: 404 });
-
-  /*
-   * The same two gates the portal itself applies: it has to be theirs, and
-   * the video has to be one they are allowed to watch.
-   *
-   * "Theirs" has three shapes now. This route only knew about orders, so a
-   * custom or editing video could be watched in the portal and then failed
-   * to download, which reads as the file being broken rather than as us
-   * having forgotten a branch.
-   */
-  const mine = await ownedBy(db, d, ctx.ownerEmail);
-  if (!mine.owned) return NextResponse.json({ error: "Not found." }, { status: 404 });
-  if (mine.refunded) return NextResponse.json({ error: "Not available." }, { status: 403 });
-  if (!isWatchable(d.status as DeliverableStatus))
-    return NextResponse.json({ error: "That video is not ready yet." }, { status: 403 });
-
-  const upstream = await fetch(d.video_url as string).catch(() => null);
-  if (!upstream?.ok || !upstream.body) {
-    return NextResponse.json({ error: "Could not fetch that video." }, { status: 502 });
-  }
-
-  return new NextResponse(upstream.body, {
-    headers: {
-      "content-type": upstream.headers.get("content-type") ?? "video/mp4",
-      ...(upstream.headers.get("content-length")
-        ? { "content-length": upstream.headers.get("content-length") as string }
-        : {}),
-      "content-disposition": `attachment; filename="${safeName(d.title as string)}"`,
-      "cache-control": "private, no-store",
-    },
-  });
 }
 
 /** Whose video is this, across all three owners a video can have. */
@@ -107,4 +108,92 @@ async function ownedBy(
     return { owned: owner.toLowerCase() === email.toLowerCase(), refunded: false };
   }
   return { owned: false, refunded: false };
+}
+
+/*
+ * The same two gates the portal itself applies: it has to be theirs, and the
+ * video has to be one they are allowed to watch.
+ *
+ * "Theirs" has three shapes. This route only knew about orders once, so a
+ * custom or editing video could be watched in the portal and then failed to
+ * download, which reads as the file being broken rather than as us having
+ * forgotten a branch.
+ */
+async function authorize(
+  db: ReturnType<typeof supabaseAdmin>,
+  req: Request,
+  d: Record<string, unknown>,
+): Promise<NextResponse | null> {
+  const ctx = await resolvePortalContext(db, req, "customer");
+  if ("failStatus" in ctx)
+    return NextResponse.json({ error: "Unauthorized." }, { status: ctx.failStatus });
+  if (!contextCan(ctx, "orders"))
+    return NextResponse.json({ error: "No access." }, { status: 403 });
+
+  const mine = await ownedBy(db, d, ctx.ownerEmail);
+  if (!mine.owned) return NextResponse.json({ error: "Not found." }, { status: 404 });
+  if (mine.refunded) return NextResponse.json({ error: "Not available." }, { status: 403 });
+  return null;
+}
+
+async function load(db: ReturnType<typeof supabaseAdmin>, id: string) {
+  const { data } = await db
+    .from("order_deliverables")
+    .select("id, title, status, video_url, order_id, project_id, cycle_id")
+    .eq("id", id)
+    .maybeSingle();
+  return data;
+}
+
+/** Mint a ticket for a video this session is allowed to have. */
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const db = supabaseAdmin();
+  const { id } = await params;
+
+  const d = await load(db, id);
+  if (!d?.video_url) return NextResponse.json({ error: "Not found." }, { status: 404 });
+
+  const denied = await authorize(db, req, d);
+  if (denied) return denied;
+  if (!isWatchable(d.status as DeliverableStatus))
+    return NextResponse.json({ error: "That video is not ready yet." }, { status: 403 });
+
+  const expiresAt = Date.now() + TICKET_TTL_MS;
+  return NextResponse.json({
+    url: `/api/portal/videos/${id}/download/?e=${expiresAt}&s=${sign(id, expiresAt)}`,
+  });
+}
+
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const db = supabaseAdmin();
+  const { id } = await params;
+  const q = new URL(req.url).searchParams;
+
+  const d = await load(db, id);
+  if (!d?.video_url) return NextResponse.json({ error: "Not found." }, { status: 404 });
+
+  /* a valid ticket already stands for the ownership check done when it was
+     minted; anything else still has to prove itself the usual way */
+  if (!ticketValid(id, q.get("e"), q.get("s"))) {
+    const denied = await authorize(db, req, d);
+    if (denied) return denied;
+  }
+  if (!isWatchable(d.status as DeliverableStatus))
+    return NextResponse.json({ error: "That video is not ready yet." }, { status: 403 });
+
+  const upstream = await fetch(d.video_url as string).catch(() => null);
+  if (!upstream?.ok || !upstream.body) {
+    return NextResponse.json({ error: "Could not fetch that video." }, { status: 502 });
+  }
+
+  return new NextResponse(upstream.body, {
+    headers: {
+      "content-type": upstream.headers.get("content-type") ?? "video/mp4",
+      ...(upstream.headers.get("content-length")
+        ? { "content-length": upstream.headers.get("content-length") as string }
+        : {}),
+      "content-disposition": `attachment; filename="${safeName(d.title as string)}"`,
+      "cache-control": "private, no-store",
+    },
+  });
 }

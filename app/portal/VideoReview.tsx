@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Check } from "lucide-react";
 import { Button, Textarea } from "@/components/portal/ui";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { DownloadButton } from "@/components/portal/download";
 
 /*
  * Reviewing one video: watch it, say what you want changed at the second it
@@ -150,6 +151,7 @@ export function VideoReview({
   }
 
   const approved = liveStatus === "approved";
+
 
   /* Clicking into the note box pauses the video. Otherwise a client types
      while it plays on, and the timestamp they attach is wherever it drifted
@@ -339,12 +341,7 @@ export function VideoReview({
               <span className="inline-flex items-center gap-2 rounded-[8px] border border-green/40 bg-green/10 px-3.5 py-2 text-body-sm font-semibold text-green">
                 <Check size={15} aria-hidden="true" /> Approved
               </span>
-              <a
-                href={`/api/portal/videos/${videoId}/download`}
-                className="tap rounded-[8px] border border-hair px-3.5 py-2 text-body-sm font-semibold text-muted transition-colors hover:border-blue/60 hover:text-blue"
-              >
-                Download it
-              </a>
+              <DownloadButton videoId={videoId} label="Download it" variant="button" />
               {onMessageStudio && (
                 <Button variant="ghost" onClick={onMessageStudio}>
                   Message the studio
