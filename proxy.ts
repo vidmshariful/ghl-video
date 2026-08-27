@@ -173,6 +173,28 @@ async function isProxy(ip: string, apiKey: string): Promise<boolean | null> {
 }
 
 export async function proxy(req: NextRequest) {
+  /*
+   * Payment webhooks skip every gate below, and nothing else does.
+   *
+   * The gate's matcher covers /api, so the Stripe webhook was behind the
+   * VPN check. Stripe delivers from a pool of AWS addresses and proxycheck
+   * flags some of that pool as proxies: of seven published Stripe webhook
+   * IPs, two came back proxy=yes. Those deliveries were being answered 403.
+   * Stripe retries, which is why orders still settled, but a settlement that
+   * depends on the next retry landing on an unflagged address is a paid
+   * customer waiting on a coin toss, and charge.refunded and dispute events
+   * ride the same road.
+   *
+   * Safe to exempt because the IP check was never what authenticated these.
+   * The handler verifies a Stripe signature over the raw body and rejects
+   * anything unsigned, so the gate added no protection here and could only
+   * ever lose deliveries. Nothing else is exempted: checkout, the quote
+   * form and the portals stay behind the gate exactly as they were.
+   */
+  if (req.nextUrl.pathname.startsWith("/api/webhooks/")) {
+    return NextResponse.next();
+  }
+
   // First-touch affiliate capture. If a ?ref= is present and no ref cookie is
   // set yet, remember it for 90 days. This runs before and independent of the
   // gate (so partner links credit their partner even while the gate is
