@@ -36,6 +36,7 @@ export async function GET(req: Request) {
 
   const [
     orders,
+    recent,
     subs,
     invoices,
     projects,
@@ -47,12 +48,31 @@ export async function GET(req: Request) {
     conversations,
     feedback,
   ] = await Promise.all([
+    /*
+     * Every order, but only the columns the arithmetic needs, and no joins.
+     * This used to drag the product and customer names of every order that
+     * has ever existed across the wire to add up six numbers and show six
+     * rows. The six rows are fetched separately below, with their joins, and
+     * a limit.
+     *
+     * products(sku) is here because the invoice check reads it. It used to
+     * select products(name) and read .sku, which is always undefined, so the
+     * set of paid skus was a set containing one empty string and no settled
+     * invoice was ever excluded from what we are owed. On today's data that
+     * had the dashboard claiming 9,550 owed against a real 9,000.
+     */
+    db
+      .from("orders")
+      .select("amount_cents, status, created_at, intake_completed, product:products(sku)")
+      .order("created_at", { ascending: false }),
+    /* the six the dashboard actually lists, with the names it shows */
     db
       .from("orders")
       .select(
-        "id, customer_email, amount_cents, currency, status, created_at, intake_completed, product:products(name), customer:customers(name)",
+        "id, customer_email, amount_cents, currency, status, created_at, product:products(name), customer:customers(name)",
       )
-      .order("created_at", { ascending: false }),
+      .order("created_at", { ascending: false })
+      .limit(6),
     db.from("subscriptions").select("status, amount_cents, plan_name"),
     db.from("invoices").select("id, number, total_cents, status, product_sku, due_date"),
     db.from("projects").select("id, title, status, due_at, pipeline, customer_email, agreed_cents, quoted_cents"),
@@ -210,7 +230,7 @@ export async function GET(req: Request) {
     },
     days,
     paidOrders: paid.length,
-    recentOrders: orderRows.slice(0, 6).map((o) => ({
+    recentOrders: ((recent.data ?? []) as Row[]).map((o) => ({
       id: String(o.id),
       email: String(o.customer_email),
       name: (o.customer as { name?: string | null } | null)?.name ?? null,

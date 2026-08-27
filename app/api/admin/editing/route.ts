@@ -238,57 +238,73 @@ export async function GET(req: Request) {
     .in("status", ["active", "trialing", "past_due"])
     .order("created_at", { ascending: false });
 
-  const clients = [];
-  for (const sub of (subs ?? []) as Row[]) {
-    const sku = skuOf(sub);
-    const cycle = await currentCycle(db, cycleArgs(sub));
-    const { data: rows } = cycle
-      ? await db
-          .from("order_deliverables")
-          .select("credit_cost, status, assets_ready_at, requested_due_at, cancelled_at, created_at")
-          .eq("cycle_id", cycle.id)
-      : { data: [] };
+  /*
+   * One client's numbers need three round trips: their current cycle, that
+   * cycle's deliverables, and any topped-up credits. This ran them client
+   * after client, so the screen waited for three times however many clients
+   * there are, one after another.
+   *
+   * Measured at two clients it is 460ms against 391ms, which is nothing. The
+   * shape is the problem: it grows in a straight line, so twenty clients is
+   * about four and a half seconds of waiting where this is under half a
+   * second. Fixed now, while it is cheap to fix and nobody is shouting.
+   *
+   * Each client's work is independent, so nothing about the arithmetic
+   * changes; only the waiting is shared. Order is preserved by map, and the
+   * sort below owns the final order anyway.
+   */
+  const clients = await Promise.all(
+    ((subs ?? []) as Row[]).map(async (sub) => {
+      const sku = skuOf(sub);
+      const cycle = await currentCycle(db, cycleArgs(sub));
+      const { data: rows } = cycle
+        ? await db
+            .from("order_deliverables")
+            .select("credit_cost, status, assets_ready_at, requested_due_at, cancelled_at, created_at")
+            .eq("cycle_id", cycle.id)
+        : { data: [] };
 
-    const items = (rows ?? []) as Row[];
-    const live = items.filter((r) => !r.cancelled_at);
-    const use = creditsUsed(
-      items.map((r) => ({
-        creditCost: Number(r.credit_cost ?? 0),
-        cancelledAt: (r.cancelled_at as string | null) ?? null,
-      })),
-      cycle?.creditsAllowed ?? 0,
-      await topupCreditsLeft(db, String(sub.id)),
-    );
+      const items = (rows ?? []) as Row[];
+      const live = items.filter((r) => !r.cancelled_at);
+      const use = creditsUsed(
+        items.map((r) => ({
+          creditCost: Number(r.credit_cost ?? 0),
+          cancelledAt: (r.cancelled_at as string | null) ?? null,
+        })),
+        cycle?.creditsAllowed ?? 0,
+        await topupCreditsLeft(db, String(sub.id)),
+      );
 
-    clients.push({
-      subscriptionId: String(sub.id),
-      /* the handle their screen lives at */
-      slug: (sub.customer as { slug?: string } | null)?.slug ?? null,
-      email: String(sub.customer_email),
-      name: (sub.customer as { name?: string } | null)?.name ?? null,
-      company: (sub.customer as { company?: string } | null)?.company ?? null,
-      planName: (sub.plan_name as string | null) ?? planNameFor(sku),
-      sku,
-      status: String(sub.status),
-      renewsAt: (sub.current_period_end as string | null) ?? null,
-      priority: planPriority(sku),
-      credits: use,
-      /* the number somebody scans this list for */
-      needsUs: live.filter((r) => r.status === "queued" || r.status === "revisions").length,
-      waitingOnThem: live.filter((r) => r.status === "queued" && !r.assets_ready_at).length,
-      inProgress: live.filter((r) => r.status === "in_production").length,
-      withClient: live.filter((r) => r.status === "ready").length,
-      /* where this client sits in the studio's order today */
-      nextUp: live
-        .map((r) => ({
-          planPriority: planPriority(sku),
-          assetsReadyAt: (r.assets_ready_at as string | null) ?? null,
-          requestedDueAt: (r.requested_due_at as string | null) ?? null,
-          createdAt: String(r.created_at),
-        }))
-        .sort(queueOrder)[0] ?? null,
-    });
-  }
+      return {
+        subscriptionId: String(sub.id),
+        /* the handle their screen lives at */
+        slug: (sub.customer as { slug?: string } | null)?.slug ?? null,
+        email: String(sub.customer_email),
+        name: (sub.customer as { name?: string } | null)?.name ?? null,
+        company: (sub.customer as { company?: string } | null)?.company ?? null,
+        planName: (sub.plan_name as string | null) ?? planNameFor(sku),
+        sku,
+        status: String(sub.status),
+        renewsAt: (sub.current_period_end as string | null) ?? null,
+        priority: planPriority(sku),
+        credits: use,
+        /* the number somebody scans this list for */
+        needsUs: live.filter((r) => r.status === "queued" || r.status === "revisions").length,
+        waitingOnThem: live.filter((r) => r.status === "queued" && !r.assets_ready_at).length,
+        inProgress: live.filter((r) => r.status === "in_production").length,
+        withClient: live.filter((r) => r.status === "ready").length,
+        /* where this client sits in the studio's order today */
+        nextUp: live
+          .map((r) => ({
+            planPriority: planPriority(sku),
+            assetsReadyAt: (r.assets_ready_at as string | null) ?? null,
+            requestedDueAt: (r.requested_due_at as string | null) ?? null,
+            createdAt: String(r.created_at),
+          }))
+          .sort(queueOrder)[0] ?? null,
+      };
+    }),
+  );
 
   clients.sort((a, b) => a.priority - b.priority || b.needsUs - a.needsUs);
   return NextResponse.json({ clients });
