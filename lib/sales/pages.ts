@@ -128,9 +128,9 @@ export const salesPages: SalesPage[] = [
     status: "live",
     indexable: true,
     seo: {
-      title: "AI First SaaS Pack: Nine White-Label HighLevel Videos",
+      title: "HighLevel White-Label Video Pack, Every AI Capability",
       description:
-        "Nine AI-first HighLevel videos white-labeled to your SaaS: a master explainer, seven feature explainers, and a platform demo. $1,995 for the set, published this week.",
+        "Nine white-label HighLevel videos, each one showing the AI inside a feature: AI Receptionist, Conversational AI, Reviews AI, Content AI, Ask AI and more. Buy one at $495 or the set at $1,995, branded to your SaaS.",
     },
   },
   {

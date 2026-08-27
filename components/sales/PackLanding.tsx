@@ -48,21 +48,17 @@ import { SectionHead } from "@/components/sales/SectionHead";
 const PACK_SLUG = "ai-first-saas-pack";
 const money = (n: number) => `$${n.toLocaleString("en-US")}`;
 
-/* Where each format goes in a reseller's own funnel. The reason to take the
-   set rather than one video, said per format. */
-const PLACEMENT: Record<string, { where: string; job: string }> = {
-  "Master Explainer": {
-    where: "Homepage and sales page",
-    job: "Sells your whole platform before anybody books a call.",
-  },
-  "Feature Explainers": {
-    where: "Ads, socials, feature pages",
-    job: "One per capability, so every ad and feature section has its own video instead of sharing one.",
-  },
-  "Platform Demo": {
-    where: "Before the demo call",
-    job: "The walkthrough, so your call starts with somebody who has already watched it work.",
-  },
+/*
+ * Where each format goes in a reseller's funnel. Only the placement: what
+ * each format DOES is the catalogue's own line, which is where the AI story
+ * is written, and an earlier version of this file replaced those lines with
+ * funnel copy of its own. That is how a page about AI-first videos ended up
+ * never mentioning AI. The label is ours, the sentence is the catalogue's.
+ */
+const PLACEMENT: Record<string, string> = {
+  "Master Explainer": "Homepage and sales page",
+  "Feature Explainers": "Ads, socials, feature pages",
+  "Platform Demo": "Before the demo call",
 };
 
 export function PackLanding() {
@@ -99,6 +95,12 @@ export function PackLanding() {
      asserted, so the number cannot disagree with the prices on the cards */
   const singly = all.reduce((sum, v) => sum + (v.price ?? 0), 0);
   const save = singly > 0 ? Math.round((1 - price / singly) * 100) : 0;
+  /* the parts of HighLevel these videos cover, read off the feature
+     explainers, which are the ones the catalogue describes as having the AI
+     woven through them. Adding a tenth video adds a tenth chip on its own. */
+  const aiCovered = (shelf.find((c) => c.name === "Feature Explainers")?.items ?? []).map(
+    (v) => v.capability,
+  );
 
   return (
     <>
@@ -120,15 +122,16 @@ export function PackLanding() {
             className="sp-display sp-h1"
             style={{ marginTop: "1.1rem", fontSize: "clamp(2.2rem, 5.6vw, 3.5rem)" }}
           >
-            {total} HighLevel videos,
+            {total}{" "}videos on HighLevel&apos;s AI,
             <span className="sp-grad-text" style={{ display: "block" }}>
               branded as your platform.
             </span>
           </h1>
           <p className="sp-lede" style={{ margin: "1.3rem auto 0", maxWidth: "44rem" }}>
-            You sell HighLevel as your own SaaS. These are the videos that sell it for
-            you: your logo, your dashboard, your voiceover, and not one mention of
-            HighLevel or of us anywhere in them.
+            You sell HighLevel as your own SaaS, and AI is what your prospects are
+            asking about. Every video here takes one part of the platform and shows
+            the AI doing the work inside it, white-labeled to you: your logo, your
+            dashboard, your voiceover, and not one mention of HighLevel or of us.
           </p>
 
           {/* what is in the box, before anybody scrolls */}
@@ -172,13 +175,43 @@ export function PackLanding() {
         </div>
       </section>
 
+      {/* ============================ what makes it THIS pack and not another */}
+      <section className="sp-section sp-section--band">
+        <div className="sp-wrap">
+          <SectionHead
+            eyebrow="Why AI first"
+            title="Not nine videos about HighLevel."
+            accent="Nine about the AI inside it."
+            sub="Any studio can film a feature tour. What your prospects are actually asking is what the AI does, so that is what every one of these answers: the feature, and then the AI working inside it. That is the whole pack, and it is why it is called what it is."
+          />
+          {/* the capabilities, taken from the videos themselves rather than
+              listed by hand, so this claim cannot outgrow the pack */}
+          <ul
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "0.6rem",
+              listStyle: "none",
+              padding: 0,
+              margin: "2.25rem 0 0",
+            }}
+          >
+            {aiCovered.map((c) => (
+              <li key={c} className="sp-badge">
+                {c}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
       {/* ================================== the shelf: watch, then buy one or all */}
       <section id="videos" className="sp-section" style={{ scrollMarginTop: "4rem" }}>
         <div className="sp-wrap">
           <SectionHead
             eyebrow="The pack"
-            title="Watch every HighLevel video,"
-            accent="take one or take all nine."
+            title="Watch the AI, feature by feature."
+            accent="Take one or take all nine."
             sub="Every video below is finished and sold on its own, at the price on its card. Preview any of them, buy just the ones you need, or take the set underneath for less than half."
             center
           />
@@ -197,12 +230,14 @@ export function PackLanding() {
             >
               <div className="sp-vtype-head">
                 <div style={{ maxWidth: "46rem" }}>
-                  <span className="sp-eyebrow">{PLACEMENT[cat.name]?.where ?? cat.name}</span>
+                  <span className="sp-eyebrow">{PLACEMENT[cat.name] ?? cat.name}</span>
                   <h3 className="sp-display sp-h3" style={{ marginTop: "0.5rem" }}>
                     {cat.name}
                   </h3>
+                  {/* the catalogue's own line: this is where the AI in each
+                      format is described, so it is quoted, not paraphrased */}
                   <p className="sp-muted" style={{ marginTop: "0.45rem" }}>
-                    {PLACEMENT[cat.name]?.job ?? cat.line}
+                    {cat.line}
                   </p>
                 </div>
                 <span className="sp-vtype-count">
@@ -455,7 +490,7 @@ export function PackLanding() {
         <div className="sp-glow" />
         <div className="sp-wrap" style={{ position: "relative", textAlign: "center" }}>
           <h2 className="sp-display sp-h2">
-            {total} HighLevel videos, branded as yours,{" "}
+            HighLevel&apos;s AI, branded as yours,{" "}
             <span className="sp-grad-text">live this week.</span>
           </h2>
           <p className="sp-lede" style={{ margin: "1.1rem auto 0", maxWidth: "40rem" }}>
