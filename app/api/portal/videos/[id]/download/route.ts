@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { contextCan, resolvePortalContext } from "@/lib/account-team";
 import { isWatchable, type DeliverableStatus } from "@/lib/deliverable-status";
+import { normalizePipeline } from "@/lib/pipeline";
 
 export const runtime = "nodejs";
 
@@ -54,17 +55,22 @@ function ticketSecret(): string {
   );
 }
 
-function sign(id: string, expiresAt: number): string {
+function sign(id: string, stage: string, expiresAt: number): string {
   return createHmac("sha256", ticketSecret())
-    .update(`portal-download.v1.${id}.${expiresAt}`)
+    .update(`portal-download.v1.${id}.${stage}.${expiresAt}`)
     .digest("hex");
 }
 
-function ticketValid(id: string, exp: string | null, sig: string | null): boolean {
+function ticketValid(
+  id: string,
+  stage: string,
+  exp: string | null,
+  sig: string | null,
+): boolean {
   if (!exp || !sig || !ticketSecret()) return false;
   const expiresAt = Number(exp);
   if (!Number.isFinite(expiresAt) || Date.now() > expiresAt) return false;
-  const expected = Buffer.from(sign(id, expiresAt));
+  const expected = Buffer.from(sign(id, stage, expiresAt));
   const given = Buffer.from(sig);
   /* length check first: timingSafeEqual throws on a mismatch rather than
      returning false, and a wrong-length signature is just a wrong signature */
@@ -142,6 +148,33 @@ async function authorize(
   return null;
 }
 
+/*
+ * The file a production-line stage is showing.
+ *
+ * A project's carrier row holds the newest cut, and each stage holds the cut
+ * it was signed off on, which is not the same thing. On a finished project
+ * the animation stage still points at the animation while the carrier has
+ * moved on to the delivery. Downloading through the carrier therefore handed
+ * somebody a different video than the one playing in front of them, so a
+ * stage download reads the stage.
+ */
+async function stageFile(
+  db: ReturnType<typeof supabaseAdmin>,
+  projectId: string,
+  stage: string,
+): Promise<{ url: string; title: string } | null> {
+  const { data: project } = await db
+    .from("projects")
+    .select("title, pipeline")
+    .eq("id", projectId)
+    .maybeSingle();
+  if (!project) return null;
+  const line = normalizePipeline(project.pipeline);
+  const url = (line as Record<string, { url?: string | null }>)[stage]?.url ?? null;
+  if (!url) return null;
+  return { url, title: `${String(project.title)} ${stage}` };
+}
+
 async function load(db: ReturnType<typeof supabaseAdmin>, id: string) {
   const { data } = await db
     .from("order_deliverables")
@@ -161,26 +194,52 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
   /* asking for a ticket rather than for the file */
   if (q.get("mint")) {
+    const stage = q.get("stage") ?? "";
     const refused = await authorize(db, req, d);
     if (refused) return refused;
-    if (!isWatchable(d.status as DeliverableStatus))
+
+    if (stage) {
+      /* a stage carries its own cut, and whether THAT is ready is answered by
+         it having a file at all. The carrier can still be mid production while
+         an earlier stage sits finished and watchable in front of the client. */
+      const file = d.project_id
+        ? await stageFile(db, String(d.project_id), stage)
+        : null;
+      if (!file)
+        return NextResponse.json({ error: "Nothing to download here yet." }, { status: 404 });
+    } else if (!isWatchable(d.status as DeliverableStatus)) {
       return NextResponse.json({ error: "That video is not ready yet." }, { status: 403 });
+    }
+
     const expiresAt = Date.now() + TICKET_TTL_MS;
+    const st = stage ? `&st=${encodeURIComponent(stage)}` : "";
     return NextResponse.json({
-      url: `/api/portal/videos/${id}/download/?e=${expiresAt}&s=${sign(id, expiresAt)}`,
+      url: `/api/portal/videos/${id}/download/?e=${expiresAt}${st}&s=${sign(id, stage, expiresAt)}`,
     });
   }
 
+  const stage = q.get("st") ?? "";
+
   /* a valid ticket already stands for the ownership check done when it was
      minted; anything else still has to prove itself the usual way */
-  if (!ticketValid(id, q.get("e"), q.get("s"))) {
+  if (!ticketValid(id, stage, q.get("e"), q.get("s"))) {
     const denied = await authorize(db, req, d);
     if (denied) return denied;
   }
-  if (!isWatchable(d.status as DeliverableStatus))
-    return NextResponse.json({ error: "That video is not ready yet." }, { status: 403 });
 
-  const upstream = await fetch(d.video_url as string).catch(() => null);
+  /* the file the client is actually looking at: the stage's own cut when one
+     was asked for, the carrier's otherwise */
+  let source = { url: String(d.video_url), title: String(d.title) };
+  if (stage) {
+    const file = d.project_id ? await stageFile(db, String(d.project_id), stage) : null;
+    if (!file)
+      return NextResponse.json({ error: "Nothing to download here yet." }, { status: 404 });
+    source = file;
+  } else if (!isWatchable(d.status as DeliverableStatus)) {
+    return NextResponse.json({ error: "That video is not ready yet." }, { status: 403 });
+  }
+
+  const upstream = await fetch(source.url).catch(() => null);
   if (!upstream?.ok || !upstream.body) {
     return NextResponse.json({ error: "Could not fetch that video." }, { status: 502 });
   }
@@ -191,7 +250,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       ...(upstream.headers.get("content-length")
         ? { "content-length": upstream.headers.get("content-length") as string }
         : {}),
-      "content-disposition": `attachment; filename="${safeName(d.title as string)}"`,
+      "content-disposition": `attachment; filename="${safeName(source.title)}"`,
       "cache-control": "private, no-store",
     },
   });

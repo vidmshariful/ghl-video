@@ -21,7 +21,10 @@ import { supabaseBrowser } from "@/lib/supabase-browser";
  *
  * Returns an error string, or null when the download started.
  */
-export async function startVideoDownload(videoId: string): Promise<string | null> {
+export async function startVideoDownload(
+  videoId: string,
+  stage?: string,
+): Promise<string | null> {
   let token: string | undefined;
   try {
     const { data } = await supabaseBrowser.auth.getSession();
@@ -38,7 +41,8 @@ export async function startVideoDownload(videoId: string): Promise<string | null
 
        Trailing slash on purpose: the app sets trailingSlash, so the bare
        path 308s and every download pays a wasted round trip. */
-    const r = await fetch(`/api/portal/videos/${videoId}/download/?mint=1`, {
+    const q = stage ? `&stage=${encodeURIComponent(stage)}` : "";
+    const r = await fetch(`/api/portal/videos/${videoId}/download/?mint=1${q}`, {
       /* a teammate downloads from inside the owner's account, same as every
          other portal call */
       headers: { Authorization: `Bearer ${token}`, ...actForHeader() },
@@ -82,10 +86,14 @@ export function DownloadButton({
   videoId,
   label = "Download",
   variant = "chip",
+  stage,
 }: {
   videoId: string;
   label?: string;
   variant?: keyof typeof STYLES;
+  /* a production-line stage shows its own cut, which is not always the
+     newest one on the project; naming it downloads what is on screen */
+  stage?: string;
 }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -97,7 +105,7 @@ export function DownloadButton({
         disabled={busy}
         onClick={async () => {
           setBusy(true);
-          setErr((await startVideoDownload(videoId)) ?? "");
+          setErr((await startVideoDownload(videoId, stage)) ?? "");
           setBusy(false);
         }}
         className={`tap transition-colors disabled:opacity-60 ${STYLES[variant]}`}

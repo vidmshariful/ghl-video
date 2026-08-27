@@ -113,7 +113,18 @@ export function StageReview({
    * an inbox. Same rule the pre-made review screen already follows.
    */
   const finished = d?.state === "done";
-  const downloadable = d?.medium === "video" && Boolean(videoId) && stageKey === "delivery";
+  /*
+   * Is there actually a cut on this stage, for Share and Download to act on?
+   *
+   * Download used to be held back for the final delivery, on the reasoning
+   * that an animation is signed off with sound still to come and is not the
+   * finished film. But Share was never held back the same way, so a stage
+   * offered one and not the other, and the client is looking at the cut
+   * either way: withholding the file does not withhold the work (owner's
+   * decision, 28 August 2026). The row button still says Review rather than
+   * Watch and download on anything but the delivery.
+   */
+  const hasCut = d?.medium === "video" && Boolean(videoId) && Boolean(d?.url);
 
 
   async function send(action: "comment" | "approve" | "changes", opts?: { parentId?: string; body?: string }) {
@@ -252,7 +263,9 @@ export function StageReview({
               <p className="mt-1 font-mono text-label uppercase tracking-[0.1em] text-dim">Your review</p>
             </div>
             <div className="flex shrink-0 flex-wrap items-center gap-2">
-              {d?.medium === "video" && videoId && (
+              {/* nothing to hand anybody until there is a cut here: both of
+                  these used to offer themselves over an empty player */}
+              {hasCut && (
                 <button
                   type="button"
                   onClick={() => setSharing(true)}
@@ -261,16 +274,8 @@ export function StageReview({
                   Share
                 </button>
               )}
-              {/* our own route: the download attribute is ignored across
-                  origins, so a plain link just opens the file in a tab */}
-              {/*
-                * Only the final delivery is the client's to keep. The
-                * animation is a stage they sign off on the way through, with
-                * sound still to come, so handing them that file gives them an
-                * unfinished cut of their own video.
-                */}
-              {downloadable && (
-                <DownloadButton videoId={videoId as string} />
+              {hasCut && (
+                <DownloadButton videoId={videoId as string} stage={stageKey} />
               )}
               {d?.url && (
                 <a
