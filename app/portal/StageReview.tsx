@@ -105,6 +105,13 @@ export function StageReview({
   }, [onClose]);
 
   const timed = d?.medium === "audio" || d?.medium === "video";
+  /*
+   * Signed off. Approving is what closes a stage, so a box asking what they
+   * would like changed under a finished cut invites a note nobody is going to
+   * act on. The past notes stay: once it is done this panel is a record, not
+   * an inbox. Same rule the pre-made review screen already follows.
+   */
+  const finished = d?.state === "done";
 
   async function send(action: "comment" | "approve" | "changes", opts?: { parentId?: string; body?: string }) {
     const body = opts?.body ?? text;
@@ -251,6 +258,16 @@ export function StageReview({
                   Share
                 </button>
               )}
+              {/* our own route: the download attribute is ignored across
+                  origins, so a plain link just opens the file in a tab */}
+              {d?.medium === "video" && videoId && (
+                <a
+                  href={`/api/portal/videos/${videoId}/download`}
+                  className="tap rounded-[8px] border border-hair px-3 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-blue/60 hover:text-blue"
+                >
+                  Download
+                </a>
+              )}
               {d?.url && (
                 <a
                   href={d.url}
@@ -309,38 +326,47 @@ export function StageReview({
 
             <div className="min-w-0">
               <p className="font-mono text-label uppercase tracking-[0.1em] text-dim">
-                Feedback{open > 0 ? ` (${open} open)` : ""}
+                {finished ? "Notes" : `Feedback${open > 0 ? ` (${open} open)` : ""}`}
               </p>
-              <div className="mt-2 grid gap-2">
-                <Textarea
-                  rows={3}
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  onFocus={timed ? pause : undefined}
-                  onKeyDown={enterSends(() => send("comment"))}
-                  placeholder="What do you think, what would you change? Enter to send."
-                />
-                {timed && (
-                  <label className="flex items-center gap-2 text-body-sm text-muted">
-                    <input
-                      type="checkbox"
-                      checked={pin}
-                      onChange={(e) => setPin(e.target.checked)}
-                      className="h-4 w-4 accent-[var(--gold)]"
+              {finished ? (
+                <p className="mt-2 text-body-sm text-dim">
+                  What you and the studio said while this was being made. If
+                  something still needs changing, message us and we will reopen it.
+                </p>
+              ) : (
+                <>
+                  <div className="mt-2 grid gap-2">
+                    <Textarea
+                      rows={3}
+                      value={text}
+                      onChange={(e) => setText(e.target.value)}
+                      onFocus={timed ? pause : undefined}
+                      onKeyDown={enterSends(() => send("comment"))}
+                      placeholder="What do you think, what would you change? Enter to send."
                     />
-                    Pin this to {mmss(at)}
-                  </label>
-                )}
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  disabled={busy || !text.trim()}
-                  onClick={() => send("comment")}
-                >
-                  Add note
-                </Button>
-              </div>
-              {err && <p className="mt-2 text-body-sm text-error">{err}</p>}
+                    {timed && (
+                      <label className="flex items-center gap-2 text-body-sm text-muted">
+                        <input
+                          type="checkbox"
+                          checked={pin}
+                          onChange={(e) => setPin(e.target.checked)}
+                          className="h-4 w-4 accent-[var(--gold)]"
+                        />
+                        Pin this to {mmss(at)}
+                      </label>
+                    )}
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={busy || !text.trim()}
+                      onClick={() => send("comment")}
+                    >
+                      Add note
+                    </Button>
+                  </div>
+                  {err && <p className="mt-2 text-body-sm text-error">{err}</p>}
+                </>
+              )}
 
               <div className="mt-4 max-h-[52vh] overflow-y-auto pr-1">
                 {top.length === 0 ? (
@@ -379,7 +405,9 @@ export function StageReview({
                           </div>
                         ))}
 
-                        {replyTo === c.id ? (
+                        {/* replying is feedback too, so it closes with the rest
+                            of the inbox once the stage is signed off */}
+                        {finished ? null : replyTo === c.id ? (
                           <div className="mt-2 grid gap-2">
                             <Textarea
                               rows={2}

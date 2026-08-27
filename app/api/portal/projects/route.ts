@@ -195,7 +195,9 @@ export async function GET(req: Request) {
                     : fs === "revisions"
                       ? "Changes in hand"
                       : fs === "in_production"
-                        ? "Being made"
+                        ? /* the same word the production line uses one card up,
+                             and the same one the studio board shows */
+                          "In progress"
                         : "Coming up",
               videoUrl: isWatchable(fs) ? ((f.video_url as string | null) ?? null) : null,
               canReview: canReview(fs),

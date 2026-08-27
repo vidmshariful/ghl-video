@@ -553,7 +553,9 @@ function ProjectPage({
                             icon={<Play />}
                             onClick={() => onPlay(f)}
                           >
-                            {f.canReview ? "Review it" : "Watch"}
+                            {/* a format with a file but no review left open is
+                                one they already approved */}
+                            {f.canReview ? "Review it" : "Watch and download"}
                           </Button>
                         )}
                       </span>
@@ -775,12 +777,19 @@ function StageRow({
   return (
     <li
       id={`stage-${st.key}`}
+      /* Every step used to sit behind a hairline at 40%, which on canvas is
+         close to no line at all: the whole production line read as one dark
+         block and you could not see where a step began. Each state now carries
+         a border you can actually find, and a finished step picks up a trace
+         of the green it is already wearing on its dot and its pill. */
       className={`flex flex-wrap items-center justify-between gap-2 rounded-[8px] border px-3.5 py-2.5 ${
         needsYou
           ? "border-gold/40 bg-gold/5"
-          : st.state === "done" || st.state === "todo"
-            ? "border-hair/40 bg-transparent"
-            : "border-hair bg-canvas"
+          : st.state === "done"
+            ? "border-green/25 bg-green/[0.03]"
+            : st.state === "todo"
+              ? "border-hair/70 bg-transparent"
+              : "border-hair bg-canvas"
       }`}
     >
       <span className="flex min-w-0 items-center gap-2.5">
@@ -816,7 +825,14 @@ function StageRow({
             variant={needsYou ? "brand" : "secondary"}
             onClick={() => onReview(st.key)}
           >
-            {needsYou ? "Review and approve" : "Review"}
+            {/* "Review" on something already approved asks for a verdict that
+                has been given. Once a cut is signed off the only things left
+                to do with it are watch it and take it. */}
+            {needsYou
+              ? "Review and approve"
+              : st.state === "done" && medium === "video"
+                ? "Watch and download"
+                : "Review"}
           </Button>
         )}
         {needsTheirFile && (
