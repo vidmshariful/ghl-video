@@ -1,7 +1,6 @@
-import { aiPackClips } from "@/lib/content/premade";
 import { deliveryWindow, studioSince } from "@/lib/content/core";
 import { nicheAddon } from "@/lib/content/niche";
-import { recentDeliveries } from "@/lib/content/deliveries";
+import { recentDeliveries, whiteLabelProof } from "@/lib/content/deliveries";
 
 /*
  * The registry of sales landing pages. Each page is a code-defined
@@ -157,11 +156,11 @@ export const salesPages: SalesPage[] = [
     /* Real recent client deliveries: the one shared list in lib/content/deliveries. */
     clientWork: recentDeliveries,
     whiteLabel: {
-      // Before/after of the AI Receptionist video: the generic (brand-agnostic)
-      // cut on the left, ColeLab's white-labeled delivery on the right.
-      defaultSrc: aiPackClips.receptionist,
-      brandedSrc: "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a7a4dff03343f290f26b7de.mp4",
-      poster: "/posters/ai-receptionist.jpg",
+      /* the shared pair, so this page and the pack page cannot drift into
+         showing two different videos and calling them the same one */
+      defaultSrc: whiteLabelProof.generic,
+      brandedSrc: whiteLabelProof.branded,
+      poster: whiteLabelProof.poster,
     },
     closing: {
       headline: "Your videos are",
