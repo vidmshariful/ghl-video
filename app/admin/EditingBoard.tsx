@@ -288,9 +288,40 @@ export function EditingBoard({ slug, onBack }: { slug: string; onBack: () => voi
     void load();
   }, [load]);
 
-  async function save(reqId: string, patch: Record<string, unknown>) {
-    setBusy(true);
-    setErr("");
+  /*
+   * `optimistic` is the change to show on the request at once.
+   *
+   * The six QC boxes are the most clicked thing on this panel, and each tick
+   * was a write plus a whole board reload with the controls disabled
+   * throughout, so ticking six of them meant six waits in a row for a
+   * checkbox that had already been clicked.
+   *
+   * The reload still runs, because the board derives things a tick can move
+   * (which column a request sits in, what the credits say), but it is not
+   * awaited when the caller has already said what to show.
+   */
+  async function save(
+    reqId: string,
+    patch: Record<string, unknown>,
+    optimistic?: Partial<Req>,
+  ) {
+    const before = b;
+    if (optimistic) {
+      setB((cur) =>
+        !cur
+          ? cur
+          : {
+              ...cur,
+              requests: cur.requests.map((r) =>
+                r.id === reqId ? { ...r, ...optimistic } : r,
+              ),
+            },
+      );
+      setErr("");
+    } else {
+      setBusy(true);
+      setErr("");
+    }
     try {
       const r = await fetch("/api/admin/editing", {
         method: "PATCH",
@@ -298,12 +329,16 @@ export function EditingBoard({ slug, onBack }: { slug: string; onBack: () => voi
         body: JSON.stringify({ id: reqId, ...patch }),
       });
       const j = await r.json();
-      if (!r.ok) setErr(j.error ?? "Could not save that.");
+      if (!r.ok) {
+        setB(before);
+        setErr(j.error ?? "Could not save that.");
+      } else if (optimistic) void load();
       else await load();
     } catch {
+      setB(before);
       setErr("Could not save that.");
     } finally {
-      setBusy(false);
+      if (!optimistic) setBusy(false);
     }
   }
 
@@ -713,7 +748,11 @@ function RequestDetail({
   req: Req;
   board: Board;
   busy: boolean;
-  onSave: (id: string, patch: Record<string, unknown>) => Promise<void>;
+  onSave: (
+    id: string,
+    patch: Record<string, unknown>,
+    optimistic?: Partial<Req>,
+  ) => Promise<void>;
 }) {
   const [url, setUrl] = useState(r.videoUrl ?? "");
   const missing = qcRemaining(r.qc);
@@ -820,7 +859,13 @@ function RequestDetail({
                   type="checkbox"
                   checked={Boolean(r.qc[c.key])}
                   disabled={busy}
-                  onChange={(e) => onSave(r.id, { qc: { [c.key]: e.target.checked } })}
+                  onChange={(e) =>
+                    onSave(
+                      r.id,
+                      { qc: { [c.key]: e.target.checked } },
+                      { qc: { ...r.qc, [c.key]: e.target.checked } },
+                    )
+                  }
                   className="mt-0.5 size-4 shrink-0 accent-[color:var(--green)]"
                 />
                 <span className={r.qc[c.key] ? "text-dim line-through" : "text-muted"}>
@@ -905,7 +950,9 @@ function RequestDetail({
                   value={r.assignedTo ?? ""}
                   disabled={busy}
                   aria-label="Name the producer"
-                  onChange={(e) => onSave(r.id, { assignedTo: e.target.value })}
+                  onChange={(e) =>
+                    onSave(r.id, { assignedTo: e.target.value }, { assignedTo: e.target.value })
+                  }
                 >
                   <option value="">Nobody yet</option>
                   {b.team.map((t) => (
@@ -924,7 +971,9 @@ function RequestDetail({
                   disabled={busy}
                   aria-label="The date we promise"
                   defaultValue={r.dueAt ? r.dueAt.slice(0, 10) : ""}
-                  onChange={(e) => onSave(r.id, { dueAt: e.target.value })}
+                  onChange={(e) =>
+                    onSave(r.id, { dueAt: e.target.value }, { dueAt: e.target.value })
+                  }
                 />
               </div>
               <p className="mt-1.5 text-body-sm text-dim">
@@ -939,7 +988,9 @@ function RequestDetail({
                   value={r.status}
                   disabled={busy}
                   aria-label="Stage"
-                  onChange={(e) => onSave(r.id, { status: e.target.value })}
+                  onChange={(e) =>
+                    onSave(r.id, { status: e.target.value }, { status: e.target.value })
+                  }
                 >
                   <option value="queued">Edit request</option>
                   <option value="in_production">In progress</option>
