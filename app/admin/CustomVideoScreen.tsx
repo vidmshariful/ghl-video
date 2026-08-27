@@ -258,6 +258,25 @@ export function CustomVideoScreen({
     }
   }, []);
 
+  /*
+   * Just the board, for after an edit.
+   *
+   * load() also re-fetches the enquiry list and every client, neither of
+   * which an edit to one project can change. A stage click was waiting on
+   * three endpoints in a row when the thing it changed lives in one.
+   */
+  const refreshProjects = useCallback(async () => {
+    try {
+      const r = await fetch("/api/admin/projects", { headers: await authHeader() });
+      const j = await r.json();
+      if (!j.error) setProjects(j.projects as Project[]);
+    } catch {
+      /* the screen already shows the change; a failed refresh is not worth
+         throwing an error over the top of it */
+    }
+  }, []);
+
+
   useEffect(() => {
     void load();
   }, [load]);
@@ -286,7 +305,28 @@ export function CustomVideoScreen({
     }
   }
 
-  async function patchProject(id: string, body: Record<string, unknown>): Promise<string | null> {
+  /*
+   * Save one project without reloading the board.
+   *
+   * `optimistic` is the change to show at once. With it the click lands
+   * immediately and the save goes out behind it, and the board refresh that
+   * follows is deliberately NOT awaited: it exists only to settle the fields
+   * the server derives, the line and the money, which nobody is staring at
+   * while they click. Without it the caller still waits, but on one endpoint
+   * rather than the three that load() pulls.
+   *
+   * A failed save puts the project back and returns the reason, so a stage
+   * that will not stick says why instead of just refusing to move.
+   */
+  async function patchProject(
+    id: string,
+    body: Record<string, unknown>,
+    optimistic?: Partial<Project>,
+  ): Promise<string | null> {
+    const before = projects;
+    if (optimistic) {
+      setProjects((list) => (list ?? []).map((x) => (x.id === id ? { ...x, ...optimistic } : x)));
+    }
     try {
       const r = await fetch("/api/admin/projects", {
         method: "PATCH",
@@ -295,11 +335,14 @@ export function CustomVideoScreen({
       });
       if (!r.ok) {
         const j = await r.json().catch(() => ({}));
+        setProjects(before);
         return (j as { error?: string }).error ?? "That did not save.";
       }
-      await load();
+      if (optimistic) void refreshProjects();
+      else await refreshProjects();
       return null;
     } catch {
+      setProjects(before);
       return "That did not save.";
     }
   }
@@ -341,7 +384,7 @@ export function CustomVideoScreen({
         team={team}
         contacts={clients.find((c) => c.email === opened.customerEmail)?.contacts ?? []}
         onBack={() => setOpen(null)}
-        onPatch={(body) => patchProject(opened.id, body)}
+        onPatch={(body, optimistic) => patchProject(opened.id, body, optimistic)}
         onReload={load}
       />
     );
@@ -799,7 +842,10 @@ function ProjectPage({
   team: { email: string; name: string }[];
   contacts: { id: string; name: string; email: string | null; role: string; title: string | null }[];
   onBack: () => void;
-  onPatch: (body: Record<string, unknown>) => Promise<string | null>;
+  onPatch: (
+    body: Record<string, unknown>,
+    optimistic?: Partial<Project>,
+  ) => Promise<string | null>;
   onReload: () => Promise<void>;
 }) {
   const [tab, setTab] = useState<"manage" | "review">("manage");
@@ -862,12 +908,21 @@ function ProjectPage({
     return () => clearTimeout(t);
   }, [confirming]);
 
-  const run = async (tag: string, body: Record<string, unknown>) => {
-    setBusy(tag);
+  /*
+   * `optimistic` is what to show the moment it is clicked. Where it is given
+   * there is nothing to wait for, so `busy` is not set: a spinner on a
+   * control that has already moved is just a flicker.
+   */
+  const run = async (
+    tag: string,
+    body: Record<string, unknown>,
+    optimistic?: Partial<Project>,
+  ) => {
+    if (!optimistic) setBusy(tag);
     setPageErr("");
-    const e = await onPatch(body);
+    const e = await onPatch(body, optimistic);
     if (e) setPageErr(e);
-    setBusy(null);
+    if (!optimistic) setBusy(null);
   };
 
   const invoice = p.invoices[0] ?? null;
@@ -982,7 +1037,7 @@ function ProjectPage({
               Edit details
             </Button>
             {!isOpen(p.status) ? (
-              <Button size="sm" variant="secondary" onClick={() => void run("reopen", { status: "backlog" })}>
+              <Button size="sm" variant="secondary" onClick={() => void run("reopen", { status: "backlog" }, { status: "backlog" })}>
                 Reopen
               </Button>
             ) : (
@@ -994,7 +1049,7 @@ function ProjectPage({
                   onClick={() => {
                     if (confirming === st) {
                       setConfirming(null);
-                      void run(st, { status: st });
+                      void run(st, { status: st }, { status: st });
                     } else setConfirming(st);
                   }}
                 >
@@ -1028,9 +1083,14 @@ function ProjectPage({
                   />
                   <Select
                     value={p.status}
-                    disabled={busy === "stage"}
                     aria-label="Project stage"
-                    onChange={(e) => void run("stage", { stage: e.target.value })}
+                    onChange={(e) => {
+                      /* the server reads `stage` as the status AND pins the
+                         line, so the local guess has to say both or the lock
+                         icon lags a beat behind the dropdown */
+                      const stage = e.target.value as ProjectStatus;
+                      void run("stage", { stage }, { status: stage, stageLocked: true });
+                    }}
                   >
                     {PROJECT_LIST.map((s) => (
                       <option key={s} value={s}>
@@ -1046,7 +1106,7 @@ function ProjectPage({
                       <button
                         type="button"
                         disabled={busy === "unlock"}
-                        onClick={() => void run("unlock", { stageLocked: false })}
+                        onClick={() => void run("unlock", { stageLocked: false }, { stageLocked: false })}
                         className="tap text-blue underline underline-offset-2 disabled:opacity-50"
                       >
                         follow the line again
@@ -1085,7 +1145,13 @@ function ProjectPage({
           <Fact label="Producer">
             <Select
               value={p.ownerEmail ?? ""}
-              onChange={(e) => void run("pm", { ownerEmail: e.target.value || null })}
+              onChange={(e) =>
+                void run(
+                  "pm",
+                  { ownerEmail: e.target.value || null },
+                  { ownerEmail: e.target.value || null },
+                )
+              }
               aria-label="Project manager"
             >
               <option value="">Nobody yet</option>
@@ -1100,7 +1166,13 @@ function ProjectPage({
           <Fact label="Category">
             <Select
               value={p.category ?? ""}
-              onChange={(e) => void run("category", { category: e.target.value || null })}
+              onChange={(e) =>
+                void run(
+                  "category",
+                  { category: e.target.value || null },
+                  { category: e.target.value || null },
+                )
+              }
               aria-label="Video category"
             >
               <option value="">Not set</option>
@@ -1156,7 +1228,13 @@ function ProjectPage({
                   <button
                     type="button"
                     aria-label={`Remove tag ${t}`}
-                    onClick={() => void run("tags", { tags: p.tags.filter((x) => x !== t) })}
+                    onClick={() =>
+                      void run(
+                        "tags",
+                        { tags: p.tags.filter((x) => x !== t) },
+                        { tags: p.tags.filter((x) => x !== t) },
+                      )
+                    }
                     className="tap text-dim transition-colors hover:text-error"
                   >
                     <X size={11} aria-hidden="true" />
@@ -1173,7 +1251,8 @@ function ProjectPage({
                   if (e.key !== "Enter") return;
                   const t = tagDraft.trim().toLowerCase();
                   setTagDraft("");
-                  if (t && !p.tags.includes(t)) void run("tags", { tags: [...p.tags, t] });
+                  if (t && !p.tags.includes(t))
+                    void run("tags", { tags: [...p.tags, t] }, { tags: [...p.tags, t] });
                 }}
               />
             </span>
@@ -1554,34 +1633,69 @@ function FormatList({ p, onReload }: { p: Project; onReload: () => Promise<void>
   const [title, setTitle] = useState("");
   const [links, setLinks] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  /* the list this component shows: p.formats until something is changed,
+     then the changed version until the board refresh catches up */
+  const [rows, setRows] = useState(p.formats);
+  useEffect(() => setRows(p.formats), [p.formats]);
 
-  const call = async (method: "POST" | "PATCH", body: Record<string, unknown>) => {
-    setBusy(true);
-    await fetch("/api/admin/projects/videos", {
-      method,
-      headers: { ...(await authHeader()), "Content-Type": "application/json" },
-      body: JSON.stringify({ projectId: p.id, ...body }),
-    });
-    await onReload();
-    setBusy(false);
+  /*
+   * `local` is how the list should look at once. Changing the status of an
+   * extra cut used to write, then reload the whole board, so a dropdown sat
+   * on its old value for the length of three endpoints before showing the
+   * one the person had already chosen.
+   *
+   * The reload still happens for correctness, it just is not awaited, and
+   * an error puts the row back rather than leaving a status the server
+   * never accepted sitting there looking saved.
+   */
+  const call = async (
+    method: "POST" | "PATCH",
+    body: Record<string, unknown>,
+    local?: (list: Project["formats"]) => Project["formats"],
+  ) => {
+    const before = rows;
+    if (local) setRows(local(rows));
+    else setBusy(true);
+    try {
+      const r = await fetch("/api/admin/projects/videos", {
+        method,
+        headers: { ...(await authHeader()), "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId: p.id, ...body }),
+      });
+      if (!r.ok) throw new Error();
+      if (local) void onReload();
+      else await onReload();
+    } catch {
+      setRows(before);
+      setErr("That did not save.");
+    } finally {
+      if (!local) setBusy(false);
+    }
   };
 
   return (
     <div className="grid gap-2">
-      {p.formats.length === 0 ? (
+      {err && <p className="text-body-sm text-error">{err}</p>}
+      {rows.length === 0 ? (
         <p className="text-body-sm text-dim">
           None yet. Add them once the main video is approved and the client
           wants a reel or a short.
         </p>
       ) : (
         <ul className="grid gap-1.5">
-          {p.formats.map((f) => (
+          {rows.map((f) => (
             <li key={f.id} className="rounded-[8px] border border-hair bg-canvas p-2.5">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="min-w-0 flex-1 text-body-sm font-semibold text-ink">{f.title}</span>
                 <Select
                   value={f.status}
-                  onChange={(e) => void call("PATCH", { id: f.id, status: e.target.value })}
+                  onChange={(e) => {
+                    const status = e.target.value;
+                    void call("PATCH", { id: f.id, status }, (list) =>
+                      list.map((x) => (x.id === f.id ? { ...x, status } : x)),
+                    );
+                  }}
                   aria-label={`State for ${f.title}`}
                 >
                   {Object.entries(FORMAT_WORD).map(([k, w]) => (
