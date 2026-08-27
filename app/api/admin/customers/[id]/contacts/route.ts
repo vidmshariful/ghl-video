@@ -42,17 +42,23 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       .eq("role", "primary");
   }
 
-  const { error } = await db.from("customer_contacts").insert({
-    customer_id: id,
-    name,
-    email: str(b.email, 200)?.toLowerCase() ?? null,
-    phone: str(b.phone, 40),
-    title: str(b.title, 120),
-    notes: str(b.notes, 2000),
-    role,
-  });
+  /* returning the row, so the record can add it to the list without
+     re-downloading the whole customer to see one contact it just typed */
+  const { data: created, error } = await db
+    .from("customer_contacts")
+    .insert({
+      customer_id: id,
+      name,
+      email: str(b.email, 200)?.toLowerCase() ?? null,
+      phone: str(b.phone, 40),
+      title: str(b.title, 120),
+      notes: str(b.notes, 2000),
+      role,
+    })
+    .select("id, name, email, phone, title, role")
+    .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, contact: created });
 }
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {

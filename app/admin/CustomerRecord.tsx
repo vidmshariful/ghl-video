@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, Eye, ExternalLink, MessageSquare, Plus } from "lucide-react";
 import { Button, Card, Chip, Input, Modal, Select, Table, Tabs, Td, Th } from "@/components/portal/ui";
 import { authHeader, money, when } from "./client";
@@ -136,7 +136,9 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
   const [tagDraft, setTagDraft] = useState("");
   const [welcomeTo, setWelcomeTo] = useState("");
   const [contact, setContact] = useState<{ name: string; email: string; phone: string; title: string; role: string } | null>(null);
-  const [busy, setBusy] = useState(false);
+  /* patch() reports failure by setting err; a caller that has already
+     returned cannot read that state, so it reads the ref instead */
+  const errRef = useRef("");
   /* which nudge is in flight: "<orderId>:<kind>" */
   const [sending, setSending] = useState<string | null>(null);
   /* their email history, straight from the log */
@@ -271,28 +273,91 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
     }
   }
 
-  async function patch(body: Record<string, unknown>) {
-    setBusy(true);
-    await fetch(`/api/admin/customers/${id}`, {
-      method: "PATCH",
-      headers: { ...(await authHeader()), "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    }).catch(() => null);
-    setBusy(false);
-    await load();
+  /*
+   * Save without making anybody watch it happen.
+   *
+   * This used to write, then re-download the entire record: eleven queries
+   * and the brand kit, to flip one switch. The write is about 140ms and the
+   * reload behind it about 1.3 seconds, so every toggle on this screen cost
+   * a second and a half of staring at a disabled control.
+   *
+   * Now the change lands in the UI immediately and the write goes out
+   * behind it. `optimistic` is what to show at once; the server hands back
+   * the real row and we settle on that, so a value the server massaged
+   * (trimmed a tag, capped a list) still ends up correct without a refetch.
+   *
+   * Failure used to be silent. The old version swallowed the error and then
+   * reloaded, so a save that failed looked like a switch that would not
+   * stay put, with nothing said. It reverts and says so now.
+   */
+  async function patch(
+    body: Record<string, unknown>,
+    optimistic?: Partial<Record_["customer"]>,
+  ) {
+    const before = data;
+    if (optimistic && data) {
+      setData({ ...data, customer: { ...data.customer, ...optimistic } });
+      setErr("");
+    }
+    try {
+      const r = await fetch(`/api/admin/customers/${id}`, {
+        method: "PATCH",
+        headers: { ...(await authHeader()), "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const j = (await r.json().catch(() => ({}))) as {
+        error?: string;
+        customer?: Partial<Record_["customer"]>;
+        note?: Record_["notes"][number];
+      };
+      if (!r.ok) throw new Error(j.error ?? "That did not save.");
+
+      setData((d) =>
+        !d
+          ? d
+          : {
+              ...d,
+              customer: { ...d.customer, ...(j.customer ?? {}) },
+              /* a new note arrives with its real id and date, so it can go
+                 straight to the top of the list */
+              notes: j.note ? [j.note, ...d.notes] : d.notes,
+            },
+      );
+    } catch (e) {
+      setData(before);
+      const msg = e instanceof Error ? e.message : "That did not save.";
+      errRef.current = msg;
+      setErr(msg);
+      return;
+    }
+    errRef.current = "";
   }
 
   async function addContact() {
     if (!contact?.name.trim()) return;
-    setBusy(true);
-    await fetch(`/api/admin/customers/${id}/contacts`, {
-      method: "POST",
-      headers: { ...(await authHeader()), "Content-Type": "application/json" },
-      body: JSON.stringify(contact),
-    }).catch(() => null);
-    setBusy(false);
+    /* close the dialog now. The person has finished typing and pressed save;
+       holding the modal open through a round trip and then a full refetch is
+       the wait this screen was full of. */
+    const draft = contact;
     setContact(null);
-    await load();
+    setErr("");
+    try {
+      const r = await fetch(`/api/admin/customers/${id}/contacts`, {
+        method: "POST",
+        headers: { ...(await authHeader()), "Content-Type": "application/json" },
+        body: JSON.stringify(draft),
+      });
+      const j = (await r.json().catch(() => ({}))) as {
+        error?: string;
+        contact?: Record_["contacts"][number];
+      };
+      if (!r.ok || !j.contact) throw new Error(j.error ?? "Could not add them.");
+      setData((d) => (d ? { ...d, contacts: [...d.contacts, j.contact!] } : d));
+    } catch (e) {
+      /* put their typing back in front of them rather than losing it */
+      setContact(draft);
+      setErr(e instanceof Error ? e.message : "Could not add them.");
+    }
   }
 
   if (err) return <p className="text-body text-error">{err}</p>;
@@ -877,7 +942,10 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
                     const disabledNext = c.disabledSections.filter((k) => k !== s.key);
                     if (next === "hidden") hiddenNext.push(s.key);
                     if (next === "disabled") disabledNext.push(s.key);
-                    void patch({ hiddenSections: hiddenNext, disabledSections: disabledNext });
+                    void patch(
+                    { hiddenSections: hiddenNext, disabledSections: disabledNext },
+                    { hiddenSections: hiddenNext, disabledSections: disabledNext },
+                  );
                   };
                   return (
                     <div key={s.key} className="flex items-center justify-between gap-3">
@@ -893,8 +961,7 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
                           <button
                             key={k}
                             type="button"
-                            disabled={busy}
-                            onClick={() => set(k)}
+                              onClick={() => set(k)}
                             aria-pressed={state === k}
                             className={`tap px-2 py-1 font-mono text-label uppercase transition-colors ${
                               state === k
@@ -991,7 +1058,7 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
                     <Button variant="ghost" size="sm" onClick={() => setContact(null)}>
                       Cancel
                     </Button>
-                    <Button variant="brand" size="sm" disabled={busy || !contact.name.trim()} onClick={addContact}>
+                    <Button variant="brand" size="sm" disabled={!contact.name.trim()} onClick={addContact}>
                       Save
                     </Button>
                   </div>
@@ -1019,7 +1086,12 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
                 <Button
                   size="sm"
                   variant={c.canSubmitProjects ? "brand" : "secondary"}
-                  onClick={() => void patch({ canSubmitProjects: !c.canSubmitProjects })}
+                  onClick={() =>
+                    void patch(
+                      { canSubmitProjects: !c.canSubmitProjects },
+                      { canSubmitProjects: !c.canSubmitProjects },
+                    )
+                  }
                 >
                   {c.canSubmitProjects ? "On" : "Off"}
                 </Button>
@@ -1046,10 +1118,18 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
                 <Button
                   variant="brand"
                   size="sm"
-                  disabled={busy || !note.trim()}
-                  onClick={async () => {
-                    await patch({ note });
+                  disabled={!note.trim()}
+                  onClick={() => {
+                    /* clear the box first. Making somebody watch their own
+                       typing sit there while a request goes out is the same
+                       wait as before, just in a smaller place. */
+                    const text = note;
                     setNote("");
+                    void patch({ note: text }).then(() => {
+                      /* patch already showed the error; give them the words
+                         back so the note is not lost with it */
+                      if (errRef.current) setNote(text);
+                    });
                   }}
                 >
                   Add
@@ -1144,7 +1224,12 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
                   <button
                     key={t}
                     type="button"
-                    onClick={() => void patch({ tags: c.tags.filter((x) => x !== t) })}
+                    onClick={() =>
+                    void patch(
+                      { tags: c.tags.filter((x) => x !== t) },
+                      { tags: c.tags.filter((x) => x !== t) },
+                    )
+                  }
                     className="tap rounded-full border border-hair px-2.5 py-1 font-mono text-label uppercase text-muted transition-colors hover:border-error/60 hover:text-error"
                     aria-label={`Remove tag ${t}`}
                   >
@@ -1162,9 +1247,12 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
                   variant="secondary"
                   size="sm"
                   icon={<Plus />}
-                  disabled={busy || !tagDraft.trim()}
+                  disabled={!tagDraft.trim()}
                   onClick={async () => {
-                    await patch({ tags: [...c.tags, tagDraft.trim()] });
+                    await patch(
+                      { tags: [...c.tags, tagDraft.trim()] },
+                      { tags: [...c.tags, tagDraft.trim()] },
+                    );
                     setTagDraft("");
                   }}
                 >
