@@ -262,6 +262,55 @@ export type PortalContext = {
   viewingAsAdmin?: boolean;
 };
 
+/**
+ * The name of the person actually doing this, not the account they are in.
+ *
+ * Everything a teammate did used to be signed with the account owner's name,
+ * because the routes looked the customer row up by ctx.ownerEmail and used
+ * that. So Emma left three notes on a HighLevel cut and approved a video,
+ * and all four went into the record as Chase Buckner. The studio replies to
+ * the wrong person, and the client's own history of who said what is wrong.
+ *
+ * Owner or teammate, this answers the same question: who is at the keyboard.
+ * A teammate is named the way their owner named them when adding them, which
+ * is the name their colleagues will recognise.
+ */
+export async function actorName(
+  db: SupabaseClient,
+  ctx: PortalContext,
+): Promise<string | null> {
+  const self = ctx.selfEmail.toLowerCase();
+
+  if (!ctx.isOwner) {
+    const { data: m } = await db
+      .from("account_members")
+      .select("member_name")
+      .eq("account_type", "customer")
+      .ilike("owner_email", ctx.ownerEmail)
+      .ilike("member_email", self)
+      .maybeSingle();
+    const named = (m?.member_name as string | null)?.trim();
+    if (named) return named;
+  } else {
+    const { data: c } = await db
+      .from("customers")
+      .select("name")
+      .ilike("email", self)
+      .maybeSingle();
+    const named = (c?.name as string | null)?.trim();
+    if (named) return named;
+  }
+
+  /* their own profile name, then the address itself. Never the owner's name:
+     a wrong name is worse than a plain email, because it reads as certain. */
+  const { data: p } = await db
+    .from("profiles")
+    .select("display_name")
+    .ilike("email", self)
+    .maybeSingle();
+  return ((p?.display_name as string | null)?.trim() || ctx.selfEmail) ?? null;
+}
+
 export function contextCan(ctx: PortalContext, feature: string): boolean {
   return ctx.isOwner || memberCan(ctx.features, feature);
 }

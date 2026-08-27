@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
-import { contextCan, resolvePortalContext } from "@/lib/account-team";
+import { contextCan, resolvePortalContext, actorName } from "@/lib/account-team";
 import {
   approveStation,
   normalizePipeline,
@@ -65,14 +65,17 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   await syncProjectState(db, id, line2);
 
+  /* who pressed the button, which is not always whose account it is */
+  const who = await actorName(db, ctx);
+
   if (note) {
     const mainId = await ensureMainCarrier(db, id);
     if (mainId)
       await addComment(db, {
         deliverableId: mainId,
         side: "client",
-        email: ctx.ownerEmail,
-        name: null,
+        email: ctx.selfEmail,
+        name: who,
         body: `[${STATIONS[key].label}] ${note}`,
         atSeconds: null,
         parentId: null,
@@ -86,12 +89,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       action === "approve"
         ? `${label} approved: ${String(project.title)}`
         : `${label} sent back: ${String(project.title)}`,
-    body: note ? note.slice(0, 140) : `By ${ctx.ownerEmail}.`,
+    body: note ? note.slice(0, 140) : `By ${who ?? ctx.selfEmail}.`,
     href: `custom/${id}`,
     vars: {
       stage_label: label,
       project_title: String(project.title),
-      note: note ? note.slice(0, 140) : `By ${ctx.ownerEmail}.`,
+      note: note ? note.slice(0, 140) : `By ${who ?? ctx.selfEmail}.`,
       customer_email: ctx.ownerEmail,
     },
   });

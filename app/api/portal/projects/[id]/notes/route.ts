@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
-import { contextCan, resolvePortalContext } from "@/lib/account-team";
+import { contextCan, resolvePortalContext, actorName } from "@/lib/account-team";
 import { ensureConversation, postMessage } from "@/lib/chat";
 
 export const runtime = "nodejs";
@@ -46,7 +46,8 @@ async function guard(req: Request, id: string) {
     email: ctx.ownerEmail,
     customerId: (customer?.id as string | null) ?? null,
   });
-  return { db, ctx, project, conv, customerName: (customer?.name as string | null) ?? null };
+  /* the conversation belongs to the account; the note belongs to a person */
+  return { db, ctx, project, conv, customerName: await actorName(db, ctx) };
 }
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
-import { contextCan, resolvePortalContext } from "@/lib/account-team";
+import { contextCan, resolvePortalContext, actorName } from "@/lib/account-team";
 import { CLIENT_LABEL, isOpen, normalizeProjectStatus, projectBalance } from "@/lib/projects";
 import {
   canRequestChanges,
@@ -301,7 +301,11 @@ export async function POST(req: Request) {
      bell must never cost us the job. */
   try {
     const { pushAdminNotifications } = await import("@/lib/notifications");
-    const who = (customer?.name as string | null) ?? ctx.ownerEmail;
+    /* name the person who submitted it, and keep the account beside them so
+       the studio still knows which client this lands under */
+    const actor = (await actorName(db, ctx)) ?? ctx.selfEmail;
+    const account = (customer?.name as string | null) ?? ctx.ownerEmail;
+    const who = ctx.isOwner ? actor : `${actor} (${account})`;
     await pushAdminNotifications(db, {
       kind: "project_submitted",
       title: `New project from ${who}: ${title}`,

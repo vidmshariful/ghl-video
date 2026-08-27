@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
-import { resolvePortalContext } from "@/lib/account-team";
+import { resolvePortalContext, actorName } from "@/lib/account-team";
 import { pushAdminNotifications } from "@/lib/notifications";
 import {
   pickAsk,
@@ -130,6 +130,8 @@ export async function POST(req: Request) {
   const firstAnswer = !prev && verdict !== "skipped";
   const noteAdded = Boolean(prev && note && !prev.note);
   if (firstAnswer || noteAdded) {
+    /* name the person who answered, not the account they answered inside */
+    const who = (await actorName(db, ctx)) ?? ctx.selfEmail;
     const said =
       verdict === "working"
         ? "It's working"
@@ -139,12 +141,12 @@ export async function POST(req: Request) {
     await pushAdminNotifications(db, {
       kind: "video_feedback",
       title: `Client feedback: "${said}" on ${String(video.title)}`,
-      body: note ?? ctx.ownerEmail,
+      body: note ?? who,
       href: "orders",
       vars: {
         video_title: String(video.title),
-        summary: `Said "${said}". ${note ?? ctx.ownerEmail}`,
-        customer_name: ctx.ownerEmail,
+        summary: `Said "${said}". ${note ?? who}`,
+        customer_name: who,
       },
     });
   }

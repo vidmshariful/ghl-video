@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
-import { contextCan, resolvePortalContext } from "@/lib/account-team";
+import { contextCan, resolvePortalContext, actorName } from "@/lib/account-team";
 import { isWatchable, type DeliverableStatus } from "@/lib/deliverable-status";
 import {
   approveStation,
@@ -136,21 +136,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ error: "That video is not ready to review yet." }, { status: 400 });
   }
 
-  const who = g.ctx.ownerEmail;
-  // profiles keys the person's name as display_name; asking for "name" here
-  // returns nothing and every note would sign itself with an email address
-  const { data: profile } = await g.db
-    .from("profiles")
-    .select("display_name")
-    .eq("email", who)
-    .maybeSingle();
-  const { data: cust } = await g.db
-    .from("customers")
-    .select("name")
-    .eq("email", who)
-    .maybeSingle();
-  const name =
-    (profile?.display_name as string | null) ?? (cust?.name as string | null) ?? null;
+  /*
+   * Who is doing this, which is not the same as whose account it is. Both of
+   * these were the owner's email and the owner's name, so a note or an
+   * approval by a teammate went into the record signed by the account owner.
+   * Emma approved a cut for HighLevel and it read as Chase.
+   */
+  const who = g.ctx.selfEmail;
+  const name = await actorName(g.db, g.ctx);
 
   if (action === "comment") {
     const text = typeof body.body === "string" ? body.body : "";

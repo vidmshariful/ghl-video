@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
-import { contextCan, resolvePortalContext } from "@/lib/account-team";
+import { actorName, contextCan, resolvePortalContext } from "@/lib/account-team";
 import {
   STATIONS,
   approveStation,
@@ -48,13 +48,12 @@ async function guard(req: Request, id: string) {
     .maybeSingle();
   if (!project) return { fail: NextResponse.json({ error: "Not found." }, { status: 404 }) };
 
-  const { data: customer } = await db
-    .from("customers")
-    .select("name")
-    .ilike("email", ctx.ownerEmail)
-    .maybeSingle();
+  /* the person at the keyboard, not the account they are working in. This
+     read the customer row by ownerEmail, so every note a teammate left was
+     signed with the account owner's name. */
+  const name = await actorName(db, ctx);
 
-  return { db, ctx, project, name: (customer?.name as string | null) ?? null };
+  return { db, ctx, project, name };
 }
 
 /* a stage's notes: its own, plus the legacy untagged video notes on animation */

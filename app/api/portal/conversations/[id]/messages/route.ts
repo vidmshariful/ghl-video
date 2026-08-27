@@ -8,7 +8,7 @@ import {
   type ConversationRow,
   type StoredAttachment,
 } from "@/lib/chat";
-import { contextCan, resolvePortalContext, type PortalContext } from "@/lib/account-team";
+import { contextCan, resolvePortalContext, type PortalContext, actorName } from "@/lib/account-team";
 
 export const runtime = "nodejs";
 
@@ -109,21 +109,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ error: (e as Error).message }, { status: 400 });
   }
 
-  // the message is signed by whoever typed it: the owner's customer name,
-  // or a team member's own profile name, so the studio knows who is talking
-  let senderName: string | null = null;
-  if (ctx.isOwner) {
-    const { data: customer } = await db
-      .from("customers")
-      .select("name")
-      .eq("email", email)
-      .maybeSingle();
-    senderName = (customer?.name as string | null) ?? null;
-  } else {
-    const { profileByEmail } = await import("@/lib/profiles");
-    const profile = await profileByEmail(db, ctx.selfEmail);
-    senderName = profile.displayName ?? ctx.selfEmail;
-  }
+  // the message is signed by whoever typed it, so the studio knows who is
+  // talking. Chat already got this right; actorName is the same answer, now
+  // shared with reviews, approvals and uploads, which did not.
+  const senderName = await actorName(db, ctx);
 
   const message = await postMessage(db, {
     conversationId: id,

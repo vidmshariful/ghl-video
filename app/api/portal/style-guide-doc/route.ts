@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
-import { contextCan, resolvePortalContext } from "@/lib/account-team";
+import { contextCan, resolvePortalContext, actorName } from "@/lib/account-team";
 import { guideFor, ownerOf } from "@/lib/style-guide-doc";
 
 export const runtime = "nodejs";
@@ -26,13 +26,10 @@ async function guard(req: Request) {
       fail: NextResponse.json({ error: "You do not have access to this." }, { status: 403 }),
     };
 
-  const { data: customer } = await db
-    .from("customers")
-    .select("name")
-    .ilike("email", ctx.ownerEmail)
-    .maybeSingle();
+  /* the person writing the note, not the account holder */
+  const name = await actorName(db, ctx);
 
-  return { db, ctx, name: (customer?.name as string | null) ?? null };
+  return { db, ctx, name };
 }
 
 export async function GET(req: Request) {
@@ -68,7 +65,7 @@ export async function POST(req: Request) {
     doc_id: docId,
     page,
     author_side: "client",
-    author_email: g.ctx.ownerEmail,
+    author_email: g.ctx.selfEmail,
     author_name: g.name,
     body,
     parent_id: typeof b.parentId === "string" && UUID_RE.test(b.parentId) ? b.parentId : null,
@@ -78,10 +75,10 @@ export async function POST(req: Request) {
   const { pushAdminNotifications } = await import("@/lib/notifications");
   await pushAdminNotifications(g.db, {
     kind: "style_guide_note",
-    title: `Style guide note from ${g.name ?? g.ctx.ownerEmail}`,
+    title: `Style guide note from ${g.name ?? g.ctx.selfEmail}`,
     body: `${page ? `Page ${page}: ` : ""}${body.slice(0, 120)}`,
     href: "editing",
-    vars: { who: g.name ?? g.ctx.ownerEmail, summary: `${page ? `Page ${page}: ` : ""}${body.slice(0, 120)}` },
+    vars: { who: g.name ?? g.ctx.selfEmail, summary: `${page ? `Page ${page}: ` : ""}${body.slice(0, 120)}` },
   });
 
   return NextResponse.json({ ok: true });

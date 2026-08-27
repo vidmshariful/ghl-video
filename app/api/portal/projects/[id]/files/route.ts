@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
-import { contextCan, resolvePortalContext } from "@/lib/account-team";
+import { contextCan, resolvePortalContext, actorName } from "@/lib/account-team";
 import { addProjectFile, listProjectFiles, removeProjectFile } from "@/lib/project-files";
 
 export const runtime = "nodejs";
@@ -30,13 +30,8 @@ async function guard(req: Request, id: string) {
     .maybeSingle();
   if (!project) return { fail: NextResponse.json({ error: "Not found." }, { status: 404 }) };
 
-  const { data: customer } = await db
-    .from("customers")
-    .select("name")
-    .ilike("email", ctx.ownerEmail)
-    .maybeSingle();
-
-  return { db, ctx, name: (customer?.name as string | null) ?? null };
+  /* whoever is uploading, not whoever owns the account */
+  return { db, ctx, name: await actorName(db, ctx) };
 }
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -64,7 +59,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     projectId: id,
     file,
     side: "client",
-    email: g.ctx.ownerEmail,
+    email: g.ctx.selfEmail,
     name: g.name,
   });
   if ("error" in res) return NextResponse.json({ error: res.error }, { status: 400 });

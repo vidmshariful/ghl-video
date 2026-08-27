@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
-import { contextCan, resolvePortalContext } from "@/lib/account-team";
+import { contextCan, resolvePortalContext, actorName } from "@/lib/account-team";
 import { normalizePipeline, STATIONS, type StationKey } from "@/lib/pipeline";
 import { ensureMainCarrier, syncProjectState } from "@/lib/project-station";
 import { addComment } from "@/lib/review";
@@ -66,8 +66,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     await addComment(db, {
       deliverableId: mainId,
       side: "client",
-      email: ctx.ownerEmail,
-      name: null,
+      email: ctx.selfEmail,
+      name: await actorName(db, ctx),
       body: replacing ? `Sent an updated ${label}: ${url}` : `Added their ${label}: ${url}`,
       atSeconds: null,
       parentId: null,
