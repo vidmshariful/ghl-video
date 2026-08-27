@@ -38,6 +38,14 @@ type SalesPageBase = {
   seo?: { title: string; description: string };
 };
 
+/* One product, one page. The premade kind below shows the whole library and
+   lets somebody choose; this one sells a single pack, so it carries no
+   composition of its own: every fact on it comes from the catalogue entry
+   for that pack. Rendered by components/sales/PackLanding. */
+export type PackSalesPage = SalesPageBase & {
+  kind: "pack";
+};
+
 /* The default kind: a premade-video landing page (library + bundles +
  * white-label showcase). Rendered inline by app/(sales)/lp/[slug]/page.tsx. */
 export type PremadeSalesPage = SalesPageBase & {
@@ -91,7 +99,11 @@ export type EditingSalesPage = SalesPageBase & {
   kind: "editing";
 };
 
-export type SalesPage = PremadeSalesPage | PartnerSalesPage | EditingSalesPage;
+export type SalesPage =
+  | PremadeSalesPage
+  | PartnerSalesPage
+  | EditingSalesPage
+  | PackSalesPage;
 
 export const salesPages: SalesPage[] = [
   {
@@ -107,6 +119,19 @@ export const salesPages: SalesPage[] = [
       title: "Video Editing for HighLevel Creators",
       description:
         "Video editing for HighLevel agencies and SaaS founders who publish every week. Send raw footage, get finished edits back in two to three business days. Plans from $595 a month, unlimited revisions, no contract.",
+    },
+  },
+  {
+    kind: "pack",
+    slug: "ai-first-saas-pack",
+    title: "AI First SaaS Pack",
+    campaign: "Paid traffic and outreach for the nine video pack",
+    status: "live",
+    indexable: true,
+    seo: {
+      title: "AI First SaaS Pack: Nine White-Label HighLevel Videos",
+      description:
+        "Nine AI-first HighLevel videos white-labeled to your SaaS: a master explainer, seven feature explainers, and a platform demo. $1,995 for the set, published this week.",
     },
   },
   {

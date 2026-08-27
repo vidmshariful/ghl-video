@@ -39,6 +39,7 @@ export const sitePages: readonly SitePage[] = [
      being flagged indexable in lib/sales/pages.ts. */
   { name: "White-Label HighLevel Videos (LP)", path: "/lp/white-label-videos/", inNav: false, note: "funnel page, indexable" },
   { name: "Video Editing for HighLevel Creators (LP)", path: "/lp/video-editing-for-highlevel-creators/", inNav: false, note: "paid ads and cold email replies, indexable" },
+  { name: "AI First SaaS Pack (LP)", path: "/lp/ai-first-saas-pack/", inNav: false, note: "paid traffic for the nine video pack, indexable" },
   { name: "Shared shortlist", path: "/list/", inNav: false, noindex: true, note: "opened by an unguessable token, one per shared list" },
   { name: "Privacy Policy", path: "/legal/privacy/", inNav: false, note: "footer" },
   { name: "Terms", path: "/legal/terms/", inNav: false, note: "footer" },
