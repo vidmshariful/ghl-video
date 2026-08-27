@@ -29,11 +29,17 @@ export const runtime = "nodejs";
  * Every download button in the portal was broken this way, including
  * "Download them all".
  *
- * So POST here, with the session, to mint a short-lived ticket, then GET with
- * it. The ticket names one video and expires in five minutes. Ownership is
- * checked when it is minted, which is what the signature then stands for.
+ * So ask here first, with the session, for a short-lived ticket, then GET
+ * with it. The ticket names one video and expires in five minutes. Ownership
+ * is checked when it is minted, which is what the signature then stands for.
  * The email is deliberately NOT in the URL: a link gets pasted into a chat
  * and logged by every hop it passes, and the video id is already opaque.
+ *
+ * Minting is a GET, and that is not an accident. It was a POST, and View as
+ * client is deliberately read-only, so the studio looking at a client's
+ * portal could watch a video and then be told Unauthorized for asking to
+ * keep a copy of it. Handing over a file somebody can already watch reads
+ * nothing new: it is a read, and it says so.
  */
 const TICKET_TTL_MS = 5 * 60 * 1000;
 
@@ -145,25 +151,6 @@ async function load(db: ReturnType<typeof supabaseAdmin>, id: string) {
   return data;
 }
 
-/** Mint a ticket for a video this session is allowed to have. */
-export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const db = supabaseAdmin();
-  const { id } = await params;
-
-  const d = await load(db, id);
-  if (!d?.video_url) return NextResponse.json({ error: "Not found." }, { status: 404 });
-
-  const denied = await authorize(db, req, d);
-  if (denied) return denied;
-  if (!isWatchable(d.status as DeliverableStatus))
-    return NextResponse.json({ error: "That video is not ready yet." }, { status: 403 });
-
-  const expiresAt = Date.now() + TICKET_TTL_MS;
-  return NextResponse.json({
-    url: `/api/portal/videos/${id}/download/?e=${expiresAt}&s=${sign(id, expiresAt)}`,
-  });
-}
-
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const db = supabaseAdmin();
   const { id } = await params;
@@ -171,6 +158,18 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
   const d = await load(db, id);
   if (!d?.video_url) return NextResponse.json({ error: "Not found." }, { status: 404 });
+
+  /* asking for a ticket rather than for the file */
+  if (q.get("mint")) {
+    const refused = await authorize(db, req, d);
+    if (refused) return refused;
+    if (!isWatchable(d.status as DeliverableStatus))
+      return NextResponse.json({ error: "That video is not ready yet." }, { status: 403 });
+    const expiresAt = Date.now() + TICKET_TTL_MS;
+    return NextResponse.json({
+      url: `/api/portal/videos/${id}/download/?e=${expiresAt}&s=${sign(id, expiresAt)}`,
+    });
+  }
 
   /* a valid ticket already stands for the ownership check done when it was
      minted; anything else still has to prove itself the usual way */

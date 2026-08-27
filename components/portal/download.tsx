@@ -32,10 +32,13 @@ export async function startVideoDownload(videoId: string): Promise<string | null
   if (!token) return "Please sign in again to download this.";
 
   try {
-    /* trailing slash on purpose: the app sets trailingSlash, so the bare path
-       308s and every download pays a wasted round trip */
-    const r = await fetch(`/api/portal/videos/${videoId}/download/`, {
-      method: "POST",
+    /* A GET, because asking for a file you can already watch is a read, and
+       View as client is read-only: as a POST this answered Unauthorized for
+       the studio looking at a client's own portal.
+
+       Trailing slash on purpose: the app sets trailingSlash, so the bare
+       path 308s and every download pays a wasted round trip. */
+    const r = await fetch(`/api/portal/videos/${videoId}/download/?mint=1`, {
       /* a teammate downloads from inside the owner's account, same as every
          other portal call */
       headers: { Authorization: `Bearer ${token}`, ...actForHeader() },
