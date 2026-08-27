@@ -138,7 +138,7 @@ export function PortalKitClient() {
                 id: "c1",
                 column: "in_production",
                 title: "Brand film, September launch",
-                meta: "Being made. 5 videos, 2 approved",
+                meta: "In progress. 5 videos, 2 approved",
                 due: "due Sep 12",
                 dueTone: "neutral",
                 progressPct: 40,

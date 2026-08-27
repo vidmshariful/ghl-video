@@ -595,7 +595,7 @@ export function DashboardView({
               }
             />
             <Counter
-              label="Being made"
+              label="In progress"
               value={count(inProduction.length)}
               hint={inProduction.length ? "In the studio now" : "Nothing in production"}
               open={inProduction.length > 0 && lens === "making"}
@@ -613,7 +613,7 @@ export function DashboardView({
                     ? "Ready to watch"
                     : lens === "waiting"
                       ? "Waiting on you"
-                      : "Being made"
+                      : "In progress"
                 }
                 description="Across everything you have with us, whichever service it came from."
                 actions={

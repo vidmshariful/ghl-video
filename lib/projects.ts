@@ -68,7 +68,7 @@ export const STUDIO_LABEL: Record<string, string> = {
 export const CLIENT_LABEL: Record<string, string> = {
   backlog: "Booked in",
   planning: "Being planned",
-  in_progress: "Being made",
+  in_progress: "In progress",
   review: "Ready for you",
   revision: "Changes in hand",
   approved: "Approved",
@@ -76,7 +76,7 @@ export const CLIENT_LABEL: Record<string, string> = {
   closed: "Complete",
   cancelled: "Cancelled",
   scoped: "Booked in",
-  in_production: "Being made",
+  in_production: "In progress",
   delivered: "Approved",
 };
 
