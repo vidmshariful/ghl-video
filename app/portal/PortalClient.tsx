@@ -127,6 +127,21 @@ async function tellPortal(kind: "signed_in" | "signed_out" | "ping") {
   }
 }
 
+/*
+ * Signing out, reported before the session is gone.
+ *
+ * This used to be left to the auth listener, which cannot work: tellPortal
+ * needs the access token to authenticate, and by the time SIGNED_OUT fires
+ * there is no session to take one from, so it returned early every time. The
+ * log recorded no sign outs at all, and presence rows outlived the sessions
+ * they stood for, which made people look like they were still in the portal
+ * after they had left.
+ */
+async function signOutPortal() {
+  await tellPortal("signed_out");
+  await supabase.auth.signOut();
+}
+
 async function authedFetch(path: string, init?: RequestInit) {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
@@ -1846,7 +1861,7 @@ function Portal({
               avatarUrl={profile.avatarUrl}
               onSettings={() => go("settings")}
               onHelp={() => go("help")}
-              onSignOut={() => supabase.auth.signOut()}
+              onSignOut={() => void signOutPortal()}
               extra={switcher}
             />
           </>
@@ -2080,11 +2095,14 @@ export function PortalClient({
     });
     const { data: sub } = supabase.auth.onAuthStateChange((e, s) => {
       setSession(s);
-      /* the two moments worth logging. SIGNED_IN also fires on a token
-         refresh, which is why the server records presence on it rather than
-         the client trying to tell a fresh sign in from a renewed one. */
+      /* SIGNED_IN also fires on a token refresh, a new tab and a remount, so
+         this is not on its own an arrival. The server decides which ones are,
+         because only it can see the person's last visit.
+
+         Sign out is NOT reported from here. It has no session left to
+         authenticate with by the time it fires; signOutPortal says so while
+         the token still exists. */
       if (e === "SIGNED_IN") void tellPortal("signed_in");
-      if (e === "SIGNED_OUT") void tellPortal("signed_out");
     });
     return () => sub.subscription.unsubscribe();
   }, []);

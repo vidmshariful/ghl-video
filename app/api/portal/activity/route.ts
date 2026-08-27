@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { resolvePortalContext } from "@/lib/account-team";
+import { isNewVisit } from "@/lib/portal-activity";
 
 export const runtime = "nodejs";
 
@@ -32,7 +33,33 @@ export async function POST(req: Request) {
 
   try {
     if (kind === "signed_in" || kind === "signed_out") {
-      await db.from("portal_activity").insert({ account_email: account, actor_email: actor, kind });
+      /*
+       * Only log an arrival that is actually an arrival. SIGNED_IN fires on
+       * every token refresh, every new tab and every remount, so recording
+       * each one turned a single eight minute visit into sixteen rows. If
+       * this person's last event on this account was a sign in inside the
+       * visit window, they never left: refresh their presence and say
+       * nothing. A sign out ends the visit, so the next one counts again.
+       */
+      let arriving = true;
+      if (kind === "signed_in") {
+        const { data: last } = await db
+          .from("portal_activity")
+          .select("kind, at")
+          .eq("account_email", account)
+          .eq("actor_email", actor)
+          .order("at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        arriving = isNewVisit(
+          last ? { kind: String(last.kind), at: String(last.at) } : null,
+          Date.now(),
+        );
+      }
+
+      if (arriving) {
+        await db.from("portal_activity").insert({ account_email: account, actor_email: actor, kind });
+      }
       /* a sign in is also the freshest possible presence; a sign out clears
          it, so a closed session cannot read as an open tab */
       if (kind === "signed_in") {

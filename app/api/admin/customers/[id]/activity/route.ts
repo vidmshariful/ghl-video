@@ -1,19 +1,17 @@
 import { NextResponse } from "next/server";
 import { verifyAdmin } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
+import { ONLINE_MS, collapseVisits } from "@/lib/portal-activity";
 
 export const runtime = "nodejs";
 
 /*
  * Who is in this client's portal, and who has been.
  *
- * `online` is a judgement, not a stored flag: presence rows are refreshed
- * every 45 seconds by an open tab, so anything seen inside two minutes is
- * still there and anything older is a tab that was closed or a laptop that
- * went to sleep. Two minutes rather than one because a missed beat on a slow
- * connection should not blink somebody offline.
+ * `online` is a judgement, not a stored flag, and the windows it is judged
+ * against are shared with the writer so the log and the screen cannot drift
+ * apart. See lib/portal-activity.
  */
-const ONLINE_MS = 2 * 60 * 1000;
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const admin = await verifyAdmin(req);
@@ -51,11 +49,15 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       lastSeenAt: p.last_seen_at as string,
       online: now - Date.parse(p.last_seen_at as string) < ONLINE_MS,
     })),
-    events: (events ?? []).map((e) => ({
-      id: String(e.id),
-      email: String(e.actor_email),
-      kind: String(e.kind) as "signed_in" | "signed_out",
-      at: e.at as string,
-    })),
+    /* collapsed, because the rows written before the writer learned to skip
+       repeats hold one line per token refresh rather than one per visit */
+    events: collapseVisits(
+      (events ?? []).map((e) => ({
+        id: String(e.id),
+        email: String(e.actor_email),
+        kind: String(e.kind) as "signed_in" | "signed_out",
+        at: e.at as string,
+      })),
+    ),
   });
 }
