@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, ChevronRight, Plus } from "lucide-react";
 import {
   Button,
@@ -46,7 +46,6 @@ import {
 } from "@/lib/editing-sop";
 import { EDIT_TIERS, creditCost, isPodcast } from "@/lib/editing-credits";
 import {
-  Drawer,
   ItemNotes,
   KanbanBoard,
   type BoardColumn,
@@ -379,6 +378,29 @@ export function EditingBoard({ slug, onBack }: { slug: string; onBack: () => voi
   const live = b.requests.filter((r) => !r.cancelledAt);
   const opened = open ? b.requests.find((r) => r.id === open) : null;
 
+  /*
+   * A request takes over the screen rather than sliding in beside the board.
+   *
+   * The drawer was a documented exception to the modal rule, and it stopped
+   * being the right one. This holds the brief, the footage, the cut, the
+   * client's whole feedback thread and now a player to watch it against:
+   * that never fitted in a panel a third of the width, and reading a note
+   * about the second something happens while the video lives somewhere else
+   * entirely is how notes get answered wrongly. Production jobs made the
+   * same move for the same reason (owner's decision, 28 August 2026).
+   */
+  if (opened) {
+    return (
+      <EditingJob
+        req={opened}
+        board={b}
+        busy={busy}
+        onSave={save}
+        onBack={() => setOpen(null)}
+      />
+    );
+  }
+
   return (
     <div className="w-full">
       <button
@@ -497,28 +519,6 @@ export function EditingBoard({ slug, onBack }: { slug: string; onBack: () => voi
       <StyleGuideCard guide={b.styleGuide} email={b.client.email} />
       <StyleGuideAdmin email={b.client.email} />
 
-      {/* the item, over the board instead of instead of it */}
-      <Drawer open={!!opened} onClose={() => setOpen(null)} title={opened?.title ?? ""}>
-        {opened && (
-          <div className="grid gap-5">
-            <RequestDetail req={opened} board={b} busy={busy} onSave={save} />
-            {/* the same list the client sees on the request: their logo and
-                images come in here, and anything we hand back goes out the
-                same way. An editor opening this card should not have to go
-                looking through email for the logo. */}
-            <Attachments
-              endpoint={`/api/admin/projects/files?deliverableId=${opened.id}`}
-              extraFields={{ deliverableId: opened.id }}
-              viewer="studio"
-              title="Resources for this video"
-              description="What the client sent to be used in the cut, and anything we send back."
-              empty="Nothing attached to this one."
-              authedFetch={adminFetch}
-            />
-            <ItemNotes target={{ deliverableId: opened.id }} authHeader={authHeader} />
-          </div>
-        )}
-      </Drawer>
     </div>
   );
 }
@@ -739,11 +739,68 @@ function AddRequest({
 
 /* ---------------- one request ---------------- */
 
+/*
+ * One editing request, on a full page.
+ *
+ * Everything about one video in one place: what they asked for, the footage,
+ * the cut, the resources both sides have sent, the client's feedback thread
+ * with the cut playing next to it, and our own internal notes.
+ */
+function EditingJob({
+  req: r,
+  board: b,
+  busy,
+  onSave,
+  onBack,
+}: {
+  req: Req;
+  board: Board;
+  busy: boolean;
+  onSave: (id: string, patch: Record<string, unknown>, optimistic?: Partial<Req>) => Promise<void>;
+  onBack: () => void;
+}) {
+  return (
+    <div className="w-full">
+      <button
+        type="button"
+        onClick={onBack}
+        className="tap inline-flex items-center gap-2 font-mono text-label uppercase text-muted transition-colors hover:text-gold"
+      >
+        <ArrowLeft size={14} aria-hidden="true" />
+        {b.client.name || b.client.email}
+      </button>
+
+      <div className="mt-4 grid gap-5">
+        <RequestDetail req={r} board={b} busy={busy} onSave={onSave} />
+
+        <ReviewRoom requestId={r.id} title={r.title} videoUrl={r.videoUrl ?? null} />
+
+        {/* the same list the client sees on the request: their logo and
+            images come in here, and anything we hand back goes out the same
+            way. An editor opening this should not have to go looking through
+            email for the logo. */}
+        <Attachments
+          endpoint={`/api/admin/projects/files?deliverableId=${r.id}`}
+          extraFields={{ deliverableId: r.id }}
+          viewer="studio"
+          title="Resources for this video"
+          description="What the client sent to be used in the cut, and anything we send back."
+          empty="Nothing attached to this one."
+          authedFetch={adminFetch}
+        />
+
+        <ItemNotes target={{ deliverableId: r.id }} authHeader={authHeader} />
+      </div>
+    </div>
+  );
+}
+
 type Note = {
   id: string;
   side: "client" | "studio";
   name: string;
   body: string;
+  atSeconds: number | null;
   stamp: string | null;
   parentId: string | null;
   resolved: boolean;
@@ -766,12 +823,34 @@ type Note = {
  * client's ones only. Somebody moving between the two boards should not have
  * to learn a second way of reading the same thing.
  */
-function ClientNotes({ requestId, title }: { requestId: string; title: string }) {
+function ReviewRoom({
+  requestId,
+  title,
+  videoUrl,
+}: {
+  requestId: string;
+  title: string;
+  videoUrl: string | null;
+}) {
+  const media = useRef<HTMLVideoElement>(null);
   const [rows, setRows] = useState<Note[] | null>(null);
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+
+  /*
+   * A note says "the logo at 0:42 is the old one". Reading that with the cut
+   * open in some other tab means scrubbing for 0:42 by hand, every time, and
+   * an editor who cannot find the moment answers the note from memory. The
+   * stamp is the control: press it and the video is there.
+   */
+  function seek(atSeconds: number) {
+    const v = media.current;
+    if (!v) return;
+    v.currentTime = atSeconds;
+    void v.play().catch(() => {});
+  }
 
   const load = useCallback(async () => {
     const r = await fetch(`/api/admin/deliverables/${requestId}/comments`, {
@@ -815,13 +894,29 @@ function ClientNotes({ requestId, title }: { requestId: string; title: string })
 
   return (
     <Card
-      title="What the client said"
+      title="Review room"
       description={
         open > 0
           ? `${open} still open on ${title}.`
           : "Their notes on this cut, and your answers."
       }
     >
+      {/* the cut, here rather than in another tab, so a stamp can be pressed */}
+      {videoUrl ? (
+        <video
+          ref={media}
+          controls
+          preload="metadata"
+          playsInline
+          src={videoUrl}
+          className="mb-3 max-h-[52vh] w-full rounded-[8px] bg-black"
+        />
+      ) : (
+        <p className="mb-3 text-body-sm text-dim">
+          No cut linked yet. Paste one above and their notes will play against it.
+        </p>
+      )}
+
       {err && <p className="mb-2 text-body-sm text-error">{err}</p>}
 
       {rows === null ? (
@@ -840,9 +935,15 @@ function ClientNotes({ requestId, title }: { requestId: string; title: string })
               <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
                 <span className="text-body-sm font-semibold text-ink">{c.name}</span>
                 {c.stamp && (
-                  <span className="rounded-full border border-gold/40 px-2 py-0.5 font-mono text-label text-gold">
+                  <button
+                    type="button"
+                    onClick={() => c.atSeconds != null && seek(c.atSeconds)}
+                    disabled={!videoUrl || c.atSeconds == null}
+                    className="tap rounded-full border border-gold/40 px-2 py-0.5 font-mono text-label text-gold transition-colors hover:bg-gold hover:text-canvas disabled:cursor-default disabled:hover:bg-transparent disabled:hover:text-gold"
+                    aria-label={`Play from ${c.stamp}`}
+                  >
                     {c.stamp}
-                  </span>
+                  </button>
                 )}
                 {c.side === "client" && (
                   <button
@@ -1082,7 +1183,6 @@ function RequestDetail({
           </div>
         </Card>
 
-        <ClientNotes requestId={r.id} title={r.title} />
       </div>
 
       <div className="grid gap-3">

@@ -106,12 +106,16 @@ Every add or edit form on every portal surface (admin, customer portal,
 partner portal) opens in the shared `Modal` from `components/portal/ui`
 (admin code may use its `AdminModal` alias). A form that expands inline and
 pushes the page down is a defect (owner decision, 22 August 2026). The
-Modal specimen lives on `/uikits/portal`. Side-panel exceptions: the studio's
-own `Drawer` on the admin work board, and full-page editors (blog posts,
-email templates) which are screens, not forms. The CLIENT side of editing
-used to be an exception too and no longer is: opening a request in the
-customer portal is a centred `Modal` (owner decision, 25 August 2026). Do not
-put it back in a side panel.
+Modal specimen lives on `/uikits/portal`. Side-panel exceptions: full-page
+editors (blog posts, email templates) which are screens, not forms.
+
+Two things that used to be exceptions and no longer are. Opening a request
+in the CUSTOMER portal is a centred `Modal` (owner decision, 25 August 2026).
+Opening one on the admin editing board is a FULL PAGE, like a production job
+(owner decision, 28 August 2026): the request carries the brief, the footage,
+the cut, the client's feedback thread and a player to watch it against, and
+that never fitted in a panel a third of the width. Do not put either back in
+a side panel.
 
 ## 5. Motion
 
