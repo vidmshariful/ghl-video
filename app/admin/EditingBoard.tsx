@@ -739,6 +739,187 @@ function AddRequest({
 
 /* ---------------- one request ---------------- */
 
+type Note = {
+  id: string;
+  side: "client" | "studio";
+  name: string;
+  body: string;
+  stamp: string | null;
+  parentId: string | null;
+  resolved: boolean;
+  createdAt: string;
+};
+
+/*
+ * What the client said about this cut.
+ *
+ * They could always say it: the review room writes their notes the same way
+ * for a plan video as for any other. Nothing on this side could read them
+ * back. The admin comments route is addressed by ORDER, and a plan's videos
+ * belong to a billing cycle with no order anywhere on them, so the board had
+ * no URL to ask with. Feedback went out as a notification email and then
+ * lived nowhere a person works, which from the client's side looks like
+ * being ignored.
+ *
+ * Deliberately the same shape the production board uses: gold for their
+ * notes, replies indented under the note they answer, Mark done on the
+ * client's ones only. Somebody moving between the two boards should not have
+ * to learn a second way of reading the same thing.
+ */
+function ClientNotes({ requestId, title }: { requestId: string; title: string }) {
+  const [rows, setRows] = useState<Note[] | null>(null);
+  const [replyTo, setReplyTo] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const load = useCallback(async () => {
+    const r = await fetch(`/api/admin/deliverables/${requestId}/comments`, {
+      headers: await authHeader(),
+    }).catch(() => null);
+    const j = await r?.json().catch(() => null);
+    setRows((j?.comments as Note[] | undefined) ?? []);
+  }, [requestId]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function post(patch: Record<string, unknown>) {
+    setBusy(true);
+    setErr("");
+    const r = await fetch(`/api/admin/deliverables/${requestId}/comments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(await authHeader()) },
+      body: JSON.stringify(patch),
+    }).catch(() => null);
+    const j = await r?.json().catch(() => null);
+    setBusy(false);
+    if (r && !r.ok) return setErr(j?.error ?? "Could not save.");
+    setReplyTo(null);
+    setReplyText("");
+    await load();
+  }
+
+  /* Enter sends, shift and enter makes a new line. */
+  const enterSends = (fn: () => void) => (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      fn();
+    }
+  };
+
+  const top = (rows ?? []).filter((c) => !c.parentId);
+  const repliesOf = (id: string) => (rows ?? []).filter((c) => c.parentId === id);
+  const open = top.filter((c) => c.side === "client" && !c.resolved).length;
+
+  return (
+    <Card
+      title="What the client said"
+      description={
+        open > 0
+          ? `${open} still open on ${title}.`
+          : "Their notes on this cut, and your answers."
+      }
+    >
+      {err && <p className="mb-2 text-body-sm text-error">{err}</p>}
+
+      {rows === null ? (
+        <p className="text-body-sm text-muted">Loading notes...</p>
+      ) : top.length === 0 ? (
+        <p className="text-body-sm text-dim">Nothing from them on this one yet.</p>
+      ) : (
+        <ul className="grid gap-2">
+          {top.map((c) => (
+            <li
+              key={c.id}
+              className={`rounded-[8px] border p-3 ${
+                c.side === "client" ? "border-gold/30 bg-gold/5" : "border-hair bg-surface"
+              } ${c.resolved ? "opacity-60" : ""}`}
+            >
+              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                <span className="text-body-sm font-semibold text-ink">{c.name}</span>
+                {c.stamp && (
+                  <span className="rounded-full border border-gold/40 px-2 py-0.5 font-mono text-label text-gold">
+                    {c.stamp}
+                  </span>
+                )}
+                {c.side === "client" && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => post({ resolveId: c.id, resolved: !c.resolved })}
+                    className="tap ml-auto font-mono text-label uppercase text-dim transition-colors hover:text-green disabled:opacity-40"
+                  >
+                    {c.resolved ? "Reopen" : "Mark done"}
+                  </button>
+                )}
+              </div>
+              <p className="mt-1.5 whitespace-pre-wrap text-body-sm text-muted">{c.body}</p>
+              <p className="mt-1 font-mono text-label uppercase tracking-[0.08em] text-muted">
+                {when(c.createdAt)}
+              </p>
+
+              {repliesOf(c.id).map((x) => (
+                <div key={x.id} className="mt-2 border-l-2 border-blue/40 pl-3">
+                  <span className="text-body-sm font-semibold text-ink">{x.name}</span>
+                  <p className="mt-0.5 whitespace-pre-wrap text-body-sm text-muted">{x.body}</p>
+                  <p className="mt-0.5 font-mono text-label uppercase tracking-[0.08em] text-muted">
+                    {when(x.createdAt)}
+                  </p>
+                </div>
+              ))}
+
+              {replyTo === c.id ? (
+                <div className="mt-2 grid gap-2">
+                  <Textarea
+                    rows={2}
+                    autoFocus
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    onKeyDown={enterSends(() => post({ body: replyText, parentId: c.id }))}
+                    placeholder="Answer this note. Enter to send."
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      variant="secondary"
+                      disabled={busy || !replyText.trim()}
+                      onClick={() => post({ body: replyText, parentId: c.id })}
+                    >
+                      Send
+                    </Button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setReplyTo(null);
+                        setReplyText("");
+                      }}
+                      className="tap font-mono text-label uppercase text-dim transition-colors hover:text-muted"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReplyTo(c.id);
+                    setReplyText("");
+                  }}
+                  className="tap mt-2 font-mono text-label uppercase tracking-[0.08em] text-muted transition-colors hover:text-gold"
+                >
+                  Reply to this note
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  );
+}
+
 function RequestDetail({
   req: r,
   board: b,
@@ -900,6 +1081,8 @@ function RequestDetail({
             </Button>
           </div>
         </Card>
+
+        <ClientNotes requestId={r.id} title={r.title} />
       </div>
 
       <div className="grid gap-3">
