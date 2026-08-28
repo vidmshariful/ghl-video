@@ -1447,6 +1447,105 @@ function WatchButton({ v, onOpen }: { v: Video; onOpen: (v: Video) => void }) {
 }
 
 /*
+ * Where this edit is, and what is still ahead of it.
+ *
+ * The six client stages were already written and worded, and the screen
+ * printed exactly one of them as a tag. So a client could read "Being edited"
+ * and still not know whether that was step two of five or the last thing
+ * before it lands, or that we check their footage before promising a date.
+ * The custom projects screen answers that with its production line, and this
+ * is the same answer for an edit.
+ *
+ * Five steps, not six. Under revisions is a loop back from Needs your
+ * approval rather than a step after it: drawing it as its own rung would tell
+ * every client to expect a revision round they may never use. It takes over
+ * the approval rung while it is happening, which is exactly what it is.
+ */
+const EDIT_LINE = ["waiting", "queued", "in_production", "ready", "approved"] as const;
+
+function EditLine({ v }: { v: Video }) {
+  /* a cancelled request stopped wherever it stopped; a line implying it is
+     still moving toward Approved would be a lie told in a nice font */
+  if (v.cancelledAt) return null;
+
+  const here = v.column === "revisions" ? "ready" : v.column;
+  const at = EDIT_LINE.indexOf(here as (typeof EDIT_LINE)[number]);
+  /* an unknown column should not silently draw an empty line */
+  if (at < 0) return null;
+
+  return (
+    <ol className="mt-4 grid gap-1.5">
+      {EDIT_LINE.map((key, i) => {
+        const done = i < at;
+        const now = i === at;
+        /* the rung says what is actually happening on it: mid revision that
+           is Under revisions, not the approval it went back from */
+        const stage = stageFor(now && v.column === "revisions" ? "revisions" : key);
+        const when =
+          now && v.dueAt && (key === "queued" || key === "in_production")
+            ? `expected ${day(v.dueAt)}`
+            : null;
+        /* gold means your turn, everywhere else in the portal. Landing on
+           Approved is nobody's turn: it is the end, and it reads green like
+           every other finished thing. */
+        const settled = now && key === "approved";
+
+        return (
+          <li
+            key={key}
+            className={`flex flex-wrap items-center justify-between gap-2 rounded-[8px] border px-3.5 py-2.5 ${
+              settled
+                ? "border-green/40 bg-green/[0.06]"
+                : now
+                  ? v.column === "revisions"
+                    ? "border-error/30 bg-error/[0.04]"
+                    : "border-gold/40 bg-gold/5"
+                  : done
+                    ? "border-green/25 bg-green/[0.03]"
+                    : "border-hair/70 bg-transparent"
+            }`}
+          >
+            {/* basis so the date drops to its own line rather than squeezing
+                the blurb into a four word column at 320px */}
+            <span className="flex min-w-0 flex-1 basis-[15rem] items-center gap-2.5">
+              <span
+                aria-hidden="true"
+                className={`h-2.5 w-2.5 shrink-0 rounded-full ${
+                  done || settled
+                    ? "bg-green"
+                    : now
+                      ? v.column === "revisions"
+                        ? "bg-error"
+                        : "bg-gold"
+                      : "bg-hair"
+                }`}
+              />
+              <span className="min-w-0">
+                <span
+                  className={`block text-body-sm font-semibold ${
+                    now ? "text-ink" : done ? "text-muted" : "text-dim"
+                  }`}
+                >
+                  {stage.label}
+                </span>
+                {/* the explanation belongs on the step being explained, not
+                    floating above a line as a caption for all five */}
+                {now && <span className="mt-0.5 block text-body-sm text-muted">{stage.blurb}</span>}
+              </span>
+            </span>
+            {when && (
+              <span className="shrink-0 whitespace-nowrap font-mono text-label uppercase text-dim">
+                {when}
+              </span>
+            )}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+/*
  * One request, opened.
  *
  * Everything we know about it in one place, so the answer to "what is
@@ -1473,7 +1572,6 @@ function RequestDetail({
   onSave: (v: Video, patch: Record<string, string>) => Promise<string | null>;
   busy: boolean;
 }) {
-  const stage = stageFor(v.column);
   /*
    * Changing a request after it is in.
    *
@@ -1602,7 +1700,9 @@ function RequestDetail({
               </div>
             ) : (
               <>
-            <p className="text-body-sm text-muted">{stage.blurb}</p>
+            {/* the line carries the blurb on the rung it belongs to, so the
+                lone caption that used to sit here would now say it twice */}
+            <EditLine v={v} />
 
             {v.column === "waiting" &&
               (v.assetsUrl ? (
