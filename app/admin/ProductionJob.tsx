@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, Input, Select, Textarea } from "@/components/portal/ui";
 import { authHeader, when } from "./client";
 import { BrandingBrief } from "./BrandingBrief";
@@ -440,6 +440,7 @@ export function ProductionJob({ id, onBack }: { id: string; onBack: () => void }
                   <StudioThread
                     orderId={id}
                     deliverableId={d.id}
+                    videoUrl={d.video_url ?? null}
                     onChanged={load}
                   />
                 )}
@@ -503,6 +504,7 @@ type Note = {
   side: "client" | "studio";
   name: string;
   body: string;
+  atSeconds: number | null;
   stamp: string | null;
   version: number | null;
   parentId: string | null;
@@ -514,12 +516,31 @@ type Cut = { id: string; version: number; video_url: string; created_at: string 
 function StudioThread({
   orderId,
   deliverableId,
+  videoUrl,
   onChanged,
 }: {
   orderId: string;
   deliverableId: string;
+  /* the cut as the job knows it, used until the versions come back */
+  videoUrl: string | null;
   onChanged: () => void;
 }) {
+  const media = useRef<HTMLVideoElement>(null);
+
+  /*
+   * A note says "the logo at 4:12 is the old one". Reading that with the cut
+   * open in another tab means scrubbing for 4:12 by hand every time, and an
+   * editor who cannot find the moment answers the note from memory. The stamp
+   * is the control: press it and the video is there. Same room the editing
+   * board got, for the same reason.
+   */
+  function seek(atSeconds: number) {
+    const v = media.current;
+    if (!v) return;
+    v.currentTime = atSeconds;
+    void v.play().catch(() => {});
+  }
+
   const [rows, setRows] = useState<Note[] | null>(null);
   const [cuts, setCuts] = useState<Cut[]>([]);
   const [text, setText] = useState("");
@@ -570,8 +591,26 @@ function StudioThread({
   const top = (rows ?? []).filter((c) => !c.parentId);
   const repliesOf = (id: string) => (rows ?? []).filter((c) => c.parentId === id);
 
+  /* the newest cut once the versions land, the job's own link before that */
+  const playing = cuts[0]?.video_url ?? videoUrl;
+
   return (
     <div className="mt-3 border-t border-hair pt-3">
+      {playing ? (
+        <video
+          ref={media}
+          controls
+          preload="metadata"
+          playsInline
+          src={playing}
+          className="mb-3 max-h-[52vh] w-full rounded-[8px] bg-black"
+        />
+      ) : (
+        <p className="mb-3 text-body-sm text-dim">
+          No cut linked yet. Paste one above and their notes will play against it.
+        </p>
+      )}
+
       {cuts.length > 1 && (
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Cuts</span>
@@ -619,9 +658,15 @@ function StudioThread({
               <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
                 <span className="text-body-sm font-semibold text-ink">{c.name}</span>
                 {c.stamp && (
-                  <span className="rounded-full border border-gold/40 px-2 py-0.5 font-mono text-label text-gold">
+                  <button
+                    type="button"
+                    onClick={() => c.atSeconds != null && seek(c.atSeconds)}
+                    disabled={!playing || c.atSeconds == null}
+                    className="tap rounded-full border border-gold/40 px-2 py-0.5 font-mono text-label text-gold transition-colors hover:bg-gold hover:text-canvas disabled:cursor-default disabled:hover:bg-transparent disabled:hover:text-gold"
+                    aria-label={`Play from ${c.stamp}`}
+                  >
                     {c.stamp}
-                  </span>
+                  </button>
                 )}
                 {c.side === "client" && (
                   <button
