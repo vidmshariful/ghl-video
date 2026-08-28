@@ -79,6 +79,36 @@ export async function openCommentCounts(
   return out;
 }
 
+/**
+ * The same count, asked for by VIDEO rather than by order.
+ *
+ * openCommentCounts above filters on order_id, which an editing plan's videos
+ * do not have: their work belongs to a billing cycle. So the studio's editing
+ * board had no way to ask how much feedback was waiting, and three notes from
+ * a client sat unread for a day with nothing on screen saying they existed.
+ *
+ * Only top level client notes that nobody has marked done: a reply of ours is
+ * not something waiting on us, and neither is a note already dealt with.
+ */
+export async function openCountsByDeliverable(
+  db: DB,
+  deliverableIds: string[],
+): Promise<Record<string, number>> {
+  if (!deliverableIds.length) return {};
+  const { data } = await db
+    .from("deliverable_comments")
+    .select("deliverable_id")
+    .in("deliverable_id", deliverableIds)
+    .eq("author_side", "client")
+    .is("parent_id", null)
+    .is("resolved_at", null);
+  const out: Record<string, number> = {};
+  for (const c of data ?? []) {
+    out[c.deliverable_id as string] = (out[c.deliverable_id as string] ?? 0) + 1;
+  }
+  return out;
+}
+
 export type NewComment = {
   deliverableId: string;
   side: "client" | "studio";

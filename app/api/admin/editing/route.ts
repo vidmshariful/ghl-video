@@ -172,9 +172,18 @@ export async function GET(req: Request) {
           .order("created_at", { ascending: true })
       : { data: [] };
 
+    /* how much of the client's feedback is still waiting on us, per video, so
+       the board can say so on the card rather than leaving it to an email */
+    const { openCountsByDeliverable } = await import("@/lib/review");
+    const openNotes = await openCountsByDeliverable(
+      db,
+      ((rows ?? []) as Row[]).map((d) => String(d.id)),
+    );
+
     const all = ((rows ?? []) as Row[]).map((d) => ({
       ...shape(d),
       cycleId: String(d.cycle_id),
+      openNotes: openNotes[String(d.id)] ?? 0,
     }));
 
     const thisMonth = cycle ? all.filter((r) => r.cycleId === cycle.id) : [];

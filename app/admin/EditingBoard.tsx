@@ -89,6 +89,8 @@ type Req = {
   createdAt: string;
   qc: Qc;
   qcPassed: boolean;
+  /* client notes nobody has answered or marked done */
+  openNotes: number;
   column: EditingColumn;
   cycleId: string;
 };
@@ -483,6 +485,12 @@ export function EditingBoard({ slug, onBack }: { slug: string; onBack: () => voi
                   .filter(Boolean)
                   .join(" / "),
                 assignee: r.assignedTo,
+                /* the thing that went wrong before this existed: three notes
+                   from a client sat unread for a day, and the board looked
+                   exactly the same as it had the day before */
+                alert: r.openNotes
+                  ? `${r.openNotes} ${r.openNotes === 1 ? "note" : "notes"} to answer`
+                  : null,
                 /* the client nearly always sent a link, so the ball is ours
                    to check it. Only a request with no link at all is on them. */
                 warn:

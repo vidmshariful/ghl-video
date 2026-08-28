@@ -50,6 +50,11 @@ export type BoardItem = {
   dueTone?: "neutral" | "warn" | "bad";
   /* a warning chip, e.g. "needs footage" */
   warn?: string | null;
+  /* somebody is waiting on us, e.g. "3 notes to answer". Distinct from warn:
+     warn is about the work's inputs, this is about a person expecting a
+     reply. It leads the row and is the only FILLED chip on a card, which is
+     what makes it findable across a full column at a glance. */
+  alert?: string | null;
   /* progress, e.g. "3/9" */
   progress?: string | null;
   /* 0..100 draws a thin bar along the card's foot in the stripe colour */
@@ -144,8 +149,13 @@ export function WorkCard({
       {item.meta && (
         <p className="mt-0.5 truncate font-mono text-label uppercase text-dim">{item.meta}</p>
       )}
-      {(item.tag || item.due || item.warn || item.progress || action) && (
+      {(item.tag || item.due || item.warn || item.alert || item.progress || action) && (
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+          {item.alert && (
+            <span className="rounded-full bg-gold px-2 py-0.5 font-mono text-label font-semibold text-canvas">
+              {item.alert}
+            </span>
+          )}
           {item.tag && (
             <span
               className={`rounded-full border px-2 py-0.5 font-mono text-label ${TONE_CHIP[tone]}`}
