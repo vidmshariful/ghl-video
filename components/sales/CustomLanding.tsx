@@ -36,6 +36,8 @@ import {
  * read as a template. The format rows flip side to side, and the sections
  * between them change shape instead of restating one.
  */
+const dollars = (n: number) => `$${n.toLocaleString("en-US")}`;
+
 const MEDIA: Record<string, { src: string | null; poster: string | null }> = {
   featured: { src: clips.featured, poster: posters.featured },
   sampleA: { src: clips.sampleA, poster: posters.sampleA },
@@ -49,6 +51,11 @@ export function CustomLanding({ page }: { page: CustomSalesPage }) {
   const items = c.formats.items;
   const formatNames = items.map((f) => f.name);
   const from = Math.min(...items.map((f) => f.from));
+  /* the three a buyer chooses between, and the programme that is a different
+     kind of decision. Found by name rather than by index so reordering the
+     catalogue cannot silently promote the wrong one into the row of three. */
+  const series = items.find((f) => f.name === "Onboarding Series") ?? null;
+  const main = items.filter((f) => f !== series);
 
   return (
     <>
@@ -68,40 +75,63 @@ export function CustomLanding({ page }: { page: CustomSalesPage }) {
         ]}
       />
 
-      {/* ------------------------------- hero: the work, not a promise about it */}
-      <section className="sp-section" style={{ position: "relative", overflow: "hidden" }}>
+      {/* ------------------------------- hero */}
+      <section
+        className="sp-section"
+        style={{
+          position: "relative",
+          overflow: "hidden",
+          paddingBlockStart: "clamp(2.5rem, 6vw, 4.5rem)",
+        }}
+      >
         <div className="sp-glow" />
-        <div className="sp-wrap" style={{ position: "relative" }}>
-          <div className="sp-hero-split">
-            <div>
-              <span className="sp-eyebrow">{page.hero.eyebrow}</span>
-              <h1 className="sp-display sp-h1" style={{ marginTop: "0.8rem" }}>
-                {page.hero.headline} <span className="sp-grad-text">{page.hero.accent}</span>
-              </h1>
-              <p className="sp-lede sp-muted" style={{ marginTop: "1.1rem" }}>
-                {page.hero.sub}
-              </p>
-
-              <p className="sp-hero-price">
-                From <strong>${from.toLocaleString("en-US")}</strong>
-                <span> a project, quoted exactly before we start</span>
-              </p>
-
-              <div className="sp-hero-actions" style={{ marginTop: "1.6rem" }}>
-                <a href="#quote" className="sp-btn sp-btn--primary">
-                  {cta.requestQuote.label}
-                </a>
-                <BookCall className="sp-btn sp-btn--ghost" />
-              </div>
-            </div>
-
-            <SpVideo
-              src={clips.featured}
-              poster={posters.featured}
-              label="A recent custom build"
-              placeholder="Custom work"
-            />
+        <div className="sp-wrap" style={{ position: "relative", textAlign: "center" }}>
+          <span className="sp-eyebrow">{page.hero.eyebrow}</span>
+          <h1 className="sp-display sp-h1" style={{ marginTop: "1.1rem" }}>
+            {page.hero.headline}{" "}
+            <span className="sp-grad-text" style={{ display: "block" }}>
+              {page.hero.accent}
+            </span>
+          </h1>
+          <p
+            className="sp-lede"
+            style={{ margin: "1.35rem auto 0", maxWidth: "48rem", textWrap: "normal" }}
+          >
+            {page.hero.sub}
+          </p>
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "0.9rem",
+              justifyContent: "center",
+              marginTop: "2rem",
+            }}
+          >
+            <a href="#formats" className="sp-btn sp-btn--primary">
+              See the floor pricing
+            </a>
+            <a href="#quote" className="sp-btn sp-btn--ghost">
+              {cta.requestQuote.label}
+            </a>
           </div>
+          <p className="sp-muted" style={{ marginTop: "1rem", fontSize: "0.92rem" }}>
+            From {dollars(from)} a project. A fixed quote in 24 hours, before anything starts.
+          </p>
+        </div>
+
+        {/* the showreel, under the promise rather than beside it. Placeholder
+            until the custom reel is cut: SpVideo draws its own frame when the
+            src is null, so nothing here changes when the file lands. */}
+        <div
+          className="sp-wrap"
+          style={{
+            position: "relative",
+            marginTop: "clamp(2.5rem, 5vw, 3.5rem)",
+            maxWidth: "980px",
+          }}
+        >
+          <SpVideo src={null} poster={null} label="watch the showreel" placeholder="Custom work showreel" />
         </div>
       </section>
 
@@ -125,7 +155,7 @@ export function CustomLanding({ page }: { page: CustomSalesPage }) {
         </div>
       </section>
 
-      {/* ------------------------------- what each one costs, and what it looks like */}
+      {/* ------------------------------- what each one costs, and looks like */}
       <section className="sp-section sp-section--band" id="formats">
         <div className="sp-wrap">
           <SectionHead
@@ -136,39 +166,60 @@ export function CustomLanding({ page }: { page: CustomSalesPage }) {
             center
           />
 
-          <div className="sp-formats">
-            {items.map((f, i) => {
+          <div className="sp-fmt-grid">
+            {main.map((f) => {
               const m = MEDIA[f.mediaKey] ?? { src: null, poster: null };
               return (
-                <div
-                  key={f.name}
-                  className={`sp-hero-split sp-format-row${i % 2 ? " sp-format-row--flip" : ""}`}
-                >
-                  <div className="sp-format-copy">
-                    {/* a heading, not a styled span: these four are the most
-                        scannable thing on the page and were missing from the
-                        outline entirely, so nothing navigating by heading
-                        could find a format */}
-                    <h3 className="sp-eyebrow">{f.name}</h3>
-                    <p className="sp-format-price">
-                      From <strong>${f.from.toLocaleString("en-US")}</strong>
+                <article key={f.name} className="sp-fmt">
+                  <SpVideo src={m.src} poster={m.poster} label={f.name} placeholder={f.name} />
+                  <div className="sp-fmt-body">
+                    <h3 className="sp-fmt-name">{f.name}</h3>
+                    <p className="sp-fmt-price">
+                      Starting at
+                      <strong>{dollars(f.from)}</strong>
                     </p>
-                    <p className="sp-muted" style={{ marginTop: "0.9rem", maxWidth: "34rem" }}>
-                      {f.line}
-                    </p>
-                    <ul className="sp-tier-list" style={{ marginTop: "1.3rem" }}>
+                    <p className="sp-fmt-line">{f.line}</p>
+                    <ul className="sp-tier-list" style={{ marginTop: "1.2rem" }}>
                       {f.includes.map((x) => (
                         <li key={x}>{x}</li>
                       ))}
                     </ul>
                   </div>
-                  <div className="sp-format-media">
-                    <SpVideo src={m.src} poster={m.poster} label={f.name} placeholder={f.name} />
-                  </div>
-                </div>
+                </article>
               );
             })}
           </div>
+
+          {/* the biggest thing we sell, so it gets a band rather than a fourth
+              column that made it read as an afterthought */}
+          {series && (
+            <article className="sp-fmt-wide">
+              <div>
+                <span className="sp-eyebrow">The full programme</span>
+                <h3 className="sp-display sp-h2" style={{ marginTop: "0.8rem" }}>
+                  {series.name}
+                </h3>
+                <p className="sp-fmt-price" style={{ borderTop: 0, paddingTop: 0 }}>
+                  Starting at
+                  <strong>{dollars(series.from)}</strong>
+                </p>
+                <p className="sp-muted" style={{ marginTop: "0.9rem", maxWidth: "34rem" }}>
+                  {series.line}
+                </p>
+                <ul className="sp-tier-list" style={{ marginTop: "1.3rem" }}>
+                  {series.includes.map((x) => (
+                    <li key={x}>{x}</li>
+                  ))}
+                </ul>
+              </div>
+              <SpVideo
+                src={(MEDIA[series.mediaKey] ?? {}).src ?? null}
+                poster={(MEDIA[series.mediaKey] ?? {}).poster ?? null}
+                label={series.name}
+                placeholder={series.name}
+              />
+            </article>
+          )}
         </div>
       </section>
 
@@ -221,18 +272,26 @@ export function CustomLanding({ page }: { page: CustomSalesPage }) {
 
       {/* ------------------------------- what every video has to do */}
       <section className="sp-section">
-        <div className="sp-wrap sp-narrow">
+        <div className="sp-wrap">
           <SectionHead
             eyebrow={c.craft.chip}
             title={c.craft.headline}
             accent={c.craft.accent}
             sub={c.craft.intro}
           />
-          <div className="sp-necks" style={{ marginTop: "2rem" }}>
-            {c.craft.items.map((i) => (
-              <div key={i.title} className="sp-neck">
-                <h3 className="sp-display sp-neck-title">{i.title}</h3>
-                <p className="sp-muted sp-neck-line">{i.line}</p>
+          {/* a sequence, at size. These three are the argument the page is
+              making about craft, and three small cards in a row said them in
+              a whisper. */}
+          <div className="sp-craft">
+            {c.craft.items.map((i, n) => (
+              <div key={i.title} className="sp-craft-row">
+                <span className="sp-craft-n" aria-hidden="true">
+                  {String(n + 1).padStart(2, "0")}
+                </span>
+                <div>
+                  <h3 className="sp-craft-title">{i.title}</h3>
+                  <p className="sp-craft-line">{i.line}</p>
+                </div>
               </div>
             ))}
           </div>
@@ -267,20 +326,34 @@ export function CustomLanding({ page }: { page: CustomSalesPage }) {
 
       {/* ------------------------------- why a team that already knows the platform */}
       <section className="sp-section">
-        <div className="sp-wrap sp-narrow">
-          <SectionHead
-            eyebrow={c.difference.chip}
-            title={c.difference.headline}
-            accent={c.difference.accent}
-            sub={c.difference.intro}
-          />
-          <div className="sp-necks" style={{ marginTop: "2rem" }}>
-            {c.capabilities.map((x) => (
-              <div key={x.title} className="sp-neck">
-                <h3 className="sp-display sp-neck-title">{x.title}</h3>
-                <p className="sp-muted sp-neck-line">{x.line}</p>
-              </div>
-            ))}
+        <div className="sp-wrap">
+          {/* deliberately not the shape of the section above it: a claim on
+              one side, the three things backing it on the other, so two
+              "here are three qualities" moments do not read as one template
+              printed twice */}
+          <div className="sp-caps">
+            <div>
+              <span className="sp-eyebrow">{c.difference.chip}</span>
+              <h2 className="sp-display sp-h2" style={{ marginTop: "0.7rem" }}>
+                {c.difference.headline}{" "}
+                <span className="sp-grad-text">{c.difference.accent}</span>
+              </h2>
+              <p className="sp-muted" style={{ marginTop: "1.1rem" }}>
+                {c.difference.intro}
+              </p>
+              <p className="sp-muted" style={{ marginTop: "1.1rem" }}>
+                Every video on this page was made by the same in-house team, for
+                brands selling the same platform you sell.
+              </p>
+            </div>
+            <div className="sp-caps-list">
+              {c.capabilities.map((x) => (
+                <div key={x.title} className="sp-caps-item">
+                  <h3 className="sp-caps-title">{x.title}</h3>
+                  <p className="sp-caps-line">{x.line}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>

@@ -2184,58 +2184,170 @@
 }
 
 /* ------------------------------------------------------------------
- * Custom production page: the format rows.
+ * Custom production page.
  *
- * Each format is priced beside its own example, and the rows alternate
- * so four of them do not read as one repeated card. The flip is a
- * desktop-only reorder: on a phone there is one column, and the copy
- * must always come before the video it describes rather than the
- * order changing every other row.
+ * The three main formats read as a row of three, and the onboarding
+ * series gets a band of its own underneath: it is the biggest piece of
+ * work we sell and a fourth column made it look like a footnote.
  * ------------------------------------------------------------------ */
-.sp-formats {
+.sp-fmt-grid {
   display: grid;
-  gap: clamp(2.5rem, 6vw, 4.5rem);
+  gap: 1.25rem;
+  grid-template-columns: 1fr;
   margin-top: 3rem;
 }
-@media (min-width: 900px) {
-  .sp-format-row--flip .sp-format-copy {
-    order: 2;
-  }
-  .sp-format-row--flip .sp-format-media {
-    order: 1;
+@media (min-width: 760px) {
+  .sp-fmt-grid {
+    grid-template-columns: repeat(3, 1fr);
   }
 }
-.sp-format-price {
-  margin-top: 0.7rem;
+.sp-fmt {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--sp-line);
+  border-radius: var(--sp-radius);
+  background: var(--sp-panel);
+  overflow: hidden;
+  transition: border-color 0.25s ease, transform 0.25s ease;
+}
+.sp-fmt:hover {
+  border-color: rgba(252, 192, 0, 0.3);
+  transform: translateY(-3px);
+}
+.sp-fmt-body {
+  padding: 1.6rem 1.5rem 1.8rem;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.sp-fmt-name {
   font-family: var(--font-heading), system-ui, sans-serif;
-  font-size: 0.78rem;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+.sp-fmt-price {
+  margin-top: 0.9rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--sp-line);
+  font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.09em;
   color: var(--sp-dim);
 }
-.sp-format-price strong {
-  font-size: 1.8rem;
-  letter-spacing: -0.01em;
-  color: var(--sp-gold);
-}
-/* the number in the hero, said the same way as the ones below it */
-.sp-hero-price {
-  margin-top: 1.5rem;
+.sp-fmt-price strong {
+  display: block;
+  margin-top: 0.15rem;
   font-family: var(--font-heading), system-ui, sans-serif;
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.09em;
-  color: var(--sp-dim);
-}
-.sp-hero-price strong {
   font-size: 2rem;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
   color: var(--sp-gold);
-}
-.sp-hero-price span {
   text-transform: none;
-  letter-spacing: 0;
-  font-size: 0.95rem;
+}
+.sp-fmt-line {
+  margin-top: 0.9rem;
+  font-size: 0.94rem;
+  color: var(--sp-muted);
+}
+
+/* the onboarding series, given the room it is actually worth */
+.sp-fmt-wide {
+  margin-top: 1.25rem;
+  border: 1px solid rgba(252, 192, 0, 0.22);
+  border-radius: var(--sp-radius);
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgba(252, 192, 0, 0.07), transparent 55%),
+    var(--sp-panel);
+  padding: clamp(1.6rem, 4vw, 2.6rem);
+  display: grid;
+  gap: 2rem;
+  grid-template-columns: 1fr;
+  align-items: center;
+}
+@media (min-width: 900px) {
+  .sp-fmt-wide {
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+  }
+}
+
+/* ---- the craft: three jobs, as a sequence rather than three small cards ---- */
+.sp-craft {
+  margin-top: 3rem;
+  display: grid;
+  gap: 0;
+}
+.sp-craft-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: clamp(1.2rem, 4vw, 3rem);
+  align-items: baseline;
+  padding: clamp(1.6rem, 3.5vw, 2.4rem) 0;
+  border-top: 1px solid var(--sp-line);
+}
+.sp-craft-row:last-child {
+  border-bottom: 1px solid var(--sp-line);
+}
+.sp-craft-n {
+  font-family: var(--font-heading), system-ui, sans-serif;
+  font-size: clamp(2rem, 5vw, 3.2rem);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: transparent;
+  background: var(--sp-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  min-width: 2.5ch;
+}
+.sp-craft-title {
+  font-family: var(--font-heading), system-ui, sans-serif;
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.sp-craft-line {
+  margin-top: 0.6rem;
+  max-width: 46rem;
+  font-size: clamp(0.98rem, 1.6vw, 1.1rem);
+  color: var(--sp-muted);
+}
+
+/* ---- the difference: a statement, with the proof listed beside it ---- */
+.sp-caps {
+  display: grid;
+  gap: 2.5rem;
+  grid-template-columns: 1fr;
+  align-items: start;
+  margin-top: 1rem;
+}
+@media (min-width: 900px) {
+  .sp-caps {
+    grid-template-columns: 0.85fr 1.15fr;
+    gap: 4rem;
+  }
+}
+.sp-caps-list {
+  display: grid;
+  gap: 0;
+}
+.sp-caps-item {
+  padding: 1.5rem 0;
+  border-bottom: 1px solid var(--sp-line);
+}
+.sp-caps-item:first-child {
+  padding-top: 0;
+}
+.sp-caps-item:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.sp-caps-title {
+  font-family: var(--font-heading), system-ui, sans-serif;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+.sp-caps-line {
+  margin-top: 0.45rem;
   color: var(--sp-muted);
 }
 
