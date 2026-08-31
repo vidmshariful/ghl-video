@@ -45,6 +45,14 @@ export type PackSalesPage = SalesPageBase & {
   kind: "pack";
 };
 
+/* Custom production: the four formats with their published floors, and the
+   quote form as the close. Rendered by components/sales/CustomLanding, and
+   every fact on it comes from pages.custom, the same copy the marketing page
+   uses. Nothing to configure per campaign yet, so it carries no composition. */
+export type CustomSalesPage = SalesPageBase & {
+  kind: "custom";
+};
+
 /* The default kind: a premade-video landing page (library + bundles +
  * white-label showcase). Rendered inline by app/(sales)/lp/[slug]/page.tsx. */
 export type PremadeSalesPage = SalesPageBase & {
@@ -102,7 +110,8 @@ export type SalesPage =
   | PremadeSalesPage
   | PartnerSalesPage
   | EditingSalesPage
-  | PackSalesPage;
+  | PackSalesPage
+  | CustomSalesPage;
 
 export const salesPages: SalesPage[] = [
   {
@@ -118,6 +127,19 @@ export const salesPages: SalesPage[] = [
       title: "Video Editing for HighLevel Creators",
       description:
         "Video editing for HighLevel agencies and SaaS founders who publish every week. Send raw footage, get finished edits back in two to three business days. Plans from $595 a month, unlimited revisions, no contract.",
+    },
+  },
+  {
+    kind: "custom",
+    slug: "custom-video",
+    title: "Custom Video Production",
+    campaign: "Paid traffic and outreach for bespoke production",
+    status: "live",
+    indexable: true,
+    seo: {
+      title: "Custom Video Production for HighLevel SaaS",
+      description:
+        "Bespoke explainers, ads, demos and onboarding series for HighLevel SaaS founders. Published starting prices from $1,500, a fixed quote in 24 hours, and you approve every step.",
     },
   },
   {

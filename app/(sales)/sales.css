@@ -2092,3 +2092,93 @@
     margin-top: -3.75rem;
   }
 }
+
+/* ------------------------------------------------------------------
+ * The quote form.
+ *
+ * The one screen on a landing page where somebody types rather than
+ * reads, so the controls are bigger than the .sp radius elsewhere and
+ * the focus state is unmistakable: a gold ring, not a hairline shift.
+ * ------------------------------------------------------------------ */
+.sp-form {
+  display: grid;
+  gap: 1.1rem;
+}
+.sp-form-row {
+  display: grid;
+  gap: 1.1rem;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 720px) {
+  .sp-form-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.sp-field {
+  display: grid;
+  gap: 0.45rem;
+  min-width: 0;
+}
+.sp-field-label {
+  font-size: 0.83rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--sp-muted);
+}
+.sp-input {
+  width: 100%;
+  border-radius: var(--sp-radius-sm);
+  border: 1px solid var(--sp-line-strong);
+  background: var(--sp-bg);
+  color: var(--sp-text);
+  padding: 0.9rem 1rem;
+  font: inherit;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.sp-input::placeholder {
+  color: var(--sp-dim);
+}
+.sp-input:focus {
+  outline: none;
+  border-color: var(--sp-gold);
+  box-shadow: 0 0 0 3px rgba(252, 192, 0, 0.18);
+}
+.sp-textarea {
+  resize: vertical;
+  min-height: 8rem;
+}
+/* the arrow, drawn rather than left to the browser's own grey one */
+.sp-select {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--sp-muted) 50%),
+    linear-gradient(135deg, var(--sp-muted) 50%, transparent 50%);
+  background-position:
+    calc(100% - 1.15rem) 1.35rem,
+    calc(100% - 0.85rem) 1.35rem;
+  background-size:
+    5px 5px,
+    5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 2.5rem;
+}
+.sp-form-error {
+  color: #ff6b6b;
+  font-size: 0.92rem;
+}
+.sp-quote-done {
+  border: 1px solid rgba(0, 204, 0, 0.35);
+  background: rgba(0, 204, 0, 0.06);
+  border-radius: var(--sp-radius);
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  text-align: center;
+}
+.sp-quote-panel {
+  margin: 2.2rem auto 0;
+  max-width: 44rem;
+  background: var(--sp-panel);
+  border: 1px solid var(--sp-line);
+  border-radius: var(--sp-radius);
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+}

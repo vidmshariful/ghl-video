@@ -24,6 +24,7 @@ import { SpVideo } from "@/components/sales/SpVideo";
 import { PartnerLanding } from "@/components/sales/PartnerLanding";
 import { EditingLanding } from "@/components/sales/EditingLanding";
 import { PackLanding } from "@/components/sales/PackLanding";
+import { CustomLanding } from "@/components/sales/CustomLanding";
 import { SectionHead } from "@/components/sales/SectionHead";
 import { MultiPartnerLanding } from "@/components/sales/MultiPartnerLanding";
 import { JsonLd } from "@/components/JsonLd";
@@ -43,16 +44,16 @@ export async function generateMetadata({
   const { slug } = await params;
   const page = salesPageBySlug(slug);
   if (!page) return { title: "GHL Video" };
-  /* the editing LP and the pack LP carry no hero of their own (their words
-     live in lib/content/editing-lp.ts and the catalogue entry), so both rely
-     on their seo block */
+  /* the editing, pack and custom LPs carry no hero of their own (their words
+     live in lib/content/editing-lp.ts, the catalogue entry, and pages.custom),
+     so all three rely on their seo block */
   const title =
     page.seo?.title ??
     (page.kind === "partner"
       ? `${page.partner.name} and GHL Video`
       : page.kind === "editing"
         ? "Video editing on a monthly plan"
-        : page.kind === "pack"
+        : page.kind === "pack" || page.kind === "custom"
           ? page.title
           : `${page.hero.headline} ${page.hero.accent}`);
   const description =
@@ -63,7 +64,9 @@ export async function generateMetadata({
         ? "Send raw footage, get finished edits back from a HighLevel fluent team."
         : page.kind === "pack"
           ? "Nine AI-first HighLevel videos, white-labeled to your SaaS."
-          : page.hero.sub);
+          : page.kind === "custom"
+            ? "Bespoke video production for HighLevel SaaS, quoted before we start."
+            : page.hero.sub);
   return {
     title: `${title} | GHL Video`,
     description,
@@ -177,6 +180,7 @@ export default async function SalesLandingPage({
   }
   if (page.kind === "editing") return <EditingLanding />;
   if (page.kind === "pack") return <PackLanding />;
+  if (page.kind === "custom") return <CustomLanding />;
 
   const ft = featuredTestimonial; // Chase Buckner
 
