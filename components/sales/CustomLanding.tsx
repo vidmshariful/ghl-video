@@ -95,7 +95,7 @@ export function CustomLanding({ page }: { page: CustomSalesPage }) {
           </h1>
           <p
             className="sp-lede"
-            style={{ margin: "1.35rem auto 0", maxWidth: "48rem", textWrap: "normal" }}
+            style={{ margin: "1.35rem auto 0", maxWidth: "46rem", textWrap: "normal" }}
           >
             {page.hero.sub}
           </p>
@@ -120,9 +120,7 @@ export function CustomLanding({ page }: { page: CustomSalesPage }) {
           </p>
         </div>
 
-        {/* the showreel, under the promise rather than beside it. Placeholder
-            until the custom reel is cut: SpVideo draws its own frame when the
-            src is null, so nothing here changes when the file lands. */}
+        {/* the showreel, under the promise rather than beside it */}
         <div
           className="sp-wrap"
           style={{
@@ -131,7 +129,12 @@ export function CustomLanding({ page }: { page: CustomSalesPage }) {
             maxWidth: "980px",
           }}
         >
-          <SpVideo src={null} poster={null} label="watch the showreel" placeholder="Custom work showreel" />
+          <SpVideo
+            src={page.hero.videoSrc}
+            poster={page.hero.videoPoster}
+            label="watch the showreel"
+            placeholder="Custom work showreel"
+          />
         </div>
       </section>
 
@@ -179,11 +182,21 @@ export function CustomLanding({ page }: { page: CustomSalesPage }) {
                       <strong>{dollars(f.from)}</strong>
                     </p>
                     <p className="sp-fmt-line">{f.line}</p>
-                    <ul className="sp-tier-list" style={{ marginTop: "1.2rem" }}>
+                    <ul className="sp-tier-list" style={{ marginTop: "1.2rem", flex: 1 }}>
                       {f.includes.map((x) => (
                         <li key={x}>{x}</li>
                       ))}
                     </ul>
+                    {/* every pack asks for the same thing, so nobody has to
+                        scroll back to the hero to act on the one they picked.
+                        A plain #quote: a fragment with a query on it matches no
+                        element id and would scroll nowhere at all. */}
+                    <a
+                      href="#quote"
+                      className="sp-btn sp-btn--ghost sp-fmt-cta"
+                    >
+                      {cta.requestQuote.label}
+                    </a>
                   </div>
                 </article>
               );
@@ -211,6 +224,13 @@ export function CustomLanding({ page }: { page: CustomSalesPage }) {
                     <li key={x}>{x}</li>
                   ))}
                 </ul>
+                <a
+                  href="#quote"
+                  className="sp-btn sp-btn--primary"
+                  style={{ marginTop: "1.6rem" }}
+                >
+                  {cta.requestQuote.label}
+                </a>
               </div>
               <SpVideo
                 src={(MEDIA[series.mediaKey] ?? {}).src ?? null}

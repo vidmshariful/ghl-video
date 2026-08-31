@@ -60,6 +60,9 @@ export type CustomSalesPage = SalesPageBase & {
     headline: string;
     accent: string;
     sub: string;
+    /* the showreel under the promise. null draws the placeholder frame. */
+    videoSrc: string | null;
+    videoPoster: string | null;
   };
   /* said above the formats, where somebody is deciding which one they need */
   formatsIntro: string;
@@ -150,12 +153,16 @@ export const salesPages: SalesPage[] = [
     indexable: true,
     hero: {
       eyebrow: "Custom production",
-      /* the accent starts at HighLevel on purpose: "HighLevel platform" is one
-         idea, and breaking the colour (and the line) through the middle of it
-         made the headline read as two half thoughts */
+      /* Two lines, and the second one is sized to sit over the paragraph under
+         it rather than running 275px wider than it. "platform" came out for
+         that reason: body text cannot follow a headline out to 1000px without
+         becoming unreadable, so the headline comes back to meet the text. */
       headline: "Custom video for the",
-      accent: "HighLevel platform you white-label.",
+      accent: "HighLevel you white-label.",
       sub: "You sell HighLevel under your own brand, to your own market. Premade covers what the platform does. This is for the part that is only yours: your positioning, your niche, your offer, scripted and animated by a team that has been building HighLevel videos since 2020.",
+      videoSrc:
+        "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a958b9c9ced56098acef721.mp4",
+      videoPoster: null,
     },
     formatsIntro:
       "Four formats, each with a published floor and a real example. Every project is quoted exactly before production starts, so these are the floors, not estimates.",

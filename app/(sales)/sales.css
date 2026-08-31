@@ -2399,3 +2399,8 @@
   outline-offset: 3px;
   border-radius: var(--sp-radius-sm);
 }
+.sp-fmt-cta {
+  margin-top: 1.4rem;
+  width: 100%;
+  justify-content: center;
+}
