@@ -51,6 +51,18 @@ export type PackSalesPage = SalesPageBase & {
    uses. Nothing to configure per campaign yet, so it carries no composition. */
 export type CustomSalesPage = SalesPageBase & {
   kind: "custom";
+  /* Campaign copy. The FACTS (formats, prices, what each includes, the six
+     steps, the FAQ) come from pages.custom, so there is one place to change
+     what we say about custom work. What lives here is who the page is
+     talking to, which is the part that changes per campaign. */
+  hero: {
+    eyebrow: string;
+    headline: string;
+    accent: string;
+    sub: string;
+  };
+  /* said above the formats, where somebody is deciding which one they need */
+  formatsIntro: string;
 };
 
 /* The default kind: a premade-video landing page (library + bundles +
@@ -136,6 +148,17 @@ export const salesPages: SalesPage[] = [
     campaign: "Paid traffic and outreach for bespoke production",
     status: "live",
     indexable: true,
+    hero: {
+      eyebrow: "Custom production",
+      /* the accent starts at HighLevel on purpose: "HighLevel platform" is one
+         idea, and breaking the colour (and the line) through the middle of it
+         made the headline read as two half thoughts */
+      headline: "Custom video for the",
+      accent: "HighLevel platform you white-label.",
+      sub: "You sell HighLevel under your own brand, to your own market. Premade covers what the platform does. This is for the part that is only yours: your positioning, your niche, your offer, scripted and animated by a team that has been building HighLevel videos since 2020.",
+    },
+    formatsIntro:
+      "Four formats, each with a published floor and a real example. Every project is quoted exactly before production starts, so these are the floors, not estimates.",
     seo: {
       title: "Custom Video Production for HighLevel SaaS",
       description:

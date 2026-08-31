@@ -180,7 +180,7 @@ export default async function SalesLandingPage({
   }
   if (page.kind === "editing") return <EditingLanding />;
   if (page.kind === "pack") return <PackLanding />;
-  if (page.kind === "custom") return <CustomLanding />;
+  if (page.kind === "custom") return <CustomLanding page={page} />;
 
   const ft = featuredTestimonial; // Chase Buckner
 

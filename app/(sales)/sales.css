@@ -2182,3 +2182,108 @@
   border-radius: var(--sp-radius);
   padding: clamp(1.5rem, 4vw, 2.5rem);
 }
+
+/* ------------------------------------------------------------------
+ * Custom production page: the format rows.
+ *
+ * Each format is priced beside its own example, and the rows alternate
+ * so four of them do not read as one repeated card. The flip is a
+ * desktop-only reorder: on a phone there is one column, and the copy
+ * must always come before the video it describes rather than the
+ * order changing every other row.
+ * ------------------------------------------------------------------ */
+.sp-formats {
+  display: grid;
+  gap: clamp(2.5rem, 6vw, 4.5rem);
+  margin-top: 3rem;
+}
+@media (min-width: 900px) {
+  .sp-format-row--flip .sp-format-copy {
+    order: 2;
+  }
+  .sp-format-row--flip .sp-format-media {
+    order: 1;
+  }
+}
+.sp-format-price {
+  margin-top: 0.7rem;
+  font-family: var(--font-heading), system-ui, sans-serif;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--sp-dim);
+}
+.sp-format-price strong {
+  font-size: 1.8rem;
+  letter-spacing: -0.01em;
+  color: var(--sp-gold);
+}
+/* the number in the hero, said the same way as the ones below it */
+.sp-hero-price {
+  margin-top: 1.5rem;
+  font-family: var(--font-heading), system-ui, sans-serif;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--sp-dim);
+}
+.sp-hero-price strong {
+  font-size: 2rem;
+  letter-spacing: -0.01em;
+  color: var(--sp-gold);
+}
+.sp-hero-price span {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.95rem;
+  color: var(--sp-muted);
+}
+
+/* how pricing works: a numbered sequence down the page */
+.sp-pricing-steps {
+  list-style: none;
+  margin: 2.5rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 1.6rem;
+}
+.sp-pricing-steps li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1.2rem;
+  align-items: start;
+  padding-bottom: 1.6rem;
+  border-bottom: 1px solid var(--sp-line);
+}
+.sp-pricing-steps li:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+.sp-pricing-n {
+  font-family: var(--font-heading), system-ui, sans-serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--sp-gold);
+  line-height: 1.3;
+}
+
+/* ------------------------------------------------------------------
+ * Keyboard focus, which the .sp system did not have.
+ *
+ * The reset takes outlines off, and nothing put one back, so every
+ * button and link on every sales landing page was invisible to anyone
+ * tabbing through it. Found reviewing the custom page; it was never
+ * specific to that page, so the fix is here rather than there and all
+ * four landing pages get it.
+ *
+ * focus-visible, not focus, so a mouse press does not draw a ring the
+ * person who clicked does not need.
+ * ------------------------------------------------------------------ */
+.sp a:focus-visible,
+.sp button:focus-visible,
+.sp summary:focus-visible,
+.sp [tabindex]:focus-visible {
+  outline: 2px solid var(--sp-gold);
+  outline-offset: 3px;
+  border-radius: var(--sp-radius-sm);
+}
