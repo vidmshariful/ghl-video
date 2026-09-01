@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { type Session } from "@supabase/supabase-js";
 import { useEffect, useState } from "react";
 import { sitePages } from "@/lib/pages-list";
@@ -65,7 +66,21 @@ import { JournalScreen } from "./JournalScreen";
 import { SettingsScreen } from "./SettingsScreen";
 import { ProductionScreen } from "./ProductionScreen";
 import { ProductsHub } from "./ProductsHub";
-import { BlogScreen } from "./BlogScreen";
+/*
+ * The blog editor is loaded only when somebody opens the Blog screen.
+ *
+ * It carries TipTap and ProseMirror, which measured at 924 KB of the
+ * admin page's 1398 KB. Statically imported, that meant opening Orders
+ * downloaded an entire rich text editor to look at a table. There is no
+ * server render to preserve here: admin is a client SPA behind a login.
+ */
+const BlogScreen = dynamic(
+  () => import("./BlogScreen").then((m) => m.BlogScreen),
+  {
+    ssr: false,
+    loading: () => <p className="text-body text-muted">Loading the editor</p>,
+  },
+);
 import { SeoScreen } from "./SeoScreen";
 import { canAccess, type Role } from "./roles";
 
