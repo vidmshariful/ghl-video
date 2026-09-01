@@ -636,7 +636,17 @@ export function AdminClient({
           ) : view === "catalog" ? (
             <ProductsHub />
           ) : view === "production" ? (
-            <ProductionScreen onNavigate={go} />
+            <ProductionScreen
+              onNavigate={go}
+              onOpenProject={(id) => {
+                go("custom");
+                openProject(id);
+              }}
+              onOpenEditing={(slug) => {
+                go("editing");
+                openEditingClient(slug);
+              }}
+            />
           ) : view === "editing" ? (
             <EditingScreen openSlug={editingSlug} onOpenClient={openEditingClient} />
           ) : view === "emails" ? (

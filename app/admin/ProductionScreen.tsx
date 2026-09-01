@@ -59,7 +59,17 @@ function label(p: Row["products"]): string {
 const daysIn = (iso: string) =>
   Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000));
 
-export function ProductionScreen({ onNavigate }: { onNavigate: (v: View) => void }) {
+export function ProductionScreen({
+  onNavigate,
+  onOpenProject,
+  onOpenEditing,
+}: {
+  onNavigate: (v: View) => void;
+  /* the studio queue lists custom and plan work too, and those open on
+     screens this one does not own */
+  onOpenProject: (projectId: string) => void;
+  onOpenEditing: (slug: string) => void;
+}) {
   const [rows, setRows] = useState<Row[] | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [err, setErr] = useState("");
@@ -217,7 +227,11 @@ export function ProductionScreen({ onNavigate }: { onNavigate: (v: View) => void
 
       {view === "queue" ? (
         <div className="mt-6">
-          <StudioQueue onOpenJob={setOpenJob} />
+          <StudioQueue
+            onOpenJob={setOpenJob}
+            onOpenProject={onOpenProject}
+            onOpenEditing={onOpenEditing}
+          />
         </div>
       ) : (
         <>

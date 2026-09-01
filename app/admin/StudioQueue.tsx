@@ -17,6 +17,10 @@ import { authHeader } from "./client";
 
 type Item = {
   bucket: "answer" | "revisions" | "start" | "waiting";
+  /* which kind of work, so a click knows which screen owns it */
+  kind: "purchase" | "project" | "plan";
+  projectId: string | null;
+  editingSlug: string | null;
   videoId: string;
   orderId: string;
   title: string;
@@ -63,7 +67,23 @@ const BUCKETS = [
   },
 ];
 
-export function StudioQueue({ onOpenJob }: { onOpenJob: (orderId: string) => void }) {
+export function StudioQueue({
+  onOpenJob,
+  onOpenProject,
+  onOpenEditing,
+}: {
+  onOpenJob: (orderId: string) => void;
+  onOpenProject: (projectId: string) => void;
+  onOpenEditing: (slug: string) => void;
+}) {
+  /* the queue lists all three kinds of work, and each lives on its own
+     screen: a purchase opens its production job, a custom project opens the
+     project, plan work opens that client's editing board */
+  const open = (i: Item) => {
+    if (i.kind === "project" && i.projectId) return onOpenProject(i.projectId);
+    if (i.kind === "plan" && i.editingSlug) return onOpenEditing(i.editingSlug);
+    if (i.orderId) return onOpenJob(i.orderId);
+  };
   const [items, setItems] = useState<Item[] | null>(null);
   const [owners, setOwners] = useState<{ email: string; name: string }[]>([]);
   const [me, setMe] = useState("");
@@ -139,7 +159,7 @@ export function StudioQueue({ onOpenJob }: { onOpenJob: (orderId: string) => voi
                     <li key={i.videoId}>
                       <button
                         type="button"
-                        onClick={() => onOpenJob(i.orderId)}
+                        onClick={() => open(i)}
                         className="tap w-full rounded-[8px] border border-hair bg-surface p-4 text-left transition-colors hover:border-gold/50"
                       >
                         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
