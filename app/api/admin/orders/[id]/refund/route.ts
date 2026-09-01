@@ -54,6 +54,23 @@ export async function POST(
       event_type: "refunded",
       payload: { by: admin.email },
     });
+
+    /*
+     * Tell the customer, from here.
+     *
+     * Stripe's charge.refunded arrives moments later and would normally send
+     * this, but only inside its own "did I just flip this" guard. The flip
+     * above has already happened, so that guard finds nothing to change and
+     * the mail never goes. Nobody has hit this yet because no screen calls
+     * this route, which is the only reason it has not already cost somebody a
+     * refund nobody told them about. Sending it here closes the trap before a
+     * button is ever wired to it.
+     *
+     * Safe against a double send for the same reason it is needed: only one
+     * of the two flips can win, and only the winner mails.
+     */
+    const { sendOrderRefundedEmail } = await import("@/lib/email/notify");
+    await sendOrderRefundedEmail(db, id, Number(order.amount_cents ?? 0));
   }
   return NextResponse.json({ ok: true });
 }

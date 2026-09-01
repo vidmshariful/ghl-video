@@ -153,20 +153,6 @@ function useKnownBuyer(): KnownBuyer {
   return buyer;
 }
 
-/* Tell FirstPromoter which email this tracked visitor is, right before we
- * take payment. This is FP's "signup" binding: it creates the lead its
- * Stripe integration attaches the sale to. Without it a click stays an
- * anonymous visitor and the sale never attributes. Fail-soft: tracking
- * must never break checkout. */
-function fpReferral(email: string) {
-  try {
-    const w = window as unknown as { fpr?: (...args: unknown[]) => void };
-    if (typeof w.fpr === "function") w.fpr("referral", { email });
-  } catch {
-    /* never block payment on tracking */
-  }
-}
-
 const money = (cents: number, currency: string) =>
   (cents / 100).toLocaleString("en-US", {
     style: "currency",
@@ -564,7 +550,6 @@ function PayBox({
     if (!stripe || !elements) return;
     setLoading(true);
     setError(null);
-    fpReferral(details.email);
     try {
       const r = await fetch("/api/checkout/finalize", {
         method: "POST",
@@ -787,7 +772,6 @@ function SubscriptionCheckout({
       return setDetailErr(`Your password needs at least ${PASSWORD_MIN_LENGTH} characters.`);
     setDetailErr(null);
     setStarting(true);
-    fpReferral(details.email);
     try {
       const r = await fetch("/api/checkout/create-subscription", {
         method: "POST",
