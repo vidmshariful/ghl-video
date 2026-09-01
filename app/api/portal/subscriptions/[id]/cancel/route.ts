@@ -31,7 +31,7 @@ export async function POST(
   const { id } = await params;
   const { data: sub } = await db
     .from("subscriptions")
-    .select("id, customer_email, stripe_subscription_id, status")
+    .select("id, customer_email, stripe_subscription_id, status, plan_name, current_period_end, cancel_at_period_end")
     .eq("id", id)
     .maybeSingle();
   if (!sub || sub.customer_email !== email) {
@@ -57,5 +57,45 @@ export async function POST(
   }
 
   await db.from("subscriptions").update({ cancel_at_period_end: cancelAtPeriodEnd }).eq("id", id);
+
+  /*
+   * Tell the studio now, not when the plan ends.
+   *
+   * Stripe sends subscription.deleted when the period actually runs out, and
+   * that is where the cancellation alert lived. So a client decided to leave
+   * and we found out up to a month later, at the one moment nothing could be
+   * done about it. This is the moment somebody could still pick up the phone.
+   *
+   * Only on a change, so a screen that re-saves the same state does not ring
+   * the bell twice. Fail-soft: losing the alert must not fail the client's
+   * own request to cancel.
+   */
+  if (Boolean(sub.cancel_at_period_end) !== cancelAtPeriodEnd) {
+    try {
+      const { pushAdminNotifications } = await import("@/lib/notifications");
+      const plan = (sub.plan_name as string | null) ?? "their plan";
+      const ends = sub.current_period_end
+        ? new Date(sub.current_period_end as string).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          })
+        : null;
+      await pushAdminNotifications(db, {
+        kind: cancelAtPeriodEnd ? "subscription_cancel_scheduled" : "subscription_cancel_undone",
+        title: cancelAtPeriodEnd
+          ? `Cancelling: ${email}`
+          : `Staying after all: ${email}`,
+        body: cancelAtPeriodEnd
+          ? `${plan}${ends ? `, runs until ${ends}` : ""}. They can still be reached.`
+          : `${plan}. They turned the cancellation off.`,
+        href: "subscriptions",
+        vars: { plan_name: plan, customer_email: email, ends_at: ends ?? "the end of the period" },
+      });
+    } catch (e) {
+      console.error("[cancel] alert failed:", (e as Error).message);
+    }
+  }
+
   return NextResponse.json({ ok: true, cancelAtPeriodEnd });
 }

@@ -24,7 +24,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   const { data: project } = await db
     .from("projects")
-    .select("id")
+    .select("id, title, brief")
     .eq("id", id)
     .ilike("customer_email", ctx.ownerEmail)
     .maybeSingle();
@@ -38,5 +38,37 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     .update({ brief: brief.trim() || null, updated_at: new Date().toISOString() })
     .eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+  /*
+   * Tell the studio the brief moved.
+   *
+   * Last write wins is fine for a field two people who talk to each other
+   * both edit. Silence is not: the studio can be halfway through building
+   * the previous version and never learn it changed. Only on an actual
+   * change, so opening the box and saving it untouched rings nothing, and
+   * never when the edit came from our own side viewing as the client.
+   */
+  const before = ((project.brief as string | null) ?? "").trim();
+  const after = brief.trim();
+  if (before !== after && !ctx.viewingAsAdmin) {
+    try {
+      const { pushAdminNotifications } = await import("@/lib/notifications");
+      await pushAdminNotifications(db, {
+        kind: "project_brief_changed",
+        title: `Brief changed: ${String(project.title ?? "project")}`,
+        body: `${ctx.ownerEmail} edited the brief. Check it before the next cut.`,
+        /* "custom/<id>" is what the admin bell routes on; "projects" is not
+           a view, and an unknown first segment makes the click do nothing */
+        href: `custom/${id}`,
+        vars: {
+          project_title: String(project.title ?? "project"),
+          customer_email: ctx.ownerEmail,
+        },
+      });
+    } catch (e) {
+      console.error("[brief] alert failed:", (e as Error).message);
+    }
+  }
+
   return NextResponse.json({ ok: true });
 }

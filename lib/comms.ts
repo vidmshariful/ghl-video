@@ -292,6 +292,14 @@ export const COMM_ACTIONS: CommAction[] = [
     notifications: [{ kind: "list_invoice_requested", audience: "admin", to: "team" }],
   },
 
+  {
+    key: "project_brief_changed", group: "custom", label: "A client edits the brief",
+    when: "The client changes the project brief from their portal. The studio may already be building the version before it.",
+    mode: "automatic",
+    emails: [],
+    notifications: [{ kind: "project_brief_changed", audience: "admin", to: "team" }],
+  },
+
   /* ---- subscriptions ---- */
   {
     key: "subscription_started", group: "subscriptions", label: "A plan starts",
@@ -306,6 +314,13 @@ export const COMM_ACTIONS: CommAction[] = [
     mode: "manual",
     emails: [{ key: "subscription_price_changed", to: "client" }],
     notifications: [{ kind: "subscription_price_changed", audience: "customer", to: "client" }],
+  },
+  {
+    key: "subscription_cancel_scheduled", group: "subscriptions", label: "A client asks to cancel",
+    when: "The client turns cancellation on from their portal. The plan keeps running until the period ends, so this is the window where somebody can still reach them.",
+    mode: "automatic",
+    emails: [],
+    notifications: [{ kind: "subscription_cancel_scheduled", audience: "admin", to: "team" }, { kind: "subscription_cancel_undone", audience: "admin", to: "team" }],
   },
   {
     key: "subscription_canceled", group: "subscriptions", label: "A plan ends",
@@ -426,6 +441,9 @@ export const NOTIFICATION_DEFAULTS: Record<string, NotificationDefault> = {
   "admin:subscription_started": { title: "New subscription: {{plan_name}}", body: "{{customer_email}}, {{amount}} monthly", variables: ["plan_name", "amount", "customer_email"] },
   "customer:subscription_price_changed": { title: "Your plan price is changing", body: "{{plan_name}} moves to {{new_amount}} a month from {{effective_date}}.", variables: ["plan_name", "new_amount", "effective_date"] },
   "customer:subscription_canceled": { title: "Your plan has ended", body: "{{plan_name}} is canceled. Restart anytime from your portal.", variables: ["plan_name"] },
+  "admin:project_brief_changed": { title: "Brief changed: {{project_title}}", body: "{{customer_email}} edited the brief. Check it before the next cut.", variables: ["project_title", "customer_email"] },
+  "admin:subscription_cancel_scheduled": { title: "Cancelling: {{customer_email}}", body: "{{plan_name}}. Runs until {{ends_at}}, so there is still time to talk to them.", variables: ["plan_name", "customer_email", "ends_at"] },
+  "admin:subscription_cancel_undone": { title: "Staying after all: {{customer_email}}", body: "{{plan_name}}. They turned the cancellation off.", variables: ["plan_name", "customer_email"] },
   "admin:subscription_canceled": { title: "Subscription canceled", body: "{{customer_email}}, {{plan_name}}", variables: ["plan_name", "customer_email"] },
 
   /* brief */
