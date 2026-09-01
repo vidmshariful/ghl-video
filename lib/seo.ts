@@ -17,7 +17,8 @@ export type SeoOverride = {
   title: string | null;
   description: string | null;
   og_image: string | null;
-  noindex: boolean;
+  /* null = not set, true = force hide, false = force show */
+  noindex: boolean | null;
 };
 
 /** Canonical page path: leading and trailing slash, lowercase, no query. */
@@ -88,7 +89,14 @@ export async function pageMetadata(
   if (title) merged.title = { absolute: title };
   if (description) merged.description = description;
 
-  if (o.noindex) merged.robots = { index: false, follow: true };
+  /*
+   * Three states, and the false case is the one that used to be missing.
+   * Before, false was indistinguishable from "not set", so an override could
+   * hide a page but never reveal one whose code said index:false. That is why
+   * the blog sat hidden for months behind a comment claiming otherwise.
+   */
+  if (o.noindex === true) merged.robots = { index: false, follow: true };
+  else if (o.noindex === false) merged.robots = { index: true, follow: true };
 
   if (title || description || o.og_image) {
     const baseOg = (defaults.openGraph ?? {}) as Record<string, unknown>;

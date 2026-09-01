@@ -72,7 +72,9 @@ export async function PUT(req: Request) {
     title: title || null,
     description: description || null,
     og_image: ogImage || null,
-    noindex: body.noindex === true,
+    /* tri-state: true hides, false shows, null hands it back to the page */
+    noindex:
+      body.noindex === true ? true : body.noindex === false ? false : null,
     updated_at: new Date().toISOString(),
     updated_by: admin.email ?? null,
   };

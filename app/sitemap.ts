@@ -14,10 +14,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // list (stubs and the unlisted campaign page) and the admin SEO screen,
   // so flipping noindex in admin also removes the page from the sitemap.
   const overrides = await getSeoOverrides();
-  const hidden = (path: string) => overrides[path]?.noindex === true;
+  /* The override wins in BOTH directions, so a page the admin has switched on
+     appears here even if the page list calls it noindex, and the sitemap can
+     never again advertise a page that refuses to be indexed. */
+  const effectiveNoindex = (p: { path: string; noindex?: boolean }) => {
+    const ov = overrides[p.path]?.noindex;
+    return ov === true || ov === false ? ov : p.noindex === true;
+  };
 
   const fixed = sitePages
-    .filter((p) => !p.noindex && !hidden(p.path))
+    .filter((p) => !effectiveNoindex(p))
     .map((p) => ({
       url: `${site.url}${p.path}`,
       changeFrequency:

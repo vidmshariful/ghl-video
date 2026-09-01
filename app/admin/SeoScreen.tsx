@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Button, Input, Textarea } from "@/components/portal/ui";
+import { Button, Input, Select, Textarea } from "@/components/portal/ui";
 import { authHeader, when } from "./client";
 import { sitePages } from "@/lib/pages-list";
 import { site } from "@/lib/site";
@@ -29,7 +29,8 @@ type SeoPageRow = {
   title: string | null;
   description: string | null;
   og_image: string | null;
-  noindex: boolean;
+  /* null = not set, true = force hide, false = force show */
+  noindex: boolean | null;
   updated_at: string;
   updated_by: string | null;
 };
@@ -390,7 +391,10 @@ function PagesTab() {
           sitePages.map((p) => {
             const row = rows[p.path];
             const custom = Boolean(row?.title || row?.description || row?.og_image);
-            const hidden = p.noindex || row?.noindex;
+            /* the override wins either way, so a page switched on in here
+               stops showing as hidden even when the page list says noindex */
+            const hidden =
+              row?.noindex === true || (row?.noindex !== false && p.noindex);
             return (
               <li key={p.path} className="border-t border-hair bg-surface/40 first:border-t-0">
                 <button
@@ -455,7 +459,9 @@ function PageEditor({
   const [title, setTitle] = useState(row?.title ?? "");
   const [description, setDescription] = useState(row?.description ?? "");
   const [ogImage, setOgImage] = useState(row?.og_image ?? "");
-  const [noindex, setNoindex] = useState(row?.noindex ?? false);
+  const [indexMode, setIndexMode] = useState<"auto" | "hide" | "show">(
+    row?.noindex === true ? "hide" : row?.noindex === false ? "show" : "auto",
+  );
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
@@ -469,7 +475,13 @@ function PageEditor({
     try {
       await api("/api/admin/seo/pages", {
         method: "PUT",
-        body: JSON.stringify({ path, title, description, og_image: ogImage, noindex }),
+        body: JSON.stringify({
+          path,
+          title,
+          description,
+          og_image: ogImage,
+          noindex: indexMode === "hide" ? true : indexMode === "show" ? false : null,
+        }),
       });
       onSaved();
     } catch (e) {
@@ -517,18 +529,27 @@ function PageEditor({
           <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Share image (optional)</span>
           <Input value={ogImage} onChange={(e) => setOgImage(e.target.value)} placeholder="https://... or /og.png" />
         </label>
-        <label className="flex items-center gap-2.5 text-body-sm text-ink">
-          <input
-            type="checkbox"
-            checked={noindex || codeNoindex}
-            disabled={codeNoindex}
-            onChange={(e) => setNoindex(e.target.checked)}
-            className="h-4 w-4 accent-[var(--gold)]"
-          />
-          Hide this page from Google
-          {codeNoindex ? (
-            <span className="font-mono text-label uppercase text-dim">already hidden in the page itself</span>
-          ) : null}
+        <label className="block">
+          <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">
+            Google indexing
+          </span>
+          <Select
+            value={indexMode}
+            onChange={(e) => setIndexMode(e.target.value as "auto" | "hide" | "show")}
+          >
+            <option value="auto">
+              Use the page&apos;s own setting{codeNoindex ? ", which is hidden" : ""}
+            </option>
+            <option value="hide">Hide this page from Google</option>
+            <option value="show">Show this page to Google</option>
+          </Select>
+          <span className="mt-1 block font-mono text-label uppercase tracking-[0.08em] text-dim">
+            {indexMode === "show"
+              ? "Overrides the page, and puts it in the sitemap"
+              : indexMode === "hide"
+                ? "Overrides the page, and keeps it out of the sitemap"
+                : "Whatever the page itself says"}
+          </span>
         </label>
         {err ? <p className="text-body-sm text-error">{err}</p> : null}
         <div className="flex items-center gap-3">
