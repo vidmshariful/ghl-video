@@ -29,21 +29,50 @@ type Row = Record<string, unknown>;
 
 const VERDICTS: FeedbackVerdict[] = ["working", "too_early", "not_really", "skipped"];
 
+/*
+ * Every finished video this account has, whoever it hangs off.
+ *
+ * This asked only about purchases, and approved work is overwhelmingly not
+ * purchases: thirteen of the fourteen approved videos on the platform belong
+ * to a custom project or an editing plan. So the one question we ask a client
+ * about finished work could reach one video in fourteen, and the clients with
+ * the most finished work were the ones it never asked.
+ */
 async function accountVideos(db: ReturnType<typeof supabaseAdmin>, email: string) {
-  const { data: orders } = await db
-    .from("orders")
-    .select("id")
-    .eq("customer_email", email)
-    .eq("status", "paid");
-  const ids = (orders ?? []).map((o) => o.id as string);
-  if (!ids.length) return { ids, approved: [] as Row[] };
-  const { data: approved } = await db
-    .from("order_deliverables")
-    .select("id, order_id, title, approved_at")
-    .in("order_id", ids)
-    .eq("status", "approved")
-    .not("approved_at", "is", null);
-  return { ids, approved: (approved ?? []) as Row[] };
+  const [{ data: orders }, { data: projects }, { data: subs }] = await Promise.all([
+    db.from("orders").select("id").ilike("customer_email", email).eq("status", "paid"),
+    db.from("projects").select("id").ilike("customer_email", email),
+    db.from("subscriptions").select("id").ilike("customer_email", email),
+  ]);
+  const ids = ((orders ?? []) as Row[]).map((o) => String(o.id));
+  const projectIds = ((projects ?? []) as Row[]).map((p) => String(p.id));
+  const { data: cycles } = subs?.length
+    ? await db
+        .from("subscription_cycles")
+        .select("id")
+        .in("subscription_id", ((subs ?? []) as Row[]).map((x) => String(x.id)))
+    : { data: [] };
+  const cycleIds = ((cycles ?? []) as Row[]).map((c) => String(c.id));
+
+  const buckets = await Promise.all(
+    (
+      [
+        ["order_id", ids],
+        ["project_id", projectIds],
+        ["cycle_id", cycleIds],
+      ] as const
+    ).map(async ([col, list]) => {
+      if (!list.length) return [] as Row[];
+      const { data } = await db
+        .from("order_deliverables")
+        .select("id, order_id, title, approved_at")
+        .in(col, list)
+        .eq("status", "approved")
+        .not("approved_at", "is", null);
+      return (data ?? []) as Row[];
+    }),
+  );
+  return { ids, approved: buckets.flat() };
 }
 
 export async function GET(req: Request) {
@@ -110,7 +139,8 @@ export async function POST(req: Request) {
   const { error } = await db.from("video_feedback").upsert(
     {
       deliverable_id: deliverableId,
-      order_id: String(video.order_id),
+      /* nullable since migration 0090: project and plan work has no order */
+      order_id: (video.order_id as string | null) ?? null,
       customer_email: ctx.ownerEmail,
       video_title: String(video.title),
       verdict,
