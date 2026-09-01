@@ -82,7 +82,15 @@ type Record_ = {
     dueDate: string | null;
     createdAt: string;
   }[];
-  videos: { id: string; orderId: string; title: string; status: string; dueAt: string | null }[];
+  videos: {
+    id: string;
+    /* null for project and plan work: it has no order behind it */
+    orderId: string | null;
+    title: string;
+    status: string;
+    dueAt: string | null;
+    source: "purchase" | "project" | "plan";
+  }[];
   contacts: {
     id: string;
     name: string;
@@ -697,9 +705,18 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
                   {data.videos.map((vd) => (
                     <li key={vd.id} className="flex items-center justify-between gap-3 text-body-sm">
                       <span className="min-w-0 truncate text-ink">{vd.title}</span>
-                      <Chip tone={vd.status === "approved" ? "good" : "info"}>
-                        {vd.status.replace(/_/g, " ")}
-                      </Chip>
+                      <span className="flex shrink-0 items-center gap-1.5">
+                        {/* this list used to be built from orders alone, so a
+                            client with twenty videos on a plan looked like a
+                            client with none. Saying where each came from is
+                            the point of showing them together. */}
+                        <span className="font-mono text-label uppercase text-dim">
+                          {vd.source}
+                        </span>
+                        <Chip tone={vd.status === "approved" ? "good" : "info"}>
+                          {vd.status.replace(/_/g, " ")}
+                        </Chip>
+                      </span>
                     </li>
                   ))}
                 </ul>

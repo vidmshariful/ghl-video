@@ -85,14 +85,60 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       .order("role"),
   ]);
 
+  /*
+   * Everything this customer has, not only what they bought outright.
+   *
+   * Work belongs to a purchase, a custom project, or a monthly plan, and this
+   * list was built from their orders alone. So a customer record could open
+   * showing one video for somebody who has twenty one, and nothing at all for
+   * a client whose entire relationship is an editing plan. The record is the
+   * screen you open to answer "what have we made for these people", and it was
+   * answering it wrongly for exactly the clients with the most work.
+   */
   const orderIds = ((orders ?? []) as Row[]).map((o) => String(o.id));
-  const { data: videos } = orderIds.length
+
+  const { data: theirProjects } = await db
+    .from("projects")
+    .select("id")
+    .ilike("customer_email", email);
+  const projectIds = ((theirProjects ?? []) as Row[]).map((p) => String(p.id));
+
+  const { data: theirSubs } = await db
+    .from("subscriptions")
+    .select("id")
+    .ilike("customer_email", email);
+  const { data: theirCycles } = theirSubs?.length
     ? await db
-        .from("order_deliverables")
-        .select("id, order_id, title, status, due_at, ready_at, approved_at, position")
-        .in("order_id", orderIds)
-        .order("created_at", { ascending: false })
+        .from("subscription_cycles")
+        .select("id")
+        .in("subscription_id", ((theirSubs ?? []) as Row[]).map((x) => String(x.id)))
     : { data: [] };
+  const cycleIds = ((theirCycles ?? []) as Row[]).map((c) => String(c.id));
+
+  /* one query per owner rather than an or() across three columns: the filter
+     stays readable and an empty list stays an empty list */
+  const buckets = await Promise.all(
+    (
+      [
+        ["order_id", orderIds],
+        ["project_id", projectIds],
+        ["cycle_id", cycleIds],
+      ] as const
+    ).map(async ([column, ids]) => {
+      if (!ids.length) return [] as Row[];
+      const { data } = await db
+        .from("order_deliverables")
+        .select(
+          "id, order_id, project_id, cycle_id, title, status, due_at, ready_at, approved_at, position, created_at",
+        )
+        .in(column, ids)
+        .order("created_at", { ascending: false });
+      return (data ?? []) as Row[];
+    }),
+  );
+  const videos = buckets
+    .flat()
+    .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
 
   const kit = await getBrandKit(db, id);
 
@@ -202,10 +248,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     })),
     videos: ((videos ?? []) as Row[]).map((v) => ({
       id: String(v.id),
-      orderId: String(v.order_id),
+      /* null for project and plan work, which has no order behind it */
+      orderId: (v.order_id as string | null) ?? null,
       title: String(v.title),
       status: String(v.status),
       dueAt: (v.due_at as string | null) ?? null,
+      /* where this came from, so the record can say so rather than implying
+         everything was a purchase */
+      source: v.order_id ? "purchase" : v.project_id ? "project" : "plan",
     })),
     team: ((members ?? []) as Row[]).map((m) => ({
       id: String(m.id),

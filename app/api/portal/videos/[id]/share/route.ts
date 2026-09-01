@@ -28,17 +28,27 @@ async function guard(req: Request, deliverableId: string) {
 
   const { data: d } = await db
     .from("order_deliverables")
-    .select("id, order_id, project_id, video_url, share_token, status")
+    .select("id, order_id, project_id, cycle_id, video_url, share_token, status")
     .eq("id", deliverableId)
     .maybeSingle();
   if (!d) return { fail: NextResponse.json({ error: "Not found." }, { status: 404 }) };
 
+  /*
+   * Whose video is this. Work belongs to a purchase, a custom project, or a
+   * monthly plan, and this knew about the first two: an editing client
+   * pressing Share fell off the end of the checks and was told Not found, on
+   * a button the review popup shows them unconditionally.
+   *
+   * Case-insensitively on all three. Orders were compared with eq and
+   * projects with ilike, so the same address stored with a capital letter
+   * matched one and not the other.
+   */
   if (d.order_id) {
     const { data: order } = await db
       .from("orders")
       .select("id")
       .eq("id", d.order_id)
-      .eq("customer_email", ctx.ownerEmail)
+      .ilike("customer_email", ctx.ownerEmail)
       .maybeSingle();
     if (!order) return { fail: NextResponse.json({ error: "Not found." }, { status: 404 }) };
     return { db, deliverable: d };
@@ -51,6 +61,18 @@ async function guard(req: Request, deliverableId: string) {
       .ilike("customer_email", ctx.ownerEmail)
       .maybeSingle();
     if (!project) return { fail: NextResponse.json({ error: "Not found." }, { status: 404 }) };
+    return { db, deliverable: d };
+  }
+  if (d.cycle_id) {
+    const { data: cycle } = await db
+      .from("subscription_cycles")
+      .select("subscription:subscriptions!inner(customer_email)")
+      .eq("id", d.cycle_id)
+      .maybeSingle();
+    const owner =
+      (cycle?.subscription as { customer_email?: string } | null)?.customer_email ?? "";
+    if (owner.toLowerCase() !== ctx.ownerEmail.toLowerCase())
+      return { fail: NextResponse.json({ error: "Not found." }, { status: 404 }) };
     return { db, deliverable: d };
   }
   return { fail: NextResponse.json({ error: "Not found." }, { status: 404 }) };
