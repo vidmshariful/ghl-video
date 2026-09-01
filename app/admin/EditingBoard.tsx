@@ -754,6 +754,162 @@ function AddRequest({
  * the cut, the resources both sides have sent, the client's feedback thread
  * with the cut playing next to it, and our own internal notes.
  */
+/*
+ * Changing a request after it is in, from our side.
+ *
+ * Nothing here was editable once the row existed. A wrong title, or a brief
+ * that missed the thing the client said on the call, was a note to a producer
+ * who could not act on it either. The client could already fix their own
+ * request; we could fix nothing.
+ *
+ * Type and length are not here on purpose. They set what the request costs in
+ * credits, so changing one re-bills the client's month. That is a
+ * conversation, not a text field on a form.
+ */
+/*
+ * Every cut this request has had.
+ *
+ * One link field used to mean one cut: pasting the revision over the top left
+ * the client's notes pinned to seconds in a video nobody could open any more,
+ * with nothing saying which round they belonged to. Orders and custom
+ * projects have recorded this for months and plan work never did.
+ *
+ * Read only here. Removing a cut is possible on the order board and is not
+ * worth a second way to do it until somebody asks.
+ */
+function Cuts({ requestId, current }: { requestId: string; current: string | null }) {
+  const [rows, setRows] = useState<{ id: string; version: number; videoUrl: string; createdAt: string }[] | null>(
+    null,
+  );
+
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      const r = await fetch(`/api/admin/deliverables/${requestId}/versions/`, {
+        headers: await authHeader(),
+      }).catch(() => null);
+      const j = await r?.json().catch(() => null);
+      if (live) setRows(j?.versions ?? []);
+    })();
+    return () => {
+      live = false;
+    };
+  }, [requestId, current]);
+
+  if (!rows?.length) return null;
+
+  return (
+    <div className="mt-4 border-t border-hair pt-3">
+      <p className="font-mono text-label uppercase tracking-[0.08em] text-dim">
+        Cuts so far
+      </p>
+      <ul className="mt-2 grid gap-1.5">
+        {rows.map((v, i) => (
+          <li
+            key={v.id}
+            className="flex flex-wrap items-center justify-between gap-2 rounded-[8px] border border-hair bg-canvas px-3 py-2"
+          >
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="font-mono text-label uppercase text-muted">v{v.version}</span>
+              {i === 0 && (
+                <span className="rounded-full border border-green/40 px-2 py-0.5 font-mono text-label text-green">
+                  current
+                </span>
+              )}
+              <span className="truncate text-body-sm text-dim">{when(v.createdAt)}</span>
+            </span>
+            <a
+              href={v.videoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="tap shrink-0 font-mono text-label uppercase text-blue hover:underline"
+            >
+              Open
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function EditDetails({
+  req: r,
+  onSave,
+  busy,
+}: {
+  req: Req;
+  onSave: (id: string, patch: Record<string, unknown>, optimistic?: Partial<Req>) => Promise<void>;
+  busy: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({ title: r.title, brief: r.brief ?? "", aspect: r.aspect ?? "" });
+
+  function start() {
+    setForm({ title: r.title, brief: r.brief ?? "", aspect: r.aspect ?? "" });
+    setOpen(true);
+  }
+
+  return (
+    <>
+      <Button size="sm" variant="ghost" onClick={start}>
+        Change details
+      </Button>
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Change this request"
+        subtitle="The client sees these. What it costs in credits is set by the type and length, which are not changed here."
+      >
+        <div className="grid gap-4">
+          <Field label="Video name" required>
+            <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+          </Field>
+          <Field label="The brief" hint="What they asked for, in their words where you have them.">
+            <Textarea
+              rows={5}
+              value={form.brief}
+              onChange={(e) => setForm({ ...form, brief: e.target.value })}
+            />
+          </Field>
+          <Field label="Shape" hint="The aspect the finished cut is delivered in.">
+            <Select
+              value={form.aspect}
+              onChange={(e) => setForm({ ...form, aspect: e.target.value })}
+            >
+              <option value="">Not set</option>
+              {ASPECTS.map((a) => (
+                <option key={a.key} value={a.key}>
+                  {a.label}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <div className="flex justify-end gap-2 border-t border-hair pt-4">
+            <Button variant="ghost" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="brand"
+              disabled={busy || !form.title.trim()}
+              onClick={async () => {
+                await onSave(
+                  r.id,
+                  { title: form.title.trim(), brief: form.brief, aspect: form.aspect },
+                  { title: form.title.trim(), brief: form.brief, aspect: form.aspect || null },
+                );
+                setOpen(false);
+              }}
+            >
+              {busy ? "Saving..." : "Save the changes"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    </>
+  );
+}
+
 function EditingJob({
   req: r,
   board: b,
@@ -778,7 +934,11 @@ function EditingJob({
         {b.client.name || b.client.email}
       </button>
 
-      <div className="mt-4 grid gap-5">
+      <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+        <EditDetails req={r} onSave={onSave} busy={busy} />
+      </div>
+
+      <div className="mt-2 grid gap-5">
         <RequestDetail req={r} board={b} busy={busy} onSave={onSave} />
 
         <ReviewRoom requestId={r.id} title={r.title} videoUrl={r.videoUrl ?? null} />
@@ -1171,7 +1331,10 @@ function RequestDetail({
           )}
         </Card>
 
-        <Card title="The cut" description="Pasting a link does not send it. Moving to Review does.">
+        <Card
+          title="The cut"
+          description="Pasting a link does not send it. Moving to Review does. Paste the revision over the top when it is ready: the cut it replaces is kept, so their notes stay attached to the round they were written on."
+        >
           <div className="flex flex-wrap items-center gap-2">
             <div className="min-w-[16rem] flex-1">
               <Input
@@ -1189,6 +1352,8 @@ function RequestDetail({
               Save link
             </Button>
           </div>
+
+          <Cuts requestId={r.id} current={r.videoUrl ?? null} />
         </Card>
 
       </div>

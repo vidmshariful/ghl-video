@@ -338,7 +338,7 @@ export async function PATCH(req: Request) {
   const db = supabaseAdmin();
   const { data: before } = await db
     .from("order_deliverables")
-    .select("id, status, qc, assets_ready_at, cycle_id")
+    .select("id, status, qc, assets_ready_at, cycle_id, video_url, title")
     .eq("id", id)
     .maybeSingle();
   if (!before) return NextResponse.json({ error: "Not found." }, { status: 404 });
@@ -381,6 +381,23 @@ export async function PATCH(req: Request) {
   if ("videoUrl" in b)
     patch.video_url = typeof b.videoUrl === "string" && b.videoUrl ? b.videoUrl.trim() : null;
 
+  /*
+   * The details, after the request is in.
+   *
+   * A wrong title or a brief that missed something used to be a message to a
+   * producer who could not act on it either: nothing here was editable once
+   * the row existed, on either side. The client could already fix their own
+   * request; the studio could not fix anything at all.
+   *
+   * Type and length are deliberately NOT here. They set credit_cost, so
+   * changing one re-bills the client's month, and that is a conversation
+   * rather than a text field.
+   */
+  if (typeof b.title === "string" && b.title.trim())
+    patch.title = b.title.trim().slice(0, 160);
+  if (typeof b.brief === "string") patch.note = b.brief.trim().slice(0, 4000) || null;
+  if (typeof b.aspect === "string") patch.aspect = b.aspect.trim().slice(0, 40) || null;
+
   if ("assetsUrl" in b)
     patch.assets_url = typeof b.assetsUrl === "string" && b.assetsUrl ? b.assetsUrl.trim() : null;
 
@@ -398,6 +415,27 @@ export async function PATCH(req: Request) {
 
   const { error } = await db.from("order_deliverables").update(patch).eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+  /*
+   * A revised cut is a new cut, not a correction to the old one.
+   *
+   * There is one link field, and pasting the revision into it used to
+   * overwrite the version the client had already reviewed. Their notes stayed
+   * behind, still pinned to seconds, but now pointing at a video nobody could
+   * watch any more, and there was no way to tell which round a note belonged
+   * to. Orders and custom projects have recorded every cut for months; plan
+   * work was the one path that never called addVersion.
+   *
+   * The client's player already reads these and files older notes under the
+   * cut they were written on, so recording them is the whole fix on that
+   * side. addVersion ignores a repeat of the same URL, so saving the form
+   * twice does not invent a v2.
+   */
+  if (typeof patch.video_url === "string" && patch.video_url !== before.video_url) {
+    const { addVersion } = await import("@/lib/versions");
+    await addVersion(db, id, patch.video_url as string, admin.email);
+  }
+
   return NextResponse.json({ ok: true });
 }
 
