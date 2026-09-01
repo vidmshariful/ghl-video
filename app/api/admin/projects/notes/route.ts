@@ -31,6 +31,42 @@ const stageOf = (raw: string | null): StationKey | null => {
   return raw == null ? "animation" : null;
 };
 
+/*
+ * The extra formats, as stages of their own.
+ *
+ * A format is its own deliverable row, not a station on the line, so its
+ * feedback lives on its own thread. This room only ever read the main
+ * carrier's, which meant a client could leave ten timestamped notes on a
+ * white-label cut and nobody here could see one of them. They arrived as an
+ * email and then existed nowhere a person works.
+ *
+ * They get a tab each, keyed format:<id> so the six real station keys stay
+ * exactly what they were. The key carries the deliverable, which is what
+ * makes a note land on the right thread when it is answered.
+ */
+const FORMAT_PREFIX = "format:";
+const formatKey = (id: string) => `${FORMAT_PREFIX}${id}`;
+const formatIdOf = (key: string) =>
+  key.startsWith(FORMAT_PREFIX) ? key.slice(FORMAT_PREFIX.length) : null;
+
+/* how a format's own status reads in the same words a station uses */
+function formatState(status: string): "todo" | "with_us" | "with_client" | "done" {
+  if (status === "approved") return "done";
+  if (status === "ready" || status === "revisions") return "with_client";
+  if (status === "in_production") return "with_us";
+  return "todo";
+}
+
+async function formatsOf(db: ReturnType<typeof supabaseAdmin>, projectId: string) {
+  const { data } = await db
+    .from("order_deliverables")
+    .select("id, title, status, video_url, position")
+    .eq("project_id", projectId)
+    .eq("category", "format")
+    .order("position");
+  return (data ?? []) as Record<string, unknown>[];
+}
+
 async function mainOf(db: ReturnType<typeof supabaseAdmin>, projectId: string) {
   const { data } = await db
     .from("order_deliverables")
@@ -56,11 +92,26 @@ export async function GET(req: Request) {
     .eq("id", projectId)
     .maybeSingle();
   const main = await mainOf(db, projectId);
+  const formats = await formatsOf(db, projectId);
   if (!main)
     return NextResponse.json({ notes: [], versions: [], videoUrl: null, stages: [] });
 
   const comments = await listComments(db, String(main.id));
   const versions = await listVersions(db, String(main.id));
+
+  /* each format's own thread, tagged with the tab it belongs to. The tag is
+     synthesised from the deliverable rather than read off the row, so the
+     notes clients have already left, which carry no stage at all, land in the
+     right place with nothing to migrate. */
+  const formatThreads = await Promise.all(
+    formats.map(async (f) => ({
+      id: String(f.id),
+      title: String(f.title),
+      status: String(f.status),
+      videoUrl: (f.video_url as string | null) ?? null,
+      list: await listComments(db, String(f.id)),
+    })),
+  );
 
   /* what the client can see and speak to, one entry per reviewable stage, in
      line order, each with how many of their notes are still unanswered */
@@ -71,16 +122,30 @@ export async function GET(req: Request) {
     const s = stageOf(c.stage);
     if (s) openByStage.set(s, (openByStage.get(s) ?? 0) + 1);
   }
-  const stages = STATION_ORDER.filter((k) => STATIONS[k].reviewMedium !== null).map((k) => ({
-    key: k,
-    label: STATIONS[k].label,
-    medium: STATIONS[k].reviewMedium,
-    url: line[k].url ?? null,
-    state: line[k].state,
-    gate: Boolean(line[k].gate),
-    provided: Boolean(line[k].provided),
-    open: openByStage.get(k) ?? 0,
-  }));
+  const stages = [
+    ...STATION_ORDER.filter((k) => STATIONS[k].reviewMedium !== null).map((k) => ({
+      key: k as string,
+      label: STATIONS[k].label,
+      medium: STATIONS[k].reviewMedium as string | null,
+      url: line[k].url ?? null,
+      state: line[k].state as string,
+      gate: Boolean(line[k].gate),
+      provided: Boolean(line[k].provided),
+      open: openByStage.get(k) ?? 0,
+    })),
+    /* the formats, after the line that produced them */
+    ...formatThreads.map((f) => ({
+      key: formatKey(f.id),
+      label: f.title,
+      medium: "video" as string | null,
+      url: f.videoUrl,
+      state: formatState(f.status),
+      gate: false,
+      provided: false,
+      open: f.list.filter((c) => c.author_side === "client" && !c.parent_id && !c.resolved_at)
+        .length,
+    })),
+  ];
 
   /* a cut pasted before versions existed, or set straight onto the row, is
      still the cut the client is watching: show it rather than an empty room */
@@ -108,19 +173,36 @@ export async function GET(req: Request) {
     round: Number(main.revision_round ?? 0),
     versions: cuts,
     stages,
-    notes: comments.map((c) => ({
-      id: c.id,
-      side: c.author_side,
-      name: c.author_name ?? (c.author_side === "studio" ? "GHL Video" : "The client"),
-      body: c.body,
-      atSeconds: c.at_seconds,
-      stamp: stamp(c.at_seconds),
-      stage: stageOf(c.stage),
-      version: c.version,
-      parentId: c.parent_id,
-      resolved: Boolean(c.resolved_at),
-      at: c.created_at,
-    })),
+    notes: [
+      ...comments.map((c) => ({
+        id: c.id,
+        side: c.author_side,
+        name: c.author_name ?? (c.author_side === "studio" ? "GHL Video" : "The client"),
+        body: c.body,
+        atSeconds: c.at_seconds,
+        stamp: stamp(c.at_seconds),
+        stage: stageOf(c.stage) as string | null,
+        version: c.version,
+        parentId: c.parent_id,
+        resolved: Boolean(c.resolved_at),
+        at: c.created_at,
+      })),
+      ...formatThreads.flatMap((f) =>
+        f.list.map((c) => ({
+          id: c.id,
+          side: c.author_side,
+          name: c.author_name ?? (c.author_side === "studio" ? "GHL Video" : "The client"),
+          body: c.body,
+          atSeconds: c.at_seconds,
+          stamp: stamp(c.at_seconds),
+          stage: formatKey(f.id) as string | null,
+          version: c.version,
+          parentId: c.parent_id,
+          resolved: Boolean(c.resolved_at),
+          at: c.created_at,
+        })),
+      ),
+    ],
   });
 }
 
@@ -169,17 +251,54 @@ export async function POST(req: Request) {
     typeof b.stage === "string" && (STATION_ORDER as string[]).includes(b.stage)
       ? (b.stage as StationKey)
       : null;
+
+  /*
+   * Which thread this lands on. A format has its own deliverable, so
+   * answering a note about the vertical cut has to be written against the
+   * vertical cut, not against the main carrier where the client would never
+   * see it. Verified as belonging to THIS project: a deliverable id arriving
+   * in a request body is not proof of anything.
+   */
+  let targetId = mainId;
+  const wantFormat = typeof b.stage === "string" ? formatIdOf(b.stage) : null;
+  if (wantFormat && UUID_RE.test(wantFormat)) {
+    const { data: f } = await db
+      .from("order_deliverables")
+      .select("id")
+      .eq("id", wantFormat)
+      .eq("project_id", projectId)
+      .eq("category", "format")
+      .maybeSingle();
+    if (!f) return NextResponse.json({ error: "Not found." }, { status: 404 });
+    targetId = String(f.id);
+    /* the deliverable already says which file this is about; a station tag on
+       top of it would be a second, disagreeing answer */
+    stage = null;
+  }
+
   if (parentId) {
     const { data: parent } = await db
       .from("deliverable_comments")
-      .select("stage")
+      .select("stage, deliverable_id")
       .eq("id", parentId)
       .maybeSingle();
-    if (parent) stage = stageOf((parent.stage as string | null) ?? null);
+    if (parent) {
+      /* a reply belongs on its parent's thread, whichever that is */
+      const owner = String(parent.deliverable_id);
+      const { data: ok } = await db
+        .from("order_deliverables")
+        .select("id")
+        .eq("id", owner)
+        .eq("project_id", projectId)
+        .maybeSingle();
+      if (!ok) return NextResponse.json({ error: "Not found." }, { status: 404 });
+      targetId = owner;
+      stage = owner === mainId ? stageOf((parent.stage as string | null) ?? null) : null;
+    }
   }
 
   const res = await addComment(db, {
-    deliverableId: mainId,
+    deliverableId: targetId,
     side: "studio",
     email: admin.email,
     name: "GHL Video",
