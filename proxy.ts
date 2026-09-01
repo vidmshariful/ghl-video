@@ -195,6 +195,24 @@ export async function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
+  /*
+   * Scheduled jobs skip the gate for exactly the same reason.
+   *
+   * Vercel calls /api/cron/* from its own infrastructure, which is the same
+   * kind of datacenter address proxycheck flags as a proxy: the Stripe pool
+   * above proved that is not hypothetical. A cron invocation gets one attempt
+   * and never retries, so a single proxy=yes verdict means the sweep silently
+   * does not happen that morning and nothing anywhere says so.
+   *
+   * Safe because the IP was never what authenticated these either. Both cron
+   * routes require Bearer CRON_SECRET, which Vercel attaches automatically
+   * once the variable is set; the chase sweep additionally accepts a signed-in
+   * admin. The gate could only ever lose runs here, never prevent one.
+   */
+  if (req.nextUrl.pathname.startsWith("/api/cron/")) {
+    return NextResponse.next();
+  }
+
   // First-touch affiliate capture. If a ?ref= is present and no ref cookie is
   // set yet, remember it for 90 days. This runs before and independent of the
   // gate (so partner links credit their partner even while the gate is
