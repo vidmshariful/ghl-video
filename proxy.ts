@@ -172,6 +172,36 @@ async function isProxy(ip: string, apiKey: string): Promise<boolean | null> {
   }
 }
 
+/*
+ * Search engines and AI assistants, which must never meet the gate.
+ *
+ * Measured 1 September 2026 against each crawler's OWN published address
+ * list, using the same proxycheck query this file makes:
+ *   OpenAI GPTBot and OAI-SearchBot   every address tested came back
+ *                                     proxy=yes, type=VPN
+ *   PerplexityBot                     the same
+ *   Googlebot                         2 of 20 sampled ranges flagged, both
+ *                                     Google Cloud 34.x addresses
+ *   Bingbot                           clean
+ *
+ * So the VPN page was being served to the crawlers we most want, and Google
+ * was getting a 403 on roughly a tenth of its attempts. robots.txt invites
+ * all of them in by name, which made the failure invisible: the file says
+ * yes and every page said 403.
+ *
+ * A user agent test is enough here, and deliberately so. The gate exists to
+ * keep VPN traffic off a public marketing site, not to authenticate anyone.
+ * Spoofing this string wins you the same pages any visitor can already read,
+ * so the worst case is one more reader, while the cost of leaving it out is
+ * every AI platform and part of Google.
+ */
+const CRAWLERS =
+  /googlebot|google-inspectiontool|storebot-google|google-extended|chrome-lighthouse|google-pagespeed|bingbot|adidxbot|slurp|duckduckbot|baiduspider|yandexbot|applebot|gptbot|oai-searchbot|chatgpt-user|claudebot|claude-searchbot|claude-user|anthropic-ai|perplexitybot|perplexity-user|amazonbot|bytespider|facebookexternalhit|twitterbot|linkedinbot|slackbot|discordbot|telegrambot|whatsapp/i;
+
+function isCrawler(ua: string | null): boolean {
+  return Boolean(ua && CRAWLERS.test(ua));
+}
+
 export async function proxy(req: NextRequest) {
   /*
    * Payment webhooks skip every gate below, and nothing else does.
@@ -280,6 +310,15 @@ export async function proxy(req: NextRequest) {
   } catch {
     /* fail open: a redirect lookup can never break a request */
   }
+
+  /*
+   * Crawlers pass, and this sits AFTER the redirect block on purpose: a search
+   * engine asking for a retired URL still needs its 301, which is the whole
+   * point of keeping those rules. It sits BEFORE the country and VPN checks,
+   * which are the two things that were turning crawlers away.
+   * No cookies are set for a bot, so their responses stay clean.
+   */
+  if (isCrawler(req.headers.get("user-agent"))) return NextResponse.next();
 
   try {
     const key = process.env.ACCESS_BYPASS_KEY;
