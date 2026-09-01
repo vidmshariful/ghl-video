@@ -436,6 +436,20 @@ export async function PATCH(req: Request) {
     await addVersion(db, id, patch.video_url as string, admin.email);
   }
 
+  /*
+   * Tell them it is ready.
+   *
+   * Ready is the moment the cut is released to the client, and on a one-time
+   * purchase it has always sent an email. Plan work sent nothing: an editing
+   * client paid every month, we finished their video, and the only way they
+   * found out was logging in and noticing. Same email, same guard, only on the
+   * way IN so re-saving a ready video does not mail them twice.
+   */
+  if (patch.status === "ready" && before.status !== "ready") {
+    const { sendVideoReadyEmail } = await import("@/lib/email/notify");
+    await sendVideoReadyEmail(db, id);
+  }
+
   return NextResponse.json({ ok: true });
 }
 

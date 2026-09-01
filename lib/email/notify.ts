@@ -772,6 +772,68 @@ export async function sendDisputeAlertEmail(
 /** Where a client goes to watch and review their videos. */
 const videosUrl = () => `${SITE_URL}/portal/videos/`;
 
+/*
+ * Who to tell about a video, and where to send them.
+ *
+ * A video belongs to a purchase, a custom project, or a monthly plan. This
+ * file looked the buyer up through the order every time, so for the other two
+ * the lookup found nothing and the mail quietly did not send. That is why an
+ * editing client has never once been told their video was ready.
+ *
+ * The link goes where the video actually lives, because "your video is ready"
+ * landing on a screen that does not have it is worse than not writing.
+ */
+async function recipientFor(
+  db: SupabaseClient,
+  deliverableId: string,
+): Promise<{ email: string; name: string; url: string; title: string } | null> {
+  const { data: d } = await db
+    .from("order_deliverables")
+    .select("title, order_id, project_id, cycle_id")
+    .eq("id", deliverableId)
+    .maybeSingle();
+  if (!d) return null;
+  const title = String(d.title ?? "your video");
+
+  const named = async (email: string | null | undefined, url: string) => {
+    if (!email) return null;
+    const { data: c } = await db
+      .from("customers")
+      .select("name")
+      .ilike("email", email)
+      .maybeSingle();
+    return { email, name: (c?.name as string | null) ?? "there", url, title };
+  };
+
+  if (d.order_id) {
+    const { data: o } = await db
+      .from("orders")
+      .select("customer_email")
+      .eq("id", d.order_id as string)
+      .maybeSingle();
+    return named(o?.customer_email as string | null, videosUrl());
+  }
+  if (d.project_id) {
+    const { data: p } = await db
+      .from("projects")
+      .select("customer_email")
+      .eq("id", d.project_id as string)
+      .maybeSingle();
+    return named(p?.customer_email as string | null, `${SITE_URL}/portal/custom/`);
+  }
+  if (d.cycle_id) {
+    const { data: c } = await db
+      .from("subscription_cycles")
+      .select("subscription:subscriptions!inner(customer_email)")
+      .eq("id", d.cycle_id as string)
+      .maybeSingle();
+    const email =
+      (c?.subscription as { customer_email?: string } | null)?.customer_email ?? null;
+    return named(email, `${SITE_URL}/portal/editing/`);
+  }
+  return null;
+}
+
 /**
  * Tell the client one of their videos is ready to watch. Fired when the studio
  * moves a video to Ready, which is the moment the link is released to them.
@@ -781,24 +843,19 @@ export async function sendVideoReadyEmail(
   deliverableId: string,
 ): Promise<void> {
   try {
-    const { data: d } = await db
-      .from("order_deliverables")
-      .select("title, order_id")
-      .eq("id", deliverableId)
-      .maybeSingle();
-    if (!d) return;
-    const { data: o } = await db
-      .from("orders")
-      .select("customer_email, customers(name)")
-      .eq("id", d.order_id)
-      .maybeSingle();
-    if (!o?.customer_email) return;
-    const name = (o.customers as any)?.name ?? "there";
-    await sendTemplateToTeam(db, "video_ready", { email: o.customer_email as string, name: name }, {
-      customer_name: escapeHtml(name),
-      video_title: escapeHtml(d.title as string),
-      portal_url: videosUrl(),
-    }, "orders");
+    const to = await recipientFor(db, deliverableId);
+    if (!to) return;
+    await sendTemplateToTeam(
+      db,
+      "video_ready",
+      { email: to.email, name: to.name },
+      {
+        customer_name: escapeHtml(to.name),
+        video_title: escapeHtml(to.title),
+        portal_url: to.url,
+      },
+      "orders",
+    );
   } catch (e) {
     console.error("[email] video_ready failed:", e instanceof Error ? e.message : e);
   }
