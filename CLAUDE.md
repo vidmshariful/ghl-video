@@ -36,8 +36,10 @@ Stripe + Supabase commerce backend, all on one domain.
   public application. Backed by the `partners` + `partner_assets` tables
   (admin -> Partners manages them). The checkout discount still reads
   `lib/affiliates.ts` (code registry) until the DB bridge ships; commissions
-  and payouts live in FirstPromoter (stats sync is phase 2, env vars in
-  `.env.example`).
+  and payouts live in **Affixo** (`lib/affixo.ts`), which replaced
+  FirstPromoter in August 2026. FirstPromoter env vars survive in
+  `.env.example` only to read the old numbers, and `lib/firstpromoter.ts`
+  is gone. Do not wire new work to it.
 
 ### The money path (details in docs/CHECKOUT-BUILD-PROMPT.md)
 
@@ -82,10 +84,18 @@ The Stripe webhook endpoint must subscribe to: `payment_intent.succeeded`,
 Schema lives in `supabase/migrations/*.sql` (ordered, idempotent).
 `npm run migrate` applies pending files and records them in
 `schema_migrations` (`--dry-run` to preview; needs `SUPABASE_DB_URL`).
-Tables: products, customers, orders, order_events (audit log), stripe_events
-(webhook idempotency), admins, order_bumps, order_updates, order_deliverables,
-subscriptions, plus the private `intake` storage bucket. Money is integer cents
-everywhere. RLS is default-deny; do not add anon policies to money tables.
+There are **61 tables**, and the migrations are the only complete list. The
+ones most work touches: products, customers, orders, order_events (audit log),
+stripe_events (webhook idempotency), admins, order_bumps, order_updates,
+order_deliverables, subscriptions, projects, subscription_cycles,
+deliverable_comments, deliverable_versions, video_feedback, conversations,
+notifications, notification_templates, seo_pages, redirects, blog_posts,
+blog_categories, catalog, partners, journal, plus the private `intake`
+storage bucket. Money is integer cents everywhere.
+
+RLS is on for all 61 tables and default-deny. Verified September 2026: the
+only anon-readable tables are the public marketing ones (catalog, blog,
+seo_pages, redirects). Do not add anon policies to money tables.
 
 `order_deliverables` is one row per VIDEO owed on an order, created at
 settlement by `lib/deliverables.ts` (a video expands to one row, a pack to its
@@ -108,10 +118,18 @@ npm run dev                 # dev server, always on :3200 (3000 belongs to anoth
 npm run build               # includes the catalog integrity gate
 npm run lint                # eslint
 npm run check:live          # the four world-state checks, before asking to deploy
+npm run check:drift         # cross-part drift (the 4 surfaces)
+npm run check:owners        # every file touching a video handles all 3 owners
+npm run check:deliverables  # each product expands to the count it advertises
 npm run migrate             # apply pending SQL migrations (tracked)
 npm run seed:subscriptions  # seed the 3 editing plans (idempotent)
 npm run test:e2e            # Playwright smoke suite
 ```
+
+`prebuild` also runs the unit tests plus check:tokens, check:leaks and
+check:portal-ui, so a `next build` failure can come from any of them. Judge
+it by the exit code, never by skimming the output. The full script list is
+in `package.json`; the rest are seeds and backfills.
 
 Rate limiting note: `lib/rate-limit.ts` is per-instance (in-memory). The
 production backstop is a Vercel firewall rule + Stripe Radar; do not treat
@@ -192,15 +210,28 @@ canvas); these are the live values in `app/globals.css`:
 
 ```
 /  /premade  /custom-video  /quote  /editing  /about  /contact  /work
-/highlevel-demo-video  /highlevel-video-bundle      (preserved SEO URLs)
-/blog  /resources                                    (designed stubs, noindex)
-/legal/privacy  /legal/terms  /legal/refund
+/library                                             (full catalogue, public)
+/studio-insights  /ai-first-launch
+/highlevel-demo-video  /highlevel-video-bundle       (preserved SEO URLs)
+/blog  /blog/[slug]  /blog/category/[slug]           (live CMS, real posts)
+/resources                                           (designed stub, noindex)
+/lp/[slug]                                           (sales pages, (sales) group)
+/legal/privacy  /legal/terms  /legal/refund  /legal/partner-terms
+/v/[token]  /list/[token]                            (share links)
 /checkout/[sku]  /checkout/intake/[orderId]  /checkout/thank-you  (noindex)
 /portal          /admin                              (noindex)
 /partners  /partners/apply                          (affiliate portal, noindex)
 /api/checkout/*  /api/webhooks/stripe  /api/portal/*  /api/admin/*
 /api/orders/[id]  /api/intake/[orderId]  /api/quote  /api/partners/*
+/api/cron/chase  /api/cron/price-drift               (needs CRON_SECRET)
 ```
+
+Note `/blog/` is a real CMS with published posts, not a stub. Its index page
+still carries a hardcoded `robots: index:false` from when it was empty, while
+the sitemap lists it. That contradiction is open and is Shariful's call, see
+the journal. Also note `pageMetadata` in `lib/seo.ts` can only ever turn
+noindex ON: a `seo_pages` override cannot switch indexing back on for a page
+whose code says index:false, despite comments that claim it can.
 
 `lib/pages-list.ts` is the canonical page list feeding the sitemap and the
 admin Pages screen. Header nav and footer chrome are backend-managed via

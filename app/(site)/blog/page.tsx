@@ -19,9 +19,16 @@ export async function generateMetadata(): Promise<Metadata> {
     title: "Blog",
     description:
       "Practical playbooks for HighLevel SaaS founders: video strategy, funnels, objection handling, and what actually moves signups. From the studio creating HighLevel videos since 2020.",
-    /* noindex while the blog is a designed stub with no real posts, the same
-       as /resources/. A DB override in seo_pages flips this the day it is
-       ready to be crawled, no deploy needed. */
+    /* NOT TRUE ANY MORE, AND LEFT FOR A DECISION.
+       This was set while the blog was a stub with no real posts. There are
+       published posts now, and the sitemap lists /blog/ because pages-list
+       carries no noindex for it, so we currently tell Google to crawl the
+       hub and then tell it not to index the hub.
+       The old comment here claimed a seo_pages override could flip this on
+       without a deploy. It cannot: pageMetadata only ever turns noindex ON
+       (lib/seo.ts), so an override cannot switch indexing back on for a page
+       whose code says index:false. Removing this line is the only way in,
+       and that is an SEO call for Shariful, not a silent edit. */
     robots: { index: false, follow: true },
     alternates: { canonical: "/blog/" },
   });
