@@ -345,9 +345,9 @@ export const pages = {
       ],
     },
     formats: {
-      chip: "The formats",
+      chip: "Formats and pricing",
       headline: "Four formats,",
-      accent: "published starting prices.",
+      accent: "published pricing.",
       intro:
         "Every project is quoted exactly before production starts. These are the floors, not estimates.",
       items: [
@@ -412,6 +412,31 @@ export const pages = {
         },
       ],
     },
+    /* The three custom pieces shown in "Custom work, in action". Owner
+       supplied the clips, September 2026. The labels are neutral on purpose:
+       nobody has said which format each one is, and calling a promo a demo
+       would be worse than saying nothing. Swap title and format per clip
+       when the owner names them. */
+    customSamples: [
+      {
+        src: "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a6ad7ebcdfcf04956dce4a7.mp4",
+        poster: null as string | null,
+        title: "Client project",
+        format: "Custom production",
+      },
+      {
+        src: "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a9972cc7aa8c6e1f53e8efb.mp4",
+        poster: null as string | null,
+        title: "Client project",
+        format: "Custom production",
+      },
+      {
+        src: "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a9973c3f20cf78ef10be803.mp4",
+        poster: null as string | null,
+        title: "Client project",
+        format: "Custom production",
+      },
+    ],
     /* The showreel the sales page leads with, and deliberately the same cut,
        so the two custom pages cannot drift into showing different work. */
     showreel: {
@@ -504,7 +529,7 @@ export const pages = {
     difference: {
       chip: "The difference",
       headline: "Made for",
-      accent: "HighLevel brands.",
+      accent: "HighLevel SaaS.",
       intro: "A team that already knows the platform and the buyer.",
     },
     /* 8. two ways in: the real quote form, and the contact page's
@@ -572,14 +597,14 @@ export const pages = {
     },
     fit: {
       chip: "Fit",
-      headline: "Built for some teams,",
-      accent: "not for all.",
+      headline: "Who custom video",
+      accent: "is built for.",
       intro: "Custom earns its cost when you have something specific to say.",
       cards: [
         {
           icon: "building",
-          title: "SaaS resellers",
-          line: "HighLevel SaaS resellers with real positioning to communicate.",
+          title: "SaaSpreneurs",
+          line: "HighLevel SaaSpreneurs with real positioning to communicate.",
         },
         {
           icon: "crosshair",
@@ -588,8 +613,8 @@ export const pages = {
         },
         {
           icon: "layout",
-          title: "Platform teams",
-          line: "Platforms that need demo and onboarding coverage.",
+          title: "Growing SaaS",
+          line: "HighLevel SaaS past launch, adding demos and onboarding as the product grows.",
         },
       ],
       cta: { label: "Request a Quote", href: "/quote/" },

@@ -26,7 +26,7 @@ import { ChaseHeroReviewer } from "@/components/home/ChaseHeroReviewer";
 import { ProcessSection } from "@/components/pages/ProcessSection";
 import { TrustStrip } from "@/components/home/TrustStrip";
 import { faqSchema, serviceSchema } from "@/lib/schema";
-import { cta, customFormats, home, newSamples, pages } from "@/lib/site";
+import { cta, customFormats, home, pages } from "@/lib/site";
 
 const craftArt = ["hook", "story", "conversion"] as const;
 const processIcons = ["crosshair", "pen-line", "mic", "clapperboard", "message", "package-check"] as const;
@@ -51,7 +51,9 @@ export default function CustomPage() {
      builds, so the section currently calls work "custom" that was not.
      Flagged for Shariful: swap in three real custom projects. Layout is
      final, the swap is data only. */
-  const samples = newSamples.slice(0, 3);
+  /* the owner's three custom pieces, not the AI pack samples the page
+     borrowed before: this section is about bespoke work, so it shows it */
+  const samples = pages.custom.customSamples;
 
   return (
     <>
@@ -80,7 +82,7 @@ export default function CustomPage() {
         note={<CapacityChip service="custom" />}
         reviewer={<ChaseHeroReviewer />}
       >
-        <Button href={cta.requestQuote.href} variant="hero">
+        <Button href={cta.requestQuote.href} variant="gradient">
           {cta.requestQuote.label}
         </Button>
         <Button href={cta.bookACall.href} variant="ghost">
@@ -145,27 +147,12 @@ export default function CustomPage() {
         />
       </RuledSection>
 
-      {/* 4. the process: a connected scroll timeline */}
-      <ProcessSection
-        bpIdx={4}
-        glow="right"
-        chip={p.process.chip}
-        headline={p.process.headline}
-        accent={p.process.accent}
-        intro={p.process.intro}
-        cta={p.process.cta}
-        video={p.process.video}
-        arts={["scope", "script", "voice", "production", "review", "delivery"] as const}
-        steps={p.process.steps}
-        icons={processIcons}
-      />
-
       {/* 5. pricing: the four formats, then how the number is arrived at */}
-      <section data-bp-idx="5" className="relative overflow-x-clip section-pad">
+      <section data-bp-idx="4" className="relative overflow-x-clip section-pad">
         <SectionGlow position="left" />
         <div className="shell relative">
           <SectionHead
-            index={5}
+            index={4}
             chip={p.formats.chip}
             headline={p.formats.headline}
             accent={p.formats.accent}
@@ -208,6 +195,21 @@ export default function CustomPage() {
           </div>
         </div>
       </section>
+
+      {/* 4. the process: a connected scroll timeline */}
+      <ProcessSection
+        bpIdx={5}
+        glow="right"
+        chip={p.process.chip}
+        headline={p.process.headline}
+        accent={p.process.accent}
+        intro={p.process.intro}
+        cta={p.process.cta}
+        video={p.process.video}
+        arts={["scope", "script", "voice", "production", "review", "delivery"] as const}
+        steps={p.process.steps}
+        icons={processIcons}
+      />
 
       {/* 6. sample work */}
       <section data-bp-idx="6" className="relative section-pad">
