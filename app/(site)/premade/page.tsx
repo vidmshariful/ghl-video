@@ -88,7 +88,12 @@ export default async function PremadePage() {
         note={<CapacityChip service="premade" />}
         reviewer={<ChaseHeroReviewer />}
       >
-        <Button href="#videos">See the videos</Button>
+        {/* gradient is the reserved hero treatment (see components/Button.tsx);
+            this slot had been on the deep primary fill, so neither hero button
+            carried the signature and the two read as equal weight */}
+        <Button href={cta.browseLibrary.href} variant="gradient">
+          {cta.browseLibrary.label}
+        </Button>
         <Button href={cta.bookACall.href} variant="ghost">
           {cta.bookACall.label}
         </Button>

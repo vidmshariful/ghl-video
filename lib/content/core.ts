@@ -65,6 +65,9 @@ export const navLinks = [
 export const cta = {
   bookACall: { label: "Book a Call", href: "/contact/" },
   seePremade: { label: "See premade videos", href: "/premade/" },
+  /* the premade hero's first action: straight into the full catalogue
+     rather than the featured strip further down the same page */
+  browseLibrary: { label: "Browse the library", href: "/library/" },
   requestQuote: { label: "Request a Quote", href: "/quote/" },
   orderPremade: "Order Now",
   startEditing: "Start editing",
