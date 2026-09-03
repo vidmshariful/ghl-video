@@ -113,11 +113,33 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
  * there ships to every visitor and reads our file paths out loud.
  */
 
-/* Injected at body end: the LeadConnector chat widget and the GTM
- * noscript fallback. */
+/*
+ * Injected at body end: the LeadConnector chat widget and the GTM
+ * noscript fallback.
+ *
+ * The small script after the widget hides its greeting bubble on phones.
+ * That bubble is fixed-position and opens on its own, and at 375px it landed
+ * on top of the hero call to action: measured on /premade/, the prompt box
+ * ran 642 to 714 and the "See the videos" button 705 to 751, so it covered
+ * the top of the primary button on the fold. The launcher circle is left
+ * alone, so anyone who wants to chat still can, and desktop is untouched.
+ *
+ * It reaches into the widget's shadow root because external CSS cannot cross
+ * that boundary, and it appends a style rule rather than hiding the node once,
+ * so the widget re-rendering does not undo it. Written as a TS comment, not an
+ * HTML one, for the same reason as the note above: everything inside the
+ * string below ships to every visitor.
+ */
 export const BODY_END_SCRIPTS = `<!-- LeadConnector widget -->
 <script src="https://widgets.leadconnectorhq.com/loader.js" data-resources-url="https://widgets.leadconnectorhq.com/chat-widget/loader.js" data-widget-id="66b215e292c831bcfeb2c0f4">
  </script>
+
+<script>
+(function(){var t=0;function f(){var e=document.querySelector("chat-widget"),r=e&&e.shadowRoot;
+if(r){if(!r.getElementById("ghlv-chat-fit")){var s=document.createElement("style");s.id="ghlv-chat-fit";
+s.textContent="@media (max-width:767px){.lc_text-widget--prompt{display:none!important}}";r.appendChild(s);}return;}
+if(t++<20)setTimeout(f,300);}f();})();
+</script>
 
 <!-- GTM noscript -->
 <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-NPHWVF2V" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>`;

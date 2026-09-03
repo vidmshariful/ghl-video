@@ -96,11 +96,19 @@ export const googleReviewUrl = "https://g.page/r/CYSgGtPLCzEfEAE/review";
    collapse back automatically). `short` shows on mobile, `long` on
    wider screens; the email renders as a mailto link after it. */
 export type SiteNotice = { short: string; long: string; email: string };
-export const siteNotice: SiteNotice | null = {
-  short: "Still improving the site. Contact",
-  long: "We're still improving the site. If anything goes wrong, contact us at",
-  email: "hi@ghlvideo.com",
-};
+/*
+ * Off since September 2026 (owner decision).
+ *
+ * It was a soft-launch notice, and it stayed up long after the launch. On a
+ * page selling between $97 and $3,495 the first line a buyer read was that
+ * the site might break, which is the opposite of a trust signal. Its mailto
+ * also overflowed the viewport by 7px at 375px.
+ *
+ * The bar and the header offset collapse on their own when this is null, so
+ * putting an object back here is all it takes to bring it back for the next
+ * real announcement.
+ */
+export const siteNotice: SiteNotice | null = null;
 
 /* Social profiles from the live site. TODO: LinkedIn URL pending from
  * Shariful (no profile found on the current site). */

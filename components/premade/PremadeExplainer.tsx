@@ -41,7 +41,7 @@ export function PremadeExplainer() {
 
         {/* the question, then the description */}
         <div>
-          <h2 className="font-display text-[26px] font-semibold leading-snug tracking-[-0.01em] text-ink md:text-[30px]">
+          <h2 className="font-display text-h2 text-ink">
             {x.question}
           </h2>
           <div className="mt-5 space-y-4">
