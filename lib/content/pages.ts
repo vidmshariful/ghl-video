@@ -4,6 +4,7 @@
 
 import { cta, clients, deliveryWindow } from "./core";
 import { clips, posters } from "./media";
+import { whiteLabelProof } from "./deliveries";
 
 export const pages = {
   premade: {
@@ -11,7 +12,9 @@ export const pages = {
       headline: "Your videos are",
       accent: "one order away.",
       sub: `Pick a video or a pack, send your brand kit, and publish this week. Most orders land in ${deliveryWindow}.`,
-      cta: { label: "See the videos", href: "#videos" },
+      /* the library, matching the hero: the page's two big actions now point
+         at the same place instead of one leaving and one anchoring inward */
+      cta: cta.browseLibrary,
     },
     hero: {
       chip: "Premade Videos",
@@ -61,7 +64,7 @@ export const pages = {
         },
       ],
       video: {
-        src: "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a7a3a1903343f290f0ae5be.mp4" as string | null,
+        src: "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a984444a1f3f48f4b9b15d2.mp4" as string | null,
         poster: null as string | null,
       },
     },
@@ -76,11 +79,16 @@ export const pages = {
         "Brand-agnostic scripts, no competitor named",
         "Full commercial rights, no attribution",
       ],
-      /* PLACEHOLDER cuts, both: Shariful sends the real default/branded
-         pair of the same video later. Swap src and poster only. */
+      /*
+       * The real pair, and deliberately the SAME one /lp/white-label-videos/
+       * shows. whiteLabelProof exists so the two pages cannot drift into
+       * showing different videos while both call it the before and after of
+       * one video. These were placeholders: two unrelated clips, which meant
+       * the proof of white-labelling proved nothing.
+       */
       demo: {
-        defaultCut: { src: clips.featured, poster: posters.featured },
-        brandedCut: { src: clips.premadeNew, poster: posters.premadeNew },
+        defaultCut: { src: whiteLabelProof.generic, poster: whiteLabelProof.poster },
+        brandedCut: { src: whiteLabelProof.branded, poster: whiteLabelProof.poster },
       },
     },
     how: {

@@ -10,12 +10,14 @@ import { home } from "@/lib/site";
  * takeaway of what they said, then the name with the gold attribution bar.
  * Clicking a clip pops it up with sound.
  */
-export function VideoTestimonials() {
+/* `index` defaults to the homepage's slot; other pages pass their own so the
+   section number matches where it actually sits in that page's sequence. */
+export function VideoTestimonials({ index = 5 }: { index?: number } = {}) {
   const vt = home.videoTestimonials;
   return (
     <RuledSection
-      bpIdx={5}
-      index={5}
+      bpIdx={index}
+      index={index}
       chip={vt.chip}
       headline={vt.headline}
       accent={vt.accent}

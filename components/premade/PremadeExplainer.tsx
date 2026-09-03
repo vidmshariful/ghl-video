@@ -41,7 +41,14 @@ export function PremadeExplainer() {
 
         {/* the question, then the description */}
         <div>
-          <h2 className="font-display text-h2 text-ink">
+          {/*
+            * 2.25rem by owner direction, which sits between text-h3 (1.55rem)
+            * and text-h2 (3.1rem) with no token in between. It is a heading
+            * beside a video in a two-column block, not a centred section
+            * head, so the full section size overpowered the column. Say the
+            * word if this size gets reused and it earns a real token.
+            */}
+          <h2 className="font-display text-[2.25rem] font-semibold leading-[1.1] tracking-[-0.01em] text-ink">
             {x.question}
           </h2>
           <div className="mt-5 space-y-4">

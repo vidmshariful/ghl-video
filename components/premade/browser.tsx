@@ -68,10 +68,19 @@ export function VideoBrowser({
   videos,
   groups,
   note,
+  scroll = true,
 }: {
   videos: BrowseVideo[];
   groups: FilterDef[];
   note?: string;
+  /*
+   * Keep the inner scrollbox (the default) or let the grid run its full
+   * height. The cap exists for /library/, where 80-odd videos beside a
+   * filter sidebar would otherwise run for screens. On a page showing a
+   * curated handful it just hides most of them behind a second scrollbar
+   * inside the page, which readers do not find.
+   */
+  scroll?: boolean;
 }) {
   const reduced = useReducedMotion();
   const [sel, setSel] = useState<Record<string, string | null>>({});
@@ -130,7 +139,7 @@ export function VideoBrowser({
               </button>
             )}
           </div>
-          <div className="max-h-[44rem] overflow-y-auto p-5">
+          <div className={scroll ? "max-h-[44rem] overflow-y-auto p-5" : "p-5"}>
             {shown.length === 0 ? (
               <div className="flex h-64 items-center justify-center">
                 <p className="font-mono text-label uppercase text-dim">

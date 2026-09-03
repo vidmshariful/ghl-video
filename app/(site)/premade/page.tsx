@@ -17,14 +17,14 @@ import { RuleList } from "@/components/RuleList";
 import { RuledSection } from "@/components/RuledSection";
 import { SectionGlow } from "@/components/SectionGlow";
 import { SectionHead } from "@/components/SectionHead";
-import { VideoBundles } from "@/components/VideoBundles";
 import { PageHero } from "@/components/pages/PageHero";
 import { ChaseHeroReviewer } from "@/components/home/ChaseHeroReviewer";
 import { ProcessSection } from "@/components/pages/ProcessSection";
 import { ProofStrip } from "@/components/pages/ProofStrip";
-import { FeaturedQuote } from "@/components/pages/FeaturedQuote";
 import { WhiteLabelDemo } from "@/components/pages/WhiteLabelDemo";
 import { TrustStrip } from "@/components/home/TrustStrip";
+import { FeaturedTestimonial } from "@/components/home/FeaturedTestimonial";
+import { VideoTestimonials } from "@/components/home/VideoTestimonials";
 import { MediaFrame } from "@/components/MediaFrame";
 import { faqSchema, productCatalogSchema, serviceSchema } from "@/lib/schema";
 import { cta, deliveryWindow, pages, recentDeliveries, sellableProducts, site } from "@/lib/site";
@@ -140,7 +140,9 @@ export default async function PremadePage() {
             * handful that makes the case, each one buyable on the spot.
             */}
           <div className="mt-12">
-            <VideoBrowser videos={featured} groups={[]} />
+            {/* no inner scrollbox: this is a curated handful, and a second
+                scrollbar inside the page hid most of them */}
+            <VideoBrowser videos={featured} groups={[]} scroll={false} />
           </div>
 
           <Reveal>
@@ -149,33 +151,11 @@ export default async function PremadePage() {
                 That is {featured.length} of {full.length}. The rest live in the
                 library, where you can watch anything before you buy it.
               </p>
-              <Button href="/library/" variant="primary">
+              <Button href={cta.browseLibrary.href} variant="gradient">
                 See the full library
               </Button>
             </div>
           </Reveal>
-        </div>
-      </section>
-
-      {/* build-your-own bundles: pick any videos from the library */}
-      <section
-        data-bp-idx="3"
-        aria-label="Video bundles"
-        className="relative overflow-x-clip section-pad"
-      >
-        <SectionGlow position="left" />
-        <div className="shell relative">
-          <SectionHead
-            index={3}
-            chip="Bundle and save"
-            headline="Bundle up and"
-            accent="save more."
-            intro="Three ways to bundle: our newest releases, the classic library at reduced prices, or a mix of both. Every video white-labeled to your SaaS."
-            center
-          />
-          <div className="mt-12">
-            <VideoBundles />
-          </div>
         </div>
       </section>
 
@@ -184,8 +164,8 @@ export default async function PremadePage() {
           default cut and the branded cut, so white-label is something
           the buyer does, not something they read. */}
       <RuledSection
-        bpIdx={4}
-        index={4}
+        bpIdx={3}
+        index={3}
         chip={p.included.chip}
         headline={p.included.headline}
         accent={p.included.accent}
@@ -208,14 +188,14 @@ export default async function PremadePage() {
 
       {/* recent deliveries: branded client work so a buyer sees the outcome */}
       <section
-        data-bp-idx="5"
+        data-bp-idx="4"
         aria-label="Recent deliveries"
         className="relative overflow-x-clip section-pad"
       >
         <SectionGlow position="left" />
         <div className="shell relative">
           <SectionHead
-            index={5}
+            index={4}
             chip="Recent work"
             headline="Recently delivered,"
             accent="branded to real SaaS."
@@ -247,7 +227,7 @@ export default async function PremadePage() {
 
       {/* how it works: a connected scroll timeline */}
       <ProcessSection
-        bpIdx={6}
+        bpIdx={5}
         glow="right"
         chip={p.how.chip}
         headline={p.how.headline}
@@ -264,8 +244,8 @@ export default async function PremadePage() {
 
       {/* keep going: ruled box, two route-out cells */}
       <RuledSection
-        bpIdx={7}
-        index={7}
+        bpIdx={6}
+        index={6}
         chip="Keep going"
         headline="Need something"
         accent="premade cannot do?"
@@ -327,12 +307,20 @@ export default async function PremadePage() {
         </Reveal>
       </RuledSection>
 
+      {/* Chase Buckner on camera. Authority proof, and un-numbered by its own
+          design so it reads as the headline endorsement rather than a step.
+          This page had only his pull quote as text; the sales page has carried
+          the video all along. */}
+      <FeaturedTestimonial />
+
+      {/* the customer founders, in their own words */}
+      <VideoTestimonials index={7} />
+
       {/* proof + FAQ */}
       <section data-bp-idx="8" className="relative section-pad">
         <DrawnBorder />
         <div className="shell">
           <ProofStrip />
-          <FeaturedQuote className="mx-auto mt-12 max-w-3xl" />
           <div className="mt-16">
             <SectionHead
               index={8}
