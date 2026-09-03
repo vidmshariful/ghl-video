@@ -5,6 +5,7 @@
 import { cta, clients, deliveryWindow } from "./core";
 import { clips, posters } from "./media";
 import { whiteLabelProof } from "./deliveries";
+import { editingLp } from "./editing-lp";
 
 export const pages = {
   premade: {
@@ -739,6 +740,14 @@ export const pages = {
       intro: "Every review below is a real one, pulled from Google.",
     },
     /* 10 */
+    /* The clip the editing sales page leads with, read from the same source
+       so the two editing pages cannot show different work. It is a real
+       library clip standing in until the campaign footage is cut, and
+       editing-lp.ts is where that swap happens for both pages at once. */
+    showreel: {
+      src: editingLp.hero.videoSrc,
+      poster: editingLp.hero.videoPoster,
+    },
     closing: {
       headline: "Stop editing.",
       accent: "Start publishing.",

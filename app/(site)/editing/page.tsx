@@ -10,7 +10,8 @@ import { FaqList } from "@/components/FaqList";
 import { MediaFrame } from "@/components/MediaFrame";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { ReviewCard } from "@/components/ReviewCard";
-import { FeaturedQuote } from "@/components/pages/FeaturedQuote";
+import { FeaturedTestimonial } from "@/components/home/FeaturedTestimonial";
+import { ProofStrip } from "@/components/pages/ProofStrip";
 import { SectionGlow } from "@/components/SectionGlow";
 import { RuledSection } from "@/components/RuledSection";
 import { SectionHead } from "@/components/SectionHead";
@@ -78,7 +79,11 @@ export default function EditingPage() {
         note={<CapacityChip service="editing" />}
         reviewer={<ChaseHeroReviewer />}
       >
-        <Button href="#plans">See the plans</Button>
+        {/* gradient is the reserved hero treatment (components/Button.tsx);
+            this slot was on the deep fill, so neither hero button led */}
+        <Button href={cta.seePlans.href} variant="gradient">
+          {cta.seePlans.label}
+        </Button>
         <Button href={cta.bookACall.href} variant="ghost">
           {cta.bookACall.label}
         </Button>
@@ -86,6 +91,24 @@ export default function EditingPage() {
 
       {/* trusted-by logo strip, directly under the hero */}
       <TrustStrip />
+
+      {/* The work, before the argument about the work. This page showed no
+          edit at all until section 7. Same clip the sales page leads with. */}
+      <section aria-label="Editing showreel" className="relative section-pad">
+        <div className="shell">
+          <Reveal>
+            <RevealItem>
+              <MediaFrame
+                src={p.showreel.src}
+                poster={p.showreel.poster}
+                label="Editing showreel"
+                tint
+                caption={{ title: "Watch", sub: "Recent edits" }}
+              />
+            </RevealItem>
+          </Reveal>
+        </div>
+      </section>
 
       {/* 2. who it is for: audience cards, not a for/not-for list */}
       <section data-bp-idx="2" className="relative section-pad">
@@ -171,14 +194,14 @@ export default function EditingPage() {
         </div>
       </section>
 
-      {/* 5b. what a credit buys. The numbers come from lib/editing-credits,
+      {/* 6. what a credit buys. The numbers come from lib/editing-credits,
           the same table the portal charges against, so the published price
           and the charged price cannot drift apart. */}
-      <section data-bp-idx="5" className="relative section-pad">
+      <section data-bp-idx="6" className="relative section-pad">
         <DrawnBorder />
         <div className="shell">
           <SectionHead
-            index={5}
+            index={6}
             chip={p.credits.chip}
             headline={p.credits.headline}
             accent={p.credits.accent}
@@ -248,11 +271,11 @@ export default function EditingPage() {
 
       {/* 6. what every plan includes: the objection-killers, with the
           three numbers that answer them up front */}
-      <section data-bp-idx="6" className="relative section-pad">
+      <section data-bp-idx="7" className="relative section-pad">
         <DrawnBorder />
         <div className="shell">
           <SectionHead
-            index={6}
+            index={7}
             chip={p.allPlans.chip}
             headline={p.allPlans.headline}
             accent={p.allPlans.accent}
@@ -284,11 +307,11 @@ export default function EditingPage() {
       </section>
 
       {/* 7. sample edits */}
-      <section data-bp-idx="7" className="relative section-pad">
+      <section data-bp-idx="8" className="relative section-pad">
         <DrawnBorder />
         <div className="shell">
           <SectionHead
-            index={7}
+            index={8}
             chip={p.samples.chip}
             headline={p.samples.headline}
             accent={p.samples.accent}
@@ -330,22 +353,21 @@ export default function EditingPage() {
       </section>
 
       {/* 8. proof */}
-      <section data-bp-idx="8" className="relative section-pad">
+      <section data-bp-idx="9" className="relative section-pad">
         <DrawnBorder />
         <div className="shell">
           <SectionHead
-            index={8}
+            index={9}
             chip={p.proof.chip}
             headline={p.proof.headline}
             accent={p.proof.accent}
             intro={p.proof.intro}
             center
           />
-          <Reveal>
-            <RevealItem>
-              <FeaturedQuote className="mx-auto mt-12 max-w-3xl" />
-            </RevealItem>
-          </Reveal>
+          {/* the locked figures: this page carried no client count at all */}
+          <div className="mt-12">
+            <ProofStrip />
+          </div>
           <Reveal className="mt-8 grid items-start gap-5 md:grid-cols-2 lg:grid-cols-3">
             {reviews.map((r) => (
               <RevealItem key={r.name} className="h-full">
@@ -356,10 +378,15 @@ export default function EditingPage() {
         </div>
       </section>
 
-      {/* 9. faq */}
+      {/* Chase Buckner on camera. The page had his words as a pull quote;
+          the video has been on the sales page all along. Un-numbered by its
+          own design so it reads as the endorsement, not a step. */}
+      <FeaturedTestimonial />
+
+      {/* 10. faq */}
       <RuledSection
-        bpIdx={9}
-        index={9}
+        bpIdx={10}
+        index={10}
         chip={p.faq.chip}
         headline={p.faq.headline}
         accent={p.faq.accent}
@@ -370,7 +397,7 @@ export default function EditingPage() {
       </RuledSection>
 
       <CtaBand
-        bpIdx={10}
+        bpIdx={11}
         headline={p.closing.headline}
         accent={p.closing.accent}
         sub={p.closing.sub}

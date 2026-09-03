@@ -68,6 +68,8 @@ export const cta = {
   /* the premade hero's first action: straight into the full catalogue
      rather than the featured strip further down the same page */
   browseLibrary: { label: "Browse the library", href: "/library/" },
+  /* the editing hero's first action: down to the three plans on the page */
+  seePlans: { label: "See the plans", href: "#plans" },
   requestQuote: { label: "Request a Quote", href: "/quote/" },
   orderPremade: "Order Now",
   startEditing: "Start editing",
