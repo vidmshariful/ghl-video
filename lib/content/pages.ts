@@ -412,6 +412,12 @@ export const pages = {
         },
       ],
     },
+    /* The showreel the sales page leads with, and deliberately the same cut,
+       so the two custom pages cannot drift into showing different work. */
+    showreel: {
+      src: "https://assets.cdn.filesafe.space/s3JXyf9P6cTSxG7NfF1B/media/6a958b9c9ced56098acef721.mp4",
+      poster: null as string | null,
+    },
     pricing: {
       chip: "How pricing works",
       headline: "No estimates.",

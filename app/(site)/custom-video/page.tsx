@@ -11,7 +11,9 @@ import { FaqList } from "@/components/FaqList";
 import { MediaCard } from "@/components/MediaCard";
 import { Reveal, RevealItem } from "@/components/Reveal";
 import { ReviewCard } from "@/components/ReviewCard";
-import { FeaturedQuote } from "@/components/pages/FeaturedQuote";
+import { FeaturedTestimonial } from "@/components/home/FeaturedTestimonial";
+import { ProofStrip } from "@/components/pages/ProofStrip";
+import { MediaFrame } from "@/components/MediaFrame";
 import { RuledSection } from "@/components/RuledSection";
 import { SectionGlow } from "@/components/SectionGlow";
 import { SectionHead } from "@/components/SectionHead";
@@ -88,6 +90,25 @@ export default function CustomPage() {
 
       {/* trusted-by logo strip, directly under the hero */}
       <TrustStrip />
+
+      {/* The work, before the argument about the work.
+          This page showed nothing it had made until section 6, on a page
+          selling video. The sales page has led with this cut all along. */}
+      <section aria-label="Custom work showreel" className="relative section-pad">
+        <div className="shell">
+          <Reveal>
+            <RevealItem>
+              <MediaFrame
+                src={p.showreel.src}
+                poster={p.showreel.poster}
+                label="Custom work showreel"
+                tint
+                caption={{ title: "Watch", sub: "Custom work" }}
+              />
+            </RevealItem>
+          </Reveal>
+        </div>
+      </section>
 
       {/* 2. who it is for: audience cards, not a for/not-for list */}
       <section data-bp-idx="2" className="relative section-pad">
@@ -171,10 +192,19 @@ export default function CustomPage() {
               on its own, so it sits with the price list. */}
           {/* the pricing rules read as rules: a list under the format
               cards, not a second card wall */}
-          <div className="mt-5">
-            <RuleList
-              items={p.pricing.points.map((x) => ({ title: x.title, line: x.line }))}
-            />
+          {/* The strongest line about price was written and never rendered:
+              the rules sat as an unlabelled list. Kept as a list, not a
+              second card wall, per the note above. */}
+          <div className="mt-10">
+            <h3 className="font-display text-h3 text-ink">
+              {p.pricing.headline}{" "}
+              <span className="text-gradient">{p.pricing.accent}</span>
+            </h3>
+            <div className="mt-5">
+              <RuleList
+                items={p.pricing.points.map((x) => ({ title: x.title, line: x.line }))}
+              />
+            </div>
           </div>
         </div>
       </section>
@@ -259,11 +289,10 @@ export default function CustomPage() {
             intro={p.proof.intro}
             center
           />
-          <Reveal>
-            <RevealItem>
-              <FeaturedQuote className="mx-auto mt-12 max-w-3xl" />
-            </RevealItem>
-          </Reveal>
+          {/* the locked figures: this page carried no client count at all */}
+          <div className="mt-12">
+            <ProofStrip />
+          </div>
           <Reveal className="mt-8 grid items-start gap-5 md:grid-cols-2 lg:grid-cols-3">
             {reviews.map((r) => (
               <RevealItem key={r.name} className="h-full">
@@ -273,6 +302,12 @@ export default function CustomPage() {
           </Reveal>
         </div>
       </section>
+
+      {/* Chase Buckner on camera. The page had his words as a pull quote
+          while the sales page has carried the video the whole time.
+          Un-numbered by its own design, so it reads as the endorsement
+          rather than another step. */}
+      <FeaturedTestimonial />
 
       {/* 10. faq */}
       <RuledSection
