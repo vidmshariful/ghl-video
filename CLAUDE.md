@@ -173,9 +173,11 @@ canvas); these are the live values in `app/globals.css`:
   low opacity. Soft radial glows over drop shadows. Radius is deliberately
   tight: 4px containers (`rounded-card` / `rounded-media`), 3px controls
   (buttons, inputs), `rounded-full` only for dots and avatars. No other radii.
-  The homepage uses a
-  hybrid theme: dark heroes and footer (hard rule), `theme-light` bands for
-  the proof/people sections.
+  The site is full-dark
+  everywhere (client direction, July 2026): the gold-to-green gradient is
+  nearly invisible on white, so the old hybrid light bands were retired and
+  the `.theme-light` wrappers are gone from the markup. Do not add a light
+  band back.
 - **Anti-generic mandate still applies:** no pill-badge centered SaaS hero
   stack, no three identical feature cards, no decorative icon dumps, no
   gradient-on-everything, no emoji as UI, no scattered fade-ups on every

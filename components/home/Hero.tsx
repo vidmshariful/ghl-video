@@ -105,6 +105,9 @@ export function Hero() {
 
               <h1 className="mt-8 font-display text-hero text-ink">
                 <HeadlineLine delay={0.12}>{home.hero.headline}</HeadlineLine>
+                {/* a real space between the lines, so the heading reads as one
+                    sentence to anything that reads the text and not the layout */}
+                {" "}
                 <HeadlineLine delay={0.21} className="text-gradient">
                   {home.hero.headlineAccent}
                 </HeadlineLine>

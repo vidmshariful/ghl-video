@@ -12,12 +12,12 @@ import { home } from "@/lib/site";
 export function FounderNote() {
   const { founder } = home;
   return (
-    <section data-bp-idx="9" aria-label="Founder note" className="relative section-pad-sm">
+    <section data-bp-idx="8" aria-label="Founder note" className="relative section-pad-sm">
       <DrawnBorder />
       <div className="shell">
         <Reveal>
           <RevealItem className="mb-8">
-            <SectionChip index={9} label="Founder" />
+            <SectionChip index={8} label="Founder" />
           </RevealItem>
           <RevealItem>
             <Panel className="overflow-hidden">

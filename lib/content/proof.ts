@@ -186,8 +186,9 @@ export const home = {
     ],
   },
 
-  /* PLACEHOLDER clips: real client testimonial videos replace these
-   * (names and companies are the locked real clients). */
+  /* The three named founders on their own clips (founderVideos above).
+     This note used to call them placeholders; the real footage landed and
+     the note did not move, so anyone reading here doubted real proof. */
   videoTestimonials: {
     chip: "Client stories",
     headline: "Founders,",

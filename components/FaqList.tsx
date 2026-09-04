@@ -20,7 +20,7 @@ export function FaqList({
         >
           <summary className="flex cursor-pointer list-none items-center gap-4 p-5 md:gap-5 md:p-6 [&::-webkit-details-marker]:hidden">
             {/* number badge */}
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[6px] border border-hair font-mono text-label text-dim md:h-10 md:w-10">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-card border border-hair font-mono text-label text-dim md:h-10 md:w-10">
               {String(i + 1).padStart(2, "0")}
             </span>
             {/* question */}

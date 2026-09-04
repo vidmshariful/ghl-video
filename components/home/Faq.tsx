@@ -14,7 +14,7 @@ export function Faq() {
   const { faq } = home;
   return (
     <section
-      data-bp-idx="8"
+      data-bp-idx="7"
       aria-labelledby="faq-heading"
       className="relative section-pad"
     >
@@ -22,7 +22,7 @@ export function Faq() {
       <div className="shell">
         <Reveal className="text-center">
           <RevealItem>
-            <SectionChip index={8} label={faq.chip} />
+            <SectionChip index={7} label={faq.chip} />
             <h2
               id="faq-heading"
               className="mx-auto mt-6 max-w-[18ch] font-display text-h2 text-ink"

@@ -52,7 +52,7 @@ export default function Home() {
       <Faq />
       <FounderNote />
       <CtaBand
-        bpIdx={10}
+        bpIdx={9}
         headline={home.closing.headline}
         accent={home.closing.accent}
         sub={home.closing.lede}
