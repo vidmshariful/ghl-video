@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { contextCan, resolvePortalContext, actorName } from "@/lib/account-team";
 import { CLIENT_LABEL, isOpen, normalizeProjectStatus, projectBalance } from "@/lib/projects";
+import { invoiceProjectShares } from "@/lib/invoice-shares";
 import {
   canRequestChanges,
   canReview,
@@ -94,11 +95,13 @@ export async function GET(req: Request) {
 
   /* payment standing: the client's own invoices on these projects, marked paid
      when one of their paid orders covers the invoice's product */
+  /* by the full list of jobs an invoice covers, not only the first: one
+     invoice can pay for several of this client's projects at once */
   const { data: invoices } = ids.length
     ? await db
         .from("invoices")
-        .select("total_cents, project_id, product_sku")
-        .in("project_id", ids)
+        .select("total_cents, project_id, project_ids, product_sku")
+        .or(`project_id.in.(${ids.join(",")}),project_ids.ov.{${ids.join(",")}}`)
     : { data: [] };
   const { data: paidOrders } = await db
     .from("orders")
@@ -124,9 +127,11 @@ export async function GET(req: Request) {
             quotedCents: p.quoted_cents == null ? null : Number(p.quoted_cents),
             agreedCents: p.agreed_cents == null ? null : Number(p.agreed_cents),
           },
-          ((invoices ?? []) as Row[])
-            .filter((i) => String(i.project_id) === String(p.id))
-            .map((i) => ({ totalCents: Number(i.total_cents), paid: paidSkus.has(String(i.product_sku)) })),
+          ((invoices ?? []) as Row[]).flatMap((i) =>
+            invoiceProjectShares(i)
+              .filter((s) => s.projectId === String(p.id))
+              .map((s) => ({ totalCents: s.shareCents, paid: paidSkus.has(String(i.product_sku)) })),
+          ),
         );
         const mine = ((videos ?? []) as Row[]).filter(
           (v) => String(v.project_id) === String(p.id),

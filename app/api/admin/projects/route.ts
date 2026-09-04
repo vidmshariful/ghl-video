@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { verifyAdmin } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { ballInCourt, normalizePipeline } from "@/lib/pipeline";
+import { invoiceProjectShares } from "@/lib/invoice-shares";
 import {
   PROJECT_LIST,
   PROJECT_STATUSES,
@@ -42,10 +43,9 @@ export async function GET(req: Request) {
   const db = supabaseAdmin();
   const [{ data: projects }, { data: invoices }, { data: videos }] = await Promise.all([
     db.from("projects").select("*").order("created_at", { ascending: false }),
-    db
-      .from("invoices")
-      .select("id, number, total_cents, status, project_id, product_sku")
-      .not("project_id", "is", null),
+    /* every invoice, then attributed below to each job it covers: the old
+       project_id filter only ever saw the first job on a multi-job invoice */
+    db.from("invoices").select("id, number, total_cents, status, project_id, project_ids, product_sku"),
     db
       .from("order_deliverables")
       /* select * so this runs the same before and after the pipeline column
@@ -88,15 +88,18 @@ export async function GET(req: Request) {
 
   const items = ((projects ?? []) as Row[]).map((p) => {
     const id = String(p.id);
-    const mine = ((invoices ?? []) as Row[])
-      .filter((i) => String(i.project_id) === id)
-      .map((i) => ({
-        id: String(i.id),
-        number: String(i.number),
-        totalCents: Number(i.total_cents),
-        status: String(i.status),
-        paid: paidSkus.has(String(i.product_sku)),
-      }));
+    const mine = ((invoices ?? []) as Row[]).flatMap((i) =>
+      invoiceProjectShares(i)
+        .filter((s) => s.projectId === id)
+        .map((s) => ({
+          id: String(i.id),
+          number: String(i.number),
+          /* this job's share of the invoice, not the whole invoice */
+          totalCents: s.shareCents,
+          status: String(i.status),
+          paid: paidSkus.has(String(i.product_sku)),
+        })),
+    );
     const money = projectBalance(
       {
         quotedCents: p.quoted_cents == null ? null : Number(p.quoted_cents),
