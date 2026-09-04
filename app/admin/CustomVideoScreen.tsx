@@ -201,6 +201,11 @@ const TABLE_GRID =
 
 const EMPTY_DRAFT = {
   customerEmail: "",
+  /* filled from an inquiry when its email is not a client yet: the client
+     is created from these on save, so nobody has to leave this screen */
+  newClientName: "",
+  newClientCompany: "",
+  sendWelcome: true,
   contactId: "",
   title: "",
   category: "",
@@ -286,9 +291,32 @@ export function CustomVideoScreen({
     setBusy(true);
     setErr("");
     try {
+      const h = { ...(await authHeader()), "Content-Type": "application/json" };
+
+      /* the client first, when the email came from an inquiry and nobody has
+         made them a client yet. "Already belongs to a client" is not a
+         failure here: it hands back the id and we carry on. */
+      let newClientId: string | null = null;
+      const isNew =
+        Boolean(draft.customerEmail) && !clients.some((c) => c.email === draft.customerEmail);
+      if (isNew) {
+        const cr = await fetch("/api/admin/customers", {
+          method: "POST",
+          headers: h,
+          body: JSON.stringify({
+            email: draft.customerEmail,
+            name: draft.newClientName || null,
+            company: draft.newClientCompany || null,
+          }),
+        });
+        const cj = (await cr.json()) as { id?: string; error?: string };
+        if (!cr.ok && !cj.id) return setErr(cj.error ?? "Could not create the client.");
+        newClientId = cj.id ?? null;
+      }
+
       const r = await fetch("/api/admin/projects", {
         method: "POST",
-        headers: { ...(await authHeader()), "Content-Type": "application/json" },
+        headers: h,
         body: JSON.stringify({
           ...draft,
           quotedCents: draft.quotedCents ? Math.round(Number(draft.quotedCents) * 100) : null,
@@ -298,6 +326,25 @@ export function CustomVideoScreen({
       });
       const j = await r.json();
       if (!r.ok) return setErr(j.error ?? "Could not create the project.");
+
+      /* their portal exists from this moment: the welcome creates the login
+         and tells them how to set a password. Fail-soft: a mail problem
+         must not undo a project that already saved. */
+      if (isNew && newClientId && draft.sendWelcome) {
+        const wr = await fetch(`/api/admin/customers/${newClientId}/welcome-email`, {
+          method: "POST",
+          headers: h,
+          body: JSON.stringify({ email: draft.customerEmail }),
+        }).catch(() => null);
+        if (!wr || !wr.ok) {
+          const wj = wr ? ((await wr.json().catch(() => ({}))) as { error?: string }) : {};
+          setErr(
+            `Project created and client added, but the welcome did not send${
+              wj.error ? `: ${wj.error}` : ""
+            }. Send it from their record under Clients.`,
+          );
+        }
+      }
       setDraft(null);
       await load();
     } finally {
@@ -436,25 +483,59 @@ export function CustomVideoScreen({
         {draft && (
           <div className="grid gap-4">
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field
-                label="Client"
-                required
-                hint="Add them under Clients first if they are not here yet."
-              >
-                <Select
-                  value={draft.customerEmail}
-                  onChange={(e) =>
-                    setDraft({ ...draft, customerEmail: e.target.value, contactId: "" })
-                  }
+              {/*
+                * An inquiry arrives as an email, not as a client. This field
+                * used to be a dropdown over existing clients with a hint to go
+                * and add them first, which meant every won inquiry was: leave,
+                * create the client, come back, press the button again. Now an
+                * email with no client behind it becomes the client on save,
+                * and gets the portal welcome in the same breath.
+                */}
+              {draft.customerEmail && !clients.some((c) => c.email === draft.customerEmail) ? (
+                <Field
+                  label="New client"
+                  required
+                  hint={`${draft.customerEmail} is not a client yet. Saving creates them.`}
                 >
-                  <option value="">Pick a client</option>
-                  {clients.map((c) => (
-                    <option key={c.id} value={c.email}>
-                      {c.company || c.name || c.email}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
+                  <div className="grid gap-2">
+                    <Input
+                      value={draft.newClientName}
+                      onChange={(e) => setDraft({ ...draft, newClientName: e.target.value })}
+                      placeholder="Their name"
+                    />
+                    <Input
+                      value={draft.newClientCompany}
+                      onChange={(e) => setDraft({ ...draft, newClientCompany: e.target.value })}
+                      placeholder="Company"
+                    />
+                    <label className="flex items-center gap-2.5 text-body-sm text-ink">
+                      <input
+                        type="checkbox"
+                        checked={draft.sendWelcome}
+                        onChange={(e) => setDraft({ ...draft, sendWelcome: e.target.checked })}
+                        className="h-4 w-4 accent-[var(--gold)]"
+                      />
+                      Send them the portal welcome, with how to sign in
+                    </label>
+                  </div>
+                </Field>
+              ) : (
+                <Field label="Client" required hint="Or make one from an inquiry above.">
+                  <Select
+                    value={draft.customerEmail}
+                    onChange={(e) =>
+                      setDraft({ ...draft, customerEmail: e.target.value, contactId: "" })
+                    }
+                  >
+                    <option value="">Pick a client</option>
+                    {clients.map((c) => (
+                      <option key={c.id} value={c.email}>
+                        {c.company || c.name || c.email}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              )}
               <Field label="Who we work with" hint="The person at their end running this with us.">
                 <Select
                   value={draft.contactId}
@@ -805,6 +886,8 @@ export function CustomVideoScreen({
                         setDraft({
                           ...EMPTY_DRAFT,
                           customerEmail: e.email,
+                          newClientName: e.name ?? "",
+                          newClientCompany: e.company ?? "",
                           title: e.company ? `Custom video for ${e.company}` : "Custom video",
                           brief: e.brief ?? "",
                           fromRequestId: e.id,
