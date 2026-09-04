@@ -291,6 +291,34 @@ export function CustomLanding({ page }: { page: CustomSalesPage }) {
       </section>
 
       {/* ------------------------------- what every video has to do */}
+      {/* CUSTOM WORK: the same three clips the service page shows, read from
+          the same content, so the two custom pages cannot drift into showing
+          different work. Rendered with this surface's own card and player. */}
+      <section className="sp-section">
+        <div className="sp-wrap">
+          <SectionHead
+            eyebrow={c.samples.chip}
+            title={c.samples.headline}
+            accent={c.samples.accent}
+            sub={c.samples.intro}
+            center
+          />
+          <div className="sp-grid-cards" style={{ marginTop: "2.5rem" }}>
+            {c.customSamples.map((v) => (
+              <figure key={v.src} className="sp-card sp-card--hover" style={{ margin: 0 }}>
+                <SpVideo src={v.src} poster={v.poster} label={v.title} />
+                <figcaption style={{ padding: "1rem 1.15rem" }}>
+                  <p style={{ fontWeight: 600 }}>{v.title}</p>
+                  <p className="sp-muted" style={{ fontSize: "0.9rem", marginTop: "0.2rem" }}>
+                    {v.format}
+                  </p>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section className="sp-section">
         <div className="sp-wrap">
           <SectionHead
