@@ -333,8 +333,12 @@ export function EditingBoard({ slug, onBack }: { slug: string; onBack: () => voi
       if (!r.ok) {
         setB(before);
         setErr(j.error ?? "Could not save that.");
-      } else if (optimistic) void load();
-      else await load();
+      } else {
+        /* an over-plan note is information, not a failure: the work is in */
+        if (typeof j.warning === "string" && j.warning) setErr(j.warning);
+        if (optimistic) void load();
+        else await load();
+      }
     } catch {
       setB(before);
       setErr("Could not save that.");
@@ -623,9 +627,9 @@ function AddRequest({
             of their month, before any short cuts.
           </p>
 
-          {d.editType !== "short" && (
+          {(
             <Field
-              label="Short cuts from it"
+              label={d.editType === "short" ? "More shorts from the same footage" : "Short cuts from it"}
               hint="One per line. Each becomes its own video costing 1 credit, with its own review."
             >
               <Textarea
@@ -1189,6 +1193,58 @@ function ReviewRoom({
   );
 }
 
+/*
+ * More shorts from the same footage, added to a request that already exists.
+ * One per line; each becomes its own video under this request, in this
+ * month, costing one short credit, with its own review. Beant Singh asked
+ * for three shorts in one short request and there was no way to add them.
+ */
+function MoreShorts({
+  req: r,
+  busy,
+  onSave,
+}: {
+  req: Req;
+  busy: boolean;
+  onSave: (id: string, patch: Record<string, unknown>, optimistic?: Partial<Req>) => Promise<void>;
+}) {
+  const [text, setText] = useState("");
+  const lines = text
+    .split("\n")
+    .map((c) => c.trim())
+    .filter(Boolean);
+  return (
+    <div className="grid gap-3">
+      <Field
+        label={r.editType === "short" ? "More shorts from the same footage" : "More short cuts from it"}
+        hint="One per line. Each becomes its own video costing 1 credit, with its own review."
+      >
+        <Textarea
+          rows={3}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder={"The pricing answer\nThe objection at 22 minutes"}
+        />
+      </Field>
+      <div>
+        <Button
+          variant="brand"
+          size="sm"
+          disabled={busy || !lines.length}
+          onClick={async () => {
+            await onSave(r.id, { addCuts: lines });
+            setText("");
+          }}
+        >
+          {lines.length
+            ? `Add ${lines.length} ${lines.length === 1 ? "short" : "shorts"}, ${lines.length} ${lines.length === 1 ? "credit" : "credits"}`
+            : "Add shorts"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function RequestDetail({
   req: r,
   board: b,
@@ -1398,6 +1454,10 @@ function RequestDetail({
         </Card>
 
         <Card title="Who and when">
+          {/* more shorts under this request, after the fact. Only off a top
+              level request: a cut cannot have cuts of its own. */}
+          {!r.parentId && <MoreShorts req={r} busy={busy} onSave={onSave} />}
+
           <div className="grid gap-3">
             <div>
               <p className="font-mono text-label uppercase text-dim">Producer</p>

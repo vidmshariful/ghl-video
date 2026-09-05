@@ -82,6 +82,31 @@ function cycleArgs(sub: Row) {
   };
 }
 
+/*
+ * What a cut is called. Off a long or mid edit it is "short cut N", the
+ * piece taken out of a bigger video. Off a short it is "short N+1": the
+ * parent is short one, and these are more shorts from the same footage.
+ */
+function cutTitle(parentTitle: string, parentType: string | null, i: number): string {
+  return parentType === "short"
+    ? `${parentTitle}, short ${i + 2}`
+    : `${parentTitle}, short cut ${i + 1}`;
+}
+
+/*
+ * Over plan, said to us rather than to them. The client's form has its own
+ * sentence, addressed to the client. On this side of the desk the reader
+ * is the producer, and what they need is the count and the conversation
+ * to have. Nothing is refused either way.
+ */
+function producerWarning(totalCost: number, left: number, planName: string): string | null {
+  if (totalCost <= left) return null;
+  return (
+    `This spends ${totalCost} ${totalCost === 1 ? "credit" : "credits"} and they have ${left} left on ${planName}. ` +
+    `It is in either way. Tell them it runs into next month, or sell them a top-up.`
+  );
+}
+
 function skuOf(sub: Row): string | null {
   return (
     ((sub.product as { sku?: string } | null)?.sku ??
@@ -338,7 +363,7 @@ export async function PATCH(req: Request) {
   const db = supabaseAdmin();
   const { data: before } = await db
     .from("order_deliverables")
-    .select("id, status, qc, assets_ready_at, cycle_id, video_url, title")
+    .select("id, status, qc, assets_ready_at, cycle_id, video_url, title, edit_type, parent_id, assets_url, requested_due_at")
     .eq("id", id)
     .maybeSingle();
   if (!before) return NextResponse.json({ error: "Not found." }, { status: 404 });
@@ -410,11 +435,89 @@ export async function PATCH(req: Request) {
       b.cancel && typeof b.cancelledReason === "string" ? b.cancelledReason.slice(0, 400) : null;
   }
 
-  if (!Object.keys(patch).length)
+  /*
+   * More shorts under a request that already exists.
+   *
+   * Beant Singh asked for three shorts in one short request. Cuts could only
+   * be added when a request was created, and only off long work, so the one
+   * case that needed it had no way in. One line per short; each becomes its
+   * own video under this request, in this month, costing one short credit,
+   * with its own review, exactly as a cut taken down at request time.
+   */
+  const addCuts = Array.isArray(b.addCuts)
+    ? (b.addCuts as unknown[])
+        .filter((c): c is string => typeof c === "string" && c.trim().length > 0)
+        .map((c) => c.trim().slice(0, 1000))
+        .slice(0, 10)
+    : [];
+  if (addCuts.length && before.parent_id)
+    return NextResponse.json({ error: "A short cut cannot have cuts of its own." }, { status: 400 });
+
+  if (!Object.keys(patch).length && !addCuts.length)
     return NextResponse.json({ error: "Nothing to change." }, { status: 400 });
 
-  const { error } = await db.from("order_deliverables").update(patch).eq("id", id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  if (Object.keys(patch).length) {
+    const { error } = await db.from("order_deliverables").update(patch).eq("id", id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+
+  let cutsMade = 0;
+  let cutWarning: string | null = null;
+  if (addCuts.length) {
+    const { data: cyc } = await db
+      .from("subscription_cycles")
+      .select("id, subscription_id, credits_allowed")
+      .eq("id", String(before.cycle_id))
+      .maybeSingle();
+    const { data: sub } = cyc
+      ? await db.from("subscriptions").select(SUB_FIELDS).eq("id", String(cyc.subscription_id)).maybeSingle()
+      : { data: null };
+    if (!cyc || !sub) return NextResponse.json({ error: "Could not find their plan." }, { status: 400 });
+
+    const { data: existing } = await db
+      .from("order_deliverables")
+      .select("id, credit_cost, cancelled_at")
+      .eq("cycle_id", String(cyc.id));
+    const standing = creditsUsed(
+      ((existing ?? []) as Row[]).map((v) => ({
+        creditCost: Number(v.credit_cost ?? 0),
+        cancelledAt: (v.cancelled_at as string | null) ?? null,
+      })),
+      Number(cyc.credits_allowed ?? 0),
+      await topupCreditsLeft(db, String(sub.id)),
+    );
+    const planName = (sub.plan_name as string | null) ?? planNameFor(skuOf(sub as Row));
+    const totalCost = addCuts.length * creditCost("short");
+    cutWarning = producerWarning(totalCost, standing.left, planName);
+
+    const now = new Date().toISOString();
+    const base = (existing ?? []).length;
+    const { error: cutError } = await db.from("order_deliverables").insert(
+      addCuts.map((instruction, i) => ({
+        cycle_id: String(before.cycle_id),
+        parent_id: id,
+        title: cutTitle(String(before.title), (before.edit_type as string | null) ?? null, i),
+        note: instruction,
+        edit_type: "short",
+        credit_cost: creditCost("short"),
+        form: "short",
+        status: "queued",
+        aspect: "9:16",
+        assets_url: (before.assets_url as string | null) ?? null,
+        requested_due_at: (before.requested_due_at as string | null) ?? null,
+        assets_ready_at: (before.assets_ready_at as string | null) ?? null,
+        requested_at: now,
+        position: base + i + 1,
+      })),
+    );
+    if (cutError) return NextResponse.json({ error: cutError.message }, { status: 400 });
+    cutsMade = addCuts.length;
+  }
+
+  /* cuts alone: nothing else changed on the parent, so the version and
+     notification work below has nothing to do */
+  if (!Object.keys(patch).length)
+    return NextResponse.json({ ok: true, cuts: cutsMade, warning: cutWarning });
 
   /*
    * A revised cut is a new cut, not a correction to the old one.
@@ -521,10 +624,12 @@ export async function POST(req: Request) {
       { status: 400 },
     );
 
-  /* short cuts, only ever off a long form request, exactly as the client form
-     builds them: each one is its own video with its own slot */
+  /* short cuts. Off a long or mid edit they are pieces of it; off a short
+     they are more shorts from the same footage. Either way each is its own
+     video, costing one short credit, with its own review. The client form
+     still offers them only off long work; here the producer decides. */
   const cuts =
-    editType !== "short" && Array.isArray(b.cuts)
+    Array.isArray(b.cuts)
       ? (b.cuts as unknown[])
           .map((c) => (typeof c === "string" ? c.trim().slice(0, 400) : ""))
           .filter(Boolean)
@@ -556,11 +661,7 @@ export async function POST(req: Request) {
    * than borrowed. Nothing is refused either way.
    */
   const totalCost = cost + cuts.length * creditCost("short");
-  const warning =
-    totalCost <= before.left
-      ? null
-      : `This spends ${totalCost} ${totalCost === 1 ? "credit" : "credits"} and they have ${before.left} left on ${planName}. ` +
-        `It is in either way. Tell them it runs into next month, or sell them a top-up.`;
+  const warning = producerWarning(totalCost, before.left, planName);
 
   const now = new Date().toISOString();
   /* footage we already have starts the promise clock now, the same stamp the
@@ -599,8 +700,12 @@ export async function POST(req: Request) {
       cuts.map((instruction, i) => ({
         cycle_id: cycle.id,
         parent_id: made.id,
-        title: `${title}, short cut ${i + 1}`,
+        title: cutTitle(title, editType, i),
         note: instruction,
+        /* the client path always wrote these; this path never did, so a cut
+           taken down here carried no type and cost the month nothing */
+        edit_type: "short",
+        credit_cost: creditCost("short"),
         form: "short",
         status: "queued",
         aspect: "9:16",
