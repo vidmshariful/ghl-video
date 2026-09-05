@@ -44,7 +44,7 @@ import {
   type EditingColumn,
   type Qc,
 } from "@/lib/editing-sop";
-import { EDIT_TIERS, creditCost, isPodcast } from "@/lib/editing-credits";
+import { EDIT_TIERS, creditCost, isPodcast, isBatch } from "@/lib/editing-credits";
 import {
   ItemNotes,
   KanbanBoard,
@@ -403,6 +403,7 @@ export function EditingBoard({ slug, onBack }: { slug: string; onBack: () => voi
         busy={busy}
         onSave={save}
         onBack={() => setOpen(null)}
+        onOpen={setOpen}
       />
     );
   }
@@ -920,12 +921,14 @@ function EditingJob({
   busy,
   onSave,
   onBack,
+  onOpen,
 }: {
   req: Req;
   board: Board;
   busy: boolean;
   onSave: (id: string, patch: Record<string, unknown>, optimistic?: Partial<Req>) => Promise<void>;
   onBack: () => void;
+  onOpen: (id: string) => void;
 }) {
   return (
     <div className="w-full">
@@ -943,7 +946,7 @@ function EditingJob({
       </div>
 
       <div className="mt-2">
-        <RequestDetail req={r} board={b} busy={busy} onSave={onSave}>
+        <RequestDetail req={r} board={b} busy={busy} onSave={onSave} onOpen={onOpen}>
           <ReviewRoom requestId={r.id} title={r.title} videoUrl={r.videoUrl ?? null} />
 
           {/* the same list the client sees on the request: their logo and
@@ -1216,7 +1219,7 @@ function MoreShorts({
   return (
     <div className="grid gap-3">
       <Field
-        label={r.editType === "short" ? "More shorts from the same footage" : "More short cuts from it"}
+        label={r.editType === "short" || isBatch(r.editType) ? "More shorts from the same footage" : "More short cuts from it"}
         hint="One per line. Each becomes its own video costing 1 credit, with its own review."
       >
         <Textarea
@@ -1250,8 +1253,11 @@ function RequestDetail({
   board: b,
   busy,
   onSave,
+  onOpen,
   children,
 }: {
+  /* opens one of this request's shorts as its own page */
+  onOpen?: (id: string) => void;
   /* the review room, resources and team notes: they are about this cut, so
      they sit in the work column under it, and the sidebar stays beside the
      whole stack instead of the page splitting into two widths */
@@ -1270,6 +1276,8 @@ function RequestDetail({
   const cuts = b.requests.filter((x) => x.parentId === r.id);
   const parent = r.parentId ? b.requests.find((x) => x.id === r.parentId) : null;
 
+  const cutsCredits = cuts.reduce((n, c) => n + c.creditCost, 0);
+
   return (
     <div className="grid gap-3 lg:grid-cols-[1fr_20rem] lg:items-start">
       <div className="grid min-w-0 gap-3">
@@ -1286,6 +1294,12 @@ function RequestDetail({
               </Chip>
             )}
             {r.aspect && <Chip tone="neutral">{r.aspect}</Chip>}
+            {isBatch(r.editType) && cuts.length > 0 && (
+              <Chip tone="neutral">
+                {cutsCredits} {cutsCredits === 1 ? "credit" : "credits"} in {cuts.length}{" "}
+                {cuts.length === 1 ? "short" : "shorts"}
+              </Chip>
+            )}
             {r.revisionRound > 0 && <Chip tone="warn">round {r.revisionRound + 1}</Chip>}
           </div>
 
@@ -1344,6 +1358,21 @@ function RequestDetail({
             title="Shorts under this request"
             description="Each is its own video, one credit, with its own review."
           >
+            {/* a request like "make 3 shorts from video 1" is a brief, not a
+                video: tick this and the request costs nothing itself while
+                each short below costs one credit */}
+            <label className="mb-4 flex cursor-pointer items-start gap-2.5 text-body-sm">
+              <input
+                type="checkbox"
+                checked={isBatch(r.editType)}
+                disabled={busy}
+                onChange={(e) => onSave(r.id, { batch: e.target.checked })}
+                className="mt-0.5 size-4 shrink-0 accent-[color:var(--green)]"
+              />
+              <span className="text-muted">
+                A batch of shorts: the request itself costs nothing, each short below costs one credit.
+              </span>
+            </label>
             {cuts.length > 0 && (
               <ul className="grid gap-2">
                 {cuts.map((c) => (
@@ -1352,8 +1381,20 @@ function RequestDetail({
                     className="flex flex-wrap items-start justify-between gap-3 border-t border-hair pt-2 first:border-t-0 first:pt-0"
                   >
                     <div className="min-w-0">
-                      <p className="text-body-sm font-semibold text-ink">{c.title}</p>
+                      {/* each short is its own request: its own cut, stage,
+                          checklist and review room live on its own page */}
+                      <button
+                        type="button"
+                        onClick={() => onOpen?.(c.id)}
+                        className="tap text-left text-body-sm font-semibold text-ink hover:text-gold"
+                      >
+                        {c.title}
+                      </button>
                       {c.brief && <p className="mt-0.5 text-body-sm text-muted">{c.brief}</p>}
+                      <p className="mt-0.5 font-mono text-label uppercase text-dim">
+                        {c.videoUrl ? "cut in" : "no cut yet"} / {c.creditCost}{" "}
+                        {c.creditCost === 1 ? "credit" : "credits"}
+                      </p>
                     </div>
                     <Chip tone={COLUMN_TONE[c.column]}>
                       {EDITING_COLUMNS.find((x) => x.key === c.column)?.label}

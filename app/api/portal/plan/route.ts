@@ -14,14 +14,7 @@ import {
   overPlanWarning,
 } from "@/lib/subscription-slots";
 import { ASPECTS, CLIENT_STATUS_WORD, columnFor, type Aspect } from "@/lib/editing-sop";
-import {
-  EDIT_TIERS,
-  TOPUP_PACKS,
-  creditCost,
-  isPodcast,
-  tierFor,
-  type EditType,
-} from "@/lib/editing-credits";
+import { EDIT_TIERS, TOPUP_PACKS, creditCost, isPodcast, tierFor, type EditType, typeLabelFor } from "@/lib/editing-credits";
 
 export const runtime = "nodejs";
 
@@ -89,7 +82,7 @@ function shapeVideo(v: Row) {
     state: CLIENT_STATUS_WORD[column] ?? status,
     column,
     editType: (v.edit_type as EditType | null) ?? null,
-    typeLabel: tierFor(String(v.edit_type ?? ""))?.label ?? null,
+    typeLabel: typeLabelFor(v.edit_type as string | null),
     creditCost: Number(v.credit_cost ?? 0),
     runtimeMinutes: v.runtime_minutes == null ? null : Number(v.runtime_minutes),
     aspect: (v.aspect as string | null) ?? null,

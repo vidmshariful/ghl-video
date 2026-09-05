@@ -30,6 +30,16 @@ import { StyleGuideView } from "./StyleGuideView";
 import { DownloadAll } from "@/components/portal/DownloadAll";
 import { Attachments } from "@/components/portal/Attachments";
 import { CLIENT_PHASES, defaultAspectFor, needsClient, phaseFor, stageFor } from "@/lib/editing-sop";
+
+/* What a request costs, as the client should read it. A batch costs nothing
+   itself and everything through the shorts inside it, so its card carries the
+   total of its shorts, and the shorts inside carry their own credit each. */
+function shownCredits(
+  v: { editType: string | null; creditCost: number },
+  cuts: { creditCost: number }[],
+): number {
+  return v.editType === "batch" ? cuts.reduce((n, c) => n + c.creditCost, 0) : v.creditCost;
+}
 import { PODCAST_TIERS, VIDEO_TIERS } from "@/lib/editing-credits";
 import { StageTimeline, WorkCard } from "@/components/portal/board";
 
@@ -972,7 +982,10 @@ export function EditingView({
                             title: v.title,
                             meta: [
                               v.typeLabel ?? null,
-                              v.creditCost ? creditWord(v.creditCost) : null,
+                              shownCredits(v, cuts) ? creditWord(shownCredits(v, cuts)) : null,
+                              v.editType === "batch" && cuts.length
+                                ? `${cuts.length} ${cuts.length === 1 ? "reel" : "reels"} inside`
+                                : null,
                               v.aspect,
                             ]
                               .filter(Boolean)
@@ -991,14 +1004,20 @@ export function EditingView({
                                 ? `you asked ${day(v.requestedDueAt)}`
                                 : null,
                             dueTone: v.dueAt ? "neutral" : "warn",
+                            /* a batch is not a video of its own, so its
+                               progress is its shorts alone */
                             progress: cuts.length
-                              ? `${cuts.filter((c) => c.status === "approved").length + (v.status === "approved" ? 1 : 0)}/${cuts.length + 1}`
+                              ? v.editType === "batch"
+                                ? `${cuts.filter((c) => c.status === "approved").length}/${cuts.length}`
+                                : `${cuts.filter((c) => c.status === "approved").length + (v.status === "approved" ? 1 : 0)}/${cuts.length + 1}`
                               : null,
                             progressPct: cuts.length
-                              ? ((cuts.filter((c) => c.status === "approved").length +
-                                  (v.status === "approved" ? 1 : 0)) /
-                                  (cuts.length + 1)) *
-                                100
+                              ? v.editType === "batch"
+                                ? (cuts.filter((c) => c.status === "approved").length / cuts.length) * 100
+                                : ((cuts.filter((c) => c.status === "approved").length +
+                                    (v.status === "approved" ? 1 : 0)) /
+                                    (cuts.length + 1)) *
+                                  100
                               : null,
                           }}
                           tone={stageFor(v.column).tone}
@@ -1014,7 +1033,13 @@ export function EditingView({
                                     id: c.id,
                                     column: c.column,
                                     title: c.title,
-                                    meta: ["cut", c.aspect].filter(Boolean).join(" / "),
+                                    meta: [
+                                      v.editType === "batch" ? "short" : "cut",
+                                      c.creditCost ? creditWord(c.creditCost) : null,
+                                      c.aspect,
+                                    ]
+                                      .filter(Boolean)
+                                      .join(" / "),
                                     tag: stageFor(c.column).label,
                                   }}
                                   tone={stageFor(c.column).tone}

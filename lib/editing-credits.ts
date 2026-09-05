@@ -193,3 +193,17 @@ export const TOPUP_PACKS = [
 ] as const;
 
 export const topupPack = (sku: string) => TOPUP_PACKS.find((p) => p.sku === sku) ?? null;
+
+/*
+ * A batch: a request that is a container for shorts and costs nothing
+ * itself. Beant Singh asked for three shorts in one request; the request is
+ * the brief, the shorts under it are the work, and each short spends its
+ * own credit. "batch" is not a tier, so tierFor returns null and creditCost
+ * returns 0, which is exactly the arithmetic a container needs.
+ */
+export const BATCH_TYPE = "batch";
+export const isBatch = (type: string | null | undefined): boolean => type === BATCH_TYPE;
+export function typeLabelFor(type: string | null | undefined): string | null {
+  if (isBatch(type)) return "Batch of shorts";
+  return tierFor(String(type ?? ""))?.label ?? null;
+}

@@ -8,7 +8,7 @@ import {
   topupCreditsLeft,
 } from "@/lib/subscription-cycles";
 import { creditsUsed, queueOrder } from "@/lib/subscription-slots";
-import { creditCost, tierFor, type EditType } from "@/lib/editing-credits";
+import { BATCH_TYPE, creditCost, isBatch, tierFor, typeLabelFor, type EditType } from "@/lib/editing-credits";
 import { ASPECTS, columnFor, qcPassed, type Aspect, type Qc } from "@/lib/editing-sop";
 import { DELIVERABLE_STATUSES, type DeliverableStatus } from "@/lib/deliverable-status";
 
@@ -88,9 +88,10 @@ function cycleArgs(sub: Row) {
  * parent is short one, and these are more shorts from the same footage.
  */
 function cutTitle(parentTitle: string, parentType: string | null, i: number): string {
-  return parentType === "short"
-    ? `${parentTitle}, short ${i + 2}`
-    : `${parentTitle}, short cut ${i + 1}`;
+  if (parentType === "short") return `${parentTitle}, short ${i + 2}`;
+  /* under a batch the request is the brief, not short one */
+  if (isBatch(parentType)) return `${parentTitle}, short ${i + 1}`;
+  return `${parentTitle}, short cut ${i + 1}`;
 }
 
 /*
@@ -124,7 +125,7 @@ function shape(d: Row) {
     brief: (d.note as string | null) ?? null,
     status: String(d.status),
     editType: (d.edit_type as EditType | null) ?? null,
-    typeLabel: tierFor(String(d.edit_type ?? ""))?.label ?? null,
+    typeLabel: typeLabelFor(d.edit_type as string | null),
     creditCost: Number(d.credit_cost ?? 0),
     runtimeMinutes: d.runtime_minutes == null ? null : Number(d.runtime_minutes),
     aspect: (d.aspect as string | null) ?? null,
@@ -433,6 +434,24 @@ export async function PATCH(req: Request) {
     patch.cancelled_at = b.cancel ? new Date().toISOString() : null;
     patch.cancelled_reason =
       b.cancel && typeof b.cancelledReason === "string" ? b.cancelledReason.slice(0, 400) : null;
+  }
+
+  /*
+   * A batch: the request is the brief and costs nothing itself; the shorts
+   * under it are the work and each spends a credit. Only a top level request
+   * can be one. Ticking it off returns the request to a one credit short,
+   * the only kind of request a batch is ever made from.
+   */
+  if (typeof b.batch === "boolean") {
+    if (before.parent_id)
+      return NextResponse.json({ error: "A cut cannot be a batch." }, { status: 400 });
+    if (b.batch) {
+      patch.edit_type = BATCH_TYPE;
+      patch.credit_cost = 0;
+    } else if (isBatch((before.edit_type as string | null) ?? null)) {
+      patch.edit_type = "short";
+      patch.credit_cost = creditCost("short");
+    }
   }
 
   /*
