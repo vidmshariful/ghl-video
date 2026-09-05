@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getActiveProductBySku } from "@/lib/checkout/products";
 import { resolveSelectedBumps } from "@/lib/checkout/bumps";
 import { checkCoupon } from "@/lib/checkout/coupons";
-import { orderTotalCents } from "@/lib/checkout/money-rules";
+import { orderTotalCents, MIN_CHARGE_CENTS, minimumChargeProblem } from "@/lib/checkout/money-rules";
 import {
   fpTidFromCookieHeader,
   refFromCookieHeader,
@@ -144,10 +144,17 @@ export async function POST(req: Request) {
     bumpsCents,
     discountCents,
   });
-  if (amountCents < 50) {
-    // Stripe's charge minimum; unreachable with the DB's discount bounds,
-    // kept as a hard floor anyway.
-    return NextResponse.json({ error: "Could not complete checkout." }, { status: 400 });
+  if (amountCents < MIN_CHARGE_CENTS) {
+    // Stripe's charge minimum. The old note here called this unreachable
+    // because of the database's discount bounds. Percent codes are capped
+    // at 90% there; a fixed amount is not capped against any price, so it
+    // was reachable all along, and it answered with nothing to go on. The
+    // coupon route now refuses such a code when it is applied; this stays
+    // as the hard floor and says the same thing if anything slips past.
+    return NextResponse.json(
+      { error: minimumChargeProblem(amountCents + Math.max(0, discountCents), discountCents) ?? "Could not complete checkout." },
+      { status: 400 },
+    );
   }
 
   const db = supabaseAdmin();

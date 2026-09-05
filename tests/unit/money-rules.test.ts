@@ -5,6 +5,7 @@ import {
   discountFor,
   isAmountMismatch,
   isPlausibleCouponCode,
+  minimumChargeProblem,
   orderTotalCents,
   type CouponTerms,
 } from "@/lib/checkout/money-rules";
@@ -202,5 +203,26 @@ describe("catching a charge that does not match the order", () => {
       false,
     );
     assert.equal(isAmountMismatch({ ...base, expectedCurrency: null }), false);
+  });
+});
+
+/*
+ * $96 off a $97 product worked; $97 off did not, with a generic error. The
+ * floor is Stripe's 50 cent minimum, judged on the resulting total.
+ */
+describe("minimumChargeProblem", () => {
+  test("$96 off $97 leaves a dollar and passes", () => {
+    assert.equal(minimumChargeProblem(9700, 9600), null);
+  });
+  test("$97 off $97 leaves nothing and is refused with a reason", () => {
+    const why = minimumChargeProblem(9700, 9700);
+    assert.ok(why && /\$0\.50/.test(why));
+  });
+  test("exactly 50 cents left is allowed, 49 is not", () => {
+    assert.equal(minimumChargeProblem(9700, 9650), null);
+    assert.ok(minimumChargeProblem(9700, 9651));
+  });
+  test("a 90% code on the cheapest product still passes", () => {
+    assert.equal(minimumChargeProblem(9700, discountFor({ percent_off: 90 } as CouponTerms, 9700)), null);
   });
 });

@@ -206,7 +206,7 @@ function CouponForm({
           </label>
         ) : (
           <label>
-            <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Dollars off</span>
+            <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Dollars off (must leave at least $0.50 to pay on the product)</span>
             <Input
               type="number"
               min={1}

@@ -77,6 +77,25 @@ export function discountFor(c: CouponTerms, baseCents: number): number {
  * why it cannot simply be subtracted from the sum: a percentage coupon large
  * enough would otherwise start discounting the add-ons too.
  */
+/*
+ * Stripe will not charge a card less than this. A code that takes an order
+ * below it cannot be paid by card at all, so it is refused when applied
+ * rather than failing at pay time with nothing to say.
+ *
+ * Tested on the resulting total, not the kind of code: percent codes are
+ * capped at 90% in the database, but a fixed amount has no ceiling against
+ * any price, so $97 off a $97 product was reaching the pay button reading
+ * "Pay $0" and then dying on the floor below with a generic error. $96 off
+ * the same product leaves $1.00 and always worked. Same rule, one dollar
+ * apart.
+ */
+export const MIN_CHARGE_CENTS = 50;
+
+export function minimumChargeProblem(baseCents: number, discountCents: number): string | null {
+  if (baseCents - discountCents >= MIN_CHARGE_CENTS) return null;
+  return "That code would take this order below the $0.50 card minimum, so it cannot be applied here. Use a code that leaves at least $0.50 to pay, or email hi@ghlvideo.com and we will set the order up by hand.";
+}
+
 export function orderTotalCents(parts: {
   basePriceCents: number;
   bumpsCents: number;

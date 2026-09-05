@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getActiveProductBySku } from "@/lib/checkout/products";
 import { checkCoupon, checkCouponForSubscription, couponLabel } from "@/lib/checkout/coupons";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
+import { minimumChargeProblem } from "@/lib/checkout/money-rules";
 
 export const runtime = "nodejs";
 
@@ -60,10 +61,15 @@ export async function POST(req: Request) {
   if (!chk.ok) {
     return NextResponse.json({ valid: false, reason: chk.reason });
   }
+  const discountCents = chk.discountFor(product.price_cents);
+  /* the card minimum, checked on the base price alone: add-ons only ever
+     add, and a code that zeroes the video is refused whatever is bolted on */
+  const floor = minimumChargeProblem(product.price_cents, discountCents);
+  if (floor) return NextResponse.json({ valid: false, reason: floor });
   return NextResponse.json({
     valid: true,
     code: chk.code,
     label: chk.label,
-    discountCents: chk.discountFor(product.price_cents),
+    discountCents,
   });
 }
