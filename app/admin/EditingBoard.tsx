@@ -942,26 +942,26 @@ function EditingJob({
         <EditDetails req={r} onSave={onSave} busy={busy} />
       </div>
 
-      <div className="mt-2 grid gap-5">
-        <RequestDetail req={r} board={b} busy={busy} onSave={onSave} />
+      <div className="mt-2">
+        <RequestDetail req={r} board={b} busy={busy} onSave={onSave}>
+          <ReviewRoom requestId={r.id} title={r.title} videoUrl={r.videoUrl ?? null} />
 
-        <ReviewRoom requestId={r.id} title={r.title} videoUrl={r.videoUrl ?? null} />
+          {/* the same list the client sees on the request: their logo and
+              images come in here, and anything we hand back goes out the same
+              way. An editor opening this should not have to go looking through
+              email for the logo. */}
+          <Attachments
+            endpoint={`/api/admin/projects/files?deliverableId=${r.id}`}
+            extraFields={{ deliverableId: r.id }}
+            viewer="studio"
+            title="Resources for this video"
+            description="What the client sent to be used in the cut, and anything we send back."
+            empty="Nothing attached to this one."
+            authedFetch={adminFetch}
+          />
 
-        {/* the same list the client sees on the request: their logo and
-            images come in here, and anything we hand back goes out the same
-            way. An editor opening this should not have to go looking through
-            email for the logo. */}
-        <Attachments
-          endpoint={`/api/admin/projects/files?deliverableId=${r.id}`}
-          extraFields={{ deliverableId: r.id }}
-          viewer="studio"
-          title="Resources for this video"
-          description="What the client sent to be used in the cut, and anything we send back."
-          empty="Nothing attached to this one."
-          authedFetch={adminFetch}
-        />
-
-        <ItemNotes target={{ deliverableId: r.id }} authHeader={authHeader} />
+          <ItemNotes target={{ deliverableId: r.id }} authHeader={authHeader} />
+        </RequestDetail>
       </div>
     </div>
   );
@@ -1250,7 +1250,12 @@ function RequestDetail({
   board: b,
   busy,
   onSave,
+  children,
 }: {
+  /* the review room, resources and team notes: they are about this cut, so
+     they sit in the work column under it, and the sidebar stays beside the
+     whole stack instead of the page splitting into two widths */
+  children?: React.ReactNode;
   req: Req;
   board: Board;
   busy: boolean;
@@ -1330,29 +1335,63 @@ function RequestDetail({
           </dl>
         </Card>
 
-        {cuts.length > 0 && (
+        {/* Shorts under this request: the ones already taken down, then the
+            box to add more. One place for the request's scope, rather than the
+            add box living under Producer where it had nothing to do. A cut
+            cannot have cuts of its own, so a cut shows nothing here. */}
+        {!r.parentId && (
           <Card
-            title="Short cuts from this video"
-            description="Each one is its own video with its own slot, review and approval."
+            title="Shorts under this request"
+            description="Each is its own video, one credit, with its own review."
           >
-            <ul className="grid gap-2">
-              {cuts.map((c) => (
-                <li
-                  key={c.id}
-                  className="flex flex-wrap items-start justify-between gap-3 border-t border-hair pt-2 first:border-t-0 first:pt-0"
-                >
-                  <div className="min-w-0">
-                    <p className="text-body-sm font-semibold text-ink">{c.title}</p>
-                    {c.brief && <p className="mt-0.5 text-body-sm text-muted">{c.brief}</p>}
-                  </div>
-                  <Chip tone={COLUMN_TONE[c.column]}>
-                    {EDITING_COLUMNS.find((x) => x.key === c.column)?.label}
-                  </Chip>
-                </li>
-              ))}
-            </ul>
+            {cuts.length > 0 && (
+              <ul className="grid gap-2">
+                {cuts.map((c) => (
+                  <li
+                    key={c.id}
+                    className="flex flex-wrap items-start justify-between gap-3 border-t border-hair pt-2 first:border-t-0 first:pt-0"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-body-sm font-semibold text-ink">{c.title}</p>
+                      {c.brief && <p className="mt-0.5 text-body-sm text-muted">{c.brief}</p>}
+                    </div>
+                    <Chip tone={COLUMN_TONE[c.column]}>
+                      {EDITING_COLUMNS.find((x) => x.key === c.column)?.label}
+                    </Chip>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className={cuts.length > 0 ? "mt-4 border-t border-hair pt-4" : ""}>
+              <MoreShorts req={r} busy={busy} onSave={onSave} />
+            </div>
           </Card>
         )}
+
+        <Card
+          title="The cut"
+          description="Pasting a link does not send it. Moving to Review does. Paste the revision over the top when it is ready: the cut it replaces is kept, so their notes stay attached to the round they were written on."
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="min-w-[16rem] flex-1">
+              <Input
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="https://..."
+                aria-label="Link to the cut"
+              />
+            </div>
+            <Button
+              variant="secondary"
+              disabled={busy || url === (r.videoUrl ?? "")}
+              onClick={() => onSave(r.id, { videoUrl: url })}
+            >
+              Save link
+            </Button>
+          </div>
+
+          <Cuts requestId={r.id} current={r.videoUrl ?? null} />
+        </Card>
 
         <Card
           title="Before it goes to the client"
@@ -1387,31 +1426,8 @@ function RequestDetail({
           )}
         </Card>
 
-        <Card
-          title="The cut"
-          description="Pasting a link does not send it. Moving to Review does. Paste the revision over the top when it is ready: the cut it replaces is kept, so their notes stay attached to the round they were written on."
-        >
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="min-w-[16rem] flex-1">
-              <Input
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://..."
-                aria-label="Link to the cut"
-              />
-            </div>
-            <Button
-              variant="secondary"
-              disabled={busy || url === (r.videoUrl ?? "")}
-              onClick={() => onSave(r.id, { videoUrl: url })}
-            >
-              Save link
-            </Button>
-          </div>
 
-          <Cuts requestId={r.id} current={r.videoUrl ?? null} />
-        </Card>
-
+        {children}
       </div>
 
       <div className="grid gap-3">
@@ -1454,10 +1470,6 @@ function RequestDetail({
         </Card>
 
         <Card title="Who and when">
-          {/* more shorts under this request, after the fact. Only off a top
-              level request: a cut cannot have cuts of its own. */}
-          {!r.parentId && <MoreShorts req={r} busy={busy} onSave={onSave} />}
-
           <div className="grid gap-3">
             <div>
               <p className="font-mono text-label uppercase text-dim">Producer</p>
@@ -1519,26 +1531,26 @@ function RequestDetail({
           </div>
         </Card>
 
+        {/* the one destructive thing, kept quiet: a line at the foot of the
+            sidebar, not a card that reads as a step in the work */}
         {!r.cancelledAt && (
-          <Card title="Cancel this request">
-            <p className="text-body-sm text-muted">
-              The request stays readable and its slot goes back to the month.
+          <div className="border-t border-hair px-1 pt-3">
+            <Button
+              variant="danger"
+              size="sm"
+              disabled={busy}
+              onClick={() => {
+                const why = window.prompt("Why is it cancelled? The client sees this.");
+                if (why === null) return;
+                void onSave(r.id, { cancel: true, cancelledReason: why });
+              }}
+            >
+              Cancel and return the slot
+            </Button>
+            <p className="mt-2 text-body-sm text-dim">
+              It stays readable and its slot goes back to the month.
             </p>
-            <div className="mt-3">
-              <Button
-                variant="danger"
-                size="sm"
-                disabled={busy}
-                onClick={() => {
-                  const why = window.prompt("Why is it cancelled? The client sees this.");
-                  if (why === null) return;
-                  void onSave(r.id, { cancel: true, cancelledReason: why });
-                }}
-              >
-                Cancel and return the slot
-              </Button>
-            </div>
-          </Card>
+          </div>
         )}
       </div>
     </div>
