@@ -148,7 +148,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       title: `A reply on ${video.title}`,
       body: summary,
       /* a plan video lives on the editing screen, not under My videos */
-      href: video.cycle_id ? "editing" : "videos",
+      /* "editing" is not a portal section, so that click did nothing for plan
+         work. The plan screen lives under subscriptions; a project under
+         projects. */
+      href: video.cycle_id ? "subscriptions" : video.project_id ? "projects" : "videos",
       vars: { video_title: String(video.title), summary },
       feature: video.cycle_id ? "subscriptions" : "orders",
     });

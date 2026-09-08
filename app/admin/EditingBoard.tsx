@@ -599,6 +599,12 @@ function AddRequest({
                 value={d.editType}
                 onChange={(e) => set("editType", e.target.value)}
               >
+                {/* a batch is not a tier, so without this the select went blank */}
+                {d.editType === "batch" && (
+                  <option value="batch" disabled>
+                    Batch of shorts
+                  </option>
+                )}
                 {EDIT_TIERS.map((t) => (
                   <option key={t.key} value={t.key}>
                     {t.label}

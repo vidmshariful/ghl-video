@@ -379,6 +379,17 @@ export async function PATCH(req: Request) {
      * the checklist is enforced rather than merely offered, because a
      * checklist nobody has to pass is decoration.
      */
+    /* a batch is the brief, not a video: it has no cut and no checklist, so
+       Review and Approved belong to its shorts, not to it */
+    if (
+      (b.status === "ready" || b.status === "approved") &&
+      isBatch((before.edit_type as string | null) ?? null)
+    ) {
+      return NextResponse.json(
+        { error: "A batch is the brief, not a video. Send its shorts to the client instead." },
+        { status: 400 },
+      );
+    }
     if (b.status === "ready" && !qcPassed((before.qc as Qc) ?? {})) {
       return NextResponse.json(
         { error: "Run the QC checks before this goes to the client." },
@@ -434,6 +445,15 @@ export async function PATCH(req: Request) {
     patch.cancelled_at = b.cancel ? new Date().toISOString() : null;
     patch.cancelled_reason =
       b.cancel && typeof b.cancelledReason === "string" ? b.cancelledReason.slice(0, 400) : null;
+    /* the shorts go with their request. Cancelling a request used to leave
+       its shorts live, still on the board and still charging the month. */
+    if (b.cancel && !before.parent_id) {
+      await db
+        .from("order_deliverables")
+        .update({ cancelled_at: patch.cancelled_at, cancelled_reason: patch.cancelled_reason })
+        .eq("parent_id", id)
+        .is("cancelled_at", null);
+    }
   }
 
   /* one email and one bell for the whole set of shorts, on the producer's

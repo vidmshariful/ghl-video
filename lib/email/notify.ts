@@ -934,24 +934,16 @@ export async function sendVideoReplyEmail(
   message: string,
 ): Promise<void> {
   try {
-    const { data: d } = await db
-      .from("order_deliverables")
-      .select("title, order_id")
-      .eq("id", deliverableId)
-      .maybeSingle();
-    if (!d) return;
-    const { data: o } = await db
-      .from("orders")
-      .select("customer_email, customers(name)")
-      .eq("id", d.order_id)
-      .maybeSingle();
-    if (!o?.customer_email) return;
-    const name = (o.customers as any)?.name ?? "there";
-    await sendTemplateToTeam(db, "video_reply", { email: o.customer_email as string, name: name }, {
-      customer_name: escapeHtml(name),
-      video_title: escapeHtml(d.title as string),
+    /* by whoever owns the video: an order, a custom project or a plan. This
+       looked the client up through the order only, so a plan or project
+       client whose note we answered never got the email. */
+    const to = await recipientFor(db, deliverableId);
+    if (!to) return;
+    await sendTemplateToTeam(db, "video_reply", { email: to.email, name: to.name }, {
+      customer_name: escapeHtml(to.name),
+      video_title: escapeHtml(to.title),
       message: escapeHtml(message.slice(0, 600)),
-      portal_url: videosUrl(),
+      portal_url: to.url,
     }, "messages");
   } catch (e) {
     console.error("[email] video_reply failed:", e instanceof Error ? e.message : e);
