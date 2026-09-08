@@ -336,6 +336,8 @@ export function EditingBoard({ slug, onBack }: { slug: string; onBack: () => voi
       } else {
         /* an over-plan note is information, not a failure: the work is in */
         if (typeof j.warning === "string" && j.warning) setErr(j.warning);
+        if (typeof j.notified === "number" && j.notified > 0)
+          setErr(`Told them: ${j.notified} ${j.notified === 1 ? "short is" : "shorts are"} ready.`);
         if (optimistic) void load();
         else await load();
       }
@@ -475,15 +477,24 @@ export function EditingBoard({ slug, onBack }: { slug: string; onBack: () => voi
         <div className="min-w-[72rem]">
           <KanbanBoard
             columns={BOARD_COLUMNS}
-            items={live.map(
-              (r): BoardItem => ({
+            items={live
+              .filter((r) => !r.parentId)
+              .map((r): BoardItem => {
+                /* a short is part of its request, not a card of its own. Each
+                   line typed into "more shorts" was becoming a separate card
+                   and the board read as three requests instead of one. */
+                const kids = live.filter((k) => k.parentId === r.id);
+                const done = kids.filter((k) => k.status === "ready" || k.status === "approved").length;
+                const notes = r.openNotes + kids.reduce((n, k) => n + k.openNotes, 0);
+                const kidCredits = kids.reduce((n, k) => n + k.creditCost, 0);
+                return {
                 id: r.id,
                 column: r.column,
                 title: r.title,
                 meta: [
-                  r.parentId ? "cut" : null,
                   r.typeLabel ?? "edit",
-                  r.creditCost ? `${r.creditCost} cr` : null,
+                  kids.length ? `${kids.length} ${kids.length === 1 ? "short" : "shorts"}` : null,
+                  r.creditCost || kidCredits ? `${r.creditCost + kidCredits} cr` : null,
                   r.aspect,
                   mins(r.targetSeconds),
                 ]
@@ -492,10 +503,13 @@ export function EditingBoard({ slug, onBack }: { slug: string; onBack: () => voi
                 assignee: r.assignedTo,
                 /* the thing that went wrong before this existed: three notes
                    from a client sat unread for a day, and the board looked
-                   exactly the same as it had the day before */
-                alert: r.openNotes
-                  ? `${r.openNotes} ${r.openNotes === 1 ? "note" : "notes"} to answer`
+                   exactly the same as it had the day before. Notes on the
+                   shorts count here too, or feedback on a short is invisible. */
+                alert: notes
+                  ? `${notes} ${notes === 1 ? "note" : "notes"} to answer`
                   : null,
+                progress: kids.length ? `${done}/${kids.length}` : null,
+                progressPct: kids.length ? (done / kids.length) * 100 : null,
                 /* the client nearly always sent a link, so the ball is ours
                    to check it. Only a request with no link at all is on them. */
                 warn:
@@ -505,8 +519,8 @@ export function EditingBoard({ slug, onBack }: { slug: string; onBack: () => voi
                       : "no footage yet"
                     : null,
                 ...dueChip(r),
-              }),
-            )}
+                };
+              })}
             onOpen={setOpen}
             onMove={async (reqId, to) => {
               const item = b.requests.find((x) => x.id === reqId);
@@ -947,7 +961,11 @@ function EditingJob({
 
       <div className="mt-2">
         <RequestDetail req={r} board={b} busy={busy} onSave={onSave} onOpen={onOpen}>
-          <ReviewRoom requestId={r.id} title={r.title} videoUrl={r.videoUrl ?? null} />
+          {/* a batch is the brief, not a video: its shorts each carry their own
+              review room inside the page above */}
+          {!isBatch(r.editType) && (
+            <ReviewRoom requestId={r.id} title={r.title} videoUrl={r.videoUrl ?? null} />
+          )}
 
           {/* the same list the client sees on the request: their logo and
               images come in here, and anything we hand back goes out the same
@@ -1248,6 +1266,127 @@ function MoreShorts({
   );
 }
 
+/*
+ * One short, in full, inside its request's page.
+ *
+ * Beant's team pasted short one's link onto the request itself because the
+ * only place to put it was a page they could not find. This is that place:
+ * the link, the six checks, the stage, and the short's own review room and
+ * versions, all under the request they belong to.
+ */
+function ShortPanel({
+  short: c,
+  busy,
+  onSave,
+  onOpen,
+}: {
+  short: Req;
+  busy: boolean;
+  onSave: (id: string, patch: Record<string, unknown>, optimistic?: Partial<Req>) => Promise<void>;
+  onOpen?: (id: string) => void;
+}) {
+  const [url, setUrl] = useState(c.videoUrl ?? "");
+  const missing = QC_CHECKS.filter((q) => !c.qc[q.key]);
+  const canSend = c.status !== "ready" && c.status !== "approved" && Boolean(c.videoUrl) && missing.length === 0;
+  return (
+    <div id={`short-${c.id}`} className="scroll-mt-24">
+    <Card
+      title={c.title}
+      description={c.brief ?? undefined}
+      actions={
+        <div className="flex flex-wrap items-center gap-2">
+          <Chip tone={COLUMN_TONE[c.column]}>
+            {EDITING_COLUMNS.find((x) => x.key === c.column)?.label}
+          </Chip>
+          {onOpen && (
+            <button
+              type="button"
+              onClick={() => onOpen(c.id)}
+              className="tap font-mono text-label uppercase text-dim hover:text-gold"
+            >
+              Open on its own
+            </button>
+          )}
+        </div>
+      }
+    >
+      <div className="grid gap-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="min-w-[16rem] flex-1">
+            <Input
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://..."
+              aria-label={`Link to the cut of ${c.title}`}
+            />
+          </div>
+          <Button
+            variant="secondary"
+            disabled={busy || url === (c.videoUrl ?? "")}
+            onClick={() => onSave(c.id, { videoUrl: url })}
+          >
+            Save link
+          </Button>
+        </div>
+
+        <div className="grid gap-1.5">
+          {QC_CHECKS.map((q) => (
+            <label key={q.key} className="flex cursor-pointer items-start gap-2.5 text-body-sm">
+              <input
+                type="checkbox"
+                checked={Boolean(c.qc[q.key])}
+                disabled={busy}
+                onChange={(e) =>
+                  onSave(c.id, { qc: { [q.key]: e.target.checked } }, { qc: { ...c.qc, [q.key]: e.target.checked } })
+                }
+                className="mt-0.5 size-4 shrink-0 accent-[color:var(--green)]"
+              />
+              <span className={c.qc[q.key] ? "text-dim line-through" : "text-muted"}>{q.label}</span>
+            </label>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="min-w-[12rem]">
+            <Select
+              value={c.status}
+              disabled={busy}
+              aria-label={`Stage of ${c.title}`}
+              onChange={(e) => onSave(c.id, { status: e.target.value }, { status: e.target.value })}
+            >
+              <option value="queued">Edit request</option>
+              <option value="in_production">In progress</option>
+              <option value="ready">Review</option>
+              <option value="revisions">Changes</option>
+              <option value="approved">Approved</option>
+            </Select>
+          </div>
+          <Button
+            variant="brand"
+            size="sm"
+            disabled={busy || !canSend}
+            onClick={() => onSave(c.id, { status: "ready" }, { status: "ready" })}
+          >
+            Send to client
+          </Button>
+          {!c.videoUrl ? (
+            <span className="text-body-sm text-dim">Paste the link first.</span>
+          ) : missing.length ? (
+            <span className="text-body-sm text-gold">{missing.length} still to check.</span>
+          ) : null}
+        </div>
+
+        <Cuts requestId={c.id} current={c.videoUrl ?? null} />
+      </div>
+
+      <div className="mt-4">
+        <ReviewRoom requestId={c.id} title={c.title} videoUrl={c.videoUrl ?? null} />
+      </div>
+    </Card>
+    </div>
+  );
+}
+
 function RequestDetail({
   req: r,
   board: b,
@@ -1385,7 +1524,9 @@ function RequestDetail({
                           checklist and review room live on its own page */}
                       <button
                         type="button"
-                        onClick={() => onOpen?.(c.id)}
+                        onClick={() =>
+                          document.getElementById(`short-${c.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" })
+                        }
                         className="tap text-left text-body-sm font-semibold text-ink hover:text-gold"
                       >
                         {c.title}
@@ -1406,9 +1547,33 @@ function RequestDetail({
             <div className={cuts.length > 0 ? "mt-4 border-t border-hair pt-4" : ""}>
               <MoreShorts req={r} busy={busy} onSave={onSave} />
             </div>
+            {cuts.some((c) => c.status === "ready" && c.videoUrl) && (
+              <div className="mt-4 border-t border-hair pt-4">
+                <Button
+                  variant="brand"
+                  size="sm"
+                  disabled={busy}
+                  onClick={() => onSave(r.id, { notifyClient: true })}
+                >
+                  Tell them {cuts.filter((c) => c.status === "ready" && c.videoUrl).length} of the shorts are ready
+                </Button>
+                <p className="mt-2 text-body-sm text-dim">
+                  One email and one bell for the set. A short in Review under a batch does not mail on its own.
+                </p>
+              </div>
+            )}
           </Card>
         )}
 
+        {/* every short, in full, inside its request: the link, the checklist,
+            the stage and the review room. Opening each as its own page is
+            still possible, but it is no longer the only way. */}
+        {cuts.map((c) => (
+          <ShortPanel key={c.id} short={c} busy={busy} onSave={onSave} onOpen={onOpen} />
+        ))}
+
+        {!isBatch(r.editType) && (
+          <>
         <Card
           title="The cut"
           description="Pasting a link does not send it. Moving to Review does. Paste the revision over the top when it is ready: the cut it replaces is kept, so their notes stay attached to the round they were written on."
@@ -1466,7 +1631,8 @@ function RequestDetail({
             </p>
           )}
         </Card>
-
+          </>
+        )}
 
         {children}
       </div>

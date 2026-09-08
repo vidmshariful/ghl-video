@@ -436,6 +436,12 @@ export async function PATCH(req: Request) {
       b.cancel && typeof b.cancelledReason === "string" ? b.cancelledReason.slice(0, 400) : null;
   }
 
+  /* one email and one bell for the whole set of shorts, on the producer's
+     say-so rather than once per short */
+  const notifyClient = b.notifyClient === true;
+  if (notifyClient && before.parent_id)
+    return NextResponse.json({ error: "Notify from the request, not from a short." }, { status: 400 });
+
   /*
    * A batch: the request is the brief and costs nothing itself; the shorts
    * under it are the work and each spends a credit. Only a top level request
@@ -472,7 +478,7 @@ export async function PATCH(req: Request) {
   if (addCuts.length && before.parent_id)
     return NextResponse.json({ error: "A short cut cannot have cuts of its own." }, { status: 400 });
 
-  if (!Object.keys(patch).length && !addCuts.length)
+  if (!Object.keys(patch).length && !addCuts.length && !notifyClient)
     return NextResponse.json({ error: "Nothing to change." }, { status: 400 });
 
   if (Object.keys(patch).length) {
@@ -533,10 +539,27 @@ export async function PATCH(req: Request) {
     cutsMade = addCuts.length;
   }
 
-  /* cuts alone: nothing else changed on the parent, so the version and
-     notification work below has nothing to do */
+  let notified = 0;
+  if (notifyClient) {
+    const { data: kids } = await db
+      .from("order_deliverables")
+      .select("id, status, video_url, cancelled_at")
+      .eq("parent_id", id);
+    notified = ((kids ?? []) as Row[]).filter(
+      (k) => k.status === "ready" && k.video_url && !k.cancelled_at,
+    ).length;
+    if (!isBatch((before.edit_type as string | null) ?? null) && before.status === "ready" && before.video_url)
+      notified += 1;
+    if (!notified)
+      return NextResponse.json({ error: "Nothing is in Review yet, so there is nothing to tell them." }, { status: 400 });
+    const { sendShortsReadyEmail } = await import("@/lib/email/notify");
+    await sendShortsReadyEmail(db, id, notified);
+  }
+
+  /* cuts or a notify alone: nothing else changed on the parent, so the
+     version and notification work below has nothing to do */
   if (!Object.keys(patch).length)
-    return NextResponse.json({ ok: true, cuts: cutsMade, warning: cutWarning });
+    return NextResponse.json({ ok: true, cuts: cutsMade, warning: cutWarning, notified });
 
   /*
    * A revised cut is a new cut, not a correction to the old one.
@@ -568,8 +591,22 @@ export async function PATCH(req: Request) {
    * way IN so re-saving a ready video does not mail them twice.
    */
   if (patch.status === "ready" && before.status !== "ready") {
-    const { sendVideoReadyEmail } = await import("@/lib/email/notify");
-    await sendVideoReadyEmail(db, id);
+    /* a short under a batch does not mail on its own: three shorts moved to
+       Ready three minutes apart sent the client three emails. The batch's
+       own button sends one for the set. */
+    let underBatch = false;
+    if (before.parent_id) {
+      const { data: parent } = await db
+        .from("order_deliverables")
+        .select("edit_type")
+        .eq("id", String(before.parent_id))
+        .maybeSingle();
+      underBatch = isBatch((parent?.edit_type as string | null) ?? null);
+    }
+    if (!underBatch) {
+      const { sendVideoReadyEmail } = await import("@/lib/email/notify");
+      await sendVideoReadyEmail(db, id);
+    }
   }
 
   return NextResponse.json({ ok: true });

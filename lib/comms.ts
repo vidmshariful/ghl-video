@@ -107,7 +107,7 @@ export const COMM_ACTIONS: CommAction[] = [
     when: "The studio moves a video into Ready.",
     mode: "automatic",
     emails: [{ key: "video_ready", to: "client" }],
-    notifications: [],
+    notifications: [{ kind: "video_ready", audience: "customer", to: "client" }],
   },
   {
     key: "video_feedback", group: "premade", label: "The client leaves a note",
@@ -433,6 +433,7 @@ export const NOTIFICATION_DEFAULTS: Record<string, NotificationDefault> = {
   "customer:invoice_paid": { title: "Payment received", body: "{{invoice_number}}, {{amount}}. Thank you, nothing else is needed.", variables: ["invoice_number", "amount"] },
   "admin:invoice_paid": { title: "Invoice payment: {{amount}}", body: "{{invoice_number}} from {{customer_email}}", variables: ["invoice_number", "amount", "customer_email"] },
   "customer:invoice_sent": { title: "An invoice is ready to pay", body: "{{invoice_number}}, {{amount}}{{due_line}}.", variables: ["invoice_number", "amount", "due_line"] },
+  "customer:video_ready": { title: "Ready to review: {{video_title}}", body: "Watch it, then approve it or ask for changes.", variables: ["video_title"] },
   "customer:order_update": { title: "New update on {{product_name}}", body: "{{update_message}}", variables: ["product_name", "update_message"] },
   "customer:order_refunded": { title: "Your refund is on the way", body: "{{amount}} back to your card for {{product_name}}.", variables: ["amount", "product_name"] },
   "admin:order_refunded": { title: "Order refunded: {{amount}}", body: "{{product_name}} for {{customer_email}}", variables: ["amount", "product_name", "customer_email"] },

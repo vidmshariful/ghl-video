@@ -829,7 +829,11 @@ async function recipientFor(
       .maybeSingle();
     const email =
       (c?.subscription as { customer_email?: string } | null)?.customer_email ?? null;
-    return named(email, `${SITE_URL}/portal/editing/`);
+    /* the plan screen lives under /portal/subscriptions/. This said
+       /portal/editing/, which is not a section, and the portal quietly
+       resolves an unknown one to the dashboard: every "ready" email an
+       editing client ever got landed them on the wrong screen. */
+    return named(email, `${SITE_URL}/portal/subscriptions/`);
   }
   return null;
 }
@@ -856,8 +860,70 @@ export async function sendVideoReadyEmail(
       },
       "orders",
     );
+    /* the bell as well as the mail. Plan work had the email and no
+       notification at all, so the portal never showed a thing had landed. */
+    await pushNotification(db, {
+      audience: "customer",
+      email: to.email,
+      kind: "video_ready",
+      title: `Ready to review: ${to.title}`,
+      body: "Watch it, then approve it or ask for changes.",
+      href: portalSectionFor(to.url),
+      feature: "orders",
+      vars: { video_title: to.title },
+    });
   } catch (e) {
     console.error("[email] video_ready failed:", e instanceof Error ? e.message : e);
+  }
+}
+
+/* which portal screen a recipient's url points at, as the bell's link */
+function portalSectionFor(url: string): string {
+  if (url.includes("/portal/subscriptions")) return "subscriptions";
+  if (url.includes("/portal/custom") || url.includes("/portal/projects")) return "projects";
+  return "videos";
+}
+
+/**
+ * One email for a batch of shorts, instead of one per short.
+ *
+ * Three shorts moved to Ready three minutes apart sent the client three
+ * "your video is ready" emails. A batch is one piece of work to them, so
+ * the producer presses one button when the set is ready and this sends once,
+ * naming the batch and how many are in it.
+ */
+export async function sendShortsReadyEmail(
+  db: SupabaseClient,
+  parentId: string,
+  readyCount: number,
+): Promise<void> {
+  try {
+    const to = await recipientFor(db, parentId);
+    if (!to) return;
+    const title = `${to.title}: ${readyCount} ${readyCount === 1 ? "short" : "shorts"}`;
+    await sendTemplateToTeam(
+      db,
+      "video_ready",
+      { email: to.email, name: to.name },
+      {
+        customer_name: escapeHtml(to.name),
+        video_title: escapeHtml(title),
+        portal_url: to.url,
+      },
+      "orders",
+    );
+    await pushNotification(db, {
+      audience: "customer",
+      email: to.email,
+      kind: "video_ready",
+      title: `Ready to review: ${title}`,
+      body: "Watch them, then approve each or ask for changes.",
+      href: portalSectionFor(to.url),
+      feature: "orders",
+      vars: { video_title: title },
+    });
+  } catch (e) {
+    console.error("[email] shorts_ready failed:", e instanceof Error ? e.message : e);
   }
 }
 
