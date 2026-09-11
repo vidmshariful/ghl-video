@@ -471,6 +471,37 @@ export async function PATCH(req: Request) {
   if (typeof b.batch === "boolean") {
     if (before.parent_id)
       return NextResponse.json({ error: "A cut cannot be a batch." }, { status: 400 });
+    if (b.batch && !isBatch((before.edit_type as string | null) ?? null)) {
+      /*
+       * Ticking this on a finished video zeroed it. Two of Beant Singh's
+       * YouTube edits, cut, reviewed and approved at two credits each, became
+       * batches the day shorts were added under them, and the month forgot
+       * four credits. A batch is only ever a short request that turned out
+       * to be several shorts, so that is the only thing one can be made
+       * from: a short with no cut of its own. Everything else keeps its price
+       * and takes its shorts underneath, where each costs a credit anyway.
+       */
+      const hasOwnVideo =
+        Boolean(before.video_url) ||
+        ["ready", "revisions", "approved"].includes(String(before.status));
+      if (hasOwnVideo)
+        return NextResponse.json(
+          {
+            error:
+              "This request has a video of its own, so it keeps its credits. Add the shorts under it instead; each still costs one credit.",
+          },
+          { status: 400 },
+        );
+      if (before.edit_type !== "short")
+        return NextResponse.json(
+          {
+            error: `Only a short request can become a batch. This one is a ${
+              typeLabelFor((before.edit_type as string | null) ?? null) ?? "video"
+            }, so it keeps its credits. Add the shorts under it instead; each still costs one credit.`,
+          },
+          { status: 400 },
+        );
+    }
     if (b.batch) {
       patch.edit_type = BATCH_TYPE;
       patch.credit_cost = 0;
@@ -504,6 +535,12 @@ export async function PATCH(req: Request) {
   if (Object.keys(patch).length) {
     const { error } = await db.from("order_deliverables").update(patch).eq("id", id);
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    /* a short moving moves its batch. The batch cannot be staged by hand, so
+       this is the only way it ever reaches Review or Approved. */
+    const { rollUpBatch } = await import("@/lib/batch-rollup");
+    if (before.parent_id && ("status" in patch || "cancelled_at" in patch))
+      await rollUpBatch(db, String(before.parent_id));
+    else if (b.batch === true) await rollUpBatch(db, id);
   }
 
   let cutsMade = 0;
@@ -557,6 +594,9 @@ export async function PATCH(req: Request) {
     );
     if (cutError) return NextResponse.json({ error: cutError.message }, { status: 400 });
     cutsMade = addCuts.length;
+    /* new shorts under a finished batch reopen it */
+    const { rollUpBatch } = await import("@/lib/batch-rollup");
+    await rollUpBatch(db, id);
   }
 
   let notified = 0;

@@ -207,3 +207,28 @@ export function typeLabelFor(type: string | null | undefined): string | null {
   if (isBatch(type)) return "Batch of shorts";
   return tierFor(String(type ?? ""))?.label ?? null;
 }
+
+/*
+ * Where a batch stands, read off its shorts.
+ *
+ * A batch cannot be moved to Review or Approved by hand, because it is the
+ * brief and not a video. It still has to land somewhere on the board and on
+ * the client's screen, and the only honest place is wherever its shorts are:
+ * every short approved means the batch is approved, one short waiting on the
+ * client puts it in Review, one sent back puts it in Revisions, one being cut
+ * puts it in production. Cancelled shorts do not count. Null when there is
+ * nothing live to read from, so a batch with no shorts yet keeps its own
+ * status.
+ */
+export type BatchStatus = "queued" | "in_production" | "ready" | "revisions" | "approved";
+export function batchStatusFor(
+  shorts: { status: string; cancelledAt?: string | null }[],
+): BatchStatus | null {
+  const live = shorts.filter((s) => !s.cancelledAt);
+  if (!live.length) return null;
+  if (live.every((s) => s.status === "approved")) return "approved";
+  if (live.some((s) => s.status === "ready")) return "ready";
+  if (live.some((s) => s.status === "revisions")) return "revisions";
+  if (live.some((s) => s.status === "in_production")) return "in_production";
+  return "queued";
+}

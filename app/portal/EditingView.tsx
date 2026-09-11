@@ -386,6 +386,14 @@ export function EditingView({
       resetDraft();
       setAsking(false);
       await load();
+    } catch {
+      /* a dropped connection or an answer that was not JSON used to end
+         here silently: the button came back and nothing else happened, which
+         reads as "the form is broken" to a client and reaches us as "I could
+         not request a video" with nothing to go on */
+      setErr(
+        "That did not send. Check your connection and try again, or message us and we will put the request in for you.",
+      );
     } finally {
       setBusy(false);
     }

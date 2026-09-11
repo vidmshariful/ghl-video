@@ -1422,6 +1422,11 @@ function RequestDetail({
   const parent = r.parentId ? b.requests.find((x) => x.id === r.parentId) : null;
 
   const cutsCredits = cuts.reduce((n, c) => n + c.creditCost, 0);
+  /* the batch tick is only for a short with no cut of its own; the route
+     refuses anything else, and the box should say so before it is pressed */
+  const hasOwnVideo =
+    Boolean(r.videoUrl) || r.status === "ready" || r.status === "revisions" || r.status === "approved";
+  const canBatch = isBatch(r.editType) || (r.editType === "short" && !hasOwnVideo);
 
   return (
     <div className="grid gap-3 lg:grid-cols-[1fr_20rem] lg:items-start">
@@ -1505,17 +1510,29 @@ function RequestDetail({
           >
             {/* a request like "make 3 shorts from video 1" is a brief, not a
                 video: tick this and the request costs nothing itself while
-                each short below costs one credit */}
-            <label className="mb-4 flex cursor-pointer items-start gap-2.5 text-body-sm">
+                each short below costs one credit. Only a short with no cut of
+                its own can be one: ticking it on a finished YouTube edit
+                zeroed two credits the month had already spent. */}
+            <label
+              className={`mb-4 flex items-start gap-2.5 text-body-sm ${
+                canBatch ? "cursor-pointer" : "cursor-not-allowed"
+              }`}
+            >
               <input
                 type="checkbox"
                 checked={isBatch(r.editType)}
-                disabled={busy}
+                disabled={busy || !canBatch}
                 onChange={(e) => onSave(r.id, { batch: e.target.checked })}
                 className="mt-0.5 size-4 shrink-0 accent-[color:var(--green)]"
               />
               <span className="text-muted">
                 A batch of shorts: the request itself costs nothing, each short below costs one credit.
+                {!canBatch && (
+                  <span className="mt-1 block text-dim">
+                    Not for this one: it {hasOwnVideo ? "has a video of its own" : "is not a short"},
+                    so it keeps its credits. The shorts you add below each cost one credit anyway.
+                  </span>
+                )}
               </span>
             </label>
             {cuts.length > 0 && (

@@ -14,6 +14,7 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { REVISIONS_INCLUDED, type DeliverableStatus } from "@/lib/deliverable-status";
+import { rollUpBatch } from "@/lib/batch-rollup";
 
 type DB = SupabaseClient;
 
@@ -211,7 +212,7 @@ export async function clientVerdict(
 ): Promise<{ ok: true; status: DeliverableStatus } | { ok: false; error: string }> {
   const { data: d } = await db
     .from("order_deliverables")
-    .select("id, order_id, cycle_id, status, revision_round")
+    .select("id, order_id, cycle_id, parent_id, status, revision_round")
     .eq("id", deliverableId)
     .maybeSingle();
   if (!d) return { ok: false, error: "Video not found." };
@@ -260,6 +261,9 @@ export async function clientVerdict(
       await resyncOrderStage(db, d.order_id as string);
       await completeIfAllApproved(db, d.order_id as string);
     }
+    /* a short under a batch moves its batch: the client approving the last
+       one is the batch finishing, and nobody else can stage it */
+    if (d.cycle_id && d.parent_id) await rollUpBatch(db, d.parent_id as string);
     return { ok: true, status: "approved" };
   }
 
@@ -272,6 +276,7 @@ export async function clientVerdict(
     })
     .eq("id", d.id);
   if (d.order_id) await resyncOrderStage(db, d.order_id as string);
+  if (d.cycle_id && d.parent_id) await rollUpBatch(db, d.parent_id as string);
   return { ok: true, status: "revisions" };
 }
 
