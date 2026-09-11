@@ -10,6 +10,7 @@ import {
   projectBalance,
   type ProjectStatus,
 } from "@/lib/projects";
+import { RETAINER_KINDS, isMonthKey, monthKey, parseRetainer, type RetainerKind } from "@/lib/retainer";
 
 export const runtime = "nodejs";
 
@@ -126,6 +127,9 @@ export async function GET(req: Request) {
       stageLocked: Boolean(p.stage_locked),
       category: (p.category as string | null) ?? null,
       tags: ((p.tags as string[] | null) ?? []).slice(0, 12),
+      /* under a retainer: which month it counts in, and whether it counts */
+      retainerMonth: (p.retainer_month as string | null) ?? null,
+      retainerKind: (p.retainer_kind as RetainerKind | null) ?? null,
       pipeline: line,
       ball: ballInCourt(line),
       quotedCents: p.quoted_cents == null ? null : Number(p.quoted_cents),
@@ -189,9 +193,34 @@ export async function POST(req: Request) {
    * quoted before they have ever bought, and that must not block the job */
   const { data: customer } = await db
     .from("customers")
-    .select("id")
+    /* the whole row on purpose: naming a column that a not-yet-run migration
+       adds would fail the lookup and file the job under no customer */
+    .select("*")
     .ilike("email", email)
     .maybeSingle();
+
+  /*
+   * Under the partnership by default when the client has one. The form can
+   * say otherwise ("none") or make it a small animation, which is included
+   * in the fee but outside the month's count. The month is stamped now and
+   * stays editable, so a job that slips past month end still belongs to
+   * the month it was briefed in.
+   */
+  const retainer = parseRetainer(customer?.retainer);
+  const kindAsked = typeof b.retainerKind === "string" ? b.retainerKind : "";
+  const retainerKind: RetainerKind | null =
+    kindAsked === "none"
+      ? null
+      : (RETAINER_KINDS as readonly string[]).includes(kindAsked)
+        ? (kindAsked as RetainerKind)
+        : retainer
+          ? "video"
+          : null;
+  const retainerMonth = retainerKind
+    ? isMonthKey(b.retainerMonth)
+      ? b.retainerMonth
+      : monthKey(new Date())
+    : null;
 
   const { data, error } = await db
     .from("projects")
@@ -200,6 +229,7 @@ export async function POST(req: Request) {
       customer_id: (customer?.id as string | undefined) ?? null,
       title,
       category: str(b.category, 60),
+      ...(retainerKind ? { retainer_kind: retainerKind, retainer_month: retainerMonth } : {}),
       brief: str(b.brief, 8000),
       script: str(b.script, 40000),
       reference_url: str(b.reference, 1000),
@@ -293,6 +323,26 @@ export async function PATCH(req: Request) {
   if ("ownerEmail" in b) patch.owner_email = str(b.ownerEmail, 200);
   if ("dueAt" in b) patch.due_at = str(b.dueAt, 40);
   if ("contactId" in b) patch.contact_id = str(b.contactId, 64);
+  if (isMonthKey(b.retainerMonth)) patch.retainer_month = b.retainerMonth;
+  if ("retainerKind" in b) {
+    const k = typeof b.retainerKind === "string" ? b.retainerKind : "";
+    if (!k || k === "none") {
+      patch.retainer_kind = null;
+      patch.retainer_month = null;
+    } else if ((RETAINER_KINDS as readonly string[]).includes(k)) {
+      patch.retainer_kind = k;
+      /* a job joining the partnership needs a month; keep the one it has */
+      if (!("retainer_month" in patch)) {
+        const { data: cur } = await db.from("projects").select("retainer_month").eq("id", id).maybeSingle();
+        if (!cur?.retainer_month) patch.retainer_month = monthKey(new Date());
+      }
+    } else {
+      return NextResponse.json(
+        { error: "Counted video, small animation, or not under the partnership." },
+        { status: 400 },
+      );
+    }
+  }
   if (!Object.keys(patch).length) {
     return NextResponse.json({ error: "Nothing to change." }, { status: 400 });
   }

@@ -4,6 +4,15 @@ import { contextCan, resolvePortalContext, actorName } from "@/lib/account-team"
 import { CLIENT_LABEL, isOpen, normalizeProjectStatus, projectBalance } from "@/lib/projects";
 import { invoiceProjectShares } from "@/lib/invoice-shares";
 import {
+  countLine,
+  monthKey,
+  monthLabel,
+  monthSummary,
+  parseRetainer,
+  type RetainerJob,
+  type RetainerKind,
+} from "@/lib/retainer";
+import {
   canRequestChanges,
   canReview,
   isWatchable,
@@ -112,7 +121,46 @@ export async function GET(req: Request) {
     ((paidOrders ?? []) as Row[]).map((o) => String((o.product as { sku?: unknown } | null)?.sku ?? "")),
   );
 
+  /*
+   * The partnership, for an account on a retainer.
+   *
+   * A partner paying a flat monthly fee should see that fact on their
+   * screen, not "Not set" against every job. This is the month as they
+   * would count it: what they have briefed against what the fee covers,
+   * what is in production right now, and the promises (turnaround, white
+   * label) said plainly.
+   */
+  const { data: cust } = await db
+    .from("customers")
+    .select("*")
+    .ilike("email", ctx.ownerEmail)
+    .maybeSingle();
+  const retainer = parseRetainer(cust?.retainer);
+  const month = monthKey(new Date());
+  const jobs: RetainerJob[] = ((projects ?? []) as Row[]).map((p) => ({
+    retainerMonth: (p.retainer_month as string | null) ?? null,
+    retainerKind: (p.retainer_kind as RetainerKind | null) ?? null,
+    status: String(p.status),
+  }));
+  const summary = retainer ? monthSummary(jobs, month) : null;
+  const partnership =
+    retainer && summary
+      ? {
+          name: retainer.name,
+          videosMin: retainer.videosMin,
+          videosMax: retainer.videosMax,
+          activeMax: retainer.activeMax,
+          turnaroundDays: retainer.turnaroundDays,
+          whiteLabel: retainer.whiteLabel,
+          month,
+          monthLabel: monthLabel(month),
+          summary,
+          line: countLine(summary, retainer),
+        }
+      : null;
+
   return NextResponse.json({
+    partnership,
     /* whether to offer them the Submit a project button. The POST below
        checks it again for real. */
     canSubmit: await canSubmit(db, ctx.ownerEmail),
@@ -153,7 +201,12 @@ export async function GET(req: Request) {
             const email = (p.owner_email as string | null)?.toLowerCase();
             return email ? (managerName.get(email) ?? null) : null;
           })(),
-          payment: clientPayment(money),
+          /* retainer work is covered by the monthly fee, so it is never
+             owed per job */
+          payment: p.retainer_kind
+            ? { label: "Included in your partnership", outstandingCents: 0 }
+            : clientPayment(money),
+          retainerKind: (p.retainer_kind as RetainerKind | null) ?? null,
           pipeline: {
             ball: ballInCourt(line),
             percent: pipelinePercent(line),
@@ -286,9 +339,13 @@ export async function POST(req: Request) {
 
   const { data: customer } = await db
     .from("customers")
-    .select("id, name")
+    .select("*")
     .ilike("email", ctx.ownerEmail)
     .maybeSingle();
+
+  /* a partner's brief lands under the partnership, counted in the month it
+     was briefed. The studio can make it a small animation afterwards. */
+  const underRetainer = parseRetainer(customer?.retainer) !== null;
 
   const { data: made, error } = await db
     .from("projects")
@@ -297,6 +354,7 @@ export async function POST(req: Request) {
       customer_id: (customer?.id as string | undefined) ?? null,
       title,
       script,
+      ...(underRetainer ? { retainer_kind: "video", retainer_month: monthKey(new Date()) } : {}),
       category: text(b.category, 60),
       reference_url: text(b.reference, 1000),
       brief: text(b.brief, 8000),

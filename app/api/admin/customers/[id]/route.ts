@@ -4,6 +4,13 @@ import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { lifetimeValue, serviceTags, type MoneySource } from "@/lib/customer-record";
 import { completeness, getBrandKit } from "@/lib/brand-kit";
 import { orderKind, type InvoiceLink } from "@/lib/order-kind";
+import {
+  monthSummary,
+  parseRetainer,
+  retainerMonths,
+  type RetainerJob,
+  type RetainerKind,
+} from "@/lib/retainer";
 
 /** A short-lived signed URL for a private brand file, or null. */
 async function signBrand(db: ReturnType<typeof supabaseAdmin>, path: string | null) {
@@ -99,7 +106,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
   const { data: theirProjects } = await db
     .from("projects")
-    .select("id")
+    .select("id, title, status, retainer_month, retainer_kind, created_at")
     .ilike("customer_email", email);
   const projectIds = ((theirProjects ?? []) as Row[]).map((p) => String(p.id));
 
@@ -184,6 +191,34 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   };
   const value = lifetimeValue(money, new Date());
 
+  /*
+   * The partnership, month by month, for an account on a retainer.
+   *
+   * The count is the one question the studio has about a retainer client
+   * every month, and it was being answered by scrolling the projects list.
+   * Every month since the start is a row, zeros included, so a quiet month
+   * shows as quiet rather than missing.
+   */
+  const retainer = parseRetainer(c.retainer);
+  const jobs = ((theirProjects ?? []) as Row[]).map((p) => ({
+    id: String(p.id),
+    title: String(p.title),
+    status: String(p.status),
+    retainerMonth: (p.retainer_month as string | null) ?? null,
+    retainerKind: (p.retainer_kind as RetainerKind | null) ?? null,
+    createdAt: String(p.created_at),
+  }));
+  const partnership = retainer
+    ? {
+        months: retainerMonths(retainer.startedOn, new Date()).map((m) =>
+          monthSummary(jobs as RetainerJob[], m),
+        ),
+        jobs: jobs
+          .filter((j) => j.retainerKind)
+          .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)),
+      }
+    : null;
+
   return NextResponse.json({
     customer: {
       id,
@@ -195,10 +230,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       hiddenSections: (c.hidden_sections as string[] | null) ?? [],
       disabledSections: (c.disabled_sections as string[] | null) ?? [],
       canSubmitProjects: Boolean(c.can_submit_projects),
+      retainer,
       lastSeenAt: (c.last_seen_at as string | null) ?? null,
       createdAt: String(c.created_at),
       highlevelContactId: (c.highlevel_contact_id as string | null) ?? null,
     },
+    partnership,
     value,
     services: serviceTags({
       paidOrders: money.orders.filter((o) => o.status === "paid" && o.kind !== "custom").length,
@@ -361,6 +398,18 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       .filter((t): t is string => typeof t === "string")
       .slice(0, 30);
   }
+  /* the retainer terms: null clears them, anything else has to parse to a
+     real monthly fee. parseRetainer is the one place the shape is decided,
+     so what is stored is exactly what every screen will read back. */
+  if ("retainer" in b) {
+    if (b.retainer === null) patch.retainer = null;
+    else {
+      const terms = parseRetainer(b.retainer);
+      if (!terms)
+        return NextResponse.json({ error: "A retainer needs a monthly fee." }, { status: 400 });
+      patch.retainer = terms;
+    }
+  }
   if (!Object.keys(patch).length) {
     return NextResponse.json({ error: "Nothing to change." }, { status: 400 });
   }
@@ -369,7 +418,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     .from("customers")
     .update(patch)
     .eq("id", id)
-    .select("tags, hidden_sections, disabled_sections, can_submit_projects")
+    .select("tags, hidden_sections, disabled_sections, can_submit_projects, retainer")
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   /* the truth after the write, so the screen can settle on it rather than
@@ -381,6 +430,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       hiddenSections: (row?.hidden_sections as string[] | null) ?? [],
       disabledSections: (row?.disabled_sections as string[] | null) ?? [],
       canSubmitProjects: Boolean(row?.can_submit_projects),
+      retainer: parseRetainer(row?.retainer),
     },
   });
 }

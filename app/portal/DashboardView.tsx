@@ -14,6 +14,7 @@ import {
   Td,
   Th,
 } from "@/components/portal/ui";
+import { PartnershipCard, type Partnership } from "@/components/portal/PartnershipCard";
 import {
   gettingStartedSteps,
   onboardingUnfinished,
@@ -407,6 +408,15 @@ export function DashboardView({
   const [brandReady, setBrandReady] = useState<boolean | null>(null);
   const [offer, setOffer] = useState<Offer | null>(null);
   const [feedbackAsk, setFeedbackAsk] = useState<FeedbackAskData | null>(null);
+  /* a partner on a retainer sees the month at the top of their dashboard */
+  const [partnership, setPartnership] = useState<Partnership | null>(null);
+  const canProjects = can("projects");
+  useEffect(() => {
+    if (!canProjects) return;
+    authedFetch("/api/portal/projects")
+      .then((j) => setPartnership((j.partnership as Partnership | null | undefined) ?? null))
+      .catch(() => setPartnership(null));
+  }, [canProjects, authedFetch]);
   /* which counter is expanded, if any */
   const [lens, setLens] = useState<"ready" | "waiting" | "making" | null>(null);
   const canOrders = can("orders");
@@ -533,6 +543,12 @@ export function DashboardView({
         title={firstName ? `Welcome back, ${firstName}.` : "Welcome back."}
         description={subtitle}
       />
+
+      {partnership && (
+        <div className="mb-3">
+          <PartnershipCard p={partnership} />
+        </div>
+      )}
 
       {/* An empty screen is the correct render for an account with nothing
           in it, and it is indistinguishable from a broken one. If they have

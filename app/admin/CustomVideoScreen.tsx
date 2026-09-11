@@ -43,6 +43,7 @@ import {
   type ProjectStatus,
   type RequestStatus,
 } from "@/lib/projects";
+import { RETAINER_KIND_LABEL, monthLabel, type RetainerKind } from "@/lib/retainer";
 
 /*
  * Custom video, the simple way (owner decision, 21 August 2026).
@@ -90,6 +91,9 @@ type Project = {
   stageLocked: boolean;
   category: string | null;
   tags: string[];
+  /* under a retainer: which month it counts in, and whether it counts */
+  retainerMonth: string | null;
+  retainerKind: RetainerKind | null;
   pipeline: Pipeline;
   ball: "us" | "client" | null;
   quotedCents: number | null;
@@ -216,6 +220,9 @@ const EMPTY_DRAFT = {
   agreedCents: "",
   dueAt: "",
   fromRequestId: "",
+  /* "" lets the server decide: under the partnership when the client has one */
+  retainerKind: "",
+  retainerMonth: "",
 };
 
 export function CustomVideoScreen({
@@ -576,6 +583,31 @@ export function CustomVideoScreen({
                 </Select>
               </Field>
             </div>
+            {/* only means anything for a client on a retainer; for anyone
+                else "follow the client" is simply "not under one" */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field
+                label="Partnership"
+                hint="A retainer client's jobs count toward their month unless you say otherwise."
+              >
+                <Select
+                  value={draft.retainerKind}
+                  onChange={(e) => setDraft({ ...draft, retainerKind: e.target.value })}
+                >
+                  <option value="">Follow the client&apos;s partnership, if they have one</option>
+                  <option value="video">{RETAINER_KIND_LABEL.video}</option>
+                  <option value="animation">{RETAINER_KIND_LABEL.animation}</option>
+                  <option value="none">Not under the partnership</option>
+                </Select>
+              </Field>
+              <Field label="Counts in" hint="The month, if not this one.">
+                <Input
+                  type="month"
+                  value={draft.retainerMonth}
+                  onChange={(e) => setDraft({ ...draft, retainerMonth: e.target.value })}
+                />
+              </Field>
+            </div>
             <Field label="The brief" hint="What they asked for, in their words if you have them.">
               <Textarea
                 rows={3}
@@ -750,6 +782,12 @@ export function CustomVideoScreen({
                               </span>
                               <span className="hidden min-w-0 items-center gap-1.5 lg:flex">
                                 {p.ball === "client" && <Chip tone="warn">with client</Chip>}
+                                {p.retainerKind && (
+                                  <Chip tone="good">
+                                    {p.retainerKind === "animation" ? "animation" : "retainer"}
+                                    {p.retainerMonth ? ` ${monthLabel(p.retainerMonth).slice(0, 3)}` : ""}
+                                  </Chip>
+                                )}
                                 {p.tags.slice(0, 2).map((t) => (
                                   <span
                                     key={t}
@@ -949,6 +987,8 @@ function ProjectPage({
     /* dollars in the form, cents on the wire, same as the create modal */
     quoted: p.quotedCents != null ? String(p.quotedCents / 100) : "",
     agreed: p.agreedCents != null ? String(p.agreedCents / 100) : "",
+    retainerKind: p.retainerKind ?? "none",
+    retainerMonth: p.retainerMonth ?? "",
   };
   const [form, setForm] = useState(emptyForm);
   const openEdit = () => {
@@ -962,6 +1002,8 @@ function ProjectPage({
     reference: p.referenceUrl ?? "",
       quoted: p.quotedCents != null ? String(p.quotedCents / 100) : "",
       agreed: p.agreedCents != null ? String(p.agreedCents / 100) : "",
+      retainerKind: p.retainerKind ?? "none",
+      retainerMonth: p.retainerMonth ?? "",
     });
     setEditing(true);
   };
@@ -980,6 +1022,8 @@ function ProjectPage({
       reference: form.reference,
       quotedCents: form.quoted === "" ? null : Math.round(Number(form.quoted) * 100),
       agreedCents: form.agreed === "" ? null : Math.round(Number(form.agreed) * 100),
+      retainerKind: form.retainerKind,
+      ...(form.retainerMonth ? { retainerMonth: form.retainerMonth } : {}),
     });
     setBusy(null);
     if (e) setPageErr(e);
@@ -1009,7 +1053,10 @@ function ProjectPage({
   };
 
   const invoice = p.invoices[0] ?? null;
-  const paidState = p.money.paidCents >= p.money.valueCents && p.money.valueCents > 0
+  /* retainer work is covered by the monthly fee: never unpaid, never priced */
+  const paidState = p.retainerKind
+    ? { word: "in the partnership", tone: "good" as const }
+    : p.money.paidCents >= p.money.valueCents && p.money.valueCents > 0
     ? { word: "paid", tone: "good" as const }
     : p.money.paidCents > 0
       ? { word: "part paid", tone: "warn" as const }
@@ -1088,6 +1135,25 @@ function ProjectPage({
                 value={form.agreed}
                 onChange={(e) => setForm({ ...form, agreed: e.target.value })}
                 placeholder="1995"
+              />
+            </Field>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Partnership" hint="Retainer work is never priced per job.">
+              <Select
+                value={form.retainerKind}
+                onChange={(e) => setForm({ ...form, retainerKind: e.target.value })}
+              >
+                <option value="none">Not under the partnership</option>
+                <option value="video">{RETAINER_KIND_LABEL.video}</option>
+                <option value="animation">{RETAINER_KIND_LABEL.animation}</option>
+              </Select>
+            </Field>
+            <Field label="Counts in" hint="The month it belongs to.">
+              <Input
+                type="month"
+                value={form.retainerMonth}
+                onChange={(e) => setForm({ ...form, retainerMonth: e.target.value })}
               />
             </Field>
           </div>
@@ -1267,10 +1333,17 @@ function ProjectPage({
             </Select>
           </Fact>
 
-          <Fact label="Agreed">
-            <span className="font-display text-h4 tabular-nums text-gold">
-              {money(p.money.valueCents)}
-            </span>
+          <Fact label={p.retainerKind ? "Partnership" : "Agreed"}>
+            {p.retainerKind ? (
+              <span className="text-body-sm text-ink">
+                {RETAINER_KIND_LABEL[p.retainerKind]}
+                {p.retainerMonth ? `, ${monthLabel(p.retainerMonth)}` : ""}
+              </span>
+            ) : (
+              <span className="font-display text-h4 tabular-nums text-gold">
+                {money(p.money.valueCents)}
+              </span>
+            )}
           </Fact>
 
           <Fact label="Payment">

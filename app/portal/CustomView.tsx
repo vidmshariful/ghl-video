@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ArrowLeft, Play, Plus } from "lucide-react";
 import { Button, Card, Chip, EmptyState, Field, Input, Modal, PageHeader, Select, Textarea } from "@/components/portal/ui";
+import { PartnershipCard, type Partnership } from "@/components/portal/PartnershipCard";
 import { VideoReviewModal } from "./VideoReviewModal";
 import { StageReview } from "./StageReview";
 import { DownloadAll } from "@/components/portal/DownloadAll";
@@ -55,6 +56,8 @@ type Project = {
   createdAt: string;
   manager: string | null;
   payment: { label: string; outstandingCents: number };
+  /* under a retainer: a counted video, or a small animation included in the fee */
+  retainerKind: "video" | "animation" | null;
   pipeline: {
     ball: "us" | "client" | null;
     percent: number;
@@ -164,11 +167,14 @@ export function CustomView({
      whether to offer the button. */
   const [canSubmit, setCanSubmit] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  /* the retainer, for a partner account; null for everyone else */
+  const [partnership, setPartnership] = useState<Partnership | null>(null);
 
   const load = useCallback(async () => {
     const j = await authedFetch("/api/portal/projects").catch(() => null);
     setProjects((j?.projects as Project[] | undefined) ?? []);
     setCanSubmit(Boolean(j?.canSubmit));
+    setPartnership((j?.partnership as Partnership | null | undefined) ?? null);
   }, [authedFetch]);
 
   useEffect(() => {
@@ -275,6 +281,12 @@ export function CustomView({
             void load();
           }}
         />
+      )}
+
+      {partnership && (
+        <div className="mb-3">
+          <PartnershipCard p={partnership} />
+        </div>
       )}
 
       {projects.length === 0 ? (
@@ -461,9 +473,18 @@ function ProjectPage({
           the project status here is the stage a producer set, not the line. */}
       <div className="mt-4 rounded-[12px] border border-hair bg-surface p-4 sm:p-5">
         <h1 className="font-display text-h3 leading-tight text-ink">{p.title}</h1>
-        {p.category && (
+        {(p.category || p.retainerKind) && (
           <p className="mt-1 font-mono text-label uppercase tracking-[0.1em] text-dim">
-            {p.category}
+            {[
+              p.category,
+              p.retainerKind === "animation"
+                ? "small animation, included"
+                : p.retainerKind === "video"
+                  ? "partnership video"
+                  : null,
+            ]
+              .filter(Boolean)
+              .join(" / ")}
           </p>
         )}
 

@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, Eye, ExternalLink, MessageSquare, Plus } from "lucide-react";
-import { Button, Card, Chip, Input, Modal, Select, Table, Tabs, Td, Th } from "@/components/portal/ui";
+import { Button, Card, Chip, Field, Input, Modal, Select, Table, Tabs, Td, Th } from "@/components/portal/ui";
+import { monthLabel, RETAINER_KIND_LABEL, type MonthSummary, type Retainer, type RetainerKind } from "@/lib/retainer";
 import { authHeader, money, when } from "./client";
 import { TeamCard } from "@/components/portal/team";
 import { HIDEABLE_SECTIONS } from "./customer-sections";
@@ -42,10 +43,24 @@ type Record_ = {
     hiddenSections: string[];
     disabledSections: string[];
     canSubmitProjects: boolean;
+    /* the retainer terms, null for everyone not on one */
+    retainer: Retainer | null;
     lastSeenAt: string | null;
     createdAt: string;
     highlevelContactId: string | null;
   };
+  /* the retainer month by month, only for an account on one */
+  partnership: {
+    months: MonthSummary[];
+    jobs: {
+      id: string;
+      title: string;
+      status: string;
+      retainerMonth: string | null;
+      retainerKind: RetainerKind | null;
+      createdAt: string;
+    }[];
+  } | null;
   value: Value;
   services: string[];
   orders: {
@@ -1114,6 +1129,14 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
                 </Button>
               </div>
             </Card>
+
+            <PartnershipPanel
+              retainer={c.retainer}
+              partnership={data.partnership}
+              /* no optimistic value: the route answers with the parsed terms,
+                 which is what every other screen will read */
+              onSave={(terms) => patch({ retainer: terms })}
+            />
           </div>
         </div>
       )}
@@ -1281,5 +1304,257 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
         </div>
       )}
     </div>
+  );
+}
+
+/*
+ * The retainer partnership: the terms, this month's count, and every month
+ * since it started.
+ *
+ * HighLevel was the first (September 2026). The terms are edited in a popup,
+ * per the platform rule; the count is read from the jobs and never typed.
+ */
+function PartnershipPanel({
+  retainer,
+  partnership,
+  onSave,
+}: {
+  retainer: Retainer | null;
+  partnership: Record_["partnership"];
+  onSave: (terms: Record<string, unknown> | null) => Promise<unknown>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const blank = {
+    name: "Retainer partnership",
+    monthly: "",
+    videosMin: "8",
+    videosMax: "12",
+    activeMax: "2",
+    turnaroundDays: "3",
+    whiteLabel: true,
+    startedOn: `${new Date().toISOString().slice(0, 7)}-01`,
+    checkInOn: "",
+    note: "",
+  };
+  const [form, setForm] = useState(blank);
+  const open = () => {
+    setForm(
+      retainer
+        ? {
+            name: retainer.name,
+            monthly: String(retainer.monthlyCents / 100),
+            videosMin: String(retainer.videosMin),
+            videosMax: String(retainer.videosMax),
+            activeMax: String(retainer.activeMax),
+            turnaroundDays: String(retainer.turnaroundDays),
+            whiteLabel: retainer.whiteLabel,
+            startedOn: retainer.startedOn,
+            checkInOn: retainer.checkInOn ?? "",
+            note: retainer.note ?? "",
+          }
+        : blank,
+    );
+    setEditing(true);
+  };
+  const save = async () => {
+    setBusy(true);
+    await onSave({
+      name: form.name,
+      monthlyCents: Math.round(Number(form.monthly) * 100),
+      videosMin: Number(form.videosMin),
+      videosMax: Number(form.videosMax),
+      activeMax: Number(form.activeMax),
+      turnaroundDays: Number(form.turnaroundDays),
+      whiteLabel: form.whiteLabel,
+      startedOn: form.startedOn,
+      checkInOn: form.checkInOn || null,
+      note: form.note || null,
+    });
+    setBusy(false);
+    setEditing(false);
+  };
+  const end = async () => {
+    setBusy(true);
+    await onSave(null);
+    setBusy(false);
+  };
+
+  const thisMonth = partnership?.months[0] ?? null;
+  const STATUS_WORD: Record<string, string> = {
+    backlog: "waiting to start",
+    planning: "in production",
+    in_progress: "in production",
+    review: "in review",
+    revision: "in revision",
+    approved: "delivered",
+    cutdowns: "delivered, formats being cut",
+    closed: "delivered",
+    cancelled: "cancelled",
+  };
+
+  return (
+    <Card
+      title="Partnership"
+      description={
+        retainer
+          ? `${money(retainer.monthlyCents)} a month, paid upfront on the first, for ${retainer.videosMin} to ${retainer.videosMax} videos.`
+          : "A flat monthly fee for a number of videos a month. Work under it is never priced per job."
+      }
+      actions={
+        <span className="flex gap-2">
+          {retainer && (
+            <Button size="sm" variant="ghost" disabled={busy} onClick={() => void end()}>
+              End it
+            </Button>
+          )}
+          <Button size="sm" variant={retainer ? "secondary" : "brand"} onClick={open}>
+            {retainer ? "Edit terms" : "Set up a retainer"}
+          </Button>
+        </span>
+      }
+    >
+      {retainer && thisMonth && (
+        <div className="grid gap-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              {
+                label: monthLabel(thisMonth.month),
+                value: `${thisMonth.counted} of ${retainer.videosMin} to ${retainer.videosMax}`,
+              },
+              { label: "Delivered", value: String(thisMonth.delivered) },
+              {
+                label: "In production now",
+                value: `${thisMonth.activeNow} of ${retainer.activeMax}`,
+              },
+              { label: "Small animations", value: `${thisMonth.animations} included` },
+            ].map((f) => (
+              <div key={f.label} className="rounded-[8px] border border-hair bg-canvas px-3 py-2.5">
+                <p className="font-mono text-label uppercase tracking-[0.08em] text-dim">{f.label}</p>
+                <p className="mt-1 font-display text-h4 tabular-nums text-ink">{f.value}</p>
+              </div>
+            ))}
+          </div>
+
+          <p className="text-body-sm text-muted">
+            {retainer.turnaroundDays} business days from brief to delivery, {retainer.activeMax} in
+            production at a time{retainer.whiteLabel ? ", a white-label version of every video" : ""}.
+            Started {retainer.startedOn}
+            {retainer.checkInOn ? `, next check-in ${retainer.checkInOn}` : ", no check-in date set"}.
+            {retainer.note ? ` ${retainer.note}` : ""}
+          </p>
+
+          {partnership && partnership.jobs.length > 0 && (
+            <Table>
+              <thead>
+                <tr>
+                  <Th>Job</Th>
+                  <Th>Month</Th>
+                  <Th>Under the partnership as</Th>
+                  <Th>Where it is</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {partnership.jobs.map((j) => (
+                  <tr key={j.id}>
+                    <Td>{j.title}</Td>
+                    <Td>{j.retainerMonth ? monthLabel(j.retainerMonth) : "not set"}</Td>
+                    <Td>{j.retainerKind ? RETAINER_KIND_LABEL[j.retainerKind] : ""}</Td>
+                    <Td>{STATUS_WORD[j.status] ?? j.status}</Td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          )}
+
+          {partnership && partnership.months.length > 1 && (
+            <Table>
+              <thead>
+                <tr>
+                  <Th>Month</Th>
+                  <Th>Videos briefed</Th>
+                  <Th>Delivered</Th>
+                  <Th>Small animations</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {partnership.months.map((m) => (
+                  <tr key={m.month}>
+                    <Td>{monthLabel(m.month)}</Td>
+                    <Td>
+                      {m.counted} of {retainer.videosMin} to {retainer.videosMax}
+                    </Td>
+                    <Td>{m.delivered}</Td>
+                    <Td>{m.animations}</Td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          )}
+        </div>
+      )}
+
+      <Modal open={editing} onClose={() => setEditing(false)} title={retainer ? "Retainer terms" : "Set up a retainer"}>
+        {editing && (
+          <div className="grid gap-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="What their portal calls it" hint="Shown on their dashboard.">
+                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              </Field>
+              <Field label="Monthly fee" required hint="Dollars, paid upfront on the first.">
+                <Input
+                  type="number"
+                  value={form.monthly}
+                  onChange={(e) => setForm({ ...form, monthly: e.target.value })}
+                  placeholder="11000"
+                />
+              </Field>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-4">
+              <Field label="Videos, from">
+                <Input type="number" value={form.videosMin} onChange={(e) => setForm({ ...form, videosMin: e.target.value })} />
+              </Field>
+              <Field label="Videos, up to">
+                <Input type="number" value={form.videosMax} onChange={(e) => setForm({ ...form, videosMax: e.target.value })} />
+              </Field>
+              <Field label="In production at once">
+                <Input type="number" value={form.activeMax} onChange={(e) => setForm({ ...form, activeMax: e.target.value })} />
+              </Field>
+              <Field label="Business days each">
+                <Input type="number" value={form.turnaroundDays} onChange={(e) => setForm({ ...form, turnaroundDays: e.target.value })} />
+              </Field>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Started on" hint="The first day of the first month.">
+                <Input type="date" value={form.startedOn} onChange={(e) => setForm({ ...form, startedOn: e.target.value })} />
+              </Field>
+              <Field label="Next check-in" hint="Quarterly, if agreed. Optional.">
+                <Input type="date" value={form.checkInOn} onChange={(e) => setForm({ ...form, checkInOn: e.target.value })} />
+              </Field>
+            </div>
+            <label className="flex cursor-pointer items-start gap-2.5 text-body-sm">
+              <input
+                type="checkbox"
+                checked={form.whiteLabel}
+                onChange={(e) => setForm({ ...form, whiteLabel: e.target.checked })}
+                className="mt-0.5 size-4 shrink-0 accent-[color:var(--green)]"
+              />
+              <span className="text-muted">A white-label version of every video is included.</span>
+            </label>
+            <Field label="Note" hint="Anything else agreed. Shown here only.">
+              <Input value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
+            </Field>
+            <div className="flex justify-end gap-2 border-t border-hair pt-4">
+              <Button variant="ghost" onClick={() => setEditing(false)}>
+                Cancel
+              </Button>
+              <Button variant="brand" disabled={busy || !form.monthly} onClick={() => void save()}>
+                {busy ? "Saving..." : "Save"}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+    </Card>
   );
 }
