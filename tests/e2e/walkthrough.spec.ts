@@ -1,5 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
-import { readFileSync } from "node:fs";
+import { test, expect } from "@playwright/test";
+import { env, signIn, staging, watchConsole } from "./helpers";
 
 /*
  * The walkthrough: sign in as the studio and as a client on staging and use
@@ -10,58 +10,8 @@ import { readFileSync } from "node:fs";
  * staging), so the smoke suite still runs everywhere. Never points at
  * production: the logins only exist on staging.
  */
-const env: Record<string, string> = {};
-try {
-  for (const line of readFileSync(".env.local", "utf8").split("\n")) {
-    const m = line.match(/^([A-Z0-9_]+)=(.*)$/);
-    if (m) env[m[1]] = m[2].replace(/^["']|["']$/g, "");
-  }
-} catch {
-  /* no env file: every test below skips */
-}
-const staging = env.GHLV_ENV === "staging";
 const admin = { email: env.QA_ADMIN_EMAIL ?? "", password: env.QA_ADMIN_PASSWORD ?? "" };
 const client = { email: env.QA_CLIENT_EMAIL ?? "", password: env.QA_CLIENT_PASSWORD ?? "" };
-
-const ALLOWED_ERRORS = [/mode="md"/, /Download the React DevTools/];
-function watchConsole(page: Page): string[] {
-  const errors: string[] = [];
-  page.on("console", (msg) => {
-    if (msg.type() === "error" && !ALLOWED_ERRORS.some((re) => re.test(msg.text()))) errors.push(msg.text());
-  });
-  page.on("pageerror", (e) => errors.push(e.message));
-  return errors;
-}
-
-async function signIn(
-  page: Page,
-  path: string,
-  who: { email: string; password: string },
-  signedIn: RegExp,
-) {
-  await page.goto(path);
-  /* The form's submit handler is attached on hydration; a click before that
-     is a native submit, which reloads the login page and looks like a wrong
-     password. On a dev server hydration lands seconds after paint, so wait
-     for the network to settle and try again if the form is still there. */
-  await page.waitForLoadState("networkidle", { timeout: 45_000 }).catch(() => null);
-  const button = page.getByRole("button", { name: /^sign in$/i }).first();
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    await page.getByRole("textbox", { name: /email/i }).first().fill(who.email);
-    await page.locator('input[type="password"]').first().fill(who.password);
-    await button.click();
-    /* signed in means the signed-in screen is up, not merely that the form
-       went away: a native submit before hydration also reloads the form */
-    const ok = await page
-      .getByRole("heading", { name: signedIn })
-      .waitFor({ timeout: 15_000 })
-      .then(() => true)
-      .catch(() => false);
-    if (ok) return;
-    await page.waitForTimeout(1500);
-  }
-  throw new Error(`could not sign in as ${who.email}: the sign-in form stayed`);
-}
 
 test.describe.configure({ mode: "serial" });
 

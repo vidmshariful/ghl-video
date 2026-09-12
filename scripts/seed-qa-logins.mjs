@@ -31,6 +31,12 @@ const LOGINS = [
   { email: "qa-admin@ghlvideo.test", name: "QA Admin", admin: true },
   /* the demo client seeded into production and copied here: every line, zero money */
   { email: "shariful@ghlvideo.com", name: "Demo client", admin: false },
+  /* the owner's own staging login, on the allowlist the copy already carries;
+     more can be added: node scripts/seed-qa-logins.mjs --admin someone@vidiosa.com */
+  { email: "shariful@vidiosa.com", name: "Shariful Islam", admin: true },
+  ...process.argv
+    .filter((a, i, all) => all[i - 1] === "--admin")
+    .map((email) => ({ email: email.toLowerCase(), name: email.split("@")[0], admin: true })),
 ];
 
 const password = () => randomBytes(12).toString("base64url");
@@ -51,7 +57,9 @@ for (const l of LOGINS) {
     if (error) { console.error(`could not create ${l.email}: ${error.message}`); continue; }
     console.log(`created  ${l.email}  password: ${pw}`);
   }
-  made[l.admin ? "QA_ADMIN" : "QA_CLIENT"] = { email: l.email, password: pw };
+  /* only the two the walkthrough suite uses go into the env file */
+  if (l.email === "qa-admin@ghlvideo.test") made.QA_ADMIN = { email: l.email, password: pw };
+  if (l.email === "shariful@ghlvideo.com") made.QA_CLIENT = { email: l.email, password: pw };
   if (l.admin) {
     const { error } = await db.from("admins").upsert({ email: l.email, name: l.name }, { onConflict: "email" });
     if (error) console.error(`admins row for ${l.email}: ${error.message}`);
