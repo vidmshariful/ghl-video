@@ -65,6 +65,22 @@ async function contactByEmail(email: string): Promise<Row | null> {
   return ((j.contacts as Row[]) ?? [])[0] ?? null;
 }
 
+/** The contact straight from its id: the search index lags a few seconds behind a write. */
+async function contactById(id: string): Promise<Row> {
+  const j = await hl("GET", `/contacts/${id}`);
+  return (j.contact as Row) ?? j;
+}
+
+/** Wait for the search index to show a contact made a moment ago. */
+async function waitForContact(email: string): Promise<Row | null> {
+  for (let i = 0; i < 12; i += 1) {
+    const c = await contactByEmail(email);
+    if (c) return c;
+    await new Promise((r) => setTimeout(r, 2500));
+  }
+  return null;
+}
+
 const fieldValue = (contact: Row, id: string) =>
   ((contact.customFields as { id: string; value?: unknown; fieldValue?: unknown }[]) ?? []).find((f) => f.id === id);
 
@@ -121,11 +137,11 @@ test.describe("HighLevel, both ways", () => {
   });
 
   test("the sync makes the contact with our fields and tags", async () => {
-    const out = await api<{ provisioned: boolean; done: number; failed: number; rows: Row[] }>("/api/cron/hl-sync", { token });
+    const out = await api<{ provisioned: boolean; done: number; failed: number; rows: Row[] }>("/api/cron/hl-sync/", { token });
     expect(out.provisioned).toBeTruthy();
     expect(out.failed, JSON.stringify(out.rows)).toBe(0);
 
-    const contact = await contactByEmail(client.email);
+    const contact = await waitForContact(client.email);
     expect(contact, "the contact should exist in the sandbox").toBeTruthy();
     contactId = String(contact!.id);
     expect(await link("customer", customerId, "contact")).toBe(contactId);
@@ -154,7 +170,7 @@ test.describe("HighLevel, both ways", () => {
     });
     projectId = project.id;
 
-    const out = await api<{ failed: number; rows: Row[] }>("/api/cron/hl-sync", { token });
+    const out = await api<{ failed: number; rows: Row[] }>("/api/cron/hl-sync/", { token });
     expect(out.failed, JSON.stringify(out.rows)).toBe(0);
 
     dealId = String(await link("project", projectId, "opportunity"));
@@ -176,14 +192,14 @@ test.describe("HighLevel, both ways", () => {
     expect(props.client_email).toBe(client.email);
 
     /* the client is now a custom client, and the contact says so */
-    const contact = await contactByEmail(client.email);
-    expect((contact!.tags as string[]) ?? []).toContain("ghlv-custom");
-    expect((contact!.tags as string[]) ?? []).not.toContain("ghlv-lead");
+    const contact = await contactById(contactId);
+    expect((contact.tags as string[]) ?? []).toContain("ghlv-custom");
+    expect((contact.tags as string[]) ?? []).not.toContain("ghlv-lead");
   });
 
   test("moving the project moves the deal card", async () => {
     await api("/api/admin/projects/", { method: "PATCH", token, body: { id: projectId, stage: "in_progress" } });
-    const out = await api<{ failed: number; rows: Row[] }>("/api/cron/hl-sync", { token });
+    const out = await api<{ failed: number; rows: Row[] }>("/api/cron/hl-sync/", { token });
     expect(out.failed, JSON.stringify(out.rows)).toBe(0);
     const opp = (await hl("GET", `/opportunities/${dealId}`)).opportunity as Row;
     expect(opp.pipelineStageId).toBe(cfg.pipelines.projects.stages.in_progress);
@@ -191,7 +207,7 @@ test.describe("HighLevel, both ways", () => {
   });
 
   test("a video on the project becomes a record", async () => {
-    await api("/api/admin/projects/videos", { method: "POST", token, body: { projectId, title: `Square cut ${stamp}` } });
+    await api("/api/admin/projects/videos/", { method: "POST", token, body: { projectId, title: `Square cut ${stamp}` } });
     const { data: v } = await db()
       .from("order_deliverables")
       .select("id")
@@ -200,7 +216,7 @@ test.describe("HighLevel, both ways", () => {
       .maybeSingle();
     expect(v?.id).toBeTruthy();
 
-    const out = await api<{ failed: number; rows: Row[] }>("/api/cron/hl-sync", { token });
+    const out = await api<{ failed: number; rows: Row[] }>("/api/cron/hl-sync/", { token });
     expect(out.failed, JSON.stringify(out.rows)).toBe(0);
     const recId = await link("video", String(v!.id), "record");
     expect(recId).toBeTruthy();
@@ -213,7 +229,7 @@ test.describe("HighLevel, both ways", () => {
 
   test("an edit made in HighLevel comes back, and goes out again", async () => {
     const phone = `+1555010${stamp.slice(-4).replace(/[^0-9]/g, "7").padStart(4, "0")}`;
-    const r = await fetch(`http://localhost:3200/api/webhooks/highlevel?key=${encodeURIComponent(env.HIGHLEVEL_WEBHOOK_SECRET)}`, {
+    const r = await fetch(`http://localhost:3200/api/webhooks/highlevel/?key=${encodeURIComponent(env.HIGHLEVEL_WEBHOOK_SECRET)}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -241,15 +257,15 @@ test.describe("HighLevel, both ways", () => {
     expect(String(inbound?.outcome)).toContain("phone");
 
     /* the change queued the customer; the next send carries it back */
-    const out = await api<{ failed: number; rows: Row[] }>("/api/cron/hl-sync", { token });
+    const out = await api<{ failed: number; rows: Row[] }>("/api/cron/hl-sync/", { token });
     expect(out.failed, JSON.stringify(out.rows)).toBe(0);
-    const contact = await contactByEmail(client.email);
-    expect(String(contact!.phone ?? "").replace(/[^0-9]/g, "")).toBe(phone.replace(/[^0-9]/g, ""));
+    const contact = await contactById(contactId);
+    expect(String(contact.phone ?? "").replace(/[^0-9]/g, "")).toBe(phone.replace(/[^0-9]/g, ""));
   });
 
   test("a wrong key is refused and nothing is written", async () => {
     const before = await db().from("hl_inbound").select("id", { count: "exact", head: true });
-    const r = await fetch(`http://localhost:3200/api/webhooks/highlevel?key=not-the-key`, {
+    const r = await fetch(`http://localhost:3200/api/webhooks/highlevel/?key=not-the-key`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ contact_id: contactId, phone: "+15550000000" }),
