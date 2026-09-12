@@ -244,6 +244,12 @@ Total: about 34 working days, roughly seven weeks with review time.
 
 ## 6. Decisions and what the owner provides
 
+Decided 13 September 2026: the boundary is confirmed as written; premade
+checkout stays native; editing plans stay on Stripe for now; a HighLevel
+private integration token and location were supplied for staging, and
+staging's writes to HighLevel are limited to test accounts by code. The
+webhook approach and the plan's enabled features are still open.
+
 1. **The boundary.** Work stays in Supabase, the customer moves to HighLevel,
    with a live mirror of the work in HighLevel custom objects. Confirm.
 2. **Premade checkout.** Stays native on the site (recommended), or moves to
