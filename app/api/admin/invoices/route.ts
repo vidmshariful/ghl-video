@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { verifyAdmin } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { parseInvoiceInput, type InvoiceLineItem } from "@/lib/invoices";
+import { ensureAccount } from "@/lib/accounts";
 
 export const runtime = "nodejs";
 
@@ -92,6 +93,19 @@ export async function POST(req: Request) {
   const inv = parsed.invoice;
 
   const db = supabaseAdmin();
+  /* an invoice to a new email is a door: the account and its login exist
+     from here, so the invoice email's "lives in your portal" is true. The
+     invoice itself is the welcome, so none is sent. */
+  if (inv.customerEmail) {
+    await ensureAccount(db, {
+      email: inv.customerEmail,
+      name: inv.customerName || null,
+      company: inv.customerCompany || null,
+      source: "invoice",
+      welcome: false,
+    });
+  }
+
   const sku = `inv-${Math.random().toString(36).slice(2, 8)}`;
   const { data: product, error: pErr } = await db
     .from("products")

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { firstTouchFromCookieHeader } from "@/lib/first-touch";
 import { getActiveProductBySku } from "@/lib/checkout/products";
-import { ensureAuthAccount } from "@/lib/checkout/account";
+import { ensureAccount } from "@/lib/accounts";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { stripe } from "@/lib/checkout/stripe";
 import { fpTidFromCookieHeader, normalizeRef, refFromCookieHeader } from "@/lib/affiliates";
@@ -100,12 +100,20 @@ export async function POST(req: Request) {
   }
 
   const db = supabaseAdmin();
-  await db.from("customers").upsert({ email, name, company, phone }, { onConflict: "email", ignoreDuplicates: true });
-  const { data: customer } = await db.from("customers").select("*").eq("email", email).single();
+  /* the customer row and their login, through the one door every path uses;
+     "your plan is live" is this door's welcome, so none is sent here */
+  const ensured = await ensureAccount(db, {
+    email,
+    name,
+    company,
+    phone,
+    source: "plan-checkout",
+    password: asStr(payload.password) || null,
+  });
+  const { data: customer } = ensured
+    ? await db.from("customers").select("*").eq("id", ensured.id).single()
+    : { data: null };
   if (!customer) return NextResponse.json({ error: "Could not start checkout." }, { status: 500 });
-  // Portal account with the password chosen at checkout, best-effort. A
-  // repeat buyer keeps the one they already had; see account.ts.
-  await ensureAuthAccount(email, asStr(payload.password) || null);
 
   let stripeCustomerId: string | null = customer.stripe_customer_id;
   if (!stripeCustomerId) {

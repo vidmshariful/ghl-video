@@ -3,6 +3,8 @@ import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { getSessionUser } from "@/lib/account/session";
 import { profileByEmail, upsertProfile } from "@/lib/profiles";
 import { membershipsForMember, resolvePortalContext } from "@/lib/account-team";
+import { linesFrom, portalVisibility, type PortalVisibility } from "@/lib/portal-visibility";
+import { parseRetainer } from "@/lib/retainer";
 
 export const runtime = "nodejs";
 
@@ -56,7 +58,7 @@ export async function GET(req: Request) {
   if (ctx.isOwner) {
     const { data } = await db
       .from("customers")
-      .select("id, name, company, phone, hidden_sections, disabled_sections")
+      .select("*")
       .ilike("email", user.email)
       .maybeSingle();
     if (data?.id) void touchLastSeen(db, String(data.id));
@@ -67,13 +69,14 @@ export async function GET(req: Request) {
       phone: (data?.phone as string | null) ?? null,
       hiddenSections: (data?.hidden_sections as string[] | null) ?? [],
       disabledSections: (data?.disabled_sections as string[] | null) ?? [],
+      sections: await sectionsFor(db, user.email, data ?? null),
       actingFor: null,
     });
   }
 
   const { data: owner } = await db
     .from("customers")
-    .select("id, name, company, hidden_sections, disabled_sections")
+    .select("*")
     .ilike("email", ctx.ownerEmail)
     .maybeSingle();
   /* staff looking is not the client visiting: stamping last seen here would
@@ -88,11 +91,65 @@ export async function GET(req: Request) {
      * from a client hides it from everybody working in that account */
     hiddenSections: (owner?.hidden_sections as string[] | null) ?? [],
     disabledSections: (owner?.disabled_sections as string[] | null) ?? [],
+    sections: await sectionsFor(db, ctx.ownerEmail, owner ?? null),
     actingFor: {
       email: ctx.ownerEmail,
       name: (owner?.name as string | null) ?? null,
       company: (owner?.company as string | null) ?? null,
     },
+  });
+}
+
+/*
+ * What this account's portal shows, from what the account has.
+ *
+ * The rule lives in lib/portal-visibility.ts; this gathers its inputs. Four
+ * small counts rather than four lists: the question is only ever "any?".
+ * An order backed by an invoice is not a premade purchase (the invoice is
+ * the record of custom or add-on work), which is what the metadata filter
+ * is for.
+ */
+async function sectionsFor(
+  db: ReturnType<typeof supabaseAdmin>,
+  email: string,
+  customer: Record<string, unknown> | null,
+): Promise<PortalVisibility> {
+  const [{ data: orders }, { count: projects }, { count: subs }, { count: invoices }] =
+    await Promise.all([
+      db
+        .from("orders")
+        .select("id, status, product:products(metadata)")
+        .ilike("customer_email", email),
+      db
+        .from("projects")
+        .select("id", { count: "exact", head: true })
+        .ilike("customer_email", email)
+        .neq("status", "cancelled"),
+      db.from("subscriptions").select("id", { count: "exact", head: true }).ilike("customer_email", email),
+      db
+        .from("invoices")
+        .select("id", { count: "exact", head: true })
+        .ilike("customer_email", email)
+        .neq("status", "void"),
+    ]);
+  const rows = (orders ?? []) as Record<string, unknown>[];
+  const premadeOrders = rows.filter((o) => {
+    const meta = ((o.product as { metadata?: Record<string, unknown> } | null)?.metadata ?? {}) as Record<string, unknown>;
+    return String(o.status) === "paid" && meta.invoice !== true;
+  }).length;
+  const retainer = parseRetainer(customer?.retainer) !== null;
+  return portalVisibility({
+    lines: linesFrom({
+      premadeOrders,
+      projects: projects ?? 0,
+      directBrief: Boolean(customer?.can_submit_projects),
+      subscriptions: subs ?? 0,
+    }),
+    retainer,
+    hasBilling: rows.length > 0 || (invoices ?? 0) > 0,
+    hasPlanBilling: (subs ?? 0) > 0,
+    hidden: (customer?.hidden_sections as string[] | null) ?? [],
+    disabled: (customer?.disabled_sections as string[] | null) ?? [],
   });
 }
 

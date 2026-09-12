@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { verifyAdmin } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
-import { ensureAuthAccount } from "@/lib/checkout/account";
+import { ensureAccount } from "@/lib/accounts";
 
 export const runtime = "nodejs";
 
@@ -81,27 +81,20 @@ export async function POST(req: Request) {
     sku = cp.sku as string;
   }
 
-  // Upsert the customer (admin entry is authoritative, so details merge in).
-  const { data: customer, error: custErr } = await db
-    .from("customers")
-    .upsert(
-      {
-        email,
-        name: name || null,
-        company: company || null,
-        phone: phone || null,
-        ...(hlContactId ? { highlevel_contact_id: hlContactId } : {}),
-      },
-      { onConflict: "email" },
-    )
-    .select("id")
-    .single();
-  if (custErr || !customer) {
+  /* the customer row and their login through the one door. A sale recorded
+     by hand has no confirmation email of its own, so a brand new account is
+     welcomed to its portal here. */
+  const customer = await ensureAccount(db, {
+    email,
+    name: name || null,
+    company: company || null,
+    phone: phone || null,
+    highlevelContactId: hlContactId || null,
+    source: "manual-order",
+  });
+  if (!customer) {
     return NextResponse.json({ error: "Could not save the client." }, { status: 500 });
   }
-
-  // Portal access (best-effort, never blocks).
-  await ensureAuthAccount(email);
 
   const { data: order, error: orderErr } = await db
     .from("orders")

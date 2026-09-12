@@ -533,12 +533,10 @@ async function recoverOrphanSubscription(
     .maybeSingle();
   if (!product) return null;
 
-  await db.from("customers").upsert({ email }, { onConflict: "email", ignoreDuplicates: true });
-  const { data: customer } = await db
-    .from("customers")
-    .select("id")
-    .eq("email", email)
-    .maybeSingle();
+  /* through the one door, so a recovered plan still gets a handle and a
+     login; the plan-started email is its welcome */
+  const { ensureAccount } = await import("@/lib/accounts");
+  const customer = await ensureAccount(db, { email, source: "stripe", welcome: false });
   if (!customer) return null;
 
   const stripeCustomerId =

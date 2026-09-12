@@ -34,6 +34,11 @@ type Row = {
     refundedCents: number;
   };
   services: string[];
+  /* a studio-owned account (demo, test): shown only when asked for */
+  internal: boolean;
+  source: string | null;
+  /* retainer or direct brief, when custom work is not per quote */
+  arrangement: "retainer" | "direct" | null;
   counts: { orders: number; projects: number; subscriptions: number; openInvoices: number };
 };
 
@@ -54,7 +59,7 @@ export function CustomersScreen({
 }) {
   const [rows, setRows] = useState<Row[] | null>(null);
   const [q, setQ] = useState("");
-  const [service, setService] = useState<"all" | "premade" | "custom" | "editing">("all");
+  const [service, setService] = useState<"all" | "premade" | "custom" | "editing" | "internal">("all");
   const [sort, setSort] = useState<Sort>("value");
   const [err, setErr] = useState("");
   const [draft, setDraft] = useState<{
@@ -83,7 +88,10 @@ export function CustomersScreen({
     const term = q.trim().toLowerCase();
     const list = (rows ?? []).filter(
       (c) =>
-        (service === "all" || c.services.includes(service)) &&
+        /* the studio's own accounts only when asked for, so the demo client
+           never sits in the list beside real ones or counts in the totals */
+        (service === "internal" ? c.internal : !c.internal) &&
+        (service === "all" || service === "internal" || c.services.includes(service)) &&
         (!term ||
           c.email.toLowerCase().includes(term) ||
           (c.name ?? "").toLowerCase().includes(term) ||
@@ -232,14 +240,14 @@ export function CustomersScreen({
       <Toolbar
         right={
           <div className="flex flex-wrap gap-1.5">
-            {(["all", "premade", "custom", "editing"] as const).map((s) => (
+            {(["all", "premade", "custom", "editing", "internal"] as const).map((s) => (
               <Button
                 key={s}
                 size="sm"
                 variant={service === s ? "primary" : "secondary"}
                 onClick={() => setService(s)}
               >
-                {s === "all" ? "Everyone" : s}
+                {s === "all" ? "Everyone" : s === "internal" ? "Ours" : s}
               </Button>
             ))}
             <span className="mx-1 w-px self-stretch bg-hair" aria-hidden="true" />
@@ -331,9 +339,10 @@ export function CustomersScreen({
                             {s}
                           </Chip>
                         ))}
-                        {c.hiddenSections.length > 0 && (
-                          <Chip tone="neutral">{c.hiddenSections.length} hidden</Chip>
-                        )}
+                        {/* how they pay for custom work, when it is not per quote */}
+                        {c.arrangement === "retainer" && <Chip tone="good">retainer</Chip>}
+                        {c.arrangement === "direct" && <Chip tone="neutral">direct brief</Chip>}
+                        {c.internal && <Chip tone="neutral">ours</Chip>}
                       </span>
                     </Td>
                     <Td align="right">

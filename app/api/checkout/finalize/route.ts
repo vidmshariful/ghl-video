@@ -9,7 +9,7 @@ import {
   saVidFromCookieHeader,
 } from "@/lib/affiliates";
 import { firstTouchFromCookieHeader } from "@/lib/first-touch";
-import { ensureAuthAccount } from "@/lib/checkout/account";
+import { ensureAccount } from "@/lib/accounts";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { stripe } from "@/lib/checkout/stripe";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
@@ -231,27 +231,32 @@ export async function POST(req: Request) {
     }
   }
 
-  // Upsert the customer, but never overwrite an existing row's details with an
-  // unverified request.
-  await db
-    .from("customers")
-    .upsert({ email, name, company, phone }, { onConflict: "email", ignoreDuplicates: true });
+  /* The customer row and their portal login, through the one door every
+   * path uses (lib/accounts.ts). Never overwrites an existing row's details
+   * with an unverified request, and the password typed here only lands if
+   * this is the moment the login is created: see account.ts for why
+   * anything else would be an account takeover hole. The order confirmation
+   * is this door's welcome, so none is sent here. */
+  const ensured = await ensureAccount(db, {
+    email,
+    name,
+    company,
+    phone,
+    source: "checkout",
+    password: asStr(payload.password) || null,
+  });
+  if (!ensured) {
+    return NextResponse.json({ error: "Could not complete checkout." }, { status: 500 });
+  }
   const { data: customer, error: custErr } = await db
     .from("customers")
     .select("*")
-    .eq("email", email)
+    .eq("id", ensured.id)
     .single();
   if (custErr || !customer) {
     return NextResponse.json({ error: "Could not complete checkout." }, { status: 500 });
   }
-
-  /* Give the buyer a portal account keyed to this email, with the password
-   * they chose at checkout, so they can sign in the moment they have paid
-   * instead of meeting a reset screen. Best-effort: never blocks the order.
-   *
-   * A repeat buyer keeps the password they already had. See account.ts for
-   * why overwriting it would be an account takeover hole. */
-  const account = await ensureAuthAccount(email, asStr(payload.password) || null);
+  const account = ensured.login;
 
   let stripeCustomerId: string | null = customer.stripe_customer_id;
   if (!stripeCustomerId) {

@@ -3,6 +3,7 @@ import { verifyAdmin } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { lifetimeValue, serviceTags, type MoneySource } from "@/lib/customer-record";
 import { orderKind, type InvoiceLink } from "@/lib/order-kind";
+import { ensureAccount } from "@/lib/accounts";
 
 export const runtime = "nodejs";
 
@@ -27,7 +28,7 @@ export async function GET(req: Request) {
     await Promise.all([
       db
         .from("customers")
-        .select("id, email, name, company, phone, tags, hidden_sections, last_seen_at, created_at")
+        .select("id, email, name, company, phone, tags, hidden_sections, last_seen_at, created_at, internal, source, retainer, can_submit_projects")
         .order("created_at", { ascending: false }),
       db
         .from("orders")
@@ -122,6 +123,11 @@ export async function GET(req: Request) {
       hiddenSections: (c.hidden_sections as string[] | null) ?? [],
       lastSeenAt: (c.last_seen_at as string | null) ?? null,
       createdAt: String(c.created_at),
+      /* a studio-owned account: out of the list and the sums by default */
+      internal: Boolean(c.internal),
+      source: (c.source as string | null) ?? null,
+      /* how they pay for custom work, when it is not per quote */
+      arrangement: c.retainer ? "retainer" : c.can_submit_projects ? "direct" : null,
       value,
       services: serviceTags({
         paidOrders: mine.orders.filter((o) => o.status === "paid" && o.kind !== "custom").length,
@@ -188,17 +194,17 @@ export async function POST(req: Request) {
     );
   }
 
-  const { data, error } = await db
-    .from("customers")
-    .insert({
-      email,
-      name: str(b.name, 160),
-      company: str(b.company, 160),
-      phone: str(b.phone, 40),
-    })
-    .select("id")
-    .single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  /* through the one door every path uses: handle and login included. The
+     welcome stays with the screen, which sends it on its own say-so. */
+  const data = await ensureAccount(db, {
+    email,
+    name: str(b.name, 160),
+    company: str(b.company, 160),
+    phone: str(b.phone, 40),
+    source: str(b.fromRequestId, 64) ? "enquiry" : "admin",
+    welcome: false,
+  });
+  if (!data) return NextResponse.json({ error: "Could not create the client." }, { status: 400 });
 
   /* the person we actually deal with, created alongside so a new client is
    * never a bare email nobody can put a name to */

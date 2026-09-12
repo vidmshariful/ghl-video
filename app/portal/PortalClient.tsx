@@ -196,6 +196,10 @@ type MyProfile = {
   features: string[] | null;
   hiddenSections?: string[] | null;
   disabledSections?: string[] | null;
+  /* what the account's portal shows, decided server-side from what the
+     account has (lib/portal-visibility.ts); the two lists above are the raw
+     overrides it was decided with */
+  sections?: { visible: string[]; disabled: string[]; offers: boolean } | null;
   actingFor: { email: string; name: string | null; company?: string | null } | null;
   viewingAsAdmin?: boolean;
   memberships: { ownerEmail: string; ownerName: string | null; status: string }[];
@@ -1448,11 +1452,23 @@ function Portal({
    * It gates the menu AND the section itself, so a hidden screen cannot be
    * reached by typing its URL.
    */
+  /*
+   * Decided by the server from what the account actually has: a section
+   * shows because the client has that service line, the store shows for
+   * people who buy from it, the offers vanish for a retainer partner. The
+   * hand switches only ever narrow that. Before a profile lands, everything
+   * shows, which is also what an older server answer without `sections`
+   * gets, so a deploy in either order renders.
+   */
+  const decided = profile?.sections ?? null;
+  const visibleSections = decided ? new Set(decided.visible) : null;
   const hiddenSections = new Set(profile?.hiddenSections ?? []);
-  const shows = (key: string) => !hiddenSections.has(key);
+  const shows = (key: string) =>
+    visibleSections ? visibleSections.has(key) : !hiddenSections.has(key);
   /* the third state: in the menu, greyed, locked, with the note on hover */
-  const disabledSections = new Set(profile?.disabledSections ?? []);
+  const disabledSections = new Set(decided ? decided.disabled : (profile?.disabledSections ?? []));
   const isDisabled = (key: string) => disabledSections.has(key);
+  const showOffers = decided ? decided.offers : true;
   /* Typing the URL of a switched-off section lands on the dashboard. Gating
    * only the menu would hide the door and leave the room open. */
   const view: PortalSection = shows(section) ? section : "dashboard";
@@ -1741,8 +1757,9 @@ function Portal({
           : []),
       ],
     },
-    /* these are offers aimed at the account owner, not at their team */
-    ...(profile.isOwner
+    /* these are offers aimed at the account owner, not at their team, and
+       never at a retainer partner who is already all the way in */
+    ...(profile.isOwner && showOffers
       ? [
           {
             /* Closed by default. These are offers aimed at an owner, not
