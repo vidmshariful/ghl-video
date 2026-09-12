@@ -11,6 +11,7 @@ import {
 import {
   creditsUsed,
   describeCredits,
+  nextPosition,
   overPlanWarning,
 } from "@/lib/subscription-slots";
 import { ASPECTS, CLIENT_STATUS_WORD, columnFor, type Aspect } from "@/lib/editing-sop";
@@ -283,8 +284,10 @@ export async function POST(req: Request) {
 
   const { data: existing } = await db
     .from("order_deliverables")
-    .select("id, credit_cost, cancelled_at")
+    .select("id, credit_cost, cancelled_at, position")
     .eq("cycle_id", cycle.id);
+  /* the next free slot in the month, never the row count: see nextPosition */
+  const base = nextPosition((existing ?? []) as { position?: number | null }[]);
   const topup = await topupCreditsLeft(db, String(sub.id));
   const before = creditsUsed(
     ((existing ?? []) as Row[]).map((v) => ({
@@ -329,7 +332,7 @@ export async function POST(req: Request) {
       /* their ask, kept apart from due_at, which is what we commit to */
       requested_due_at: wantedBy,
       requested_at: now,
-      position: (existing ?? []).length,
+      position: base,
     })
     .select("id")
     .single();
@@ -350,7 +353,7 @@ export async function POST(req: Request) {
         assets_url: assetsUrl,
         requested_due_at: wantedBy,
         requested_at: now,
-        position: (existing ?? []).length + i + 1,
+        position: base + i + 1,
       })),
     );
     /* the parent is already in. A failed cut is worth saying out loud

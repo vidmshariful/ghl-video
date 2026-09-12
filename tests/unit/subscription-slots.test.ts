@@ -2,6 +2,7 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import {
   creditsUsed,
+  nextPosition,
   cycleWindow,
   describeCredits,
   overPlanWarning,
@@ -262,4 +263,19 @@ test("Scale jumps the line once the footage is in", () => {
     createdAt: "2026-08-10T00:00:00Z",
   };
   assert.ok(queueOrder(scale, starter) < 0);
+});
+
+describe("nextPosition", () => {
+  test("an empty month starts at zero", () => {
+    assert.equal(nextPosition([]), 0);
+  });
+  test("the highest plus one, not the count: shorts added above the count left a hole the count landed on", () => {
+    /* Beant's September: fifteen rows, highest position fifteen, count fifteen */
+    const rows = [0, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].map((position) => ({ position }));
+    assert.equal(rows.length, 15);
+    assert.equal(nextPosition(rows), 16);
+  });
+  test("cancelled rows keep their slot", () => {
+    assert.equal(nextPosition([{ position: 0 }, { position: 3 }, { position: null }]), 4);
+  });
 });

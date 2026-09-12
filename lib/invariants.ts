@@ -147,11 +147,14 @@ const CHECKS: { key: string; rule: string; severity: Severity; run: Check }[] = 
          cut for review lives on the line's station, so it is exempt */
       const { data } = await db
         .from("order_deliverables")
-        .select("id, status, category")
+        .select("id, status, category, edit_type")
         .in("status", ["ready", "approved"])
         .is("video_url", null)
         .is("cancelled_at", null);
-      const rows = ((data ?? []) as Row[]).filter((r) => r.category !== "main");
+      /* a batch is the brief for its shorts and never has a cut of its own */
+      const rows = ((data ?? []) as Row[]).filter(
+        (r) => r.category !== "main" && !isBatch((r.edit_type as string | null) ?? null),
+      );
       return tally(rows, (r) => `${short(r.id)} ${String(r.status)}`);
     },
   },

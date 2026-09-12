@@ -7,7 +7,7 @@ import {
   planPriority,
   topupCreditsLeft,
 } from "@/lib/subscription-cycles";
-import { creditsUsed, queueOrder } from "@/lib/subscription-slots";
+import { creditsUsed, nextPosition, queueOrder } from "@/lib/subscription-slots";
 import { BATCH_TYPE, creditCost, isBatch, tierFor, typeLabelFor, type EditType } from "@/lib/editing-credits";
 import { ASPECTS, columnFor, qcPassed, type Aspect, type Qc } from "@/lib/editing-sop";
 import { DELIVERABLE_STATUSES, type DeliverableStatus } from "@/lib/deliverable-status";
@@ -561,7 +561,7 @@ export async function PATCH(req: Request) {
 
     const { data: existing } = await db
       .from("order_deliverables")
-      .select("id, credit_cost, cancelled_at")
+      .select("id, credit_cost, cancelled_at, position")
       .eq("cycle_id", String(cyc.id));
     const standing = creditsUsed(
       ((existing ?? []) as Row[]).map((v) => ({
@@ -576,7 +576,9 @@ export async function PATCH(req: Request) {
     cutWarning = producerWarning(totalCost, standing.left, planName);
 
     const now = new Date().toISOString();
-    const base = (existing ?? []).length;
+    /* the next free slot, never the row count: a count can land on a taken
+       number and the unique index then refuses the client's next request */
+    const base = nextPosition((existing ?? []) as Row[]);
     const { error: cutError } = await db.from("order_deliverables").insert(
       addCuts.map((instruction, i) => ({
         cycle_id: String(before.cycle_id),
@@ -592,7 +594,7 @@ export async function PATCH(req: Request) {
         requested_due_at: (before.requested_due_at as string | null) ?? null,
         assets_ready_at: (before.assets_ready_at as string | null) ?? null,
         requested_at: now,
-        position: base + i + 1,
+        position: base + i,
       })),
     );
     if (cutError) return NextResponse.json({ error: cutError.message }, { status: 400 });
@@ -757,8 +759,9 @@ export async function POST(req: Request) {
 
   const { data: existing } = await db
     .from("order_deliverables")
-    .select("id, credit_cost, cancelled_at")
+    .select("id, credit_cost, cancelled_at, position")
     .eq("cycle_id", cycle.id);
+  const base = nextPosition((existing ?? []) as Row[]);
 
   const before = creditsUsed(
     ((existing ?? []) as Row[]).map((v) => ({
@@ -807,7 +810,7 @@ export async function POST(req: Request) {
       assigned_admin_email: assignedTo,
       assets_ready_at: readyAt,
       requested_at: now,
-      position: (existing ?? []).length,
+      position: base,
     })
     .select("id")
     .single();
@@ -832,7 +835,7 @@ export async function POST(req: Request) {
         requested_due_at: wantedBy,
         assets_ready_at: readyAt,
         requested_at: now,
-        position: (existing ?? []).length + i + 1,
+        position: base + i + 1,
       })),
     );
     /* the video is already in. A failed cut is worth saying out loud rather

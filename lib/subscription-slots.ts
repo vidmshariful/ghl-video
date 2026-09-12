@@ -181,3 +181,24 @@ export function queueOrder(a: Queued, b: Queued): number {
   if (due(a) !== due(b)) return due(a) - due(b);
   return Date.parse(a.createdAt) - Date.parse(b.createdAt);
 }
+
+/*
+ * The next free position in a plan month.
+ *
+ * Positions used to be "how many rows the month has", which is wrong the
+ * moment a row is ever placed above the count: the board's "add shorts"
+ * placed each short at count plus one, so after three shorts the count sat
+ * two below the highest position, and the client's next request landed on
+ * a taken number. The unique index refused it and the client read "Could
+ * not save that." That was Beant Singh's month in September 2026, and the
+ * walkthrough on staging reproduced it in an hour. Highest plus one cannot
+ * collide, whatever order things were added in.
+ */
+export function nextPosition(rows: { position?: number | null }[]): number {
+  let max = -1;
+  for (const r of rows) {
+    const p = Number(r.position ?? -1);
+    if (Number.isFinite(p) && p > max) max = p;
+  }
+  return max + 1;
+}
