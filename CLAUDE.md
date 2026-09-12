@@ -267,6 +267,15 @@ whose code says index:false, despite comments that claim it can.
 admin Pages screen. Header nav and footer chrome are backend-managed via
 Supabase (`lib/chrome.ts`) with site.ts values as build-time fallback.
 
+## 7b. The plan (read before any platform work)
+
+`docs/PLATFORM-PLAN-2026-09.md` is the direction from 13 September 2026:
+the three faults behind every bug, the HighLevel boundary (HighLevel owns
+the customer, money, conversations, scheduling and automation; Supabase
+owns the work and the site, with a synced mirror of the work in HighLevel
+custom objects), and the eight phases built on staging before one release.
+Nothing is pushed until phase 7 and the owner says so.
+
 ## 8. The Journal ritual (shared brain, non-negotiable)
 
 The `journal` table (admin -> Journal) is the owner-facing record of this
