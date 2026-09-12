@@ -288,6 +288,14 @@
     {
       "path": "/api/cron/invariants",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/hl-sync",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/hl-reconcile",
+      "schedule": "0 4 * * *"
     }
   ]
 }

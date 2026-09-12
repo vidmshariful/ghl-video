@@ -58,6 +58,8 @@ type Record_ = {
     createdAt: string;
     highlevelContactId: string | null;
   };
+  /* where they are in HighLevel, from the sync's own links; null until sent */
+  highlevel: { contactId: string; contactUrl: string; syncedAt: string; pending: number } | null;
   /* the service lines the account has, and what its portal shows because of them */
   lines: ServiceLines;
   visibility: PortalVisibility;
@@ -81,6 +83,8 @@ type Record_ = {
     retainerMonth: string | null;
     retainerKind: RetainerKind | null;
     createdAt: string;
+    /* the deal card in HighLevel, once the sync has made it */
+    highlevelUrl: string | null;
   }[];
   /* the retainer month by month, only for an account on one */
   partnership: {
@@ -513,15 +517,23 @@ export function CustomerRecord({
           >
             View their portal
           </Button>
-          {c.highlevelContactId && (
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={<ExternalLink />}
-              href={`https://app.gohighlevel.com/v2/location/${process.env.NEXT_PUBLIC_HL_LOCATION ?? ""}/contacts/detail/${c.highlevelContactId}`}
-            >
+          {/* the contact the sync made, in the sub-account it points at; the
+              legacy id column is only a fallback for accounts synced the old way */}
+          {data.highlevel ? (
+            <Button variant="secondary" size="sm" icon={<ExternalLink />} href={data.highlevel.contactUrl}>
               In HighLevel
             </Button>
+          ) : (
+            c.highlevelContactId && (
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<ExternalLink />}
+                href={`https://app.gohighlevel.com/v2/location/${process.env.NEXT_PUBLIC_HL_LOCATION ?? ""}/contacts/detail/${c.highlevelContactId}`}
+              >
+                In HighLevel
+              </Button>
+            )
           )}
         </div>
       </div>
@@ -973,6 +985,16 @@ export function CustomerRecord({
                             <a href={`/admin/custom/${p.id}/`} className="hover:text-gold">
                               {p.title}
                             </a>
+                            {p.highlevelUrl && (
+                              <a
+                                href={p.highlevelUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="ml-2 text-label text-muted hover:text-gold"
+                              >
+                                Deal
+                              </a>
+                            )}
                           </Td>
                           <Td>
                             <Chip

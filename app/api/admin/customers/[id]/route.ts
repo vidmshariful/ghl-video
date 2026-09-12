@@ -14,6 +14,7 @@ import {
 import { linesFrom, portalVisibility } from "@/lib/portal-visibility";
 import { currentCycle, topupCreditsLeft } from "@/lib/subscription-cycles";
 import { creditsUsed } from "@/lib/subscription-slots";
+import { customerLinks } from "@/lib/highlevel/links";
 
 /** A short-lived signed URL for a private brand file, or null. */
 async function signBrand(db: ReturnType<typeof supabaseAdmin>, path: string | null) {
@@ -212,6 +213,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     retainerKind: (p.retainer_kind as RetainerKind | null) ?? null,
     createdAt: String(p.created_at),
   }));
+  /* where they are in HighLevel: the contact, each project's deal card */
+  const hl = await customerLinks(db, id, jobs.map((j) => j.id));
+
   const partnership = retainer
     ? {
         months: retainerMonths(retainer.startedOn, new Date()).map((m) =>
@@ -310,6 +314,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       createdAt: String(c.created_at),
       highlevelContactId: (c.highlevel_contact_id as string | null) ?? null,
     },
+    highlevel: hl.customer,
     lines,
     visibility,
     plan,
@@ -324,6 +329,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       retainerMonth: (p.retainer_month as string | null) ?? null,
       retainerKind: (p.retainer_kind as RetainerKind | null) ?? null,
       createdAt: String(p.created_at),
+      highlevelUrl: hl.dealUrls[String(p.id)] ?? null,
     })),
     partnership,
     value,
