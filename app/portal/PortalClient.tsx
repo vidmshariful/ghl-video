@@ -1703,6 +1703,15 @@ function Portal({
               },
             ]
           : []),
+        /* one screen for everything they pay: orders, invoices and plans.
+           Two screens showed the same money from two sides and invited the
+           question of whether it was charged twice. The key follows what the
+           account has, so a plan-only client still finds it. */
+        ...(can("orders") && shows("orders")
+          ? [{ key: "orders", label: "Billing", icon: <ShoppingCart /> }]
+          : can("subscriptions") && shows("billing")
+            ? [{ key: "billing", label: "Billing", icon: <Repeat /> }]
+            : []),
       ],
     },
     {
@@ -1721,7 +1730,10 @@ function Portal({
       ],
     },
     {
-      title: "Get more videos",
+      /* the lines they do not have yet, in one quiet group: the store for
+         premade, the call for custom. Which of these show is decided
+         server-side from what the account has. */
+      title: "Get more",
       defaultOpen: true,
       items: [
         ...(can("orders")
@@ -1730,31 +1742,6 @@ function Portal({
         { key: "coming-soon", label: "Coming Soon", icon: <Sparkles /> },
         /* the existing route to a custom video, until the quote thread lands */
         { key: "book", label: "Book a Call", icon: <PhoneCall /> },
-      ],
-    },
-    {
-      /*
-       * Everything they pay, in two items rather than three.
-       *
-       * Orders and Invoices are one screen because they are the same money
-       * seen from two sides: paying an invoice creates an order, so listing
-       * both separately shows a client the same $450 twice and invites them
-       * to wonder whether they were charged for it twice. What they still owe
-       * sits at the top of it, because that is the only part that needs
-       * them to do something.
-       *
-       * Subscriptions is separate because it is the opposite kind of money:
-       * nothing to do, until the once a year when there is.
-       */
-      title: "Billings",
-      defaultOpen: true,
-      items: [
-        ...(can("orders")
-          ? [{ key: "orders", label: "Orders and Invoices", icon: <ShoppingCart /> }]
-          : []),
-        ...(can("subscriptions")
-          ? [{ key: "billing", label: "Subscriptions", icon: <Repeat /> }]
-          : []),
       ],
     },
     /* these are offers aimed at the account owner, not at their team, and
@@ -1951,6 +1938,7 @@ function Portal({
                   : (session.user.email ?? "")
               }
               can={can}
+              has={shows}
               authedFetch={authedFetch}
               onOpenOrder={openOrderById}
               onOpenVideo={openVideo}
@@ -1974,13 +1962,18 @@ function Portal({
             ) : (
               <div>
                 <PageHeader
-                  title="Orders and Invoices"
-                  subtitle="Everything you have paid for, and anything still to pay."
+                  title="Billing"
+                  subtitle="Everything you have paid for, anything still to pay, and any plan you are on."
                 />
                 <div className="mt-6">
-                  {/* what needs them first, then the record */}
+                  {/* what needs them first, then the record, then the plans */}
                   <OpenInvoices />
                   <OrdersList onOpen={openOrderById} />
+                  {shows("billing") && can("subscriptions") && (
+                    <div className="mt-6">
+                      <SubscriptionsView canBilling={can("billing")} />
+                    </div>
+                  )}
                 </div>
               </div>
             )
@@ -2044,13 +2037,22 @@ function Portal({
               onMessageStudio={can("messages") ? () => go("messages") : undefined}
             />
           ) : view === "billing" && can("subscriptions") ? (
+            /* the same one screen, reached by the plan-only route */
             <div>
               <PageHeader
-                title="Subscriptions"
-                subtitle="Your recurring plans, what they cost, and when they renew."
+                title="Billing"
+                subtitle="Your plan, what it costs, when it renews, and anything else you have paid for."
               />
               <div className="mt-6">
-                <SubscriptionsView canBilling={can("billing")} />
+                {shows("orders") && can("orders") && (
+                  <>
+                    <OpenInvoices />
+                    <OrdersList onOpen={openOrderById} />
+                  </>
+                )}
+                <div className={shows("orders") && can("orders") ? "mt-6" : ""}>
+                  <SubscriptionsView canBilling={can("billing")} />
+                </div>
               </div>
             </div>
           ) : view === "projects" && can("orders") ? (
@@ -2074,6 +2076,7 @@ function Portal({
                   : (session.user.email ?? "")
               }
               can={can}
+              has={shows}
               authedFetch={authedFetch}
               onOpenOrder={openOrderById}
               onOpenVideo={openVideo}

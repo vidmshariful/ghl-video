@@ -379,6 +379,7 @@ export function DashboardView({
   firstName,
   subtitle,
   can,
+  has,
   authedFetch,
   onOpenOrder,
   onOpenVideo,
@@ -396,6 +397,10 @@ export function DashboardView({
   otherAccounts?: { ownerEmail: string; ownerName: string | null }[];
   onSwitchAccount?: (ownerEmail: string) => void;
   can: (key: string) => boolean;
+  /** which sections this account's portal shows, decided server-side; the
+      line cards follow it so a client never sees a card for a screen they
+      do not have */
+  has?: (key: string) => boolean;
   authedFetch: (path: string, init?: RequestInit) => Promise<Record<string, unknown>>;
   onOpenOrder: (id: string) => void;
   /** open one video on whichever of the three screens it lives */
@@ -410,13 +415,62 @@ export function DashboardView({
   const [feedbackAsk, setFeedbackAsk] = useState<FeedbackAskData | null>(null);
   /* a partner on a retainer sees the month at the top of their dashboard */
   const [partnership, setPartnership] = useState<Partnership | null>(null);
-  const canProjects = can("projects");
+  /*
+   * One card per service line, in that line's own terms.
+   *
+   * The counters span every line, which is right for "what needs me", but a
+   * month's credits or a project waiting on a script are not video counts.
+   * Custom and editing get a card whenever the account has them; premade
+   * gets one only beside another line, since alone it would repeat the
+   * counters.
+   */
+  const [lineProjects, setLineProjects] = useState<{ open: number; waiting: number } | null>(null);
+  const [linePlan, setLinePlan] = useState<{
+    spent: number;
+    allowed: number;
+    review: number;
+    planName: string;
+  } | null>(null);
+  const hasCustom = (has ? has("projects") : true) && can("projects");
+  const hasEditing = (has ? has("subscriptions") : false) && can("subscriptions");
   useEffect(() => {
-    if (!canProjects) return;
+    if (!hasCustom) return;
     authedFetch("/api/portal/projects")
-      .then((j) => setPartnership((j.partnership as Partnership | null | undefined) ?? null))
-      .catch(() => setPartnership(null));
-  }, [canProjects, authedFetch]);
+      .then((j) => {
+        setPartnership((j.partnership as Partnership | null | undefined) ?? null);
+        const list = (j.projects as { open: boolean; pipeline?: { ball?: string | null } }[] | undefined) ?? [];
+        const open = list.filter((p) => p.open);
+        setLineProjects({
+          open: open.length,
+          waiting: open.filter((p) => p.pipeline?.ball === "client").length,
+        });
+      })
+      .catch(() => {
+        setPartnership(null);
+        setLineProjects(null);
+      });
+  }, [hasCustom, authedFetch]);
+  useEffect(() => {
+    if (!hasEditing) return;
+    authedFetch("/api/portal/plan")
+      .then((j) => {
+        const plan = j.plan as
+          | { planName: string; credits: { spent: number; allowed: number }; videos: { status: string }[] }
+          | null
+          | undefined;
+        setLinePlan(
+          plan
+            ? {
+                spent: plan.credits.spent,
+                allowed: plan.credits.allowed,
+                review: plan.videos.filter((v) => v.status === "ready").length,
+                planName: plan.planName,
+              }
+            : null,
+        );
+      })
+      .catch(() => setLinePlan(null));
+  }, [hasEditing, authedFetch]);
   /* which counter is expanded, if any */
   const [lens, setLens] = useState<"ready" | "waiting" | "making" | null>(null);
   const canOrders = can("orders");
@@ -536,6 +590,49 @@ export function DashboardView({
      * month never saw this at all. */
     hasWork &&
     onboardingUnfinished(steps);
+
+  const premadeVideos = allVideos.filter((v) => v.line === "premade");
+  const premadeReady = premadeVideos.filter((v) => v.status === "ready").length;
+  const lineCards: { key: string; label: string; value: string; hint: string }[] = [
+    ...((has ? has("videos") : false) && (hasCustom || hasEditing) && premadeVideos.length
+      ? [
+          {
+            key: "videos",
+            label: "Pre-made",
+            value: count(premadeVideos.length),
+            hint: premadeReady
+              ? `${premadeReady} ready to watch`
+              : `${premadeVideos.length === 1 ? "video" : "videos"} from the library`,
+          },
+        ]
+      : []),
+    ...(hasCustom && lineProjects && (lineProjects.open > 0 || partnership)
+      ? [
+          {
+            key: "projects",
+            label: "Custom",
+            value: String(lineProjects.open),
+            hint: lineProjects.waiting
+              ? `${lineProjects.waiting} waiting on you`
+              : lineProjects.open === 1
+                ? "project in production"
+                : "projects in production",
+          },
+        ]
+      : []),
+    ...(hasEditing && linePlan
+      ? [
+          {
+            key: "subscriptions",
+            label: "Editing",
+            value: `${linePlan.spent} of ${linePlan.allowed}`,
+            hint: linePlan.review
+              ? `credits used, ${linePlan.review} ready to review`
+              : `credits used this month on ${linePlan.planName}`,
+          },
+        ]
+      : []),
+  ];
 
   return (
     <div>
@@ -809,6 +906,23 @@ export function DashboardView({
               ))}
             </ul>
           </Card>
+        </div>
+      )}
+
+      {lineCards.length > 0 && (
+        <div className="mt-6">
+          <CardGrid min="15rem">
+            {lineCards.map((c) => (
+              <button
+                key={c.key}
+                type="button"
+                onClick={() => onGo(c.key)}
+                className="tap block w-full rounded-[12px] text-left transition-colors hover:ring-1 hover:ring-gold/40"
+              >
+                <Stat label={c.label} value={c.value} hint={c.hint} />
+              </button>
+            ))}
+          </CardGrid>
         </div>
       )}
 
