@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Search } from "lucide-react";
-import { Button, Card, Chip, EmptyState, Field, Input, Modal, Table, Td, Th, Toolbar } from "@/components/portal/ui";
+import { Button, Card, Chip, EmptyState, Field, Input, Modal, Select, Table, Td, Th, Toolbar } from "@/components/portal/ui";
 import { authHeader, money, when } from "./client";
 import { CustomerRecord } from "./CustomerRecord";
 
@@ -42,6 +42,16 @@ type Row = {
   counts: { orders: number; projects: number; subscriptions: number; openInvoices: number };
 };
 
+type Lead = {
+  id: string;
+  name: string | null;
+  email: string;
+  company: string | null;
+  status: string;
+  createdAt: string;
+  isClient: boolean;
+};
+
 const SERVICE_TONE: Record<string, "good" | "info" | "warn"> = {
   premade: "info",
   custom: "warn",
@@ -65,7 +75,12 @@ export function CustomersScreen({
   const [draft, setDraft] = useState<{
     company: string; name: string; email: string; phone: string;
     contactName: string; contactTitle: string; contactEmail: string; contactPhone: string;
+    /* what they are here for: sets how they brief us and where the record opens */
+    intent: "premade" | "custom" | "direct" | "retainer" | "editing";
+    sendWelcome: boolean;
   } | null>(null);
+  /* enquiries that have not become clients yet */
+  const [leads, setLeads] = useState<Lead[]>([]);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -75,6 +90,7 @@ export function CustomersScreen({
       const j = await r.json();
       if (!r.ok) return setErr(j.error ?? "Could not load the clients.");
       setRows(j.customers as Row[]);
+      setLeads((j.leads as Lead[] | undefined) ?? []);
     } catch {
       setErr("Could not load the clients.");
     }
@@ -113,10 +129,22 @@ export function CustomersScreen({
       const r = await fetch("/api/admin/customers", {
         method: "POST",
         headers: { ...(await authHeader()), "Content-Type": "application/json" },
-        body: JSON.stringify(draft),
+        body: JSON.stringify({
+          ...draft,
+          canSubmitProjects: draft.intent === "direct" || draft.intent === "retainer",
+        }),
       });
       const j = await r.json();
       if (!r.ok) return setErr(j.error ?? "Could not add the client.");
+      /* the welcome is the door's email for an account the studio makes:
+         nothing else ever tells this person their portal exists */
+      if (j.id && draft.sendWelcome) {
+        await fetch(`/api/admin/customers/${j.id}/welcome-email`, {
+          method: "POST",
+          headers: { ...(await authHeader()), "Content-Type": "application/json" },
+          body: JSON.stringify({ email: draft.email.trim().toLowerCase() }),
+        }).catch(() => null);
+      }
       setDraft(null);
       await load();
       if (j.id) onOpen(j.id);
@@ -147,6 +175,7 @@ export function CustomersScreen({
             setDraft({
               company: "", name: "", email: "", phone: "",
               contactName: "", contactTitle: "", contactEmail: "", contactPhone: "",
+              intent: "custom", sendWelcome: true,
             })
           }
         >
@@ -187,6 +216,35 @@ export function CustomersScreen({
                   value={draft.phone}
                   onChange={(e) => setDraft({ ...draft, phone: e.target.value })}
                 />
+              </Field>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field
+                label="What are they here for?"
+                hint="Sets how they brief us. Premade and editing clients buy from the site themselves."
+              >
+                <Select
+                  value={draft.intent}
+                  onChange={(e) => setDraft({ ...draft, intent: e.target.value as typeof draft.intent })}
+                >
+                  <option value="custom">Custom video, quoted per project</option>
+                  <option value="direct">Custom video, briefed directly, rate agreed</option>
+                  <option value="retainer">Retainer partnership, set the terms on their record next</option>
+                  <option value="premade">Premade videos from the library</option>
+                  <option value="editing">An editing plan</option>
+                </Select>
+              </Field>
+              <Field label="Portal welcome" hint="Their login exists from the moment they are added.">
+                <label className="flex cursor-pointer items-start gap-2.5 pt-2 text-body-sm">
+                  <input
+                    type="checkbox"
+                    checked={draft.sendWelcome}
+                    onChange={(e) => setDraft({ ...draft, sendWelcome: e.target.checked })}
+                    className="mt-0.5 size-4 shrink-0 accent-[color:var(--green)]"
+                  />
+                  <span className="text-muted">Send it now, to the account email.</span>
+                </label>
               </Field>
             </div>
 
@@ -304,6 +362,41 @@ export function CustomersScreen({
           }
         />
       ) : (
+        <>
+        {/* leads: asked, not yet bought. One stage before the list below,
+            and the way to make one a client is the enquiry itself. */}
+        {service === "all" && !q.trim() && leads.length > 0 && (
+          <div className="mb-3">
+            <Card
+              title={`Leads (${leads.length})`}
+              description="Quote enquiries from the site that have not become clients yet."
+              padded={false}
+              actions={
+                <Button size="sm" variant="secondary" href="/admin/custom/enquiries/">
+                  Work the enquiries
+                </Button>
+              }
+            >
+              <div className="px-5 pb-5">
+                <ul className="grid grid-cols-[minmax(0,1fr)] gap-2">
+                  {leads.map((l) => (
+                    <li key={l.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-body-sm">
+                      <span className="min-w-0">
+                        <span className="text-ink">{l.company || l.name || l.email}</span>
+                        <span className="ml-2 font-mono text-label uppercase text-dim">{l.email}</span>
+                      </span>
+                      <span className="flex shrink-0 items-center gap-1.5">
+                        {l.isClient && <Chip tone="neutral">already a client</Chip>}
+                        <Chip tone={l.status === "quoted" ? "warn" : "info"}>{l.status}</Chip>
+                        <span className="font-mono text-label uppercase text-dim">{when(l.createdAt)}</span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </Card>
+          </div>
+        )}
         <Card padded={false}>
           <div className="px-5 pb-5">
             <Table>
@@ -363,6 +456,7 @@ export function CustomersScreen({
             </Table>
           </div>
         </Card>
+        </>
       )}
     </div>
   );

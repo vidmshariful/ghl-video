@@ -30,7 +30,7 @@ type Row = Record<string, unknown>;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const SUB_FIELDS =
-  "id, customer_email, plan_name, status, amount_cents, current_period_end, metadata, product:products(sku, name), customer:customers(name, company, slug)";
+  "id, customer_email, plan_name, status, amount_cents, current_period_end, metadata, product:products(sku, name), customer:customers(id, name, company, slug)";
 
 /* Who can be put on a job. Sales reps are not production, so they are not
    offered; the executive producer sorts to the top because that is who takes
@@ -237,6 +237,8 @@ export async function GET(req: Request) {
     return NextResponse.json({
       client: {
         subscriptionId: String(sub.id),
+        /* the record, one click away from the board */
+        customerId: (sub.customer as { id?: string } | null)?.id ?? null,
         slug: (sub.customer as { slug?: string } | null)?.slug ?? null,
         email: String(sub.customer_email),
         name: (sub.customer as { name?: string } | null)?.name ?? null,
@@ -312,6 +314,7 @@ export async function GET(req: Request) {
 
       return {
         subscriptionId: String(sub.id),
+        customerId: (sub.customer as { id?: string } | null)?.id ?? null,
         /* the handle their screen lives at */
         slug: (sub.customer as { slug?: string } | null)?.slug ?? null,
         email: String(sub.customer_email),

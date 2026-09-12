@@ -11,6 +11,9 @@ import {
   type RetainerJob,
   type RetainerKind,
 } from "@/lib/retainer";
+import { linesFrom, portalVisibility } from "@/lib/portal-visibility";
+import { currentCycle, topupCreditsLeft } from "@/lib/subscription-cycles";
+import { creditsUsed } from "@/lib/subscription-slots";
 
 /** A short-lived signed URL for a private brand file, or null. */
 async function signBrand(db: ReturnType<typeof supabaseAdmin>, path: string | null) {
@@ -106,8 +109,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
   const { data: theirProjects } = await db
     .from("projects")
-    .select("id, title, status, retainer_month, retainer_kind, created_at")
-    .ilike("customer_email", email);
+    .select("id, title, status, retainer_month, retainer_kind, created_at, due_at, owner_email, agreed_cents, quoted_cents")
+    .ilike("customer_email", email)
+    .order("created_at", { ascending: false });
   const projectIds = ((theirProjects ?? []) as Row[]).map((p) => String(p.id));
 
   const { data: theirSubs } = await db
@@ -219,6 +223,72 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       }
     : null;
 
+  /*
+   * The service lines and what their portal shows, decided by the same rule
+   * the portal itself runs (lib/portal-visibility.ts), so the record can say
+   * "they see this because they have that" rather than guessing.
+   */
+  const paidOrders = money.orders.filter((o) => o.status === "paid");
+  const lines = linesFrom({
+    premadeOrders: paidOrders.filter((o) => o.kind !== "custom").length,
+    projects: jobs.filter((j) => j.status !== "cancelled").length,
+    directBrief: Boolean(c.can_submit_projects),
+    subscriptions: money.subscriptions.length,
+  });
+  const visibility = portalVisibility({
+    lines,
+    retainer: retainer !== null,
+    hasBilling:
+      money.orders.length > 0 || ((invoices ?? []) as Row[]).some((i) => i.status !== "void"),
+    hasPlanBilling: money.subscriptions.length > 0,
+    hidden: (c.hidden_sections as string[] | null) ?? [],
+    disabled: (c.disabled_sections as string[] | null) ?? [],
+  });
+
+  /* the editing plan's month, for the record's Editing tab: the same
+     arithmetic the board and the portal use */
+  const liveSub = ((subs ?? []) as Row[]).find((x) =>
+    ["active", "trialing", "past_due"].includes(String(x.status)),
+  );
+  let plan: Record<string, unknown> | null = null;
+  if (liveSub) {
+    const sku =
+      (liveSub.product as { sku?: string } | null)?.sku ??
+      (liveSub.metadata as { sku?: string } | null)?.sku ??
+      null;
+    const cycle = await currentCycle(db, {
+      id: String(liveSub.id),
+      current_period_end: (liveSub.current_period_end as string | null) ?? null,
+      product: { sku },
+    });
+    if (cycle) {
+      const { data: work } = await db
+        .from("order_deliverables")
+        .select("credit_cost, cancelled_at, status")
+        .eq("cycle_id", cycle.id);
+      const rows = (work ?? []) as Row[];
+      const use = creditsUsed(
+        rows.map((w) => ({
+          creditCost: Number(w.credit_cost ?? 0),
+          cancelledAt: (w.cancelled_at as string | null) ?? null,
+        })),
+        cycle.creditsAllowed,
+        await topupCreditsLeft(db, String(liveSub.id)),
+      );
+      plan = {
+        subscriptionId: String(liveSub.id),
+        planName:
+          (liveSub.plan_name as string | null) ??
+          (liveSub.product as { name?: string } | null)?.name ??
+          "Editing",
+        cycle: { startsAt: cycle.periodStart, endsAt: cycle.periodEnd },
+        credits: use,
+        inReview: rows.filter((w) => !w.cancelled_at && String(w.status) === "ready").length,
+        inProduction: rows.filter((w) => !w.cancelled_at && String(w.status) === "in_production").length,
+      };
+    }
+  }
+
   return NextResponse.json({
     customer: {
       id,
@@ -226,15 +296,35 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       name: (c.name as string | null) ?? null,
       company: (c.company as string | null) ?? null,
       phone: (c.phone as string | null) ?? null,
+      slug: (c.slug as string | null) ?? null,
       tags: (c.tags as string[] | null) ?? [],
       hiddenSections: (c.hidden_sections as string[] | null) ?? [],
       disabledSections: (c.disabled_sections as string[] | null) ?? [],
       canSubmitProjects: Boolean(c.can_submit_projects),
       retainer,
+      /* the door they came through, and whether they are ours */
+      source: (c.source as string | null) ?? null,
+      internal: Boolean(c.internal),
+      welcomedAt: (c.welcomed_at as string | null) ?? null,
       lastSeenAt: (c.last_seen_at as string | null) ?? null,
       createdAt: String(c.created_at),
       highlevelContactId: (c.highlevel_contact_id as string | null) ?? null,
     },
+    lines,
+    visibility,
+    plan,
+    projects: ((theirProjects ?? []) as Row[]).map((p) => ({
+      id: String(p.id),
+      title: String(p.title),
+      status: String(p.status),
+      dueAt: (p.due_at as string | null) ?? null,
+      ownerEmail: (p.owner_email as string | null) ?? null,
+      agreedCents: p.agreed_cents == null ? null : Number(p.agreed_cents),
+      quotedCents: p.quoted_cents == null ? null : Number(p.quoted_cents),
+      retainerMonth: (p.retainer_month as string | null) ?? null,
+      retainerKind: (p.retainer_kind as RetainerKind | null) ?? null,
+      createdAt: String(p.created_at),
+    })),
     partnership,
     value,
     services: serviceTags({
@@ -388,6 +478,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (typeof b.canSubmitProjects === "boolean") {
     patch.can_submit_projects = b.canSubmitProjects;
   }
+  /* ours, not a client: out of the list and the totals */
+  if (typeof b.internal === "boolean") patch.internal = b.internal;
   if (Array.isArray(b.hiddenSections)) {
     patch.hidden_sections = (b.hiddenSections as unknown[])
       .filter((t): t is string => typeof t === "string")
@@ -418,7 +510,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     .from("customers")
     .update(patch)
     .eq("id", id)
-    .select("tags, hidden_sections, disabled_sections, can_submit_projects, retainer")
+    .select("tags, hidden_sections, disabled_sections, can_submit_projects, retainer, internal")
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   /* the truth after the write, so the screen can settle on it rather than
@@ -431,6 +523,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       disabledSections: (row?.disabled_sections as string[] | null) ?? [],
       canSubmitProjects: Boolean(row?.can_submit_projects),
       retainer: parseRetainer(row?.retainer),
+      internal: Boolean(row?.internal),
     },
   });
 }

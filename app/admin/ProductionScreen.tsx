@@ -27,7 +27,7 @@ type Row = {
   assigned_admin_email: string | null;
   created_at: string;
   stage_changed_at: string;
-  customers: { name: string | null } | null;
+  customers: { id: string; name: string | null } | null;
   products: { name: string; sku: string; metadata: Record<string, unknown> | null } | null;
 };
 
@@ -87,7 +87,7 @@ export function ProductionScreen({
     const { data, error } = await supabase
       .from("orders")
       .select(
-        "id, customer_email, amount_cents, currency, fulfillment_stage, intake_completed, assigned_manager, assigned_admin_email, created_at, stage_changed_at, customers(name), products(name, sku, metadata)",
+        "id, customer_email, amount_cents, currency, fulfillment_stage, intake_completed, assigned_manager, assigned_admin_email, created_at, stage_changed_at, customers(id, name), products(name, sku, metadata)",
       )
       .eq("status", "paid")
       .or(`fulfillment_stage.neq.delivered,stage_changed_at.gte.${since}`)
@@ -299,7 +299,18 @@ export function ProductionScreen({
                           {label(r.products)}
                         </button>
                         <p className="mt-1 truncate text-body-sm text-muted">
-                          {r.customers?.name || r.customer_email}
+                          {r.customers?.id ? (
+                            /* the client behind the job, one click away */
+                            <a
+                              href={`/admin/customers/${r.customers.id}/`}
+                              className="hover:text-gold"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {r.customers.name || r.customer_email}
+                            </a>
+                          ) : (
+                            r.customer_email
+                          )}
                         </p>
                         <p className="mt-1 font-mono text-label uppercase text-dim">
                           {money(r.amount_cents, r.currency)} / {when(r.created_at)}

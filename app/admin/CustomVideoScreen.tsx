@@ -81,6 +81,8 @@ type Project = {
   customerEmail: string;
   /* company, or their name, or null when we only have the email */
   customerName: string | null;
+  /* their record, when the row exists */
+  customerId: string | null;
   title: string;
   brief: string | null;
   script: string | null;
@@ -232,7 +234,17 @@ export function CustomVideoScreen({
   openProjectId?: string | null;
   onOpenProject?: (id: string | null) => void;
 }) {
-  const [tab, setTab] = useState<"projects" | "enquiries">("projects");
+  /* /admin/custom/enquiries/ lands on the enquiries, which is where the
+     Clients list sends somebody to work a lead */
+  const [tab, setTab] = useState<"projects" | "enquiries">(
+    openProjectId === "enquiries" ? "enquiries" : "projects",
+  );
+  useEffect(() => {
+    if (openProjectId === "enquiries") {
+      setTab("enquiries");
+      onOpenProject?.(null);
+    }
+  }, [openProjectId, onOpenProject]);
   /* "" is everyone; otherwise the client's account email, which is the key
      a project is actually filed under */
   const [onlyClient, setOnlyClient] = useState("");
@@ -1289,6 +1301,16 @@ function ProjectPage({
               }
               aria-label="Deadline"
             />
+          </Fact>
+
+          <Fact label="Client">
+            {p.customerId ? (
+              <a href={`/admin/customers/${p.customerId}/`} className="text-ink hover:text-gold">
+                {nameOf(p)}
+              </a>
+            ) : (
+              nameOf(p)
+            )}
           </Fact>
 
           <Fact label="Producer">

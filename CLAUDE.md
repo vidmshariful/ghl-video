@@ -31,6 +31,17 @@ Stripe + Supabase commerce backend, all on one domain.
   table): dashboard, orders, products, customers, bumps, subscriptions, and
   site tools. **Portal** at `/portal` gives customers their orders, invoices,
   and subscription management. Both are noindex, outside the marketing chrome.
+- **Accounts (September 2026).** A customer is one account with one or more
+  service lines (premade, custom, editing), each with an arrangement (per
+  order, per quote, direct brief, monthly plan, monthly retainer). Every path
+  that creates a customer row goes through `ensureAccount` in
+  `lib/accounts.ts` (row, handle, portal login, one welcome); never insert
+  into `customers` directly. What a client's portal shows is decided by
+  `portalVisibility` in `lib/portal-visibility.ts` from the lines the account
+  has; the per-client hide/lock switches only ever narrow it. The admin
+  customer record is tabbed by line (Overview, Premade, Custom, Editing,
+  Billing, Portal), and the retainer terms live under Custom. Studio-owned
+  accounts carry `customers.internal` and stay out of the list and totals.
 - **Partner portal** at `/partners` (same Supabase auth): affiliates get
   their tracked links, promo assets, and profile; `/partners/apply` is the
   public application. Backed by the `partners` + `partner_assets` tables

@@ -1,24 +1,28 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowLeft, Eye, ExternalLink, MessageSquare, Plus } from "lucide-react";
+import { ArrowLeft, ArrowRight, Eye, ExternalLink, MessageSquare, Plus } from "lucide-react";
 import { Button, Card, Chip, Field, Input, Modal, Select, Table, Tabs, Td, Th } from "@/components/portal/ui";
 import { monthLabel, RETAINER_KIND_LABEL, type MonthSummary, type Retainer, type RetainerKind } from "@/lib/retainer";
+import { portalVisibility, type PortalVisibility, type ServiceLines } from "@/lib/portal-visibility";
+import { STUDIO_LABEL } from "@/lib/projects";
 import { authHeader, money, when } from "./client";
 import { TeamCard } from "@/components/portal/team";
 import { HIDEABLE_SECTIONS } from "./customer-sections";
 
 /*
- * One client, everything we know.
+ * One client, everything we know, organised by the service lines they have.
  *
- * Built to end the tab-hopping: what they are worth, what they have bought,
- * what we owe them, who else is on their account, what their brand is, and
- * what we have said to each other. The old screen showed a name, an email and
- * a total that was wrong for anyone who does not buy premade.
- *
- * The money panel splits by service on purpose. "Lifetime value" as one
- * number cannot tell you whether a client is a $2,000 one-off or $995 every
- * month, and those are completely different clients.
+ * The record used to split into Orders, Videos, Messages, Access and
+ * Profile, which is how the database is shaped and not how a client is. A
+ * retainer partner's terms sat under Access beside the portal switches;
+ * their editing month was a table of subscriptions; their projects were
+ * on another screen entirely. Now (owner decision, 12 September 2026) the
+ * tabs are the lines: Overview for what is live right now, then Premade,
+ * Custom and Editing, each present only when the account has that line,
+ * then Billing for every kind of money in one place, and Portal for what
+ * they see and who can sign in. The name and the money stay above the tabs
+ * because they are the context for all of them.
  */
 
 type Value = {
@@ -39,16 +43,45 @@ type Record_ = {
     name: string | null;
     company: string | null;
     phone: string | null;
+    slug: string | null;
     tags: string[];
     hiddenSections: string[];
     disabledSections: string[];
     canSubmitProjects: boolean;
     /* the retainer terms, null for everyone not on one */
     retainer: Retainer | null;
+    /* the door they came through, and whether they are ours */
+    source: string | null;
+    internal: boolean;
+    welcomedAt: string | null;
     lastSeenAt: string | null;
     createdAt: string;
     highlevelContactId: string | null;
   };
+  /* the service lines the account has, and what its portal shows because of them */
+  lines: ServiceLines;
+  visibility: PortalVisibility;
+  /* the editing plan's month, when there is a live plan */
+  plan: {
+    subscriptionId: string;
+    planName: string;
+    cycle: { startsAt: string; endsAt: string };
+    credits: { spent: number; allowed: number; planLeft: number; topupLeft: number; left: number; overPlan: boolean };
+    inReview: number;
+    inProduction: number;
+  } | null;
+  projects: {
+    id: string;
+    title: string;
+    status: string;
+    dueAt: string | null;
+    ownerEmail: string | null;
+    agreedCents: number | null;
+    quotedCents: number | null;
+    retainerMonth: string | null;
+    retainerKind: RetainerKind | null;
+    createdAt: string;
+  }[];
   /* the retainer month by month, only for an account on one */
   partnership: {
     months: MonthSummary[];
@@ -146,14 +179,39 @@ const PAY_TONE: Record<string, "good" | "warn" | "bad" | "neutral"> = {
   refunded: "neutral",
 };
 
+/* the door an account came through, in words */
+const DOOR_WORD: Record<string, string> = {
+  checkout: "bought from the site",
+  "plan-checkout": "joined a plan on the site",
+  stripe: "recovered from Stripe",
+  admin: "added by the studio",
+  enquiry: "converted from an enquiry",
+  invoice: "invoiced first",
+  "manual-order": "a sale recorded by hand",
+};
+
+const VIDEO_SOURCE_WORD: Record<string, string> = {
+  purchase: "premade",
+  project: "custom",
+  plan: "editing",
+};
+
 const ago = (iso: string | null) => (iso ? when(iso) : "never");
 
-/* the five groups the record splits into, in the order they are read */
-type TabKey = "orders" | "videos" | "messages" | "access" | "profile";
+/* the record's tabs: the lines they have, plus the three every account gets */
+type TabKey = "overview" | "premade" | "custom" | "editing" | "billing" | "portal";
 
-export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void }) {
+export function CustomerRecord({
+  id,
+  onBack,
+  initialTab = "overview",
+}: {
+  id: string;
+  onBack: () => void;
+  initialTab?: TabKey;
+}) {
   const [data, setData] = useState<Record_ | null>(null);
-  const [tab, setTab] = useState<TabKey>("orders");
+  const [tab, setTab] = useState<TabKey>(initialTab);
   const [err, setErr] = useState("");
   const [note, setNote] = useState("");
   const [tagDraft, setTagDraft] = useState("");
@@ -216,22 +274,23 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
     };
   }, [id]);
 
+  const refreshEmails = useCallback(async (email: string) => {
+    try {
+      const r = await fetch(`/api/admin/email-log?q=${encodeURIComponent(email)}`, {
+        headers: await authHeader(),
+      });
+      const j = await r.json();
+      if (r.ok) setEmails(j.entries ?? []);
+    } catch {
+      setEmails([]);
+    }
+  }, []);
+
   /* the log already answers "what did this person get": one query, theirs */
   useEffect(() => {
     if (!data?.customer.email) return;
-    (async () => {
-      try {
-        const r = await fetch(
-          `/api/admin/email-log?q=${encodeURIComponent(data.customer.email)}`,
-          { headers: await authHeader() },
-        );
-        const j = await r.json();
-        if (r.ok) setEmails(j.entries ?? []);
-      } catch {
-        setEmails([]);
-      }
-    })();
-  }, [data?.customer.email]);
+    void refreshEmails(data.customer.email);
+  }, [data?.customer.email, refreshEmails]);
 
   async function sendWelcome(email: string) {
     setSending(`welcome:${email}`);
@@ -251,12 +310,7 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
             ? `${email} got the invite${j.granted ? " and a seat on this account, everything switched on" : ""}. The owner can trim their access under Settings, Team.`
             : `Welcome sent to ${email}.`,
         );
-      const r2 = await fetch(
-        `/api/admin/email-log?q=${encodeURIComponent(data?.customer.email ?? "")}`,
-        { headers: await authHeader() },
-      );
-      const j2 = await r2.json();
-      if (r2.ok) setEmails(j2.entries ?? []);
+      await refreshEmails(data?.customer.email ?? "");
     } catch {
       setErr("Not sent.");
     } finally {
@@ -283,12 +337,7 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
             : `Confirmation re-sent to ${data?.customer.email}.`,
         );
       /* the log is the record; refresh it so the send shows up right away */
-      const r2 = await fetch(
-        `/api/admin/email-log?q=${encodeURIComponent(data?.customer.email ?? "")}`,
-        { headers: await authHeader() },
-      );
-      const j2 = await r2.json();
-      if (r2.ok) setEmails(j2.entries ?? []);
+      await refreshEmails(data?.customer.email ?? "");
     } catch {
       setErr("Not sent.");
     } finally {
@@ -299,19 +348,9 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
   /*
    * Save without making anybody watch it happen.
    *
-   * This used to write, then re-download the entire record: eleven queries
-   * and the brand kit, to flip one switch. The write is about 140ms and the
-   * reload behind it about 1.3 seconds, so every toggle on this screen cost
-   * a second and a half of staring at a disabled control.
-   *
-   * Now the change lands in the UI immediately and the write goes out
-   * behind it. `optimistic` is what to show at once; the server hands back
-   * the real row and we settle on that, so a value the server massaged
-   * (trimmed a tag, capped a list) still ends up correct without a refetch.
-   *
-   * Failure used to be silent. The old version swallowed the error and then
-   * reloaded, so a save that failed looked like a switch that would not
-   * stay put, with nothing said. It reverts and says so now.
+   * The change lands in the UI immediately and the write goes out behind
+   * it. `optimistic` is what to show at once; the server hands back the real
+   * row and we settle on that. Failure reverts and says so.
    */
   async function patch(
     body: Record<string, unknown>,
@@ -346,6 +385,10 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
               notes: j.note ? [j.note, ...d.notes] : d.notes,
             },
       );
+      /* the portal switches, the direct brief flag and the retainer all move
+         what the portal shows, and the server is the one that knows how */
+      if ("hiddenSections" in body || "disabledSections" in body || "canSubmitProjects" in body || "retainer" in body)
+        void load();
     } catch (e) {
       setData(before);
       const msg = e instanceof Error ? e.message : "That did not save.";
@@ -358,9 +401,8 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
 
   async function addContact() {
     if (!contact?.name.trim()) return;
-    /* close the dialog now. The person has finished typing and pressed save;
-       holding the modal open through a round trip and then a full refetch is
-       the wait this screen was full of. */
+    /* close the dialog now; holding it open through a round trip is the
+       wait this screen used to be full of */
     const draft = contact;
     setContact(null);
     setErr("");
@@ -383,7 +425,7 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
     }
   }
 
-  if (err) return <p className="text-body text-error">{err}</p>;
+  if (err && !data) return <p className="text-body text-error">{err}</p>;
   if (!data) return <p className="text-body text-muted">Loading...</p>;
 
   const c = data.customer;
@@ -391,9 +433,39 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
   const title = c.company || c.name || c.email;
   const hidden = new Set(c.hiddenSections);
   const disabledSet = new Set(c.disabledSections);
-  /* add-ons are extra work billed against a project, not projects of their
-     own, so the tab counts what they actually bought */
-  const projectOrders = data.orders.filter((o) => o.kind !== "addon");
+  const lines = data.lines ?? { premade: false, custom: false, editing: false };
+  const vis = data.visibility ?? { visible: [], disabled: [], offers: true };
+  /* what the rules alone would show, so the Portal tab can say which
+     switches are doing anything */
+  const rule = portalVisibility({
+    lines,
+    retainer: c.retainer !== null,
+    hasBilling: data.orders.length > 0 || data.invoices.some((i) => i.status !== "void"),
+    hasPlanBilling: data.subscriptions.length > 0,
+    hidden: [],
+    disabled: [],
+  });
+
+  const premadeOrders = data.orders.filter((o) => o.kind === "premade");
+  const addOns = data.orders.filter((o) => o.kind === "addon");
+  const liveVideos = data.videos.filter((vd) => vd.status !== "approved");
+  const openProjects = data.projects.filter((p) => !["closed", "cancelled"].includes(p.status));
+  const hasPremade = lines.premade || premadeOrders.length > 0;
+  const hasCustom = lines.custom || data.projects.length > 0 || c.retainer !== null;
+  const hasEditing = data.subscriptions.length > 0;
+
+  const tabs: { key: TabKey; label: string; count?: number }[] = [
+    { key: "overview", label: "Overview" },
+    ...(hasPremade ? [{ key: "premade" as const, label: "Premade", count: premadeOrders.length }] : []),
+    ...(hasCustom ? [{ key: "custom" as const, label: "Custom", count: openProjects.length }] : []),
+    ...(hasEditing ? [{ key: "editing" as const, label: "Editing" }] : []),
+    { key: "billing", label: "Billing", count: data.invoices.filter((i) => !i.paid && i.status === "open").length || undefined },
+    { key: "portal", label: "Portal" },
+  ];
+  /* a tab for a line they do not have is not a tab */
+  const active: TabKey = tabs.some((t) => t.key === tab) ? tab : "overview";
+
+  const boardHref = c.slug ? `/admin/editing/${c.slug}/` : `/admin/editing/`;
 
   return (
     <div className="w-full">
@@ -416,13 +488,17 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
                 {s}
               </Chip>
             ))}
+            {c.retainer && <Chip tone="good">retainer</Chip>}
+            {!c.retainer && c.canSubmitProjects && <Chip tone="neutral">direct brief</Chip>}
+            {c.internal && <Chip tone="neutral">ours</Chip>}
             {c.tags.map((t) => (
               <Chip key={t} tone="neutral">
                 {t}
               </Chip>
             ))}
             <span className="ml-1 font-mono text-label uppercase text-dim">
-              client since {when(c.createdAt)} / last seen {ago(c.lastSeenAt)}
+              client since {when(c.createdAt)}
+              {c.source && DOOR_WORD[c.source] ? `, ${DOOR_WORD[c.source]}` : ""} / last seen {ago(c.lastSeenAt)}
             </span>
           </div>
         </div>
@@ -450,6 +526,9 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
         </div>
       </div>
 
+      {err && <p className="mt-3 text-body-sm text-error">{err}</p>}
+      {note && <p className="mt-3 text-body-sm text-green">{note}</p>}
+
       {/* money, split by service, because one number hides which kind of client this is */}
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
@@ -462,10 +541,14 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
         <Card>
           <p className="font-mono text-label uppercase text-dim">Every month</p>
           <p className="mt-2 font-display text-h2 tabular-nums text-ink">
-            {v.monthlyCents ? money(v.monthlyCents) : "-"}
+            {c.retainer
+              ? money(c.retainer.monthlyCents)
+              : v.monthlyCents
+                ? money(v.monthlyCents)
+                : "-"}
           </p>
           <p className="mt-1 text-body-sm text-muted">
-            {v.monthlyCents ? "recurring" : "no active plan"}
+            {c.retainer ? "retainer, invoiced monthly" : v.monthlyCents ? "recurring" : "no active plan"}
           </p>
         </Card>
         <Card>
@@ -502,339 +585,96 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
         </Card>
       </div>
 
-      {/* One client is more than one screen. It all used to stack into a
-          page where you scrolled past every order to reach the access
-          controls, so it is grouped now: what they bought, what they got,
-          what we have said, who can sign in, and who they are. The name and
-          the money stay above the tabs, because they are the context for
-          all five. */}
       <div className="mt-6">
-        <Tabs
-          tabs={[
-            { key: "orders", label: "Orders", count: projectOrders.length },
-            { key: "videos", label: "Videos", count: data.videos.length },
-            { key: "messages", label: "Messages", count: data.conversations.length },
-            { key: "access", label: "Access" },
-            { key: "profile", label: "Profile" },
-          ]}
-          active={tab}
-          onChange={setTab}
-        />
+        <Tabs tabs={tabs} active={active} onChange={setTab} />
       </div>
 
-      {tab === "orders" && (
-        <div className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-3">
-          {/* orders */}
-          <Card title="Orders" padded={false}>
-            <div className="px-5 pb-5">
-              {data.orders.length === 0 ? (
-                <p className="py-3 text-body-sm text-muted">No orders yet.</p>
-              ) : (
-                <Table>
-                  <thead>
-                    <tr>
-                      <Th>What</Th>
-                      <Th>State</Th>
-                      <Th>Send</Th>
-                      <Th align="right">Amount</Th>
-                      <Th align="right">Placed</Th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.orders
-                      .filter((o) => o.kind !== "addon")
-                      .map((o) => (
-                      <tr key={o.id}>
-                        <Td strong>
-                          {o.productName ?? "Order"}
-                          {o.kind === "custom" && (
-                            <span className="ml-2">
-                              <Chip tone="warn">custom</Chip>
-                            </span>
-                          )}
-                          {o.invoiceNumber && (
-                            <span className="ml-2 font-mono text-label text-dim">
-                              {o.invoiceNumber}
-                            </span>
-                          )}
-                          {/* extra work billed against this order. It made no
-                              new video, so it belongs here rather than
-                              standing on its own as if it were a project. */}
-                          {data.orders
-                            .filter((a) => a.kind === "addon" && a.parentOrderId === o.id)
-                            .map((a) => (
-                              <span
-                                key={a.id}
-                                className="mt-1 flex items-center gap-2 font-normal text-body-sm text-muted"
-                              >
-                                <span aria-hidden="true" className="text-dim">
-                                  &#8627;
-                                </span>
-                                {a.productName ?? "Extra work"}
-                                <Chip tone="info">add-on</Chip>
-                                <span className="tabular-nums">{money(a.amountCents)}</span>
-                              </span>
-                            ))}
-                        </Td>
-                        <Td>
-                          <Chip tone={PAY_TONE[o.status] ?? "neutral"}>
-                            {o.status === "paid" ? o.stage.replace(/_/g, " ") : o.status}
-                          </Chip>
-                        </Td>
-                        <Td>
-                          {/* the two nudges worth re-firing by hand. Every
-                              other email is tied to an event happening, and
-                              re-firing one without the event tells a client
-                              a video is ready twice. */}
-                          {o.status === "paid" ? (
-                            <span className="flex flex-wrap gap-1.5">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                disabled={sending === `${o.id}:order_confirmation`}
-                                onClick={() => sendNudge(o.id, "order_confirmation")}
-                              >
-                                {sending === `${o.id}:order_confirmation` ? "Sending..." : "Confirmation"}
-                              </Button>
-                              {!o.intakeCompleted && (
-                                <Button
-                                  size="sm"
-                                  variant="secondary"
-                                  disabled={sending === `${o.id}:intake_reminder`}
-                                  onClick={() => sendNudge(o.id, "intake_reminder")}
-                                >
-                                  {sending === `${o.id}:intake_reminder` ? "Sending..." : "Intake link"}
-                                </Button>
-                              )}
-                            </span>
-                          ) : (
-                            <span className="font-mono text-label uppercase text-dim">-</span>
-                          )}
-                        </Td>
-                        <Td align="right">{money(o.amountCents)}</Td>
-                        <Td align="right">{when(o.createdAt)}</Td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </Table>
-              )}
-            </div>
-          </Card>
-
-          {/* subscriptions */}
-          {data.subscriptions.length > 0 && (
-            <Card title="Plans" padded={false}>
-              <div className="px-5 pb-5">
-                <Table>
-                  <thead>
-                    <tr>
-                      <Th>Plan</Th>
-                      <Th>State</Th>
-                      <Th align="right">Price</Th>
-                      <Th align="right">Renews</Th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.subscriptions.map((s) => (
-                      <tr key={s.id}>
-                        <Td strong>{s.planName ?? s.sku ?? "Plan"}</Td>
-                        <Td>
-                          <Chip
-                            tone={
-                              s.status === "active"
-                                ? "good"
-                                : s.status.startsWith("incomplete")
-                                  ? "neutral"
-                                  : "warn"
-                            }
-                          >
-                            {s.cancelAtPeriodEnd ? "ending" : s.status}
-                          </Chip>
-                        </Td>
-                        <Td align="right">{s.amountCents ? money(s.amountCents) : "-"}</Td>
-                        <Td align="right">
-                          {s.currentPeriodEnd ? when(s.currentPeriodEnd) : "-"}
-                        </Td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </Table>
-              </div>
-            </Card>
-          )}
-
-          {/* invoices */}
-          {data.invoices.length > 0 && (
-            <Card title="Invoices" padded={false}>
-              <div className="px-5 pb-5">
-                <Table>
-                  <thead>
-                    <tr>
-                      <Th>Number</Th>
-                      <Th>State</Th>
-                      <Th align="right">Total</Th>
-                      <Th align="right">Raised</Th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.invoices.map((i) => (
-                      <tr key={i.id}>
-                        <Td strong>
-                          <a
-                            href={`/invoice/${i.token}/`}
-                            target="_blank"
-                            rel="noopener"
-                            className="hover:text-gold"
-                          >
-                            {i.number}
-                          </a>
-                        </Td>
-                        <Td>
-                          <Chip tone={i.paid ? "good" : i.status === "void" ? "neutral" : "warn"}>
-                            {i.paid ? "paid" : i.status}
-                          </Chip>
-                        </Td>
-                        <Td align="right">{money(i.totalCents)}</Td>
-                        <Td align="right">{when(i.createdAt)}</Td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </Table>
-              </div>
-            </Card>
-          )}
-        </div>
-      )}
-
-      {tab === "videos" && (
-        <div className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-3">
-          {/* videos */}
-          <Card title={`Videos (${data.videos.length})`} padded={false}>
-            <div className="px-5 pb-5">
-              {data.videos.length === 0 ? (
-                <p className="py-3 text-body-sm text-muted">
-                  Nothing delivered yet.
-                </p>
-              ) : (
-                <ul className="grid grid-cols-[minmax(0,1fr)] gap-1.5">
-                  {data.videos.map((vd) => (
-                    <li key={vd.id} className="flex items-center justify-between gap-3 text-body-sm">
-                      <span className="min-w-0 truncate text-ink">{vd.title}</span>
-                      <span className="flex shrink-0 items-center gap-1.5">
-                        {/* this list used to be built from orders alone, so a
-                            client with twenty videos on a plan looked like a
-                            client with none. Saying where each came from is
-                            the point of showing them together. */}
-                        <span className="font-mono text-label uppercase text-dim">
-                          {vd.source}
-                        </span>
-                        <Chip tone={vd.status === "approved" ? "good" : "info"}>
-                          {vd.status.replace(/_/g, " ")}
-                        </Chip>
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {tab === "messages" && (
+      {/* ---------------- Overview: what is live right now ---------------- */}
+      {active === "overview" && (
         <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_22rem] lg:items-start">
           <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3">
-            <Card title="Emails" description="What this person was sent, and what happened to each.">
-              {/* the welcome, for accounts the studio created by hand: nothing
-                  else ever tells these people their portal exists. A contact
-                  gets a seat on the account first, then the invite. */}
-              <div className="mb-3 flex flex-wrap items-center gap-2">
-                <div className="min-w-0 flex-1">
-                  <Select
-                    value={welcomeTo || data.customer.email}
-                    onChange={(e) => setWelcomeTo(e.target.value)}
-                    aria-label="Who gets the welcome email"
-                  >
-                    <option value={data.customer.email}>{data.customer.email} (account)</option>
-                    {data.contacts
-                      .filter(
-                        (ct) =>
-                          ct.email &&
-                          ct.email.toLowerCase() !== data.customer.email.toLowerCase(),
-                      )
-                      .map((ct) => (
-                        <option key={ct.id} value={ct.email ?? ""}>
-                          {ct.email} ({ct.name})
-                        </option>
-                      ))}
-                  </Select>
+            {data.plan && (
+              <Card
+                title={`${data.plan.planName}, this month`}
+                description={`${when(data.plan.cycle.startsAt)} to ${when(data.plan.cycle.endsAt)}.`}
+                actions={
+                  <Button size="sm" variant="secondary" icon={<ArrowRight />} href={boardHref}>
+                    Open the board
+                  </Button>
+                }
+              >
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {[
+                    { label: "Credits used", value: `${data.plan.credits.spent} of ${data.plan.credits.allowed}` },
+                    { label: "Left", value: String(data.plan.credits.left) },
+                    { label: "Ready for them", value: String(data.plan.inReview) },
+                    { label: "Being cut", value: String(data.plan.inProduction) },
+                  ].map((f) => (
+                    <div key={f.label} className="rounded-[8px] border border-hair bg-canvas px-3 py-2.5">
+                      <p className="font-mono text-label uppercase tracking-[0.08em] text-dim">{f.label}</p>
+                      <p className="mt-1 font-display text-h4 tabular-nums text-ink">{f.value}</p>
+                    </div>
+                  ))}
                 </div>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  disabled={sending?.startsWith("welcome:") ?? false}
-                  onClick={() => sendWelcome(welcomeTo || data.customer.email)}
-                >
-                  {sending?.startsWith("welcome:") ? "Sending..." : "Send welcome"}
-                </Button>
-              </div>
-              {emails === null ? (
-                <p className="text-body-sm text-muted">Loading...</p>
-              ) : emails.length === 0 ? (
+                {data.plan.credits.overPlan && (
+                  <p className="mt-3 text-body-sm text-gold">Over the plan this month. Work continues in order.</p>
+                )}
+              </Card>
+            )}
+
+            {c.retainer && data.partnership?.months[0] && (
+              <Card
+                title={`Partnership, ${monthLabel(data.partnership.months[0].month)}`}
+                description={`${data.partnership.months[0].counted} of ${c.retainer.videosMin} to ${c.retainer.videosMax} videos briefed, ${data.partnership.months[0].delivered} delivered, ${data.partnership.months[0].activeNow} of ${c.retainer.activeMax} in production now.`}
+                actions={
+                  <Button size="sm" variant="secondary" icon={<ArrowRight />} onClick={() => setTab("custom")}>
+                    The partnership
+                  </Button>
+                }
+              >
                 <p className="text-body-sm text-muted">
-                  Nothing recorded. The log started on 20 August 2026, so older
-                  sends are not in it.
+                  {c.retainer.turnaroundDays} business days each, a white-label version of every video, {money(c.retainer.monthlyCents)} a month.
                 </p>
-              ) : (
-                <ul className="grid grid-cols-[minmax(0,1fr)] gap-2">
-                  {emails.slice(0, 8).map((e) => (
-                    <li key={e.id}>
-                      <button
-                        type="button"
-                        onClick={() => setOpenEmail(openEmail === e.id ? null : e.id)}
-                        className="tap w-full text-left"
-                      >
-                        <span className="flex items-start justify-between gap-2">
-                          <span className="min-w-0 flex-1 truncate text-body-sm text-ink">
-                            {e.subject}
+              </Card>
+            )}
+
+            <Card
+              title={`Live work (${liveVideos.length})`}
+              description="Every video not yet approved, whichever line it came from."
+              padded={false}
+            >
+              <div className="px-5 pb-5">
+                {liveVideos.length === 0 ? (
+                  <p className="py-3 text-body-sm text-muted">Nothing in production right now.</p>
+                ) : (
+                  <ul className="grid grid-cols-[minmax(0,1fr)] gap-1.5">
+                    {liveVideos.slice(0, 12).map((vd) => (
+                      <li key={vd.id} className="flex items-center justify-between gap-3 text-body-sm">
+                        <span className="min-w-0 truncate text-ink">{vd.title}</span>
+                        <span className="flex shrink-0 items-center gap-1.5">
+                          <span className="font-mono text-label uppercase text-dim">
+                            {VIDEO_SOURCE_WORD[vd.source] ?? vd.source}
                           </span>
-                          <Chip
-                            tone={
-                              e.status === "sent"
-                                ? "good"
-                                : e.status === "failed"
-                                  ? "bad"
-                                  : e.status === "skipped"
-                                    ? "warn"
-                                    : "neutral"
-                            }
-                          >
-                            {e.status}
+                          <Chip tone={vd.status === "ready" ? "warn" : "info"}>
+                            {vd.status.replace(/_/g, " ")}
                           </Chip>
                         </span>
-                        <span className="mt-0.5 block font-mono text-label uppercase text-dim">
-                          {e.templateKey ?? e.source} / {when(e.at)}
-                        </span>
-                        {openEmail === e.id && e.error && (
-                          <span className="mt-1 block whitespace-pre-wrap text-body-sm text-error">
-                            {e.error}
-                          </span>
-                        )}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
+                      </li>
+                    ))}
+                    {liveVideos.length > 12 && (
+                      <li className="pt-1 font-mono text-label uppercase text-dim">
+                        and {liveVideos.length - 12} more on the line tabs
+                      </li>
+                    )}
+                  </ul>
+                )}
+              </div>
             </Card>
-          </div>
-          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3">
+
             <Card title="Messages">
               {data.conversations.length === 0 ? (
                 <p className="text-body-sm text-muted">No conversation yet.</p>
               ) : (
-                /* the track has to be allowed to shrink, or the preview line,
-                   which is nowrap so it can end in an ellipsis, sizes the
-                   column to the whole message instead of being clipped by it */
                 <ul className="grid grid-cols-[minmax(0,1fr)] gap-2.5">
                   {data.conversations.slice(0, 4).map((v2) => (
                     <li key={v2.id} className="text-body-sm">
@@ -847,308 +687,16 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
                 </ul>
               )}
               <div className="mt-3">
-                <Button variant="secondary" size="sm" full icon={<MessageSquare />} href="/admin/messages/">
+                <Button variant="secondary" size="sm" icon={<MessageSquare />} href="/admin/messages/">
                   Open messages
                 </Button>
               </div>
             </Card>
           </div>
-        </div>
-      )}
 
-      {tab === "access" && (
-        <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_22rem] lg:items-start">
           <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3">
-            {/* the client's own portal team, managed from here when they ask us
-                to do it for them. Same card and same routes their Settings
-                screen uses, so a member we add is not a different kind of
-                member. */}
-            {/*
-             * Who is in the portal right now, and who has been.
-             *
-             * Sits under Access because it answers the other half of the same
-             * question: that card says who MAY sign in, this one says who
-             * does. Deliberately its own card rather than a column on the
-             * team rows, because TeamCard is shared with the client portal
-             * and the partner portal, and neither of those should grow a
-             * surveillance column.
-             */}
-            <Card
-              title="Portal activity"
-              description="Who is signed in now, and the sign ins before this one. Studio staff using View as client are never counted."
-            >
-              {!activity ? (
-                <p className="text-body-sm text-muted">Loading...</p>
-              ) : activity.people.length === 0 && activity.events.length === 0 ? (
-                <p className="text-body-sm text-muted">
-                  Nobody from this account has signed in yet.
-                </p>
-              ) : (
-                <>
-                  {activity.people.length > 0 && (
-                    <ul className="grid grid-cols-[minmax(0,1fr)] gap-2">
-                      {activity.people.map((p) => (
-                        <li
-                          key={p.email}
-                          className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1"
-                        >
-                          <span className="flex min-w-0 items-center gap-2">
-                            <span
-                              aria-hidden="true"
-                              className={`h-2 w-2 shrink-0 rounded-full ${
-                                p.online ? "bg-green" : "bg-hair"
-                              }`}
-                            />
-                            <span className="min-w-0 truncate text-body-sm text-ink">
-                              {p.email}
-                            </span>
-                          </span>
-                          <span
-                            className={`shrink-0 font-mono text-label uppercase ${
-                              p.online ? "text-green" : "text-dim"
-                            }`}
-                          >
-                            {p.online ? "In the portal now" : `last seen ${when(p.lastSeenAt)}`}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-
-                  {activity.events.length > 0 && (
-                    <div className={activity.people.length > 0 ? "mt-5 border-t border-hair pt-4" : ""}>
-                      <p className="font-mono text-label uppercase tracking-[0.08em] text-dim">
-                        The log
-                      </p>
-                      <ul className="mt-3 grid grid-cols-[minmax(0,1fr)] gap-2">
-                        {activity.events.map((e) => (
-                          <li
-                            key={e.id}
-                            className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1"
-                          >
-                            <span className="min-w-0 truncate text-body-sm text-muted">
-                              {e.email}
-                            </span>
-                            <span className="shrink-0 font-mono text-label uppercase text-dim">
-                              {e.kind === "signed_in" ? "signed in" : "signed out"} /{" "}
-                              {when(e.at)}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </>
-              )}
-            </Card>
-
-            <TeamCard
-              endpoint={`/api/admin/customers/${data.customer.id}/team`}
-              accountType="customer"
-              heading="Portal access"
-              blurb="Who can sign in to this client's portal. The primary account holder is always in; anyone below is a teammate they added, or one you added for them. Each gets their own login and the updates for the areas they are granted."
-              owner={{ email: data.customer.email, name: data.customer.name }}
-            />
-
-            {/* the access control Shariful asked for */}
-            <Card title="What they see">
-              <p className="text-body-sm text-muted">
-                Visible is normal. Disabled stays in their menu but locked, with
-                a note on hover, which says this exists and you do not have it.
-                Hidden removes it entirely.
-              </p>
-              {/* shrinkable track again: each row's max-content is its label
-                  plus the three-way switch on one line, and an `auto` track
-                  would size to that instead of letting the label truncate */}
-              <div className="mt-3 grid grid-cols-[minmax(0,1fr)] gap-2">
-                {HIDEABLE_SECTIONS.map((s) => {
-                  const state = hidden.has(s.key)
-                    ? "hidden"
-                    : disabledSet.has(s.key)
-                      ? "disabled"
-                      : "visible";
-                  /* one home per key: choosing a state clears the other list,
-                     so a section can never be hidden AND disabled at once */
-                  const set = (next: "visible" | "disabled" | "hidden") => {
-                    const hiddenNext = c.hiddenSections.filter((k) => k !== s.key);
-                    const disabledNext = c.disabledSections.filter((k) => k !== s.key);
-                    if (next === "hidden") hiddenNext.push(s.key);
-                    if (next === "disabled") disabledNext.push(s.key);
-                    void patch(
-                    { hiddenSections: hiddenNext, disabledSections: disabledNext },
-                    { hiddenSections: hiddenNext, disabledSections: disabledNext },
-                  );
-                  };
-                  return (
-                    <div key={s.key} className="flex items-center justify-between gap-3">
-                      <span className="min-w-0 truncate text-body-sm text-ink">{s.label}</span>
-                      <span className="flex shrink-0 overflow-hidden rounded-[6px] border border-hair">
-                        {(
-                          [
-                            ["visible", "On"],
-                            ["disabled", "Locked"],
-                            ["hidden", "Off"],
-                          ] as const
-                        ).map(([k, label]) => (
-                          <button
-                            key={k}
-                            type="button"
-                              onClick={() => set(k)}
-                            aria-pressed={state === k}
-                            className={`tap px-2 py-1 font-mono text-label uppercase transition-colors ${
-                              state === k
-                                ? k === "visible"
-                                  ? "bg-green/15 text-green"
-                                  : k === "disabled"
-                                    ? "bg-gold/15 text-gold"
-                                    : "bg-hair/60 text-muted"
-                                : "text-dim hover:text-ink"
-                            }`}
-                          >
-                            {label}
-                          </button>
-                        ))}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </Card>
-          </div>
-          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3">
-            {/* who we actually deal with. Distinct from Team below, which is who
-                can log in: most contacts never sign in at all. */}
-            <Card
-              title="Who we work with"
-              actions={
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  icon={<Plus />}
-                  onClick={() =>
-                    setContact({ name: "", email: "", phone: "", title: "", role: "production" })
-                  }
-                >
-                  Add
-                </Button>
-              }
-            >
-              {data.contacts.length === 0 && !contact && (
-                <p className="text-body-sm text-muted">
-                  Nobody named yet. Add the person who runs projects with you.
-                </p>
-              )}
-              {data.contacts.length > 0 && (
-                <ul className="grid gap-2.5">
-                  {data.contacts.map((c) => (
-                    <li key={c.id} className="text-body-sm">
-                      <span className="flex flex-wrap items-center gap-2">
-                        <span className="text-ink">{c.name}</span>
-                        <Chip tone={c.role === "primary" ? "good" : "info"}>{c.role}</Chip>
-                      </span>
-                      <p className="mt-0.5 font-mono text-label uppercase text-dim">
-                        {[c.title, c.email, c.phone].filter(Boolean).join(" / ") || "no details"}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <Modal open={!!contact} onClose={() => setContact(null)} title="Add a contact">
-                {contact && (
-                  <div className="grid gap-2">
-                  <Input
-                    value={contact.name}
-                    onChange={(e) => setContact({ ...contact, name: e.target.value })}
-                    placeholder="Name"
-                  />
-                  <Input
-                    value={contact.title}
-                    onChange={(e) => setContact({ ...contact, title: e.target.value })}
-                    placeholder="What they do, e.g. Head of Content"
-                  />
-                  <Input
-                    value={contact.email}
-                    onChange={(e) => setContact({ ...contact, email: e.target.value })}
-                    placeholder="Email"
-                  />
-                  <Input
-                    value={contact.phone}
-                    onChange={(e) => setContact({ ...contact, phone: e.target.value })}
-                    placeholder="Phone"
-                  />
-                  <Select
-                    value={contact.role}
-                    onChange={(e) => setContact({ ...contact, role: e.target.value })}
-                    aria-label="What this contact is for"
-                  >
-                    <option value="primary">Primary, the relationship</option>
-                    <option value="production">Production, the day to day</option>
-                    <option value="billing">Billing</option>
-                    <option value="other">Other</option>
-                  </Select>
-                  <div className="flex justify-end gap-2 border-t border-hair pt-3">
-                    <Button variant="ghost" size="sm" onClick={() => setContact(null)}>
-                      Cancel
-                    </Button>
-                    <Button variant="brand" size="sm" disabled={!contact.name.trim()} onClick={addContact}>
-                      Save
-                    </Button>
-                  </div>
-                  </div>
-                )}
-              </Modal>
-            </Card>
-
-            {/* A commercial switch, not a visibility one, which is why it is
-                its own card above the section toggles rather than a row in
-                them. */}
-            <Card title="Custom video">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-body-sm font-semibold text-ink">
-                    Let them submit projects directly
-                  </p>
-                  <p className="mt-1 text-body-sm text-muted">
-                    For accounts on a retainer, where the rate is already agreed.
-                    They brief a video straight from their portal with a script
-                    and it lands in the backlog, with no quote in between. Off,
-                    they request a quote like everyone else.
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  variant={c.canSubmitProjects ? "brand" : "secondary"}
-                  onClick={() =>
-                    void patch(
-                      { canSubmitProjects: !c.canSubmitProjects },
-                      { canSubmitProjects: !c.canSubmitProjects },
-                    )
-                  }
-                >
-                  {c.canSubmitProjects ? "On" : "Off"}
-                </Button>
-              </div>
-            </Card>
-
-            <PartnershipPanel
-              retainer={c.retainer}
-              partnership={data.partnership}
-              /* no optimistic value: the route answers with the parsed terms,
-                 which is what every other screen will read */
-              onSave={(terms) => patch({ retainer: terms })}
-            />
-          </div>
-        </div>
-      )}
-
-      {tab === "profile" && (
-        <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_22rem] lg:items-start">
-          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3">
-            {/* internal notes */}
             <Card title="Internal notes">
-              <p className="text-body-sm text-muted">
-                Only the team sees these. The client never does.
-              </p>
+              <p className="text-body-sm text-muted">Only the team sees these. The client never does.</p>
               <div className="mt-3 flex gap-2">
                 <Input
                   value={note}
@@ -1160,14 +708,9 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
                   size="sm"
                   disabled={!note.trim()}
                   onClick={() => {
-                    /* clear the box first. Making somebody watch their own
-                       typing sit there while a request goes out is the same
-                       wait as before, just in a smaller place. */
                     const text = note;
                     setNote("");
                     void patch({ note: text }).then(() => {
-                      /* patch already showed the error; give them the words
-                         back so the note is not lost with it */
                       if (errRef.current) setNote(text);
                     });
                   }}
@@ -1188,8 +731,51 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
                 </ul>
               )}
             </Card>
-          </div>
-          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3">
+
+            <Card title="Tags">
+              <div className="flex flex-wrap gap-1.5">
+                {c.tags.length === 0 && <p className="text-body-sm text-muted">No tags yet.</p>}
+                {c.tags.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() =>
+                      void patch(
+                        { tags: c.tags.filter((x) => x !== t) },
+                        { tags: c.tags.filter((x) => x !== t) },
+                      )
+                    }
+                    className="tap rounded-full border border-hair px-2.5 py-1 font-mono text-label uppercase text-muted transition-colors hover:border-error/60 hover:text-error"
+                    aria-label={`Remove tag ${t}`}
+                  >
+                    {t} &times;
+                  </button>
+                ))}
+              </div>
+              <div className="mt-3 flex gap-2">
+                <Input
+                  value={tagDraft}
+                  onChange={(e) => setTagDraft(e.target.value)}
+                  placeholder="agency, priority"
+                />
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon={<Plus />}
+                  disabled={!tagDraft.trim()}
+                  onClick={async () => {
+                    await patch(
+                      { tags: [...c.tags, tagDraft.trim()] },
+                      { tags: [...c.tags, tagDraft.trim()] },
+                    );
+                    setTagDraft("");
+                  }}
+                >
+                  Add
+                </Button>
+              </div>
+            </Card>
+
             <Card title="Brand">
               {data.brandKit.kit?.brandName ? (
                 <div className="grid gap-1.5 text-body-sm">
@@ -1251,52 +837,694 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
                   )}
                 </div>
               ) : (
-                <p className="text-body-sm text-muted">
-                  No brand kit yet. Their first brief fills it.
+                <p className="text-body-sm text-muted">No brand kit yet. Their first brief fills it.</p>
+              )}
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {/* ---------------- Premade: bought off the shelf ---------------- */}
+      {active === "premade" && (
+        <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_22rem] lg:items-start">
+          <Card title="Orders" padded={false}>
+            <div className="px-5 pb-5">
+              {premadeOrders.length === 0 ? (
+                <p className="py-3 text-body-sm text-muted">No premade orders yet.</p>
+              ) : (
+                <Table>
+                  <thead>
+                    <tr>
+                      <Th>What</Th>
+                      <Th>State</Th>
+                      <Th>Send</Th>
+                      <Th align="right">Amount</Th>
+                      <Th align="right">Placed</Th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {premadeOrders.map((o) => (
+                      <tr key={o.id}>
+                        <Td strong>
+                          {o.productName ?? "Order"}
+                          {o.invoiceNumber && (
+                            <span className="ml-2 font-mono text-label text-dim">{o.invoiceNumber}</span>
+                          )}
+                          {/* extra work billed against this order. It made no
+                              new video, so it belongs here rather than
+                              standing on its own as if it were a project. */}
+                          {addOns
+                            .filter((a) => a.parentOrderId === o.id)
+                            .map((a) => (
+                              <span
+                                key={a.id}
+                                className="mt-1 flex items-center gap-2 font-normal text-body-sm text-muted"
+                              >
+                                <span aria-hidden="true" className="text-dim">
+                                  &#8627;
+                                </span>
+                                {a.productName ?? "Extra work"}
+                                <Chip tone="info">add-on</Chip>
+                                <span className="tabular-nums">{money(a.amountCents)}</span>
+                              </span>
+                            ))}
+                        </Td>
+                        <Td>
+                          <Chip tone={PAY_TONE[o.status] ?? "neutral"}>
+                            {o.status === "paid" ? o.stage.replace(/_/g, " ") : o.status}
+                          </Chip>
+                        </Td>
+                        <Td>
+                          {/* the two nudges worth re-firing by hand. Every
+                              other email is tied to an event happening. */}
+                          {o.status === "paid" ? (
+                            <span className="flex flex-wrap gap-1.5">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                disabled={sending === `${o.id}:order_confirmation`}
+                                onClick={() => sendNudge(o.id, "order_confirmation")}
+                              >
+                                {sending === `${o.id}:order_confirmation` ? "Sending..." : "Confirmation"}
+                              </Button>
+                              {!o.intakeCompleted && (
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  disabled={sending === `${o.id}:intake_reminder`}
+                                  onClick={() => sendNudge(o.id, "intake_reminder")}
+                                >
+                                  {sending === `${o.id}:intake_reminder` ? "Sending..." : "Intake link"}
+                                </Button>
+                              )}
+                            </span>
+                          ) : (
+                            <span className="font-mono text-label uppercase text-dim">-</span>
+                          )}
+                        </Td>
+                        <Td align="right">{money(o.amountCents)}</Td>
+                        <Td align="right">{when(o.createdAt)}</Td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              )}
+            </div>
+          </Card>
+          <VideoList
+            title="Their premade videos"
+            empty="Nothing delivered from an order yet."
+            videos={data.videos.filter((vd) => vd.source === "purchase")}
+          />
+        </div>
+      )}
+
+      {/* ---------------- Custom: projects, and how they brief us ---------------- */}
+      {active === "custom" && (
+        <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_22rem] lg:items-start">
+          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3">
+            <Card
+              title={`Projects (${data.projects.length})`}
+              description="Each opens on the Custom board with its production line."
+              padded={false}
+              actions={
+                <Button size="sm" variant="secondary" icon={<Plus />} href="/admin/custom/">
+                  New project
+                </Button>
+              }
+            >
+              <div className="px-5 pb-5">
+                {data.projects.length === 0 ? (
+                  <p className="py-3 text-body-sm text-muted">No projects yet.</p>
+                ) : (
+                  <Table>
+                    <thead>
+                      <tr>
+                        <Th>Project</Th>
+                        <Th>Stage</Th>
+                        <Th>Price</Th>
+                        <Th align="right">Due</Th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.projects.map((p) => (
+                        <tr key={p.id}>
+                          <Td strong>
+                            <a href={`/admin/custom/${p.id}/`} className="hover:text-gold">
+                              {p.title}
+                            </a>
+                          </Td>
+                          <Td>
+                            <Chip
+                              tone={
+                                p.status === "approved" || p.status === "closed"
+                                  ? "good"
+                                  : p.status === "cancelled"
+                                    ? "neutral"
+                                    : p.status === "review"
+                                      ? "warn"
+                                      : "info"
+                              }
+                            >
+                              {STUDIO_LABEL[p.status] ?? p.status}
+                            </Chip>
+                          </Td>
+                          <Td>
+                            {p.retainerKind ? (
+                              <span className="text-body-sm text-muted">
+                                {p.retainerKind === "animation" ? "animation" : "retainer"}
+                                {p.retainerMonth ? `, ${monthLabel(p.retainerMonth)}` : ""}
+                              </span>
+                            ) : p.agreedCents ?? p.quotedCents ? (
+                              <span className="tabular-nums text-ink">{money(p.agreedCents ?? p.quotedCents ?? 0)}</span>
+                            ) : (
+                              <span className="font-mono text-label uppercase text-dim">no price yet</span>
+                            )}
+                          </Td>
+                          <Td align="right">{p.dueAt ? when(p.dueAt) : "-"}</Td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                )}
+              </div>
+            </Card>
+            <VideoList
+              title="Videos from projects"
+              empty="Nothing delivered from a project yet."
+              videos={data.videos.filter((vd) => vd.source === "project")}
+            />
+          </div>
+          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3">
+            {/* how their custom work is arranged: quoted per project, briefed
+                directly, or covered by a retainer */}
+            <Card title="How they brief us">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-body-sm font-semibold text-ink">Direct brief</p>
+                  <p className="mt-1 text-body-sm text-muted">
+                    On, they brief a video straight from their portal with a script and it lands
+                    in the backlog, no quote in between. Off, they request a quote like everyone
+                    else. A retainer partner is always on.
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant={c.canSubmitProjects ? "brand" : "secondary"}
+                  disabled={c.retainer !== null}
+                  onClick={() =>
+                    void patch(
+                      { canSubmitProjects: !c.canSubmitProjects },
+                      { canSubmitProjects: !c.canSubmitProjects },
+                    )
+                  }
+                >
+                  {c.canSubmitProjects || c.retainer ? "On" : "Off"}
+                </Button>
+              </div>
+            </Card>
+
+            <PartnershipPanel
+              retainer={c.retainer}
+              partnership={data.partnership}
+              /* no optimistic value: the route answers with the parsed terms,
+                 which is what every other screen will read */
+              onSave={(terms) => patch({ retainer: terms })}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ---------------- Editing: the plan and its month ---------------- */}
+      {active === "editing" && (
+        <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_22rem] lg:items-start">
+          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3">
+            {data.plan ? (
+              <Card
+                title={`${data.plan.planName}, this month`}
+                description={`${when(data.plan.cycle.startsAt)} to ${when(data.plan.cycle.endsAt)}. Requests, cuts, checklists and review live on the board.`}
+                actions={
+                  <Button size="sm" variant="brand" icon={<ArrowRight />} href={boardHref}>
+                    Open the board
+                  </Button>
+                }
+              >
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {[
+                    { label: "Credits used", value: `${data.plan.credits.spent} of ${data.plan.credits.allowed}` },
+                    { label: "Left", value: String(data.plan.credits.left) },
+                    { label: "Ready for them", value: String(data.plan.inReview) },
+                    { label: "Being cut", value: String(data.plan.inProduction) },
+                  ].map((f) => (
+                    <div key={f.label} className="rounded-[8px] border border-hair bg-canvas px-3 py-2.5">
+                      <p className="font-mono text-label uppercase tracking-[0.08em] text-dim">{f.label}</p>
+                      <p className="mt-1 font-display text-h4 tabular-nums text-ink">{f.value}</p>
+                    </div>
+                  ))}
+                </div>
+                {data.plan.credits.topupLeft > 0 && (
+                  <p className="mt-3 text-body-sm text-muted">
+                    Plus {data.plan.credits.topupLeft} topped-up credits that never expire.
+                  </p>
+                )}
+              </Card>
+            ) : (
+              <Card title="No live plan" description="Their past plans and months are below.">
+                <p className="text-body-sm text-muted">A plan that ended keeps its months and its videos.</p>
+              </Card>
+            )}
+            <PlansTable subscriptions={data.subscriptions} />
+            <VideoList
+              title="Videos on the plan"
+              empty="Nothing cut on a plan yet."
+              videos={data.videos.filter((vd) => vd.source === "plan")}
+            />
+          </div>
+          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3">
+            <Card title="Editing" description="Where the rest of it lives.">
+              <div className="grid gap-2">
+                <Button variant="secondary" size="sm" icon={<ArrowRight />} href={boardHref}>
+                  Their board: requests, cuts, QC and review
+                </Button>
+                <Button variant="ghost" size="sm" icon={<ArrowRight />} href="/admin/subscriptions/">
+                  Subscriptions: every plan, the revenue view
+                </Button>
+              </div>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {/* ---------------- Billing: every kind of money, one place ---------------- */}
+      {active === "billing" && (
+        <div className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-3">
+          <Card
+            title="Orders"
+            description="Every payment through the site, including invoices paid, each labelled by what it was."
+            padded={false}
+            actions={
+              <Button size="sm" variant="secondary" icon={<Plus />} href="/admin/invoices/">
+                New invoice
+              </Button>
+            }
+          >
+            <div className="px-5 pb-5">
+              {data.orders.length === 0 ? (
+                <p className="py-3 text-body-sm text-muted">No payments yet.</p>
+              ) : (
+                <Table>
+                  <thead>
+                    <tr>
+                      <Th>What</Th>
+                      <Th>Kind</Th>
+                      <Th>State</Th>
+                      <Th align="right">Amount</Th>
+                      <Th align="right">Placed</Th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.orders.map((o) => (
+                      <tr key={o.id}>
+                        <Td strong>
+                          {o.productName ?? "Order"}
+                          {o.invoiceNumber && (
+                            <span className="ml-2 font-mono text-label text-dim">{o.invoiceNumber}</span>
+                          )}
+                        </Td>
+                        <Td>
+                          <Chip tone={o.kind === "custom" ? "warn" : o.kind === "addon" ? "info" : "neutral"}>
+                            {o.kind === "addon" ? "add-on" : o.kind}
+                          </Chip>
+                        </Td>
+                        <Td>
+                          <Chip tone={PAY_TONE[o.status] ?? "neutral"}>
+                            {o.status === "paid" ? o.stage.replace(/_/g, " ") : o.status}
+                          </Chip>
+                        </Td>
+                        <Td align="right">{money(o.amountCents)}</Td>
+                        <Td align="right">{when(o.createdAt)}</Td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              )}
+            </div>
+          </Card>
+
+          {data.subscriptions.length > 0 && <PlansTable subscriptions={data.subscriptions} />}
+
+          {data.invoices.length > 0 && (
+            <Card title="Invoices" padded={false}>
+              <div className="px-5 pb-5">
+                <Table>
+                  <thead>
+                    <tr>
+                      <Th>Number</Th>
+                      <Th>State</Th>
+                      <Th align="right">Total</Th>
+                      <Th align="right">Due</Th>
+                      <Th align="right">Raised</Th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.invoices.map((i) => (
+                      <tr key={i.id}>
+                        <Td strong>
+                          <a href={`/invoice/${i.token}/`} target="_blank" rel="noopener" className="hover:text-gold">
+                            {i.number}
+                          </a>
+                        </Td>
+                        <Td>
+                          <Chip tone={i.paid ? "good" : i.status === "void" ? "neutral" : "warn"}>
+                            {i.paid ? "paid" : i.status}
+                          </Chip>
+                        </Td>
+                        <Td align="right">{money(i.totalCents)}</Td>
+                        <Td align="right">{i.dueDate ? when(i.dueDate) : "-"}</Td>
+                        <Td align="right">{when(i.createdAt)}</Td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              </div>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* ---------------- Portal: what they see, who signs in ---------------- */}
+      {active === "portal" && (
+        <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_22rem] lg:items-start">
+          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3">
+            <Card
+              title="What they see"
+              description="Decided from what the account has: a section shows because they have that service line, the store shows for people who buy from it, the offers vanish for a retainer partner. The switches only ever narrow that."
+            >
+              <div className="mt-1 grid grid-cols-[minmax(0,1fr)] gap-2">
+                {HIDEABLE_SECTIONS.map((s) => {
+                  const byRule = rule.visible.includes(s.key);
+                  const state = hidden.has(s.key)
+                    ? "hidden"
+                    : disabledSet.has(s.key)
+                      ? "disabled"
+                      : "visible";
+                  /* one home per key: choosing a state clears the other list */
+                  const set = (next: "visible" | "disabled" | "hidden") => {
+                    const hiddenNext = c.hiddenSections.filter((k) => k !== s.key);
+                    const disabledNext = c.disabledSections.filter((k) => k !== s.key);
+                    if (next === "hidden") hiddenNext.push(s.key);
+                    if (next === "disabled") disabledNext.push(s.key);
+                    void patch(
+                      { hiddenSections: hiddenNext, disabledSections: disabledNext },
+                      { hiddenSections: hiddenNext, disabledSections: disabledNext },
+                    );
+                  };
+                  return (
+                    <div key={s.key} className="flex items-center justify-between gap-3">
+                      <span className="min-w-0 truncate text-body-sm text-ink">
+                        {s.label}
+                        {!byRule && (
+                          <span className="ml-2 font-mono text-label uppercase text-dim">
+                            not in their account
+                          </span>
+                        )}
+                        {byRule && state !== "visible" && (
+                          <span className="ml-2 font-mono text-label uppercase text-gold">
+                            {state === "hidden" ? "hidden by you" : "locked by you"}
+                          </span>
+                        )}
+                      </span>
+                      {byRule ? (
+                        <span className="flex shrink-0 overflow-hidden rounded-[6px] border border-hair">
+                          {(
+                            [
+                              ["visible", "On"],
+                              ["disabled", "Locked"],
+                              ["hidden", "Off"],
+                            ] as const
+                          ).map(([k, label]) => (
+                            <button
+                              key={k}
+                              type="button"
+                              onClick={() => set(k)}
+                              aria-pressed={state === k}
+                              className={`tap px-2 py-1 font-mono text-label uppercase transition-colors ${
+                                state === k
+                                  ? k === "visible"
+                                    ? "bg-green/15 text-green"
+                                    : k === "disabled"
+                                      ? "bg-gold/15 text-gold"
+                                      : "bg-hair/60 text-muted"
+                                  : "text-dim hover:text-ink"
+                              }`}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </span>
+                      ) : (
+                        <span className="shrink-0 font-mono text-label uppercase text-dim">off</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              {!vis.offers && (
+                <p className="mt-3 text-body-sm text-muted">
+                  The offers (Affiliate, White-label, SocialX) are off for a retainer partner.
                 </p>
               )}
             </Card>
 
-            <Card title="Tags">
-              <div className="flex flex-wrap gap-1.5">
-                {c.tags.length === 0 && <p className="text-body-sm text-muted">No tags yet.</p>}
-                {c.tags.map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() =>
-                    void patch(
-                      { tags: c.tags.filter((x) => x !== t) },
-                      { tags: c.tags.filter((x) => x !== t) },
-                    )
-                  }
-                    className="tap rounded-full border border-hair px-2.5 py-1 font-mono text-label uppercase text-muted transition-colors hover:border-error/60 hover:text-error"
-                    aria-label={`Remove tag ${t}`}
-                  >
-                    {t} &times;
-                  </button>
-                ))}
-              </div>
-              <div className="mt-3 flex gap-2">
-                <Input
-                  value={tagDraft}
-                  onChange={(e) => setTagDraft(e.target.value)}
-                  placeholder="agency, priority"
-                />
+            <TeamCard
+              endpoint={`/api/admin/customers/${data.customer.id}/team`}
+              accountType="customer"
+              heading="Portal access"
+              blurb="Who can sign in to this client's portal. The primary account holder is always in; anyone below is a teammate they added, or one you added for them. Each gets their own login and the updates for the areas they are granted."
+              owner={{ email: data.customer.email, name: data.customer.name }}
+            />
+
+            <Card
+              title="Portal activity"
+              description="Who is signed in now, and the sign ins before this one. Studio staff using View as client are never counted."
+            >
+              {!activity ? (
+                <p className="text-body-sm text-muted">Loading...</p>
+              ) : activity.people.length === 0 && activity.events.length === 0 ? (
+                <p className="text-body-sm text-muted">Nobody from this account has signed in yet.</p>
+              ) : (
+                <>
+                  {activity.people.length > 0 && (
+                    <ul className="grid grid-cols-[minmax(0,1fr)] gap-2">
+                      {activity.people.map((p) => (
+                        <li key={p.email} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                          <span className="flex min-w-0 items-center gap-2">
+                            <span
+                              aria-hidden="true"
+                              className={`h-2 w-2 shrink-0 rounded-full ${p.online ? "bg-green" : "bg-hair"}`}
+                            />
+                            <span className="min-w-0 truncate text-body-sm text-ink">{p.email}</span>
+                          </span>
+                          <span className={`shrink-0 font-mono text-label uppercase ${p.online ? "text-green" : "text-dim"}`}>
+                            {p.online ? "In the portal now" : `last seen ${when(p.lastSeenAt)}`}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {activity.events.length > 0 && (
+                    <div className={activity.people.length > 0 ? "mt-5 border-t border-hair pt-4" : ""}>
+                      <p className="font-mono text-label uppercase tracking-[0.08em] text-dim">The log</p>
+                      <ul className="mt-3 grid grid-cols-[minmax(0,1fr)] gap-2">
+                        {activity.events.map((e) => (
+                          <li key={e.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                            <span className="min-w-0 truncate text-body-sm text-muted">{e.email}</span>
+                            <span className="shrink-0 font-mono text-label uppercase text-dim">
+                              {e.kind === "signed_in" ? "signed in" : "signed out"} / {when(e.at)}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </>
+              )}
+            </Card>
+          </div>
+
+          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3">
+            <Card
+              title="Who we work with"
+              actions={
                 <Button
-                  variant="secondary"
+                  variant="ghost"
                   size="sm"
                   icon={<Plus />}
-                  disabled={!tagDraft.trim()}
-                  onClick={async () => {
-                    await patch(
-                      { tags: [...c.tags, tagDraft.trim()] },
-                      { tags: [...c.tags, tagDraft.trim()] },
-                    );
-                    setTagDraft("");
-                  }}
+                  onClick={() => setContact({ name: "", email: "", phone: "", title: "", role: "production" })}
                 >
                   Add
+                </Button>
+              }
+            >
+              {data.contacts.length === 0 && !contact && (
+                <p className="text-body-sm text-muted">Nobody named yet. Add the person who runs projects with you.</p>
+              )}
+              {data.contacts.length > 0 && (
+                <ul className="grid gap-2.5">
+                  {data.contacts.map((ct) => (
+                    <li key={ct.id} className="text-body-sm">
+                      <span className="flex flex-wrap items-center gap-2">
+                        <span className="text-ink">{ct.name}</span>
+                        <Chip tone={ct.role === "primary" ? "good" : "info"}>{ct.role}</Chip>
+                      </span>
+                      <p className="mt-0.5 font-mono text-label uppercase text-dim">
+                        {[ct.title, ct.email, ct.phone].filter(Boolean).join(" / ") || "no details"}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <Modal open={!!contact} onClose={() => setContact(null)} title="Add a contact">
+                {contact && (
+                  <div className="grid gap-2">
+                    <Input
+                      value={contact.name}
+                      onChange={(e) => setContact({ ...contact, name: e.target.value })}
+                      placeholder="Name"
+                    />
+                    <Input
+                      value={contact.title}
+                      onChange={(e) => setContact({ ...contact, title: e.target.value })}
+                      placeholder="What they do, e.g. Head of Content"
+                    />
+                    <Input
+                      value={contact.email}
+                      onChange={(e) => setContact({ ...contact, email: e.target.value })}
+                      placeholder="Email"
+                    />
+                    <Input
+                      value={contact.phone}
+                      onChange={(e) => setContact({ ...contact, phone: e.target.value })}
+                      placeholder="Phone"
+                    />
+                    <Select
+                      value={contact.role}
+                      onChange={(e) => setContact({ ...contact, role: e.target.value })}
+                      aria-label="What this contact is for"
+                    >
+                      <option value="primary">Primary, the relationship</option>
+                      <option value="production">Production, the day to day</option>
+                      <option value="billing">Billing</option>
+                      <option value="other">Other</option>
+                    </Select>
+                    <div className="flex justify-end gap-2 border-t border-hair pt-3">
+                      <Button variant="ghost" size="sm" onClick={() => setContact(null)}>
+                        Cancel
+                      </Button>
+                      <Button variant="brand" size="sm" disabled={!contact.name.trim()} onClick={addContact}>
+                        Save
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </Modal>
+            </Card>
+
+            <Card
+              title="Emails"
+              description={
+                c.welcomedAt
+                  ? `Portal welcome sent ${when(c.welcomedAt)}. Everything sent since, below.`
+                  : "No portal welcome recorded for this account. Send it here, or to one of their contacts."
+              }
+            >
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  <Select
+                    value={welcomeTo || data.customer.email}
+                    onChange={(e) => setWelcomeTo(e.target.value)}
+                    aria-label="Who gets the welcome email"
+                  >
+                    <option value={data.customer.email}>{data.customer.email} (account)</option>
+                    {data.contacts
+                      .filter((ct) => ct.email && ct.email.toLowerCase() !== data.customer.email.toLowerCase())
+                      .map((ct) => (
+                        <option key={ct.id} value={ct.email ?? ""}>
+                          {ct.email} ({ct.name})
+                        </option>
+                      ))}
+                  </Select>
+                </div>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={sending?.startsWith("welcome:") ?? false}
+                  onClick={() => sendWelcome(welcomeTo || data.customer.email)}
+                >
+                  {sending?.startsWith("welcome:") ? "Sending..." : "Send welcome"}
+                </Button>
+              </div>
+              {emails === null ? (
+                <p className="text-body-sm text-muted">Loading...</p>
+              ) : emails.length === 0 ? (
+                <p className="text-body-sm text-muted">
+                  Nothing recorded. The log started on 20 August 2026, so older sends are not in it.
+                </p>
+              ) : (
+                <ul className="grid grid-cols-[minmax(0,1fr)] gap-2">
+                  {emails.slice(0, 8).map((e) => (
+                    <li key={e.id}>
+                      <button
+                        type="button"
+                        onClick={() => setOpenEmail(openEmail === e.id ? null : e.id)}
+                        className="tap w-full text-left"
+                      >
+                        <span className="flex items-start justify-between gap-2">
+                          <span className="min-w-0 flex-1 truncate text-body-sm text-ink">{e.subject}</span>
+                          <Chip
+                            tone={
+                              e.status === "sent"
+                                ? "good"
+                                : e.status === "failed"
+                                  ? "bad"
+                                  : e.status === "skipped"
+                                    ? "warn"
+                                    : "neutral"
+                            }
+                          >
+                            {e.status}
+                          </Chip>
+                        </span>
+                        <span className="mt-0.5 block font-mono text-label uppercase text-dim">
+                          {e.templateKey ?? e.source} / {when(e.at)}
+                        </span>
+                        {openEmail === e.id && e.error && (
+                          <span className="mt-1 block whitespace-pre-wrap text-body-sm text-error">{e.error}</span>
+                        )}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+
+            <Card title="This account">
+              <ul className="grid gap-1.5 text-body-sm text-muted">
+                <li>
+                  Came in: {c.source && DOOR_WORD[c.source] ? DOOR_WORD[c.source] : "before the door was recorded"}.
+                </li>
+                <li>Handle: {c.slug ?? "none"}.</li>
+              </ul>
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                <span className="text-body-sm text-muted">
+                  {c.internal ? "One of ours: out of the client list and its totals." : "A client. Counts in the list and the totals."}
+                </span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => void patch({ internal: !c.internal }, { internal: !c.internal })}
+                >
+                  {c.internal ? "Make it a client" : "Mark as ours"}
                 </Button>
               </div>
             </Card>
@@ -1304,6 +1532,76 @@ export function CustomerRecord({ id, onBack }: { id: string; onBack: () => void 
         </div>
       )}
     </div>
+  );
+}
+
+/** A list of videos with where each came from and where it stands. */
+function VideoList({
+  title,
+  empty,
+  videos,
+}: {
+  title: string;
+  empty: string;
+  videos: Record_["videos"];
+}) {
+  return (
+    <Card title={`${title} (${videos.length})`} padded={false}>
+      <div className="px-5 pb-5">
+        {videos.length === 0 ? (
+          <p className="py-3 text-body-sm text-muted">{empty}</p>
+        ) : (
+          <ul className="grid grid-cols-[minmax(0,1fr)] gap-1.5">
+            {videos.map((vd) => (
+              <li key={vd.id} className="flex items-center justify-between gap-3 text-body-sm">
+                <span className="min-w-0 truncate text-ink">{vd.title}</span>
+                <Chip tone={vd.status === "approved" ? "good" : vd.status === "ready" ? "warn" : "info"}>
+                  {vd.status.replace(/_/g, " ")}
+                </Chip>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+/** Every plan they have had, live or not. */
+function PlansTable({ subscriptions }: { subscriptions: Record_["subscriptions"] }) {
+  return (
+    <Card title="Plans" padded={false}>
+      <div className="px-5 pb-5">
+        {subscriptions.length === 0 ? (
+          <p className="py-3 text-body-sm text-muted">No plan yet.</p>
+        ) : (
+          <Table>
+            <thead>
+              <tr>
+                <Th>Plan</Th>
+                <Th>State</Th>
+                <Th align="right">Price</Th>
+                <Th align="right">Renews</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {subscriptions.map((s) => (
+                <tr key={s.id}>
+                  <Td strong>{s.planName ?? s.sku ?? "Plan"}</Td>
+                  <Td>
+                    <Chip tone={s.status === "active" ? "good" : s.status.startsWith("incomplete") ? "neutral" : "warn"}>
+                      {s.cancelAtPeriodEnd ? "ending" : s.status}
+                    </Chip>
+                  </Td>
+                  <Td align="right">{s.amountCents ? money(s.amountCents) : "-"}</Td>
+                  <Td align="right">{s.currentPeriodEnd ? when(s.currentPeriodEnd) : "-"}</Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        )}
+      </div>
+    </Card>
   );
 }
 

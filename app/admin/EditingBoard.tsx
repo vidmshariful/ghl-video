@@ -99,6 +99,8 @@ type Client = {
   subscriptionId: string;
   /* the handle their board lives at, /admin/editing/<slug>/ */
   slug: string | null;
+  /* their record, /admin/customers/<id>/ */
+  customerId: string | null;
   email: string;
   name: string | null;
   company: string | null;
@@ -427,6 +429,16 @@ export function EditingBoard({ slug, onBack }: { slug: string; onBack: () => voi
           <p className="mt-1 font-mono text-label uppercase text-dim">
             {b.client.planName} / {b.client.email}
             {b.month ? ` / month of ${when(b.month.startsAt)}` : ""}
+            {/* the rest of the client is one click away: the board is the
+                work, the record is who they are */}
+            {b.client.customerId && (
+              <>
+                {" / "}
+                <a href={`/admin/customers/${b.client.customerId}/`} className="text-muted hover:text-gold">
+                  their record
+                </a>
+              </>
+            )}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-4">

@@ -53,6 +53,14 @@ export async function GET(req: Request) {
     .select("id, customer_id, name, email, role, title")
     .order("role");
 
+  /* the people who have asked and not yet bought: leads belong in the same
+     list as clients, one stage earlier, rather than on another screen */
+  const { data: enquiries } = await db
+    .from("project_requests")
+    .select("id, name, email, company, status, created_at")
+    .in("status", ["new", "contacted", "quoted"])
+    .order("created_at", { ascending: false });
+
   /* group once, by lowercased email, which is the only key all four share */
   const key = (e: unknown) => String(e ?? "").toLowerCase();
   const byEmail = <T extends Row>(rows: T[] | null, field: string) => {
@@ -156,7 +164,20 @@ export async function GET(req: Request) {
     };
   });
 
-  return NextResponse.json({ customers: items });
+  const known = new Set(items.map((c) => c.email.toLowerCase()));
+  return NextResponse.json({
+    customers: items,
+    leads: ((enquiries ?? []) as Row[]).map((e) => ({
+      id: String(e.id),
+      name: (e.name as string | null) ?? null,
+      email: String(e.email),
+      company: (e.company as string | null) ?? null,
+      status: String(e.status),
+      createdAt: String(e.created_at),
+      /* an existing client asking for more is not a new lead */
+      isClient: known.has(String(e.email).toLowerCase()),
+    })),
+  });
 }
 
 
@@ -205,6 +226,11 @@ export async function POST(req: Request) {
     welcome: false,
   });
   if (!data) return NextResponse.json({ error: "Could not create the client." }, { status: 400 });
+
+  /* what they are here for decides how they brief us: a direct-brief or
+     retainer account skips the quote, everyone else asks for one */
+  if (typeof b.canSubmitProjects === "boolean")
+    await db.from("customers").update({ can_submit_projects: b.canSubmitProjects }).eq("id", data.id);
 
   /* the person we actually deal with, created alongside so a new client is
    * never a bare email nobody can put a name to */
