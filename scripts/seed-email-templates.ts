@@ -10,7 +10,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { DEFAULT_TEMPLATES } from "../lib/email/templates";
 
 const dot: Record<string, string> = {};
-const envPath = new URL("../.env.local", import.meta.url);
+const envPath = new URL(`../${process.env.GHLV_ENV === "prod" ? ".env.prod.local" : ".env.local"}`, import.meta.url);
 if (existsSync(envPath)) {
   for (const line of readFileSync(envPath, "utf8").split("\n")) {
     const t = line.trim();

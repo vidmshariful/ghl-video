@@ -30,7 +30,9 @@
     "backfill:subscription-payments": "tsx scripts/backfill-subscription-payments.ts",
     "seed:demo": "tsx scripts/seed-demo-client.ts",
     "check:demo": "node scripts/check-demo-client.mjs",
-    "check:owners": "tsx scripts/check-owners.ts"
+    "check:owners": "tsx scripts/check-owners.ts",
+    "staging:refresh": "node scripts/staging-refresh.mjs",
+    "staging:logins": "node scripts/seed-qa-logins.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

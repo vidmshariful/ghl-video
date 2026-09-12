@@ -132,10 +132,27 @@ npm run check:live          # the four world-state checks, before asking to depl
 npm run check:drift         # cross-part drift (the 4 surfaces)
 npm run check:owners        # every file touching a video handles all 3 owners
 npm run check:deliverables  # each product expands to the count it advertises
-npm run migrate             # apply pending SQL migrations (tracked)
+npm run migrate             # apply pending SQL migrations (tracked); GHLV_ENV=prod for production
+npm run staging:refresh     # recopy production's public tables into staging
+npm run staging:logins      # (re)make the staging QA admin + demo client logins
 npm run seed:subscriptions  # seed the 3 editing plans (idempotent)
 npm run test:e2e            # Playwright smoke suite
 ```
+
+**Staging (since 12 September 2026).** Local dev and every script read
+`.env.local`, which points at the STAGING Supabase project
+(`udawvwkirafbwgmcbcip`) and carries no Stripe, HighLevel, Affixo or email
+keys, so nothing run locally can charge, sync or mail anyone. Production
+credentials live in `.env.prod.local` and are reached only on purpose:
+`GHLV_ENV=prod node scripts/<x>` or `GHLV_ENV=prod npm run migrate`. Staging
+is a snapshot of production's public schema: `npm run staging:refresh`
+recopies it (children first, foreign-key order, sequences advanced), and
+`npm run staging:logins` makes the QA admin and the demo client's logins,
+printing new passwords each time. The agent signs in there with a one-time
+link minted from the admin API; nobody types a password into a form. The
+migrations replay from scratch (0094 carries the three tables production
+made by hand before the files existed), which is what makes the refresh
+possible.
 
 `prebuild` also runs the unit tests plus check:tokens, check:leaks and
 check:portal-ui, so a `next build` failure can come from any of them. Judge

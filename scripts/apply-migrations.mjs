@@ -23,7 +23,7 @@ import pg from "pg";
 
 // dev convenience: load .env.local if present; production sets real env vars.
 const dotenv = {};
-const envPath = new URL("../.env.local", import.meta.url);
+const envPath = new URL(`../${process.env.GHLV_ENV === "prod" ? ".env.prod.local" : ".env.local"}`, import.meta.url);
 if (existsSync(envPath)) {
   for (const line of readFileSync(envPath, "utf8").split("\n")) {
     const t = line.trim();
@@ -32,7 +32,9 @@ if (existsSync(envPath)) {
     dotenv[t.slice(0, i).trim()] = t.slice(i + 1).trim().replace(/^["']|["']$/g, "");
   }
 }
-const env = (k) => dotenv[k] ?? process.env[k];
+/* the environment wins over the file, so one migration can be pointed at a
+   database by hand: SUPABASE_DB_URL=... npm run migrate */
+const env = (k) => process.env[k] ?? dotenv[k];
 
 const DB_URL = env("SUPABASE_DB_URL");
 if (!DB_URL || DB_URL.includes("PASSWORD")) {

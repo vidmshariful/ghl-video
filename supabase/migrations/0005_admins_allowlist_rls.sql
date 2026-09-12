@@ -64,24 +64,41 @@ drop policy if exists products_admin_update on public.products;
 create policy products_admin_update on public.products
   for update to authenticated using (public.is_admin()) with check (public.is_admin());
 
--- videos: admin all via is_admin()
-drop policy if exists "auth all videos" on public.videos;
-drop policy if exists videos_admin_all on public.videos;
-create policy videos_admin_all on public.videos
-  for all to authenticated using (public.is_admin()) with check (public.is_admin());
+-- The three tables below were made by hand before the migration files
+-- existed, so a fresh database (staging) does not have them at this point.
+-- 0094 creates them; here their policies are set only where they exist, so
+-- the same file runs on production (which has them) and on a fresh replay.
+do $$
+begin
+  if to_regclass('public.videos') is not null then
+    -- videos: admin all via is_admin()
+    drop policy if exists "auth all videos" on public.videos;
+    drop policy if exists videos_admin_all on public.videos;
+    create policy videos_admin_all on public.videos
+      for all to authenticated using (public.is_admin()) with check (public.is_admin());
+  end if;
 
--- site_settings: keep anon read; admin read/write via is_admin()
-drop policy if exists "auth read settings" on public.site_settings;
-create policy site_settings_admin_read on public.site_settings
-  for select to authenticated using (public.is_admin());
-drop policy if exists "auth write settings" on public.site_settings;
-create policy site_settings_admin_write on public.site_settings
-  for update to authenticated using (public.is_admin()) with check (public.is_admin());
+  if to_regclass('public.site_settings') is not null then
+    -- site_settings: keep anon read; admin read/write via is_admin()
+    drop policy if exists "auth read settings" on public.site_settings;
+    drop policy if exists site_settings_admin_read on public.site_settings;
+    create policy site_settings_admin_read on public.site_settings
+      for select to authenticated using (public.is_admin());
+    drop policy if exists "auth write settings" on public.site_settings;
+    drop policy if exists site_settings_admin_write on public.site_settings;
+    create policy site_settings_admin_write on public.site_settings
+      for update to authenticated using (public.is_admin()) with check (public.is_admin());
+  end if;
 
--- site_links: keep anon read; admin read/write via is_admin()
-drop policy if exists "auth read links" on public.site_links;
-create policy site_links_admin_read on public.site_links
-  for select to authenticated using (public.is_admin());
-drop policy if exists "auth write links" on public.site_links;
-create policy site_links_admin_write on public.site_links
-  for all to authenticated using (public.is_admin()) with check (public.is_admin());
+  if to_regclass('public.site_links') is not null then
+    -- site_links: keep anon read; admin read/write via is_admin()
+    drop policy if exists "auth read links" on public.site_links;
+    drop policy if exists site_links_admin_read on public.site_links;
+    create policy site_links_admin_read on public.site_links
+      for select to authenticated using (public.is_admin());
+    drop policy if exists "auth write links" on public.site_links;
+    drop policy if exists site_links_admin_write on public.site_links;
+    create policy site_links_admin_write on public.site_links
+      for all to authenticated using (public.is_admin()) with check (public.is_admin());
+  end if;
+end $$;

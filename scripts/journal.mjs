@@ -28,7 +28,7 @@ const require = createRequire(import.meta.url);
 const { createClient } = require("@supabase/supabase-js");
 
 const env = {};
-const envPath = new URL("../.env.local", import.meta.url);
+const envPath = new URL(`../${process.env.GHLV_ENV === "prod" ? ".env.prod.local" : ".env.local"}`, import.meta.url);
 if (existsSync(envPath)) {
   for (const line of readFileSync(envPath, "utf8").split("\n")) {
     const t = line.trim();

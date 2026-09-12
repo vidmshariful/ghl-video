@@ -14,7 +14,7 @@
  */
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";
-for (const l of readFileSync(".env.local","utf8").split("\n")) { const m=l.match(/^([A-Z0-9_]+)=(.*)$/); if(m) process.env[m[1]]=m[2].replace(/^["']|["']$/g,""); }
+for (const l of readFileSync(process.env.GHLV_ENV === "prod" ? ".env.prod.local" : ".env.local","utf8").split("\n")) { const m=l.match(/^([A-Z0-9_]+)=(.*)$/); if(m) process.env[m[1]]=m[2].replace(/^["']|["']$/g,""); }
 const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {auth:{persistSession:false}});
 const E = "shariful@ghlvideo.com";
 let bad = 0; const need = (ok,msg)=>{ console.log((ok?"  ok   ":"  FAIL ")+msg); if(!ok) bad++; };

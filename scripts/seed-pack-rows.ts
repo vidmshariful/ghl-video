@@ -23,7 +23,7 @@ import { skuFor } from "@/lib/content/codes";
 const DRY = process.argv.includes("--dry");
 
 const env: Record<string, string> = {};
-for (const line of readFileSync(".env.local", "utf8").split("\n")) {
+for (const line of readFileSync(process.env.GHLV_ENV === "prod" ? ".env.prod.local" : ".env.local", "utf8").split("\n")) {
   const m = line.match(/^([A-Z0-9_]+)=(.*)$/);
   if (m) env[m[1]] = m[2].replace(/^["']|["']$/g, "");
 }

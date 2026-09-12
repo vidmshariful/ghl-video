@@ -589,6 +589,11 @@ export function DashboardView({
   const onboarding =
     !loading &&
     canOrders &&
+    /* the three steps are a premade buyer's first order: brief, brand,
+       approve. A custom or editing client has no brief to send, and on
+       staging HighLevel's dashboard opened with "your orders are briefed
+       and with us", which was true of nothing. */
+    (has ? has("videos") : true) &&
     brandReady !== null &&
     /* work of any kind. Gated on orders, an editing client who pays every
      * month never saw this at all. */
