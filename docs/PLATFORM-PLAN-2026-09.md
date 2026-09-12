@@ -157,13 +157,16 @@ Needs from the owner: the HighLevel test sub-account (or permission to create
 one), and the list of HighLevel features enabled on the plan (Payments,
 Email, Documents, Affiliate Manager).
 
-### Phase 1. Every line walked and fixed (5 days)
+### Phase 1. Every line walked and fixed, and the look decided (6 days)
 Premade, custom, editing and billing, each walked on staging as a client and
 as the studio, every button pressed twice. Bugs fixed with a test or a check
 that would have caught them. This is what was done for custom on 12
 September, done for the rest.
-Done when: the walkthrough suite passes on all four lines and the invariants
-are green.
+Alongside: the three blueprint screens (portal home, client record, editing
+board) designed and agreed, so every screen touched from phase 2 on is built
+in the new look and nothing is built twice. Phase 6 then finishes the rest.
+Done when: the walkthrough suite passes on all four lines, the invariants
+are green, and the three blueprints are agreed.
 
 ### Phase 2. HighLevel owns the customer (6 days)
 The contact model: custom fields for lines, arrangement, retainer terms,
@@ -208,11 +211,11 @@ Offers through HighLevel campaigns.
 Done when: a quote becomes a signed document, a paid job asks for a review,
 and a partner link tracks a sale end to end in the test sub-account.
 
-### Phase 6. One vocabulary, fewer screens (6 days)
+### Phase 6. One vocabulary, fewer screens (5 days)
 One status language across the three lines. One work card and one detail
 view shared by the three boards. The portal cut to Home, My work, Billing,
-Brand, Messages, Settings. Three blueprint screens designed first (portal
-home, client record, editing board), agreed, then rolled through the rest.
+Brand, Messages, Settings. The blueprints from phase 1 rolled through every
+screen not already rebuilt in phases 2 to 5.
 Done when: every screen uses the shared components and the blueprint look,
 and the walkthrough suite still passes.
 

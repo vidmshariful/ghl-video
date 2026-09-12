@@ -10,7 +10,7 @@
  * printed once; nobody types them into a form, the agent signs in with a
  * one-time link minted from the same admin API.
  */
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { randomBytes } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 
@@ -34,6 +34,9 @@ const LOGINS = [
 ];
 
 const password = () => randomBytes(12).toString("base64url");
+/* the walkthrough suite signs in with these, so they are written into the
+   staging env file as well as printed; staging only, never production */
+const made = {};
 const { data: existing } = await db.auth.admin.listUsers({ perPage: 1000 });
 const byEmail = new Map((existing?.users ?? []).map((u) => [String(u.email).toLowerCase(), u]));
 
@@ -48,10 +51,21 @@ for (const l of LOGINS) {
     if (error) { console.error(`could not create ${l.email}: ${error.message}`); continue; }
     console.log(`created  ${l.email}  password: ${pw}`);
   }
+  made[l.admin ? "QA_ADMIN" : "QA_CLIENT"] = { email: l.email, password: pw };
   if (l.admin) {
     const { error } = await db.from("admins").upsert({ email: l.email, name: l.name }, { onConflict: "email" });
     if (error) console.error(`admins row for ${l.email}: ${error.message}`);
     else console.log(`         ${l.email} is on the admin allowlist`);
   }
 }
-console.log("Done. Store the passwords somewhere private; they are not saved anywhere.");
+/* into .env.local for the walkthrough suite: replace the lines if present */
+{
+  const path = new URL("../.env.local", import.meta.url);
+  const keep = readFileSync(path, "utf8")
+    .split("\n")
+    .filter((l) => !/^QA_(ADMIN|CLIENT)_(EMAIL|PASSWORD)=/.test(l));
+  while (keep.length && keep[keep.length - 1] === "") keep.pop();
+  for (const [k, v] of Object.entries(made)) keep.push(`${k}_EMAIL=${v.email}`, `${k}_PASSWORD=${v.password}`);
+  writeFileSync(path, keep.join("\n") + "\n");
+}
+console.log("Done. The same logins are in .env.local for npm run test:walk. Staging only.");

@@ -14,7 +14,7 @@
     "seed:subscriptions": "node scripts/seed-editing-subscriptions.mjs",
     "seed:affiliates": "node scripts/seed-affiliate-coupons.mjs",
     "migrate": "node scripts/apply-migrations.mjs",
-    "check:live": "npm run check:drift && npm run check:deliverables && npm run check:composition && npm run check:demo",
+    "check:live": "npm run check:drift && npm run check:deliverables && npm run check:composition && npm run check:demo && npm run check:invariants",
     "check:drift": "tsx scripts/check-drift.ts",
     "test": "tsx --test tests/unit/*.test.ts",
     "test:e2e": "playwright test",
@@ -32,7 +32,9 @@
     "check:demo": "node scripts/check-demo-client.mjs",
     "check:owners": "tsx scripts/check-owners.ts",
     "staging:refresh": "node scripts/staging-refresh.mjs",
-    "staging:logins": "node scripts/seed-qa-logins.mjs"
+    "staging:logins": "node scripts/seed-qa-logins.mjs",
+    "check:invariants": "tsx scripts/check-invariants.ts",
+    "test:walk": "playwright test tests/e2e/walkthrough.spec.ts --workers=1"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
