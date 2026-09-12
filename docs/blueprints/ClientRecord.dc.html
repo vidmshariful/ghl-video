@@ -1,0 +1,118 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    :root { --chrome:#0c0e14; --chrome-2:#171a23; --chrome-line:#262b38; --chrome-text:#e9ecf3; --chrome-muted:#949cb0; --chrome-dim:#99a1b5; --canvas:#0d0f15; --surface:#14161d; --card:#191c25; --hair:#2b3040; --text:#eef0f6; --muted:#a3aabb; --dim:#858d9f; --gold:#FCC000; --blue:#0090FC; --green:#00CC00; --error:#FF6B6B; }
+    body { margin:0; font-family:"Raveo Display","Instrument Sans",system-ui,sans-serif; color:var(--text); background:#08090d; -webkit-font-smoothing:antialiased; }
+    a { color:var(--text); } a:hover { color:var(--gold); }
+    .display { font-family:Archivo,"Instrument Sans",sans-serif; font-weight:600; letter-spacing:-0.015em; }
+    .label { font-size:11px; letter-spacing:0.14em; text-transform:uppercase; font-weight:600; color:var(--dim); line-height:1.4; }
+    .row { display:flex; align-items:center; gap:14px; padding:12px 0; border-top:1px solid var(--hair); }
+    .row:first-child { border-top:0; }
+    .dot { width:8px; height:8px; border-radius:999px; flex-shrink:0; }
+    .tab { padding:7px 12px; border-radius:8px; border:1px solid var(--hair); font-size:14px; color:var(--muted); background:var(--surface); }
+    .tab.on { background:var(--chrome); border-color:var(--chrome); color:var(--chrome-text); }
+    .stat { display:flex; flex-direction:column; gap:4px; }
+  </style>
+</helmet>
+<div style="display:flex; width:1440px; height:900px; background:linear-gradient(180deg,#11141c 0%,#0a0c11 48%,#08090d 100%);">
+
+  <nav style="display:flex; flex-direction:column; width:240px; flex-shrink:0; background:var(--chrome); border-right:1px solid var(--chrome-line); padding:16px; gap:2px;">
+    <div style="display:flex; align-items:center; gap:10px; padding:4px 8px 18px;">
+      <span style="display:inline-block; width:22px; height:22px; border-radius:6px; background:linear-gradient(100deg,#FCC000,#00CC00);"></span>
+      <span class="display" style="font-size:15px; color:var(--chrome-text);">GHL VIDEO</span>
+      <span class="label" style="color:var(--chrome-dim);">Admin</span>
+    </div>
+    <a style="display:block; padding:8px 12px; border-radius:8px; color:var(--chrome-muted); font-size:14px; text-decoration:none;">Dashboard</a>
+    <a style="display:block; padding:8px 12px; border-radius:8px; background:var(--chrome-2); color:var(--chrome-text); font-size:14px; text-decoration:none;">Clients</a>
+    <a style="display:block; padding:8px 12px; border-radius:8px; color:var(--chrome-muted); font-size:14px; text-decoration:none;">Premade</a>
+    <a style="display:block; padding:8px 12px; border-radius:8px; color:var(--chrome-muted); font-size:14px; text-decoration:none;">Custom</a>
+    <a style="display:block; padding:8px 12px; border-radius:8px; color:var(--chrome-muted); font-size:14px; text-decoration:none;">Editing</a>
+    <a style="display:block; padding:8px 12px; border-radius:8px; color:var(--chrome-muted); font-size:14px; text-decoration:none;">Money</a>
+    <a style="display:block; padding:8px 12px; border-radius:8px; color:var(--chrome-muted); font-size:14px; text-decoration:none;">Messages</a>
+  </nav>
+
+  <main style="flex:1; min-width:0; padding:32px 56px 48px; display:flex; flex-direction:column; gap:28px; overflow:hidden;">
+    <a style="font-size:13px; color:var(--muted); text-decoration:none;">All clients</a>
+
+    <!-- who -->
+    <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:24px;">
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <h1 class="display" style="margin:0; font-size:28px; line-height:1.1; color:var(--text);">HighLevel Inc.</h1>
+        <div style="font-size:14px; color:var(--muted);">Chase Buckner, chase@gohighlevel.com</div>
+        <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
+          <span style="display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:999px; background:rgba(0,204,0,0.12); color:#3FD83F; font-size:11px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase;">Retainer partner</span>
+          <span style="font-size:13px; color:var(--dim);">Client since 20 Aug 2026, in the portal yesterday</span>
+        </div>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <a style="padding:8px 14px; border-radius:8px; border:1px solid var(--hair); font-size:13px; font-weight:600; color:var(--text); text-decoration:none;">Their portal</a>
+        <a style="padding:8px 14px; border-radius:8px; border:1px solid var(--hair); font-size:13px; font-weight:600; color:var(--text); text-decoration:none;">In HighLevel</a>
+      </div>
+    </div>
+
+    <!-- money: one quiet row, not four tiles -->
+    <div style="display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:32px; padding:18px 0; border-top:1px solid var(--hair); border-bottom:1px solid var(--hair);">
+      <div class="stat"><span class="label">Every month</span><span class="display" style="font-size:22px; color:var(--text);">$11,000</span><span style="font-size:13px; color:var(--dim);">retainer, invoiced on the 1st</span></div>
+      <div class="stat"><span class="label">September</span><span class="display" style="font-size:22px; color:var(--text);">2 of 8 to 12</span><span style="font-size:13px; color:var(--dim);">videos briefed, 1 animation included</span></div>
+      <div class="stat"><span class="label">In production now</span><span class="display" style="font-size:22px; color:var(--text);">2 of 2</span><span style="font-size:13px; color:var(--dim);">3 business days each</span></div>
+      <div class="stat"><span class="label">Waiting on payment</span><span class="display" style="font-size:22px; color:var(--text);">Nothing</span><span style="font-size:13px; color:var(--dim);">August paid in full</span></div>
+    </div>
+
+    <!-- tabs -->
+    <div style="display:flex; gap:6px;">
+      <span class="tab on">Overview</span>
+      <span class="tab">Custom <span style="color:var(--dim);">9</span></span>
+      <span class="tab">Money</span>
+      <span class="tab">Portal</span>
+    </div>
+
+    <!-- overview: two columns, rows not cards -->
+    <div style="display:grid; grid-template-columns:minmax(0, 1fr) 340px; gap:40px; align-items:start;">
+      <section style="display:flex; flex-direction:column; gap:12px;">
+        <div style="display:flex; align-items:baseline; gap:12px;">
+          <h2 class="display" style="margin:0; font-size:17px; color:var(--text);">Live work</h2>
+          <span class="label">10</span>
+        </div>
+        <div style="display:flex; flex-direction:column;">
+          <div class="row"><span class="dot" style="background:var(--gold);"></span><span style="flex:1; font-size:15px; color:var(--text);">The G2 Momentum Grid Rank</span><span style="font-size:13px; color:var(--muted);">Custom</span><span style="font-size:13px; color:var(--gold); min-width:150px; text-align:right;">Waiting on Chase</span></div>
+          <div class="row"><span class="dot" style="background:var(--blue);"></span><span style="flex:1; font-size:15px; color:var(--text);">Promo Video, Meeting Room</span><span style="font-size:13px; color:var(--muted);">Custom</span><span style="font-size:13px; color:var(--muted); min-width:150px; text-align:right;">Voiceover</span></div>
+          <div class="row"><span class="dot" style="background:var(--blue);"></span><span style="flex:1; font-size:15px; color:var(--text);">Promo Video, Social Planner</span><span style="font-size:13px; color:var(--muted);">Custom</span><span style="font-size:13px; color:var(--muted); min-width:150px; text-align:right;">Animation</span></div>
+          <div class="row"><span class="dot" style="background:var(--blue);"></span><span style="flex:1; font-size:15px; color:var(--text);">Promo Video, Ad Manager</span><span style="font-size:13px; color:var(--muted);">Custom</span><span style="font-size:13px; color:var(--muted); min-width:150px; text-align:right;">Design</span></div>
+          <div class="row"><span class="dot" style="background:var(--hair);"></span><span style="flex:1; font-size:15px; color:var(--text);">SMS Conversation Animation</span><span style="font-size:13px; color:var(--muted);">Animation, included</span><span style="font-size:13px; color:var(--dim); min-width:150px; text-align:right;">Not started</span></div>
+        </div>
+        <a style="font-size:13px; color:var(--muted); text-decoration:none;">5 more on the Custom tab</a>
+      </section>
+
+      <aside style="display:flex; flex-direction:column; gap:28px;">
+        <section style="display:flex; flex-direction:column; gap:10px;">
+          <h2 class="display" style="margin:0; font-size:15px; color:var(--text);">Notes</h2>
+          <div style="font-size:14px; color:var(--muted); line-height:1.55;">Added emma.jackson@gohighlevel.com to the portal team on their behalf.</div>
+          <div style="font-size:12px; color:var(--dim);">Eurobotn, 26 Aug</div>
+          <div style="display:flex; gap:8px; margin-top:4px;">
+            <input style="flex:1; padding:9px 12px; border-radius:8px; border:1px solid var(--hair); background:var(--canvas); color:var(--text); font-size:13px; font-family:inherit;" placeholder="Add a note">
+          </div>
+        </section>
+        <section style="display:flex; flex-direction:column; gap:10px;">
+          <h2 class="display" style="margin:0; font-size:15px; color:var(--text);">Brand</h2>
+          <div style="display:flex; align-items:center; gap:10px; font-size:14px; color:var(--muted);"><span style="width:14px; height:14px; border-radius:3px; background:#0B5FFF; border:1px solid var(--hair);"></span>HighLevel blue, logo on file, said "high level"</div>
+        </section>
+        <section style="display:flex; flex-direction:column; gap:10px;">
+          <h2 class="display" style="margin:0; font-size:15px; color:var(--text);">Messages</h2>
+          <div style="font-size:14px; color:var(--muted); line-height:1.55;">"This part should be from the video labeled VIDEO 3, not Video 1."</div>
+          <div style="font-size:12px; color:var(--dim);">Chase, 2 days ago</div>
+        </section>
+      </aside>
+    </div>
+  </main>
+</div>
+</x-dc>
+</body>
+</html>

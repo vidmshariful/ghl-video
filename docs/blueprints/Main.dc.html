@@ -1,0 +1,158 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    :root { --chrome:#0c0e14; --chrome-2:#171a23; --chrome-line:#262b38; --chrome-text:#e9ecf3; --chrome-muted:#949cb0; --chrome-dim:#99a1b5; --canvas:#0d0f15; --surface:#14161d; --card:#191c25; --hair:#2b3040; --text:#eef0f6; --muted:#a3aabb; --dim:#858d9f; --gold:#FCC000; --blue:#0090FC; --green:#00CC00; --error:#FF6B6B; }
+    body { margin:0; font-family:"Raveo Display","Instrument Sans",system-ui,sans-serif; color:var(--text); background:#08090d; -webkit-font-smoothing:antialiased; }
+    a { color:var(--text); } a:hover { color:var(--gold); }
+    .display { font-family:Archivo,"Instrument Sans",sans-serif; font-weight:600; letter-spacing:-0.015em; }
+    .label { font-size:11px; letter-spacing:0.14em; text-transform:uppercase; font-weight:600; color:var(--dim); line-height:1.4; }
+    .row { display:flex; align-items:center; gap:14px; padding:14px 0; border-top:1px solid var(--hair); }
+    .row:first-child { border-top:0; }
+    .dot { width:8px; height:8px; border-radius:999px; flex-shrink:0; }
+  </style>
+</helmet>
+<div style="display:flex; width:1440px; height:900px; background:linear-gradient(180deg,#11141c 0%,#0a0c11 48%,#08090d 100%);">
+
+  <!-- rail -->
+  <nav style="display:flex; flex-direction:column; width:240px; flex-shrink:0; background:var(--chrome); border-right:1px solid var(--chrome-line); padding:16px;">
+    <div style="display:flex; align-items:center; gap:10px; padding:4px 8px 18px;">
+      <span style="display:inline-block; width:22px; height:22px; border-radius:6px; background:linear-gradient(100deg,#FCC000,#00CC00);"></span>
+      <span class="display" style="font-size:15px; color:var(--chrome-text);">GHL VIDEO</span>
+      <span class="label" style="color:var(--chrome-dim);">Portal</span>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:2px;">
+      <a style="display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:8px; background:var(--chrome-2); color:var(--chrome-text); font-size:14px; text-decoration:none;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FCC000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8v9a2 2 0 0 1-2 2h-4v-6H9v6H5a2 2 0 0 1-2-2z"/></svg>
+        Home
+      </a>
+      <a style="display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:8px; color:var(--chrome-muted); font-size:14px; text-decoration:none;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9h18M8 5v14M16 5v14"/></svg>
+        My work
+        <span style="margin-left:auto; background:var(--gold); color:#08090d; border-radius:999px; padding:2px 7px; font-size:11px; font-weight:700;">2</span>
+      </a>
+      <a style="display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:8px; color:var(--chrome-muted); font-size:14px; text-decoration:none;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20"/></svg>
+        Billing
+      </a>
+      <a style="display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:8px; color:var(--chrome-muted); font-size:14px; text-decoration:none;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="8.5" cy="10.5" r="1"/><circle cx="12" cy="7.5" r="1"/><circle cx="15.5" cy="10.5" r="1"/><path d="M12 21a2 2 0 0 0 2-2c0-1-1-1.5-1-2.5S14 15 15 15h1a5 5 0 0 0 5-5"/></svg>
+        Brand
+      </a>
+      <a style="display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:8px; color:var(--chrome-muted); font-size:14px; text-decoration:none;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 21l1.9-5.4A8 8 0 1 1 21 12z"/></svg>
+        Messages
+      </a>
+    </div>
+    <div style="margin-top:auto; display:flex; align-items:center; gap:10px; padding:8px 12px; border-top:1px solid var(--chrome-line);">
+      <span style="display:grid; place-items:center; width:28px; height:28px; border-radius:999px; background:linear-gradient(100deg,#FCC000,#00CC00); color:#08090d; font-size:11px; font-weight:700;">BS</span>
+      <span style="font-size:13px; color:var(--chrome-muted);">Beant Singh</span>
+      <span style="margin-left:auto; color:var(--chrome-dim);">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      </span>
+    </div>
+  </nav>
+
+  <!-- page -->
+  <main style="flex:1; min-width:0; padding:40px 56px 48px; display:flex; flex-direction:column; gap:40px; overflow:hidden;">
+    <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:24px;">
+      <div>
+        <h1 class="display" style="margin:0; font-size:30px; line-height:1.1; color:var(--text);">Good morning, Beant.</h1>
+        <p style="margin:8px 0 0; font-size:15px; color:var(--muted);">Two things need you. Three are in the studio.</p>
+      </div>
+      <a style="display:inline-flex; align-items:center; gap:8px; padding:10px 16px; border-radius:8px; background:linear-gradient(100deg,#FCC000,#00CC00); color:#08090d; font-size:14px; font-weight:600; text-decoration:none;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#08090d" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        Request an edit
+      </a>
+    </div>
+
+    <!-- needs you -->
+    <section style="display:flex; flex-direction:column; gap:12px;">
+      <div style="display:flex; align-items:baseline; gap:12px;">
+        <h2 class="display" style="margin:0; font-size:17px; color:var(--text);">Needs you</h2>
+        <span class="label">2</span>
+      </div>
+      <div style="display:flex; flex-direction:column; border:1px solid var(--hair); border-radius:12px; background:var(--surface); padding:0 20px;">
+        <div class="row">
+          <span class="dot" style="background:var(--gold);"></span>
+          <div style="flex:1; min-width:0;">
+            <div style="font-size:15px; color:var(--text);">Use AI to Respond to Every Review, short 2</div>
+            <div style="margin-top:2px; font-size:13px; color:var(--muted);">Ready to watch. Approve it, or tell us what to change.</div>
+          </div>
+          <a style="display:inline-flex; align-items:center; padding:8px 14px; border-radius:8px; border:1px solid var(--hair); font-size:13px; font-weight:600; color:var(--text); text-decoration:none;">Watch</a>
+        </div>
+        <div class="row">
+          <span class="dot" style="background:var(--gold);"></span>
+          <div style="flex:1; min-width:0;">
+            <div style="font-size:15px; color:var(--text);">Video 4: Use Reviews on Your Website</div>
+            <div style="margin-top:2px; font-size:13px; color:var(--muted);">The footage link does not open. Send a fresh one and the clock restarts.</div>
+          </div>
+          <a style="display:inline-flex; align-items:center; padding:8px 14px; border-radius:8px; border:1px solid var(--hair); font-size:13px; font-weight:600; color:var(--text); text-decoration:none;">Fix the link</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- in the studio -->
+    <section style="display:flex; flex-direction:column; gap:12px;">
+      <div style="display:flex; align-items:baseline; justify-content:space-between;">
+        <div style="display:flex; align-items:baseline; gap:12px;">
+          <h2 class="display" style="margin:0; font-size:17px; color:var(--text);">In the studio</h2>
+          <span class="label">3</span>
+        </div>
+        <a style="font-size:13px; color:var(--muted); text-decoration:none;">All my work</a>
+      </div>
+      <div style="display:flex; flex-direction:column; padding:0 4px;">
+        <div class="row">
+          <span class="dot" style="background:var(--blue);"></span>
+          <div style="flex:1; min-width:0; font-size:15px; color:var(--text);">Video 3: Turn Google Reviews Into Social Content, short 1</div>
+          <span style="font-size:13px; color:var(--muted);">Editing</span>
+          <span style="font-size:13px; color:var(--muted); min-width:120px; text-align:right;">Being cut</span>
+          <span style="font-size:13px; color:var(--dim); min-width:90px; text-align:right;">Due Mon</span>
+        </div>
+        <div class="row">
+          <span class="dot" style="background:var(--blue);"></span>
+          <div style="flex:1; min-width:0; font-size:15px; color:var(--text);">Video 3: Turn Google Reviews Into Social Content, short 2</div>
+          <span style="font-size:13px; color:var(--muted);">Editing</span>
+          <span style="font-size:13px; color:var(--muted); min-width:120px; text-align:right;">Being cut</span>
+          <span style="font-size:13px; color:var(--dim); min-width:90px; text-align:right;">Due Mon</span>
+        </div>
+        <div class="row">
+          <span class="dot" style="background:var(--blue);"></span>
+          <div style="flex:1; min-width:0; font-size:15px; color:var(--text);">Onboarding explainer, 90 seconds</div>
+          <span style="font-size:13px; color:var(--muted);">Custom</span>
+          <span style="font-size:13px; color:var(--muted); min-width:120px; text-align:right;">Animation</span>
+          <span style="font-size:13px; color:var(--dim); min-width:90px; text-align:right;">Due 24 Sep</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- this month, one quiet strip -->
+    <section style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:16px;">
+      <div style="border:1px solid var(--hair); border-radius:12px; background:var(--surface); padding:18px 20px; display:flex; flex-direction:column; gap:10px;">
+        <span class="label">Editing, September</span>
+        <div style="display:flex; align-items:baseline; gap:8px;"><span class="display" style="font-size:24px; color:var(--text);">6</span><span style="font-size:14px; color:var(--muted);">of 20 credits used</span></div>
+        <div style="height:4px; border-radius:999px; background:var(--hair); overflow:hidden;"><div style="width:30%; height:100%; background:linear-gradient(100deg,#FCC000,#00CC00);"></div></div>
+      </div>
+      <div style="border:1px solid var(--hair); border-radius:12px; background:var(--surface); padding:18px 20px; display:flex; flex-direction:column; gap:10px;">
+        <span class="label">Custom</span>
+        <div style="display:flex; align-items:baseline; gap:8px;"><span class="display" style="font-size:24px; color:var(--text);">1</span><span style="font-size:14px; color:var(--muted);">project in production</span></div>
+        <span style="font-size:13px; color:var(--dim);">Animation, then sound, then delivery.</span>
+      </div>
+      <div style="border:1px solid var(--hair); border-radius:12px; background:var(--surface); padding:18px 20px; display:flex; flex-direction:column; gap:10px;">
+        <span class="label">Pre-made</span>
+        <div style="display:flex; align-items:baseline; gap:8px;"><span class="display" style="font-size:24px; color:var(--text);">12</span><span style="font-size:14px; color:var(--muted);">videos delivered</span></div>
+        <a style="font-size:13px; color:var(--muted); text-decoration:none;">Browse the library for more</a>
+      </div>
+    </section>
+  </main>
+</div>
+</x-dc>
+</body>
+</html>

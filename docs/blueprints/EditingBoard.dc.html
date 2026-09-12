@@ -1,0 +1,112 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    :root { --chrome:#0c0e14; --chrome-2:#171a23; --chrome-line:#262b38; --chrome-text:#e9ecf3; --chrome-muted:#949cb0; --chrome-dim:#99a1b5; --canvas:#0d0f15; --surface:#14161d; --card:#191c25; --hair:#2b3040; --text:#eef0f6; --muted:#a3aabb; --dim:#858d9f; --gold:#FCC000; --blue:#0090FC; --green:#00CC00; --error:#FF6B6B; }
+    body { margin:0; font-family:"Raveo Display","Instrument Sans",system-ui,sans-serif; color:var(--text); background:#08090d; -webkit-font-smoothing:antialiased; }
+    a { color:var(--text); } a:hover { color:var(--gold); }
+    .display { font-family:Archivo,"Instrument Sans",sans-serif; font-weight:600; letter-spacing:-0.015em; }
+    .label { font-size:11px; letter-spacing:0.14em; text-transform:uppercase; font-weight:600; color:var(--dim); line-height:1.4; }
+    .row { display:flex; align-items:center; gap:14px; padding:11px 0; border-top:1px solid var(--hair); }
+    .row:first-child { border-top:0; }
+    .sub { padding-left:22px; }
+    .dot { width:8px; height:8px; border-radius:999px; flex-shrink:0; }
+    .group { display:flex; align-items:baseline; gap:10px; padding:22px 0 6px; }
+    .check { display:flex; align-items:center; gap:10px; font-size:13px; color:var(--muted); padding:6px 0; }
+    .box { width:16px; height:16px; border-radius:4px; border:1px solid var(--hair); display:grid; place-items:center; flex-shrink:0; }
+    .box.on { background:rgba(0,204,0,0.15); border-color:rgba(0,204,0,0.5); }
+  </style>
+</helmet>
+<div style="display:flex; width:1440px; height:900px; background:linear-gradient(180deg,#11141c 0%,#0a0c11 48%,#08090d 100%);">
+
+  <nav style="display:flex; flex-direction:column; width:240px; flex-shrink:0; background:var(--chrome); border-right:1px solid var(--chrome-line); padding:16px; gap:2px;">
+    <div style="display:flex; align-items:center; gap:10px; padding:4px 8px 18px;">
+      <span style="display:inline-block; width:22px; height:22px; border-radius:6px; background:linear-gradient(100deg,#FCC000,#00CC00);"></span>
+      <span class="display" style="font-size:15px; color:var(--chrome-text);">GHL VIDEO</span>
+      <span class="label" style="color:var(--chrome-dim);">Admin</span>
+    </div>
+    <a style="display:block; padding:8px 12px; border-radius:8px; color:var(--chrome-muted); font-size:14px; text-decoration:none;">Dashboard</a>
+    <a style="display:block; padding:8px 12px; border-radius:8px; color:var(--chrome-muted); font-size:14px; text-decoration:none;">Clients</a>
+    <a style="display:block; padding:8px 12px; border-radius:8px; color:var(--chrome-muted); font-size:14px; text-decoration:none;">Premade</a>
+    <a style="display:block; padding:8px 12px; border-radius:8px; color:var(--chrome-muted); font-size:14px; text-decoration:none;">Custom</a>
+    <a style="display:block; padding:8px 12px; border-radius:8px; background:var(--chrome-2); color:var(--chrome-text); font-size:14px; text-decoration:none;">Editing</a>
+    <a style="display:block; padding:8px 12px; border-radius:8px; color:var(--chrome-muted); font-size:14px; text-decoration:none;">Money</a>
+    <a style="display:block; padding:8px 12px; border-radius:8px; color:var(--chrome-muted); font-size:14px; text-decoration:none;">Messages</a>
+  </nav>
+
+  <main style="flex:1; min-width:0; display:grid; grid-template-columns:minmax(0, 1fr) 420px; overflow:hidden;">
+    <!-- the month as one ordered list -->
+    <section style="padding:32px 40px 48px 56px; display:flex; flex-direction:column; gap:4px; min-width:0;">
+      <a style="font-size:13px; color:var(--muted); text-decoration:none;">All editing clients</a>
+      <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:24px; margin-top:20px;">
+        <div>
+          <h1 class="display" style="margin:0; font-size:26px; line-height:1.1; color:var(--text);">Extendly</h1>
+          <div style="margin-top:6px; font-size:14px; color:var(--muted);">Growth plan, month of 18 Aug to 18 Sep</div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:6px; min-width:260px;">
+          <div style="display:flex; justify-content:space-between; font-size:13px; color:var(--muted);"><span>Credits</span><span style="color:var(--text);">17 of 20 used</span></div>
+          <div style="height:4px; border-radius:999px; background:var(--hair); overflow:hidden;"><div style="width:85%; height:100%; background:linear-gradient(100deg,#FCC000,#00CC00);"></div></div>
+        </div>
+      </div>
+
+      <div class="group" style="padding-top:34px;"><h2 class="display" style="margin:0; font-size:15px; color:var(--text);">Needs us</h2><span class="label">3</span></div>
+      <div class="row"><span class="dot" style="background:var(--gold);"></span><span style="flex:1; font-size:15px; color:var(--text);">Use AI to Respond to Every Review, short 3</span><span style="font-size:13px; color:var(--gold); min-width:170px;">1 note to answer</span><span style="font-size:13px; color:var(--muted); min-width:70px;">Prince</span><span style="font-size:13px; color:var(--dim); min-width:80px; text-align:right;">1 cr</span></div>
+      <div class="row"><span class="dot" style="background:var(--error);"></span><span style="flex:1; font-size:15px; color:var(--text);">Video 4: Use Reviews on Your Website</span><span style="font-size:13px; color:var(--error); min-width:170px;">Footage link is dead</span><span style="font-size:13px; color:var(--muted); min-width:70px;">Prince</span><span style="font-size:13px; color:var(--dim); min-width:80px; text-align:right;">2 cr</span></div>
+      <div class="row"><span class="dot" style="background:var(--gold);"></span><span style="flex:1; font-size:15px; color:var(--text);">Turn Google Reviews Into Social Content, short 1</span><span style="font-size:13px; color:var(--muted); min-width:170px;">Cut is in, QC 4 of 6</span><span style="font-size:13px; color:var(--muted); min-width:70px;">Prince</span><span style="font-size:13px; color:var(--dim); min-width:80px; text-align:right;">1 cr</span></div>
+
+      <div class="group"><h2 class="display" style="margin:0; font-size:15px; color:var(--text);">Being cut</h2><span class="label">2</span></div>
+      <div class="row"><span class="dot" style="background:var(--blue);"></span><span style="flex:1; font-size:15px; color:var(--text);">Turn Google Reviews Into Social Content, short 2</span><span style="font-size:13px; color:var(--muted); min-width:170px;">Since Thursday</span><span style="font-size:13px; color:var(--muted); min-width:70px;">Prince</span><span style="font-size:13px; color:var(--dim); min-width:80px; text-align:right;">1 cr</span></div>
+      <div class="row"><span class="dot" style="background:var(--blue);"></span><span style="flex:1; font-size:15px; color:var(--text);">Turn Google Reviews Into Social Content, short 3</span><span style="font-size:13px; color:var(--muted); min-width:170px;">Since Thursday</span><span style="font-size:13px; color:var(--muted); min-width:70px;">Prince</span><span style="font-size:13px; color:var(--dim); min-width:80px; text-align:right;">1 cr</span></div>
+
+      <div class="group"><h2 class="display" style="margin:0; font-size:15px; color:var(--text);">With the client</h2><span class="label">2</span></div>
+      <div class="row"><span class="dot" style="background:var(--green);"></span><span style="flex:1; font-size:15px; color:var(--text);">Use AI to Respond to Every Review, short 1</span><span style="font-size:13px; color:var(--muted); min-width:170px;">Sent 3 days ago</span><span style="font-size:13px; color:var(--muted); min-width:70px;">Prince</span><span style="font-size:13px; color:var(--dim); min-width:80px; text-align:right;">1 cr</span></div>
+      <div class="row"><span class="dot" style="background:var(--green);"></span><span style="flex:1; font-size:15px; color:var(--text);">Use AI to Respond to Every Review, short 2</span><span style="font-size:13px; color:var(--muted); min-width:170px;">Sent 3 days ago</span><span style="font-size:13px; color:var(--muted); min-width:70px;">Prince</span><span style="font-size:13px; color:var(--dim); min-width:80px; text-align:right;">1 cr</span></div>
+
+      <div class="group"><h2 class="display" style="margin:0; font-size:15px; color:var(--dim);">Done this month</h2><span class="label">7</span></div>
+    </section>
+
+    <!-- the open request, beside the list rather than a page of cards -->
+    <aside style="border-left:1px solid var(--hair); background:var(--surface); padding:32px 32px 48px; display:flex; flex-direction:column; gap:22px; overflow:hidden;">
+      <div>
+        <span class="label">Short, 1 credit, 9:16</span>
+        <h2 class="display" style="margin:6px 0 0; font-size:18px; line-height:1.25; color:var(--text);">Turn Google Reviews Into Social Content, short 1</h2>
+        <div style="margin-top:6px; font-size:13px; color:var(--muted);">Part of a batch of 3. Footage checked Thursday. Due Monday.</div>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <span class="label">The cut</span>
+        <div style="display:flex; gap:8px;">
+          <input style="flex:1; padding:9px 12px; border-radius:8px; border:1px solid var(--hair); background:var(--canvas); color:var(--text); font-size:13px; font-family:inherit;" value="https://drive.google.com/file/d/1x...">
+          <span style="padding:9px 14px; border-radius:8px; border:1px solid var(--hair); font-size:13px; font-weight:600; color:var(--text);">Save</span>
+        </div>
+        <span style="font-size:12px; color:var(--dim);">v2, posted Thursday. v1 is kept with its notes.</span>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:2px;">
+        <span class="label" style="margin-bottom:6px;">Before it goes to them</span>
+        <div class="check"><span class="box on"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#3FD83F" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></span>Audio levelled</div>
+        <div class="check"><span class="box on"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#3FD83F" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></span>Captions spelled right</div>
+        <div class="check"><span class="box on"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#3FD83F" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></span>Their brand, from the style guide</div>
+        <div class="check"><span class="box on"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#3FD83F" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></span>Right aspect and resolution</div>
+        <div class="check"><span class="box"></span>Clean top and tail</div>
+        <div class="check"><span class="box"></span>Exported to spec and named</div>
+      </div>
+
+      <div style="display:flex; gap:8px; margin-top:auto;">
+        <span style="flex:1; text-align:center; padding:10px 14px; border-radius:8px; background:var(--hair); color:var(--dim); font-size:14px; font-weight:600;">Send to client</span>
+        <span style="padding:10px 14px; border-radius:8px; border:1px solid var(--hair); font-size:14px; font-weight:600; color:var(--text);">Notes 1</span>
+      </div>
+      <span style="font-size:12px; color:var(--dim); margin-top:-12px;">Two checks left before this can go.</span>
+    </aside>
+  </main>
+</div>
+</x-dc>
+</body>
+</html>

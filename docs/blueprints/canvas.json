@@ -1,0 +1,11 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "title": "Portal home", "x": 0, "y": 0, "w": 1440, "h": 900 },
+    { "file": "ClientRecord.dc.html", "title": "Client record (admin)", "x": 1560, "y": 0, "w": 1440, "h": 900 },
+    { "file": "EditingBoard.dc.html", "title": "Editing board (admin)", "x": 0, "y": 1060, "w": 1440, "h": 900 }
+  ],
+  "annotations": [
+    { "id": "how-to-read", "x": 1560, "y": 1060, "w": 520, "text": "The three blueprints, in the platform's own colours and type.\n\nWhat changed against today: one level of containers (the page is the surface, cards only for objects), rows instead of tiles, the status as a dot and a word instead of a chip, one gold action per screen, quiet uppercase labels only for metadata, and the same rhythm on every screen (40px between sections, 12px rows).\n\nEvery screen touched from phase 2 on is built in this look. Say what to change here and it changes everywhere." }
+  ],
+  "launch": { "view": "canvas" }
+}
