@@ -226,9 +226,14 @@ function ProductionSummary({
         </span>
         <span className="inline-flex items-center gap-2">
           <span className={fLab}>Brief</span>
-          <span className={order.intake_completed ? "text-green" : "text-gold"}>
-            {order.intake_completed ? "In" : "Waiting"}
-          </span>
+          {/* a payment against a bill has no brief to wait for */}
+          {(order.metadata ?? {}).invoice ? (
+            <span className="text-dim">Not needed</span>
+          ) : (
+            <span className={order.intake_completed ? "text-green" : "text-gold"}>
+              {order.intake_completed ? "In" : "Waiting"}
+            </span>
+          )}
         </span>
       </div>
 

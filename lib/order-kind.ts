@@ -39,3 +39,12 @@ export function orderKind(
   if (productMetadata?.invoice) return "custom";
   return "premade";
 }
+
+/**
+ * Is this product an invoice's backing product rather than something on the
+ * shelf? Every screen that must not treat a payment as work asks this one
+ * question, so the answer cannot drift between them.
+ */
+export function isInvoiceProduct(productMetadata: { invoice?: unknown } | null | undefined): boolean {
+  return Boolean(productMetadata?.invoice);
+}

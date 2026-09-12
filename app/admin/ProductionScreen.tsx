@@ -97,7 +97,11 @@ export function ProductionScreen({
       setErr(error.message);
       return;
     }
-    const list = (data ?? []) as unknown as Row[];
+    /* an invoice payment is money, not a job: the work it paid for lives on
+       its projects, and it has no place on this board */
+    const list = ((data ?? []) as unknown as Row[]).filter(
+      (r) => !(r.products?.metadata as { invoice?: unknown } | null)?.invoice,
+    );
     setRows(list);
 
     // One query for every card's video counts rather than one per card.
@@ -227,7 +231,10 @@ export function ProductionScreen({
 
       {view === "queue" ? (
         <div className="mt-6">
+          {/* this is the premade board, so its queue is premade work; a
+              custom note belongs on the Custom board, not here as well */}
           <StudioQueue
+            kind="purchase"
             onOpenJob={setOpenJob}
             onOpenProject={onOpenProject}
             onOpenEditing={onOpenEditing}

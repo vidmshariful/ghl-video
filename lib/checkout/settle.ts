@@ -92,6 +92,28 @@ export async function settlePaidIntent(
         event_type: "payment_succeeded",
         payload: { stripe_payment_intent_id: pi.id, amount_cents: chargedCents },
       });
+      /*
+       * An invoice payment has nothing to produce: the work it pays for
+       * lives on its projects or on the order it topped up. Left at "paid"
+       * it sat in the premade board's first column for good and counted as
+       * an order with no brief on the dashboard. It settles straight to
+       * delivered, which is what a paid bill is.
+       */
+      try {
+        const { data: prod } = await db
+          .from("products")
+          .select("metadata")
+          .eq("id", order.product_id)
+          .maybeSingle();
+        if ((prod?.metadata as { invoice?: unknown } | null)?.invoice) {
+          await db
+            .from("orders")
+            .update({ fulfillment_stage: "delivered", stage_changed_at: new Date().toISOString() })
+            .eq("id", order.id);
+        }
+      } catch (e) {
+        console.error(`[settle] could not settle invoice order ${order.id} to delivered:`, e);
+      }
       // The winner of the flip is the exactly-once place for the customer
       // confirmation + team alert. Fail-soft inside; never blocks settlement.
       const { sendOrderPaidEmails } = await import("@/lib/email/notify");

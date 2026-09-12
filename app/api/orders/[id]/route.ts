@@ -22,6 +22,7 @@ type Meta = {
   kind?: string;
   delivery_days?: number;
   video_count?: number;
+  invoice?: unknown;
 };
 type OrderMeta = {
   bumps?: { id: string; name: string; price_cents: number }[];
@@ -76,15 +77,21 @@ export async function GET(
   } | null;
   const pm = product?.metadata ?? {};
   const om = (data.metadata ?? {}) as OrderMeta;
+  /* a payment against a bill: the thank-you page must not ask for a brief */
+  const invoice = Boolean(pm.invoice);
+  const { data: bill } = invoice
+    ? await db.from("invoices").select("number").eq("product_sku", String(product?.sku ?? "")).maybeSingle()
+    : { data: null };
   return NextResponse.json({
     status: data.status,
     amountCents: data.amount_cents,
     currency: data.currency,
     invoiceNumber: data.invoice_number ?? null,
+    paysInvoice: bill ? String(bill.number) : null,
     email: data.customer_email ?? null,
     productName: product?.name ?? null,
-    productCode: product?.metadata?.code ?? product?.sku?.toUpperCase() ?? null,
-    kind: pm.kind ?? null,
+    productCode: invoice ? null : (product?.metadata?.code ?? product?.sku?.toUpperCase() ?? null),
+    kind: invoice ? "invoice" : (pm.kind ?? null),
     videoCount: pm.video_count ?? null,
     deliveryDays: pm.delivery_days ?? null,
     bumps: (om.bumps ?? []).map((b) => ({ name: b.name, priceCents: b.price_cents })),

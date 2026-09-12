@@ -116,7 +116,8 @@ export async function POST(req: Request) {
       currency: "usd",
       type: "one_time",
       active: true,
-      metadata: { invoice: true },
+      /* the CRM tag says what this was: a bill paid, not a purchase */
+      metadata: { invoice: true, hl_tags: ["ghlv-invoice-paid"] },
     })
     .select("id, sku")
     .single();

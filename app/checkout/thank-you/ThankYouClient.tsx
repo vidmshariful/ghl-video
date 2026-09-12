@@ -19,6 +19,8 @@ type Detail = {
   productName: string | null;
   productCode: string | null;
   invoiceNumber: string | null;
+  /* the bill this payment settled, when it was a bill */
+  paysInvoice: string | null;
   email: string | null;
   amountCents: number | null;
   currency: string;
@@ -70,6 +72,7 @@ export function ThankYouClient() {
           productName: j.productName ?? null,
           productCode: j.productCode ?? null,
           invoiceNumber: j.invoiceNumber ?? null,
+          paysInvoice: j.paysInvoice ?? null,
           email: j.email ?? null,
           amountCents: j.amountCents ?? null,
           currency: j.currency ?? "usd",
@@ -110,6 +113,8 @@ export function ThankYouClient() {
 /* ---------------------------------------------------------------- */
 
 function Paid({ detail, orderId }: { detail: Detail | null; orderId: string | null }) {
+  /* a bill paid is a bill paid: no brief, no video count, no delivery clock */
+  if (detail?.kind === "invoice") return <InvoicePaid detail={detail} />;
   const videos = detail?.videoCount ?? 1;
   const delivery = detail?.deliveryDays
     ? `${detail.deliveryDays} days after brief`
@@ -245,6 +250,68 @@ function PlanConfirmation({ plan }: { plan: string }) {
         </div>
       </div>
     </section>
+  );
+}
+
+function InvoicePaid({ detail }: { detail: Detail }) {
+  return (
+    <div className="mx-auto max-w-[42rem]">
+      <div className="text-center">
+        <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-brand-gradient shadow-[0_0_36px_rgba(var(--green-rgb),0.3)]">
+          <svg viewBox="0 0 24 24" className="h-8 w-8" aria-hidden="true" fill="none">
+            <path
+              d="M5 12.5l4.5 4.5L19 7"
+              stroke="var(--canvas)"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </span>
+        <p className="mt-6 font-mono text-label uppercase tracking-[0.16em]">
+          <span className="rounded-[3px] border border-gold/40 px-2 py-0.5 text-gold">
+            Confirmed
+          </span>{" "}
+          <span className="text-muted">Payment received</span>
+        </p>
+        <h1 className="mt-4 font-display text-h1 leading-[1.04] text-ink">
+          Thank you. <span className="text-gradient">That one is settled.</span>
+        </h1>
+        <p className="mt-5 text-lede text-muted">
+          {detail.paysInvoice ? `Invoice ${detail.paysInvoice} is paid.` : "Your invoice is paid."}{" "}
+          Nothing else is needed from you: the work it covers carries on in your portal.
+        </p>
+      </div>
+
+      <div className="mt-10 rounded-card border border-hair bg-card p-6 md:p-7">
+        <div className="flex items-center justify-between border-b border-hair pb-4">
+          <span className="font-mono text-label uppercase tracking-[0.14em] text-dim">
+            Payment
+          </span>
+          {detail.paysInvoice ? (
+            <span className="font-mono text-body-sm font-semibold text-gold [font-variant-numeric:tabular-nums]">
+              {detail.paysInvoice}
+            </span>
+          ) : null}
+        </div>
+        <dl className="mt-4 grid gap-3.5">
+          <Row label="For" value={detail.productName ?? "Your invoice"} />
+          {detail.amountCents != null ? (
+            <Row
+              label="Amount paid"
+              value={`${money(detail.amountCents, detail.currency)} ${detail.currency.toUpperCase()}`}
+            />
+          ) : null}
+          {detail.email ? <Row label="Receipt sent to" value={detail.email} /> : null}
+        </dl>
+      </div>
+
+      <div className="mt-6 text-center">
+        <Button href="/portal/" className="w-full sm:w-auto">
+          Open your portal
+        </Button>
+      </div>
+    </div>
   );
 }
 

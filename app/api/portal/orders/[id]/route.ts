@@ -49,13 +49,20 @@ export async function GET(
   const product = o.product as unknown as {
     name: string;
     sku: string;
-    metadata: { code?: string } | null;
+    metadata: { code?: string; invoice?: unknown } | null;
   } | null;
+  /* an invoice payment: say which bill it settled, and never ask for a brief */
+  const invoice = Boolean(product?.metadata?.invoice);
+  const { data: bill } = invoice
+    ? await db.from("invoices").select("number").eq("product_sku", String(product?.sku ?? "")).maybeSingle()
+    : { data: null };
   return NextResponse.json({
     order: {
       id: o.id,
+      kind: invoice ? "invoice" : "premade",
+      paysInvoice: bill ? String(bill.number) : null,
       productName: product?.name ?? null,
-      productCode: product?.metadata?.code ?? product?.sku?.toUpperCase() ?? null,
+      productCode: invoice ? null : (product?.metadata?.code ?? product?.sku?.toUpperCase() ?? null),
       amountCents: o.amount_cents,
       currency: o.currency,
       status: o.status,

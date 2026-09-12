@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 import { validateBundleSelections, type BundleSelections } from "@/lib/bundles";
+import { isInvoiceProduct } from "@/lib/order-kind";
 
 export const runtime = "nodejs";
 
@@ -32,7 +33,7 @@ type Intake = {
 };
 
 type DB = ReturnType<typeof supabaseAdmin>;
-type Product = { name: string; sku: string; metadata: { code?: string } | null } | null;
+type Product = { name: string; sku: string; metadata: { code?: string; invoice?: unknown } | null } | null;
 
 async function loadOrder(db: DB, id: string) {
   const { data } = await db
@@ -81,6 +82,12 @@ export async function GET(
   if (!order) return NextResponse.json({ error: "Not found." }, { status: 404 });
 
   const product = order.product as unknown as Product;
+  /* a payment against a bill has no brief: the work it paid for has its own */
+  if (isInvoiceProduct(product?.metadata))
+    return NextResponse.json(
+      { error: "This payment has no brief to fill in. The work it covers is under Custom in your portal." },
+      { status: 400 },
+    );
   const intake = (order.metadata?.intake ?? null) as Intake | null;
 
   let logoUrl: string | null = null;
@@ -142,6 +149,8 @@ export async function POST(
   const db = supabaseAdmin();
   const order = await loadOrder(db, orderId);
   if (!order) return NextResponse.json({ error: "Not found." }, { status: 404 });
+  if (isInvoiceProduct((order.product as unknown as Product)?.metadata))
+    return NextResponse.json({ error: "This payment has no brief to fill in." }, { status: 400 });
   // pending stays open (a buyer can land here while the webhook is still
   // settling), but dead orders take no more uploads or edits.
   if (order.status === "failed" || order.status === "refunded") {

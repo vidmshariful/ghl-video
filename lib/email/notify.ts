@@ -237,7 +237,9 @@ export async function sendOrderPaidEmails(db: SupabaseClient, orderId: string): 
       kind: "invoice_paid",
       title: "Payment received",
       body: `${invoice.number}, ${amount}. Thank you, nothing else is needed.`,
-      href: "billing",
+      /* the Billing screen for an account with orders lives at "orders";
+         "billing" is the plan-only route and is hidden without a plan */
+      href: "orders",
       feature: "orders",
       vars: bell,
     });

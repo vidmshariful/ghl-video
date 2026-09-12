@@ -41,12 +41,18 @@ export async function GET(req: Request) {
 
   const db = supabaseAdmin();
 
+  /* one kind only, when the caller is a board that owns one kind: the
+     premade board asks for purchases, so a custom client's note does not
+     show up there as well as on the Custom board */
+  const only = new URL(req.url).searchParams.get("kind");
+  const wantKind = (k: Kind) => !only || only === k;
+
   /* the three places work can hang off, and who each one belongs to */
-  const [{ data: orders }, { data: projects }, { data: subs }] = await Promise.all([
+  const [{ data: rawOrders }, { data: projects }, { data: subs }] = await Promise.all([
     db
       .from("orders")
       .select(
-        "id, invoice_number, customer_email, intake_completed, intake_completed_at, assigned_admin_email, assigned_manager, customers(name), products(name)",
+        "id, invoice_number, customer_email, intake_completed, intake_completed_at, assigned_admin_email, assigned_manager, customers(name), products(name, metadata)",
       )
       .eq("status", "paid")
       .neq("archived", true),
@@ -63,10 +69,14 @@ export async function GET(req: Request) {
       .eq("status", "active"),
   ]);
 
-  const orderIds = ((orders ?? []) as Row[]).map((o) => String(o.id));
-  const projectIds = ((projects ?? []) as Row[]).map((p) => String(p.id));
+  /* an invoice payment is money, not a job */
+  const orders = ((rawOrders ?? []) as Row[]).filter(
+    (o) => !((o.products as { metadata?: { invoice?: unknown } } | null)?.metadata?.invoice),
+  );
+  const orderIds = wantKind("purchase") ? orders.map((o) => String(o.id)) : [];
+  const projectIds = wantKind("project") ? ((projects ?? []) as Row[]).map((p) => String(p.id)) : [];
 
-  const { data: cycles } = subs?.length
+  const { data: cycles } = subs?.length && wantKind("plan")
     ? await db
         .from("subscription_cycles")
         .select("id, subscription_id")

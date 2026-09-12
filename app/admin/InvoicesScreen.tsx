@@ -80,7 +80,13 @@ function CopyField({ url }: { url: string }) {
 
 
 type Customer = { id: string; email: string; name: string | null; company: string | null };
-type ProjectPick = { id: string; title: string; customerEmail: string };
+type ProjectPick = {
+  id: string;
+  title: string;
+  customerEmail: string;
+  /* the live invoices already carrying this job, by number */
+  billed: string[];
+};
 type Row = { description: string; quantity: string; unit: string };
 
 const EMPTY_ROW: Row = { description: "", quantity: "1", unit: "" };
@@ -143,9 +149,22 @@ export function InvoicesScreen() {
         ]);
         setCustomers((c.customers as Customer[]) ?? []);
         setProjects(
-          ((p.projects as { id: string; title: string; customerEmail: string; status: string }[]) ?? [])
-            .filter((x) => x.status !== "closed" && x.status !== "cancelled")
-            .map((x) => ({ id: x.id, title: x.title, customerEmail: x.customerEmail })),
+          (
+            (p.projects as {
+              id: string;
+              title: string;
+              customerEmail: string;
+              status: string;
+              invoices?: { number: string; status: string }[];
+            }[]) ?? []
+          )
+            .filter((x) => x.status !== "cancelled")
+            .map((x) => ({
+              id: x.id,
+              title: x.title,
+              customerEmail: x.customerEmail,
+              billed: (x.invoices ?? []).filter((i) => i.status !== "void").map((i) => i.number),
+            })),
         );
       } catch {
         /* the pickers just stay empty */
@@ -154,10 +173,16 @@ export function InvoicesScreen() {
   }, []);
 
   const chosen = customers.find((c) => c.email === customerEmail) ?? null;
-  /* only this client's jobs can go on this client's bill */
-  const theirProjects = projects.filter(
+  /* only this client's jobs can go on this client's bill, and only the ones
+     not already on one: HighLevel's next invoice offered the six jobs their
+     last invoice had paid for */
+  const theirs = projects.filter(
     (p) => !customerEmail || p.customerEmail.toLowerCase() === customerEmail.toLowerCase(),
   );
+  const theirProjects = theirs.filter(
+    (p) => p.billed.length === 0 || (editing ? (editing.projectIds ?? []).includes(p.id) : false),
+  );
+  const alreadyBilled = theirs.length - theirProjects.length;
 
   const cents = (v: string) => {
     const n = Number(v);
@@ -337,7 +362,9 @@ export function InvoicesScreen() {
           {theirProjects.length > 0 && (
             <Field
               label="Custom projects on this invoice"
-              hint="Tick every job this bill covers. One invoice can carry several."
+              hint={`Tick every job this bill covers. One invoice can carry several.${
+                alreadyBilled ? ` ${alreadyBilled} of their jobs ${alreadyBilled === 1 ? "is" : "are"} already on an invoice and left out.` : ""
+              }`}
             >
               <div className="grid gap-1.5">
                 {theirProjects.map((p) => (
@@ -359,6 +386,14 @@ export function InvoicesScreen() {
                 ))}
               </div>
             </Field>
+          )}
+          {/* an invoice is money, never work: with no job attached, nothing
+              on the platform will show what this paid for */}
+          {customerEmail && projectIds.length === 0 && !parentOrderId && (
+            <p className="-mt-2 text-body-sm text-gold">
+              No project attached. This invoice is a payment only; attach the job it pays for so the
+              work exists somewhere.
+            </p>
           )}
 
           {/* the lines */}

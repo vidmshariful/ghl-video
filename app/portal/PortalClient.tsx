@@ -216,6 +216,9 @@ type OrderSummary = {
   invoiceNumber: string | null;
   createdAt: string;
   intakeCompleted: boolean;
+  /* a payment against a bill is not an order for videos */
+  kind?: "invoice" | "premade";
+  paysInvoice?: string | null;
 };
 
 function Shell({ children }: { children: React.ReactNode }) {
@@ -556,6 +559,8 @@ function LoginView() {
 /* ---- order detail ---- */
 type OrderDetail = {
   id: string;
+  kind?: "invoice" | "premade";
+  paysInvoice?: string | null;
   productName: string | null;
   productCode: string | null;
   amountCents: number;
@@ -660,7 +665,24 @@ function OrderDetailView({
         </p>
       </div>
 
-      {order.status !== "refunded" && (
+      {/* a payment against a bill: no production line and no brief. The
+          work it paid for lives on its projects. */}
+      {order.kind === "invoice" && (
+        <div className="rounded-[12px] border border-hair bg-surface p-6 md:p-8">
+          <p className="font-mono text-label uppercase text-muted">Payment</p>
+          <p className="mt-3 text-body text-muted">
+            This settled {order.paysInvoice ? `invoice ${order.paysInvoice}` : "an invoice"}.
+            Nothing else is needed from you: the work it covers carries on under Custom.
+          </p>
+          <div className="mt-5">
+            <Button variant="secondary" href="/portal/projects/">
+              Open your custom projects
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {order.status !== "refunded" && order.kind !== "invoice" && (
         <div className="rounded-[12px] border border-hair bg-surface p-6 md:p-8">
           <p className="mb-5 font-mono text-label uppercase text-muted">Progress</p>
           <ProgressTracker stage={order.stage} />
@@ -668,7 +690,7 @@ function OrderDetailView({
       )}
 
       {/* branding brief */}
-      {order.status !== "refunded" && (
+      {order.status !== "refunded" && order.kind !== "invoice" && (
         <div className="rounded-[12px] border border-hair bg-surface p-6 md:p-8">
           <p className="font-mono text-label uppercase text-muted">Branding brief</p>
           {order.intakeCompleted ? (
@@ -1020,12 +1042,19 @@ function OrdersList({ onOpen }: { onOpen: (id: string) => void }) {
                 <Td strong>
                   <span className="block">{o.productName ?? "Order"}</span>
                   <span className="mt-0.5 block font-mono text-label uppercase text-dim">
-                    {o.productCode ? `${o.productCode} / ` : ""}
+                    {o.kind === "invoice"
+                      ? `${o.paysInvoice ? `Invoice ${o.paysInvoice} / ` : "Invoice / "}`
+                      : o.productCode
+                        ? `${o.productCode} / `
+                        : ""}
                     {day(o.createdAt)}
                   </span>
                 </Td>
                 <Td>
-                  {o.status === "paid" && !o.intakeCompleted ? (
+                  {/* a paid bill is paid; it never waits on a brief */}
+                  {o.kind === "invoice" && o.status === "paid" ? (
+                    <Chip tone="good">Paid</Chip>
+                  ) : o.status === "paid" && !o.intakeCompleted ? (
                     <Chip tone="warn">Waiting on your brief</Chip>
                   ) : o.status !== "paid" ? (
                     <Chip tone="neutral">{o.status}</Chip>

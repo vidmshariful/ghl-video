@@ -63,7 +63,7 @@ export async function GET(req: Request) {
      */
     db
       .from("orders")
-      .select("amount_cents, status, created_at, intake_completed, product:products(sku)")
+      .select("amount_cents, status, created_at, intake_completed, product:products(sku, metadata)")
       .order("created_at", { ascending: false }),
     /* the six the dashboard actually lists, with the names it shows */
     db
@@ -150,7 +150,12 @@ export async function GET(req: Request) {
   const projectsWithClient = openProjects.filter(
     (p) => ballInCourt(normalizePipeline(p.pipeline)) === "client",
   );
-  const noBrief = paid.filter((o) => o.intake_completed === false);
+  /* an invoice payment has no brief to wait for */
+  const noBrief = paid.filter(
+    (o) =>
+      o.intake_completed === false &&
+      !((o.product as { metadata?: { invoice?: unknown } } | null)?.metadata?.invoice),
+  );
   const newEnquiries = ((enquiries.data ?? []) as Row[]).filter(
     (e) => String(e.status) === "new",
   );

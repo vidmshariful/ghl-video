@@ -48,6 +48,8 @@ type OrderSummary = {
   invoiceNumber: string | null;
   createdAt: string;
   intakeCompleted: boolean;
+  /* a payment against a bill is not an order for videos */
+  kind?: "invoice" | "premade";
 };
 
 type Line = "premade" | "custom" | "editing";
@@ -502,7 +504,9 @@ export function DashboardView({
   }, [canOrders, authedFetch]);
 
   const loading = orders === null || groups === null;
-  const list = orders ?? [];
+  /* orders for videos. An invoice payment is money, not work: it never
+     waits on a brief and it is not something to follow. */
+  const list = (orders ?? []).filter((o) => o.kind !== "invoice");
 
   /*
    * Every video, carrying the line it came from.

@@ -68,10 +68,13 @@ const BUCKETS = [
 ];
 
 export function StudioQueue({
+  kind,
   onOpenJob,
   onOpenProject,
   onOpenEditing,
 }: {
+  /* one kind of work only, for a board that owns one kind */
+  kind?: "purchase" | "project" | "plan";
   onOpenJob: (orderId: string) => void;
   onOpenProject: (projectId: string) => void;
   onOpenEditing: (slug: string) => void;
@@ -93,7 +96,9 @@ export function StudioQueue({
   const load = useCallback(async () => {
     setErr("");
     try {
-      const r = await fetch("/api/admin/studio/queue", { headers: await authHeader() });
+      const r = await fetch(`/api/admin/studio/queue${kind ? `?kind=${kind}` : ""}`, {
+        headers: await authHeader(),
+      });
       const j = await r.json();
       if (!r.ok) return setErr(j.error ?? "Could not load the queue.");
       setItems(j.items as Item[]);
@@ -102,7 +107,7 @@ export function StudioQueue({
     } catch {
       setErr("Could not load the queue.");
     }
-  }, []);
+  }, [kind]);
 
   useEffect(() => {
     load();

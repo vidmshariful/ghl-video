@@ -89,21 +89,31 @@ export async function planDeliverables(db: DB, sku: string): Promise<Deliverable
     if (!product) return [];
 
     /*
-     * An add-on owes no video.
+     * An invoice owes no video.
      *
-     * Extra work invoiced against an order we already delivered, a niche
-     * customisation, a re-cut, a language pass, changes videos that exist
-     * rather than creating one. Expanding it made a phantom row that sat in
-     * the client's list as a video queued forever and showed on the studio
-     * board as work nobody could finish. The invoice naming a parent order is
-     * exactly what says "this is extra work on that", so it is what we check.
+     * An invoice is money, never work. The work it pays for already exists
+     * somewhere else: an add-on is extra work on videos an order delivered,
+     * and a custom invoice pays for projects that carry their own videos.
+     * Expanding one made a phantom row that sat in the client's list as a
+     * video queued forever, asked them for a branding brief they had no
+     * reason to fill in, and showed on the premade board as work nobody
+     * could finish. HighLevel's nine-thousand-dollar invoice for six
+     * projects became "Animated Promo Video, queued" on both. So any
+     * invoice-backed sku expands to nothing, whether or not it names a
+     * parent order (owner decision, 12 September 2026).
      */
+    const { data: productRow } = await db
+      .from("products")
+      .select("metadata")
+      .eq("sku", sku)
+      .maybeSingle();
+    if ((productRow?.metadata as { invoice?: unknown } | null)?.invoice) return [];
     const { data: invoice } = await db
       .from("invoices")
-      .select("parent_order_id")
+      .select("id")
       .eq("product_sku", sku)
       .maybeSingle();
-    if (invoice?.parent_order_id) return [];
+    if (invoice) return [];
 
     return [
       { catalog_code: null, title: product.name as string, category: null, group_label: null, position: 0 },
