@@ -6,11 +6,17 @@
  *   npm run hl:sync -- --watch         keep sending every 15 seconds
  *   npm run hl:sync -- --all           queue every customer, project and video first (the first fill)
  *   npm run hl:sync -- --reconcile     queue whatever drifted, verify a slice of the links, then send
+ *   npm run hl:sync -- --products      mirror the catalogue into HighLevel products first
+ *
+ * Every run also reads money back: which open invoices HighLevel says are
+ * paid, and any invoice made over there that we do not have yet.
  *   GHLV_ENV=prod npm run hl:sync      the same against production, only when asked
  */
 import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 import { drainOutbox, enqueue, reconcile, type SyncKind } from "../lib/highlevel/sync";
+import { loadHlConfig } from "../lib/highlevel/config";
+import { pollOpenInvoices, pullInvoices, syncProductsToHighLevel } from "../lib/highlevel/money";
 
 for (const line of readFileSync(process.env.GHLV_ENV === "prod" ? ".env.prod.local" : ".env.local", "utf8").split("\n")) {
   const m = line.match(/^([A-Z0-9_]+)=(.*)$/);
@@ -39,6 +45,17 @@ async function queueEverything() {
   }
 }
 
+async function money(): Promise<void> {
+  const cfg = await loadHlConfig(db, process.env.HIGHLEVEL_LOCATION_ID as string);
+  if (!cfg) return;
+  const polled = await pollOpenInvoices(db, cfg);
+  const pulled = await pullInvoices(db, cfg, { pages: 1 });
+  if (polled.changed || pulled.imported || pulled.skipped.length)
+    console.log(
+      `  money: ${polled.checked} open invoices checked, ${polled.paid} now paid, ${polled.changed} changed; ${pulled.imported} imported from HighLevel${pulled.skipped.length ? `; skipped: ${pulled.skipped.join(" | ")}` : ""}`,
+    );
+}
+
 async function drainAll(): Promise<number> {
   let total = 0;
   for (;;) {
@@ -65,13 +82,22 @@ async function drainAll(): Promise<number> {
       `  reconcile: queued ${r.enqueued.customer} customers, ${r.enqueued.project} projects, ${r.enqueued.video} videos; verified ${r.verified} links, ${r.missing} gone; ${r.pending} pending, ${r.stuck} stuck`,
     );
   }
+  if (args.has("--products")) {
+    const cfg = await loadHlConfig(db, process.env.HIGHLEVEL_LOCATION_ID as string);
+    if (cfg) {
+      const r = await syncProductsToHighLevel(db, cfg);
+      console.log(`  products: ${r.seen} seen, ${r.made} made, ${r.repriced} repriced, ${r.unchanged} unchanged${r.errors.length ? `; errors: ${r.errors.join(" | ")}` : ""}`);
+    }
+  }
   const n = await drainAll();
+  await money();
   console.log(n === 0 ? "  nothing waiting" : `  ${n} processed`);
   if (!args.has("--watch")) return;
   console.log("\n  watching: every 15 seconds, Ctrl+C to stop\n");
   for (;;) {
     await new Promise((r) => setTimeout(r, 15000));
     const m = await drainAll();
+    await money();
     if (m) console.log(`  ${new Date().toLocaleTimeString()} ${m} processed`);
   }
 })().catch((e) => {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { verifyAdmin } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { lifetimeValue, serviceTags, type MoneySource } from "@/lib/customer-record";
+import { invoiceOpen, invoiceSettled } from "@/lib/invoice-state";
 import { orderKind, type InvoiceLink } from "@/lib/order-kind";
 import { ensureAccount } from "@/lib/accounts";
 
@@ -43,7 +44,7 @@ export async function GET(req: Request) {
        * carrying them here as well would count that money twice. */
       db
         .from("invoices")
-        .select("customer_email, total_cents, status, product_sku, product_id, parent_order_id"),
+        .select("customer_email, total_cents, status, product_sku, product_id, parent_order_id, paid_at, hl_status, kind, amount_paid_cents"),
     ]);
 
   /* every client's people, so a picker can show who to talk to rather than
@@ -75,14 +76,6 @@ export async function GET(req: Request) {
   const subsBy = byEmail(subs as Row[] | null, "customer_email");
   const invBy = byEmail(invoices as Row[] | null, "customer_email");
 
-  /* Which invoice-backed products have actually been paid for. This is the
-   * only way to know an invoice landed: the table itself has no paid state,
-   * by design, because the backing order is the record of payment. */
-  const paidSkus = new Set(
-    ((orders ?? []) as Row[])
-      .filter((o) => String(o.status) === "paid")
-      .map((o) => String((o.product as { sku?: unknown } | null)?.sku ?? "")),
-  );
 
   /* which product each invoice bills through, so an order can say whether it
    * was a shelf purchase, an add-on to earlier work, or bespoke */
@@ -118,8 +111,20 @@ export async function GET(req: Request) {
         currentPeriodEnd: (s.current_period_end as string | null) ?? null,
       })),
       openInvoices: (invBy.get(k) ?? [])
-        .filter((i) => i.status === "open" && !paidSkus.has(String(i.product_sku)))
+        .filter((i) => invoiceOpen(i))
         .map((i) => ({ totalCents: Number(i.total_cents) })),
+      /* paid in HighLevel with no order behind it */
+      paidInvoices: (invBy.get(k) ?? [])
+        .filter((i) => !i.product_id && invoiceSettled(i))
+        .map((i) => ({
+          amountCents: Number(i.amount_paid_cents || i.total_cents),
+          kind: (["custom", "addon", "retainer", "premade", "plan"].includes(String(i.kind)) ? String(i.kind) : "custom") as
+            | "custom"
+            | "addon"
+            | "retainer"
+            | "premade"
+            | "plan",
+        })),
     };
     const value = lifetimeValue(mine, now);
     return {

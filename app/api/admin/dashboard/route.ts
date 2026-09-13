@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { verifyAdmin } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
+import { invoiceOpen, invoiceSettled } from "@/lib/invoice-state";
 import { STUDIO_LABEL, isOpen, normalizeProjectStatus } from "@/lib/projects";
 import { ballInCourt, normalizePipeline } from "@/lib/pipeline";
 
@@ -74,7 +75,7 @@ export async function GET(req: Request) {
       .order("created_at", { ascending: false })
       .limit(6),
     db.from("subscriptions").select("status, amount_cents, plan_name"),
-    db.from("invoices").select("id, number, total_cents, status, product_sku, due_date"),
+    db.from("invoices").select("id, number, total_cents, status, product_sku, product_id, due_date, paid_at, hl_status, amount_paid_cents"),
     db.from("projects").select("id, title, status, due_at, pipeline, customer_email, agreed_cents, quoted_cents"),
     db
       .from("order_deliverables")
@@ -105,10 +106,16 @@ export async function GET(req: Request) {
   const invoiceRows = (invoices.data ?? []) as Row[];
 
   /* ---- money ---- */
-  const allTimeCents = paid.reduce((s, o) => s + cents(o.amount_cents), 0);
-  const monthCents = paid
-    .filter((o) => String(o.created_at) >= monthAgo)
-    .reduce((s, o) => s + cents(o.amount_cents), 0);
+  /* invoices paid in HighLevel have no order behind them, so they are added
+     from the invoice itself; a legacy one paid through checkout has an order
+     and is already in `paid` */
+  const hlPaid = invoiceRows.filter((i) => !i.product_id && invoiceSettled(i));
+  const hlPaidCents = (i: Row) => cents(i.amount_paid_cents || i.total_cents);
+  const allTimeCents =
+    paid.reduce((s, o) => s + cents(o.amount_cents), 0) + hlPaid.reduce((s, i) => s + hlPaidCents(i), 0);
+  const monthCents =
+    paid.filter((o) => String(o.created_at) >= monthAgo).reduce((s, o) => s + cents(o.amount_cents), 0) +
+    hlPaid.filter((i) => String(i.paid_at) >= monthAgo).reduce((s, i) => s + hlPaidCents(i), 0);
 
   const BILLING = new Set(["active", "trialing", "past_due"]);
   const subRows = (subs.data ?? []) as Row[];
@@ -116,13 +123,7 @@ export async function GET(req: Request) {
     .filter((s) => BILLING.has(String(s.status)))
     .reduce((s, x) => s + cents(x.amount_cents), 0);
 
-  /* an invoice is settled when a paid order exists for its backing product */
-  const paidSkus = new Set(
-    paid.map((o) => String((o.product as { sku?: unknown } | null)?.sku ?? "")),
-  );
-  const openInvoices = invoiceRows.filter(
-    (i) => String(i.status) === "open" && !paidSkus.has(String(i.product_sku)),
-  );
+  const openInvoices = invoiceRows.filter((i) => invoiceOpen(i));
   const owedCents = openInvoices.reduce((s, i) => s + cents(i.total_cents), 0);
   /* agreed custom work with no money in yet */
   const pipelineCents = openProjects.reduce(
@@ -143,6 +144,10 @@ export async function GET(req: Request) {
   for (const o of paid) {
     const slot = days.find((d) => d.key === new Date(String(o.created_at)).toDateString());
     if (slot) slot.cents += cents(o.amount_cents);
+  }
+  for (const i of hlPaid) {
+    const slot = days.find((d) => d.key === new Date(String(i.paid_at)).toDateString());
+    if (slot) slot.cents += hlPaidCents(i);
   }
 
   /* ---- what needs a person today ---- */

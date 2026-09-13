@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { contextCan, resolvePortalContext, actorName } from "@/lib/account-team";
 import { CLIENT_LABEL, isOpen, normalizeProjectStatus, projectBalance } from "@/lib/projects";
 import { invoiceProjectShares } from "@/lib/invoice-shares";
+import { invoiceSettled } from "@/lib/invoice-state";
 import {
   countLine,
   monthKey,
@@ -109,17 +110,9 @@ export async function GET(req: Request) {
   const { data: invoices } = ids.length
     ? await db
         .from("invoices")
-        .select("total_cents, project_id, project_ids, product_sku")
+        .select("total_cents, project_id, project_ids, product_sku, paid_at, hl_status, status")
         .or(`project_id.in.(${ids.join(",")}),project_ids.ov.{${ids.join(",")}}`)
     : { data: [] };
-  const { data: paidOrders } = await db
-    .from("orders")
-    .select("product:products(sku)")
-    .eq("status", "paid")
-    .ilike("customer_email", ctx.ownerEmail);
-  const paidSkus = new Set(
-    ((paidOrders ?? []) as Row[]).map((o) => String((o.product as { sku?: unknown } | null)?.sku ?? "")),
-  );
 
   /*
    * The partnership, for an account on a retainer.
@@ -178,7 +171,7 @@ export async function GET(req: Request) {
           ((invoices ?? []) as Row[]).flatMap((i) =>
             invoiceProjectShares(i)
               .filter((s) => s.projectId === String(p.id))
-              .map((s) => ({ totalCents: s.shareCents, paid: paidSkus.has(String(i.product_sku)) })),
+              .map((s) => ({ totalCents: s.shareCents, paid: invoiceSettled(i) })),
           ),
         );
         const mine = ((videos ?? []) as Row[]).filter(

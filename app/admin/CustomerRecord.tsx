@@ -57,6 +57,8 @@ type Record_ = {
     lastSeenAt: string | null;
     createdAt: string;
     highlevelContactId: string | null;
+    /* the partnership's monthly bill, scheduled in HighLevel */
+    retainerScheduleId: string | null;
   };
   /* where they are in HighLevel, from the sync's own links; null until sent */
   highlevel: { contactId: string; contactUrl: string; syncedAt: string; pending: number } | null;
@@ -130,6 +132,11 @@ type Record_ = {
     totalCents: number;
     status: string;
     paid: boolean;
+    paidAt: string | null;
+    kind: string;
+    source: string;
+    /* HighLevel's pay page, once the invoice is there */
+    payUrl: string | null;
     parentOrderId: string | null;
     dueDate: string | null;
     createdAt: string;
@@ -560,7 +567,13 @@ export function CustomerRecord({
                 : "-"}
           </p>
           <p className="mt-1 text-body-sm text-muted">
-            {c.retainer ? "retainer, invoiced monthly" : v.monthlyCents ? "recurring" : "no active plan"}
+            {c.retainer
+              ? c.retainerScheduleId
+                ? "retainer, billed by HighLevel on the 1st"
+                : "retainer, invoiced monthly"
+              : v.monthlyCents
+                ? "recurring"
+                : "no active plan"}
           </p>
         </Card>
         <Card>
@@ -1215,6 +1228,14 @@ export function CustomerRecord({
                           <a href={`/invoice/${i.token}/`} target="_blank" rel="noopener" className="hover:text-gold">
                             {i.number}
                           </a>
+                          {i.kind === "retainer" && (
+                            <span className="ml-2 font-mono text-label uppercase text-dim">retainer month</span>
+                          )}
+                          {i.payUrl && !i.paid && i.status === "open" && (
+                            <a href={i.payUrl} target="_blank" rel="noreferrer" className="ml-2 text-label text-muted hover:text-gold">
+                              Pay link
+                            </a>
+                          )}
                         </Td>
                         <Td>
                           <Chip tone={i.paid ? "good" : i.status === "void" ? "neutral" : "warn"}>

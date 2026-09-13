@@ -36,6 +36,7 @@
     "check:invariants": "tsx scripts/check-invariants.ts",
     "hl:provision": "node scripts/hl-provision.mjs",
     "hl:sync": "tsx scripts/hl-sync.ts",
+    "hl:migrate-invoices": "tsx scripts/hl-migrate-invoices.ts",
     "test:walk": "playwright test tests/e2e/walkthrough.spec.ts tests/e2e/premade.spec.ts tests/e2e/custom.spec.ts tests/e2e/editing.spec.ts tests/e2e/highlevel.spec.ts --workers=1"
   },
   "dependencies": {

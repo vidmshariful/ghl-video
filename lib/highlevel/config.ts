@@ -18,6 +18,7 @@ export const CONTACT_FIELD_KEYS = [
   "lastSeen",
   "adminUrl",
   "customerId",
+  "editingPlan",
 ] as const;
 export type ContactFieldKey = (typeof CONTACT_FIELD_KEYS)[number];
 

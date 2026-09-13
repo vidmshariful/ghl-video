@@ -4,6 +4,7 @@ import {
   arrangementOf,
   contactPayload,
   fingerprint,
+  planLine,
   projectPayload,
   syncAllowed,
   tagsFor,
@@ -29,6 +30,7 @@ const cfg: HlConfig = {
     lastSeen: "f_seen",
     adminUrl: "f_url",
     customerId: "f_id",
+    editingPlan: "f_plan",
   },
   pipelines: {
     leads: { id: "pl", stages: { new: "s1", contacted: "s2", quoted: "s3", won: "s4", lost: "s5" } },
@@ -58,6 +60,7 @@ const none: CustomerShape = {
   retainer: null,
   directBrief: false,
   internal: false,
+  plan: null,
 };
 
 const field = (body: Record<string, unknown>, id: string) =>
@@ -80,6 +83,7 @@ test("a retainer partner is tagged and described as one", () => {
     },
     directBrief: true,
     internal: false,
+    plan: null,
   };
   assert.equal(arrangementOf(shape), "Retainer partner");
   assert.deepEqual(tagsFor(shape), ["ghlv-custom", "ghlv-retainer", "ghlv-direct-brief"]);
@@ -116,11 +120,15 @@ test("a studio-owned account is marked, and each line earns its tag", () => {
     retainer: null,
     directBrief: false,
     internal: true,
+    plan: { name: "Editing: Growth", status: "active", renewsOn: "2026-10-02" },
   };
   assert.deepEqual(tagsFor(shape), ["ghlv-premade", "ghlv-editing", "ghlv-internal"]);
   assert.equal(arrangementOf(shape), "Editing plan");
   const { body } = contactPayload({ id: "c3", email: "demo@ghlvideo.com", name: "Demo" }, shape, cfg);
   assert.equal(field(body, "f_lines"), "premade, editing");
+  assert.equal(field(body, "f_plan"), "Growth, active, renews 2026-10-02");
+  assert.equal(planLine({ name: "Editing: Starter", status: "canceled", renewsOn: "2026-10-02" }), "Starter, canceled");
+  assert.equal(planLine(null), "");
   assert.equal(body.firstName, "Demo");
   assert.equal(body.lastName, undefined);
 });

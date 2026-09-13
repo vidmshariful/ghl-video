@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { verifyAdmin } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
+import { invoiceDisplayNumber, invoiceOpen, invoiceSettled } from "@/lib/invoice-state";
 import { isOpen } from "@/lib/projects";
 import { orderKind, type InvoiceLink } from "@/lib/order-kind";
 
@@ -38,7 +39,7 @@ export async function GET(req: Request) {
       db
         .from("subscriptions")
         .select("customer_email, amount_cents, status, created_at, current_period_end, plan_name, product:products(name, sku)"),
-      db.from("invoices").select("number, total_cents, status, product_sku, product_id, parent_order_id"),
+      db.from("invoices").select("number, hl_number, total_cents, status, product_sku, product_id, parent_order_id, paid_at, hl_status, kind, customer_email, line_items, amount_paid_cents"),
       db.from("projects").select("id, status, quoted_cents, agreed_cents"),
     ]);
 
@@ -70,7 +71,7 @@ export async function GET(req: Request) {
       .map((i) => [String(i.product_id), i.number as string]),
   );
 
-  const sales = ((orders ?? []) as Row[])
+  const orderSales = ((orders ?? []) as Row[])
     .filter((o) => String(o.status) === "paid")
     .map((o) => {
       const productId = (o.product_id as string | null) ?? null;
@@ -92,6 +93,26 @@ export async function GET(req: Request) {
         recurring: false,
       };
     });
+
+  /* invoices paid in HighLevel: money with no order behind it. A legacy
+     invoice paid through checkout has an order above and is not repeated. */
+  const invoiceSales = ((invoices ?? []) as Row[])
+    .filter((i) => !i.product_id && invoiceSettled(i))
+    .map((i) => {
+      const first = Array.isArray(i.line_items) ? (i.line_items[0] as { description?: string } | undefined) : undefined;
+      const kind = String(i.kind) === "addon" ? ("addon" as const) : String(i.kind) === "premade" ? ("premade" as const) : ("custom" as const);
+      return {
+        kind,
+        amountCents: Number(i.amount_paid_cents || i.total_cents),
+        at: String(i.paid_at),
+        email: String(i.customer_email ?? ""),
+        name: first?.description ?? invoiceDisplayNumber(i),
+        viaInvoice: true,
+        invoiceNumber: invoiceDisplayNumber(i) || null,
+        recurring: false,
+      };
+    });
+  const sales = [...orderSales, ...invoiceSales];
 
   const refundedCents = ((orders ?? []) as Row[])
     .filter((o) => String(o.status) === "refunded")
@@ -123,13 +144,8 @@ export async function GET(req: Request) {
     }
   }
 
-  const paidSkus = new Set(
-    ((orders ?? []) as Row[])
-      .filter((o) => String(o.status) === "paid")
-      .map((o) => String((o.product as { sku?: unknown } | null)?.sku ?? "")),
-  );
   const outstandingCents = ((invoices ?? []) as Row[])
-    .filter((i) => String(i.status) === "open" && !paidSkus.has(String(i.product_sku)))
+    .filter((i) => invoiceOpen(i))
     .reduce((s, i) => s + Number(i.total_cents), 0);
 
   /* work agreed and not yet paid for: the pipeline. isOpen speaks both the

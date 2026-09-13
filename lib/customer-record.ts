@@ -38,8 +38,15 @@ export type MoneySource = {
     createdAt: string;
     currentPeriodEnd: string | null;
   }[];
-  /** raised and still unpaid. Paid ones are already in `orders`. */
+  /** raised and still unpaid. Never part of the total. */
   openInvoices: { totalCents: number }[];
+  /**
+   * Invoices paid in HighLevel (phase 3): money with no order behind it, so
+   * it is counted here. A legacy invoice paid through checkout has an order
+   * and is NOT listed here, or it would count twice. A retainer month is
+   * custom work paid monthly, so it lands in customCents.
+   */
+  paidInvoices?: { amountCents: number; kind: "custom" | "addon" | "retainer" | "premade" | "plan" }[];
 };
 
 export type Lifetime = {
@@ -97,9 +104,11 @@ export function lifetimeValue(src: MoneySource, now: Date): Lifetime {
   const paid = src.orders.filter((o) => o.status === "paid");
   const sumOf = (kind: OrderKind) =>
     paid.filter((o) => o.kind === kind).reduce((s, o) => s + o.amountCents, 0);
-  const premadeCents = sumOf("premade");
-  const addOnCents = sumOf("addon");
-  const customCents = sumOf("custom");
+  const invoiced = (kinds: string[]) =>
+    (src.paidInvoices ?? []).filter((i) => kinds.includes(i.kind)).reduce((s, i) => s + i.amountCents, 0);
+  const premadeCents = sumOf("premade") + invoiced(["premade"]);
+  const addOnCents = sumOf("addon") + invoiced(["addon"]);
+  const customCents = sumOf("custom") + invoiced(["custom", "retainer", "plan"]);
 
   const refundedCents = src.orders
     .filter((o) => o.status === "refunded")

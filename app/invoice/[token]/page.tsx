@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
+import { invoiceDisplayNumber, invoicePayUrl, invoiceSettled } from "@/lib/invoice-state";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,6 +37,11 @@ type Invoice = {
   status: "open" | "void";
   created_at: string;
   project_ids: string[] | null;
+  paid_at: string | null;
+  hl_url: string | null;
+  hl_number: string | null;
+  hl_status: string | null;
+  token: string;
 };
 
 const money = (cents: number, cur = "usd") =>
@@ -62,17 +68,12 @@ export default async function InvoicePage({ params }: { params: Promise<{ token:
   if (!data) notFound();
   const inv = data as Invoice;
 
-  let paidAt: string | null = null;
-  if (inv.product_id) {
-    const { data: order } = await db
-      .from("orders")
-      .select("paid_at")
-      .eq("product_id", inv.product_id)
-      .eq("status", "paid")
-      .maybeSingle();
-    if (order) paidAt = order.paid_at;
-  }
-  const paid = !!paidAt;
+  /* paid_at is the one test for paid; the migration filled it for the
+     invoices that were settled through checkout before HighLevel held them */
+  const paidAt = inv.paid_at;
+  const paid = invoiceSettled(inv);
+  const payUrl = invoicePayUrl(inv);
+  const number = invoiceDisplayNumber(inv);
 
   /*
    * The jobs this bill is for, by name.
@@ -121,7 +122,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ token:
         <div className="overflow-hidden rounded-card border border-hair bg-surface">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-hair px-6 py-5">
             <div>
-              <h1 className="font-display text-h3 text-ink">{inv.number}</h1>
+              <h1 className="font-display text-h3 text-ink">{number}</h1>
               <p className="mt-1 font-mono text-label uppercase text-dim">
                 Issued {dateLabel(inv.created_at)}
                 {inv.due_date ? ` / Due ${dateLabel(inv.due_date)}` : ""}
@@ -262,19 +263,23 @@ export default async function InvoicePage({ params }: { params: Promise<{ token:
               <p className="text-body text-muted">
                 This invoice has been voided. Please contact us if you believe this is a mistake.
               </p>
-            ) : (
+            ) : payUrl ? (
               <>
                 <a
-                  href={`/checkout/${inv.product_sku}/`}
+                  href={payUrl}
                   className="tap inline-flex items-center gap-2 rounded-[3px] bg-brand-gradient px-8 py-3.5 text-body font-semibold text-canvas transition-all hover:brightness-110"
                 >
                   Pay {money(inv.total_cents, inv.currency)}
                   <span aria-hidden="true">&rarr;</span>
                 </a>
                 <p className="mt-3 font-mono text-label uppercase text-dim">
-                  Secure checkout, card payment
+                  Secure card payment
                 </p>
               </>
+            ) : (
+              <p className="text-body text-muted">
+                The payment link is being prepared. Check back in a minute, or reply to the invoice email.
+              </p>
             )}
           </div>
         </div>

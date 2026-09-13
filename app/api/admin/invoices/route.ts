@@ -3,14 +3,16 @@ import { verifyAdmin } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { parseInvoiceInput, type InvoiceLineItem } from "@/lib/invoices";
 import { ensureAccount } from "@/lib/accounts";
+import { invoiceDisplayNumber, invoicePayUrl, invoiceSettled, invoiceStatusWord } from "@/lib/invoice-state";
+import { nudgeInvoice } from "@/lib/highlevel/nudge";
 
 export const runtime = "nodejs";
 
 /*
- * Invoices: itemized, payable invoices backed by a one_time product so the pay
- * link runs through the normal checkout. POST creates the backing product +
- * the invoice; GET lists them with "paid" derived from a paid order on the
- * backing product. Admin-gated (allowlist).
+ * Invoices. Since phase 3 (September 2026) an invoice is raised here and
+ * made in HighLevel by the sync, where the client pays it; this table is the
+ * mirror and paid_at is the one test for paid. The throwaway product per
+ * invoice is gone: only legacy rows still carry one. Admin-gated (allowlist).
  */
 
 type LineItem = InvoiceLineItem;
@@ -35,14 +37,36 @@ type InvoiceRow = {
   subtotal_cents: number | null;
   discount_kind: "percent" | "flat" | null;
   discount_value: number | null;
+  hl_invoice_id: string | null;
+  hl_number: string | null;
+  hl_status: string | null;
+  hl_url: string | null;
+  hl_sent_at: string | null;
+  paid_at: string | null;
+  amount_paid_cents: number | null;
+  kind: string | null;
+  source: string | null;
 };
 
-function shape(inv: InvoiceRow, paid: boolean) {
+function shape(inv: InvoiceRow) {
+  const paid = invoiceSettled(inv);
   return {
     id: inv.id,
     number: inv.number,
+    /* the number the client sees: HighLevel's once it has one */
+    displayNumber: invoiceDisplayNumber(inv),
     token: inv.token,
-    status: paid ? "paid" : inv.status,
+    status: invoiceStatusWord(inv),
+    paidAt: inv.paid_at,
+    amountPaidCents: inv.amount_paid_cents ?? (paid ? inv.total_cents : 0),
+    kind: inv.kind ?? "custom",
+    source: inv.source ?? "platform",
+    /* a legacy invoice still bills through checkout; the rest pay on HighLevel's page */
+    legacy: Boolean(inv.product_id),
+    highlevel: inv.hl_invoice_id
+      ? { id: inv.hl_invoice_id, number: inv.hl_number, status: inv.hl_status, url: inv.hl_url, sentAt: inv.hl_sent_at }
+      : null,
+    payUrl: invoicePayUrl(inv),
     customerName: inv.customer_name,
     customerEmail: inv.customer_email,
     customerCompany: inv.customer_company,
@@ -66,21 +90,7 @@ export async function GET(req: Request) {
   const db = supabaseAdmin();
   const { data } = await db.from("invoices").select("*").order("created_at", { ascending: false });
   const invoices = (data ?? []) as InvoiceRow[];
-
-  const productIds = invoices.map((i) => i.product_id).filter((x): x is string => !!x);
-  let paid = new Set<string>();
-  if (productIds.length) {
-    const { data: orders } = await db
-      .from("orders")
-      .select("product_id")
-      .in("product_id", productIds)
-      .eq("status", "paid");
-    paid = new Set((orders ?? []).map((o) => o.product_id as string));
-  }
-
-  return NextResponse.json({
-    invoices: invoices.map((i) => shape(i, !!i.product_id && paid.has(i.product_id))),
-  });
+  return NextResponse.json({ invoices: invoices.map(shape) });
 }
 
 export async function POST(req: Request) {
@@ -106,30 +116,13 @@ export async function POST(req: Request) {
     });
   }
 
-  const sku = `inv-${Math.random().toString(36).slice(2, 8)}`;
-  const { data: product, error: pErr } = await db
-    .from("products")
-    .insert({
-      sku,
-      name: inv.lineItems[0].description.slice(0, 120),
-      price_cents: inv.totalCents,
-      currency: "usd",
-      type: "one_time",
-      active: true,
-      /* the CRM tag says what this was: a bill paid, not a purchase */
-      metadata: { invoice: true, hl_tags: ["ghlv-invoice-paid"] },
-    })
-    .select("id, sku")
-    .single();
-  if (pErr || !product) {
-    return NextResponse.json({ error: "Could not create the invoice." }, { status: 500 });
-  }
-
+  /* no product, no checkout: the invoice is made in HighLevel by the sync
+     and paid on HighLevel's page. An add-on to an order is still an add-on. */
   const { data: invoice, error: iErr } = await db
     .from("invoices")
     .insert({
-      product_id: product.id,
-      product_sku: product.sku,
+      kind: inv.parentOrderId ? "addon" : "custom",
+      source: "platform",
       customer_name: inv.customerName || null,
       customer_email: inv.customerEmail,
       customer_company: inv.customerCompany || null,
@@ -152,5 +145,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Could not create the invoice." }, { status: 500 });
   }
 
-  return NextResponse.json({ invoice: shape(invoice as InvoiceRow, false) });
+  /* straight across, so the pay link exists before the screen refreshes; the
+     outbox row the trigger wrote finds it unchanged a minute later */
+  const synced = await nudgeInvoice(db, String(invoice.id));
+  return NextResponse.json({ invoice: shape((synced ?? invoice) as InvoiceRow) });
 }

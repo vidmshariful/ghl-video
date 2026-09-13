@@ -42,6 +42,32 @@ type Check = (db: DB) => Promise<{ count: number; sample: string[] }>;
 
 const CHECKS: { key: string; rule: string; severity: Severity; run: Check }[] = [
   {
+    key: "void_invoice_paid",
+    rule: "A void invoice is never paid.",
+    severity: "error",
+    run: async (db) => {
+      const { data } = await db.from("invoices").select("id, number").eq("status", "void").not("paid_at", "is", null);
+      return tally(data, (r) => String(r.number));
+    },
+  },
+  {
+    key: "invoice_not_in_highlevel",
+    rule: "An invoice raised here reaches HighLevel within five minutes.",
+    severity: "warn",
+    run: async (db) => {
+      const cutoff = new Date(Date.now() - 5 * 60_000).toISOString();
+      const { data } = await db
+        .from("invoices")
+        .select("id, number")
+        .eq("source", "platform")
+        .eq("status", "open")
+        .is("product_id", null)
+        .is("hl_invoice_id", null)
+        .lt("created_at", cutoff);
+      return tally(data, (r) => String(r.number));
+    },
+  },
+  {
     key: "video_no_owner",
     rule: "Every video belongs to an order, a project or a plan month.",
     severity: "error",

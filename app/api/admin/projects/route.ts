@@ -3,6 +3,7 @@ import { verifyAdmin } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { ballInCourt, normalizePipeline } from "@/lib/pipeline";
 import { invoiceProjectShares } from "@/lib/invoice-shares";
+import { invoiceDisplayNumber, invoicePayUrl, invoiceSettled, invoiceStatusWord } from "@/lib/invoice-state";
 import {
   PROJECT_LIST,
   PROJECT_STATUSES,
@@ -46,7 +47,7 @@ export async function GET(req: Request) {
     db.from("projects").select("*").order("created_at", { ascending: false }),
     /* every invoice, then attributed below to each job it covers: the old
        project_id filter only ever saw the first job on a multi-job invoice */
-    db.from("invoices").select("id, number, total_cents, status, project_id, project_ids, product_sku"),
+    db.from("invoices").select("id, number, hl_number, total_cents, status, project_id, project_ids, product_sku, paid_at, hl_status, hl_url"),
     db
       .from("order_deliverables")
       /* select * so this runs the same before and after the pipeline column
@@ -55,15 +56,6 @@ export async function GET(req: Request) {
       .not("project_id", "is", null)
       .order("position", { ascending: true }),
   ]);
-
-  /* an invoice is paid when a paid order exists for its backing product */
-  const { data: paidOrders } = await db
-    .from("orders")
-    .select("product:products(sku)")
-    .eq("status", "paid");
-  const paidSkus = new Set(
-    ((paidOrders ?? []) as Row[]).map((o) => String((o.product as { sku?: unknown } | null)?.sku ?? "")),
-  );
 
   const { data: contacts } = await db
     .from("customer_contacts")
@@ -94,11 +86,12 @@ export async function GET(req: Request) {
         .filter((s) => s.projectId === id)
         .map((s) => ({
           id: String(i.id),
-          number: String(i.number),
+          number: invoiceDisplayNumber(i),
           /* this job's share of the invoice, not the whole invoice */
           totalCents: s.shareCents,
-          status: String(i.status),
-          paid: paidSkus.has(String(i.product_sku)),
+          status: invoiceStatusWord(i),
+          paid: invoiceSettled(i),
+          payUrl: invoicePayUrl(i),
         })),
     );
     const money = projectBalance(

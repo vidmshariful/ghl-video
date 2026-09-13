@@ -41,6 +41,14 @@ type Invoice = {
   projectIds: string[];
   discountKind: "percent" | "flat" | null;
   discountValue: number | null;
+  /* since phase 3: the number the client sees, where they pay, and where it came from */
+  displayNumber: string;
+  payUrl: string | null;
+  legacy: boolean;
+  source: "platform" | "highlevel" | "migration";
+  kind: string;
+  paidAt: string | null;
+  highlevel: { id: string; number: string | null; status: string | null; url: string | null; sentAt: string | null } | null;
 };
 
 const STATUS_STYLE: Record<string, string> = {
@@ -584,10 +592,15 @@ export function InvoicesScreen() {
             >
               <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                 <p className="font-semibold text-ink">
-                  <span className="mr-2 font-mono text-gold/80">{inv.number}</span>
+                  <span className="mr-2 font-mono text-gold/80">{inv.displayNumber || inv.number}</span>
                   {inv.customerName || inv.customerEmail}
                   {inv.customerCompany ? (
                     <span className="ml-2 text-body-sm text-dim">{inv.customerCompany}</span>
+                  ) : null}
+                  {inv.source === "highlevel" ? (
+                    <span className="ml-2 font-mono text-label uppercase text-dim">made in HighLevel</span>
+                  ) : inv.kind === "retainer" ? (
+                    <span className="ml-2 font-mono text-label uppercase text-dim">retainer month</span>
                   ) : null}
                 </p>
                 <div className="flex items-center gap-3">
@@ -604,11 +617,14 @@ export function InvoicesScreen() {
               <p className="mt-1 font-mono text-label uppercase text-dim">
                 {when(inv.createdAt)}
                 {inv.dueDate ? ` / due ${inv.dueDate}` : ""}
-                {inv.sentAt ? " / sent" : ""}
+                {inv.sentAt ? (inv.highlevel?.sentAt ? " / sent by HighLevel" : " / sent") : ""}
+                {inv.status === "open" && !inv.legacy && !inv.highlevel ? " / on its way to HighLevel" : ""}
+                {inv.highlevel?.status === "viewed" ? " / viewed by the client" : ""}
               </p>
 
               <div className="mt-3 flex flex-wrap items-center gap-2">
-                <CopyField url={`${SITE}/invoice/${inv.token}/`} />
+                {/* the link the client pays on: HighLevel's page, or our page for a legacy invoice */}
+                <CopyField url={inv.highlevel?.url ?? `${SITE}/invoice/${inv.token}/`} />
                 <a
                   href={`/invoice/${inv.token}/`}
                   target="_blank"
@@ -620,21 +636,24 @@ export function InvoicesScreen() {
                 {inv.status === "open" ? (
                   <>
                     {/* only while it is unpaid and not void. The API checks
-                        the same thing again, because a button is not a gate. */}
-                    <button
-                      type="button"
-                      onClick={() => startEdit(inv)}
-                      className="tap shrink-0 rounded-[8px] border border-hair px-3.5 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
-                    >
-                      Edit
-                    </button>
-                    {!inv.sentAt ? (
+                        the same thing again, because a button is not a gate.
+                        An invoice made in HighLevel is edited there. */}
+                    {inv.source !== "highlevel" ? (
+                      <button
+                        type="button"
+                        onClick={() => startEdit(inv)}
+                        className="tap shrink-0 rounded-[8px] border border-hair px-3.5 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
+                      >
+                        Edit
+                      </button>
+                    ) : null}
+                    {!inv.sentAt && inv.source !== "highlevel" ? (
                       <button
                         type="button"
                         onClick={() => act(inv.id, "sent")}
                         className="tap shrink-0 rounded-[8px] border border-hair px-3.5 py-2 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
                       >
-                        Mark sent
+                        {inv.legacy ? "Mark sent" : "Send from HighLevel"}
                       </button>
                     ) : null}
                     <button

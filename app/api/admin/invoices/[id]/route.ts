@@ -2,13 +2,16 @@ import { NextResponse } from "next/server";
 import { verifyAdmin } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { parseInvoiceInput } from "@/lib/invoices";
+import { nudgeInvoice } from "@/lib/highlevel/nudge";
 
 export const runtime = "nodejs";
 
 /*
- * Invoice actions. "sent" stamps sent_at (the team sent the link). "void"
- * closes the invoice AND deactivates its backing product, so the pay link
- * stops working (getActiveProductBySku returns null for inactive products).
+ * Invoice actions. "sent" stamps sent_at and HighLevel sends it (the sync
+ * carries the stamp across; HighLevel's own email holds the pay link).
+ * "void" closes it here and in HighLevel. A legacy invoice, one still
+ * billed through a product, keeps its old behaviour: our email, and the
+ * product switched off so the checkout link stops working.
  */
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const admin = await verifyAdmin(req);
@@ -36,26 +39,18 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
      */
     const { data: existing } = await db
       .from("invoices")
-      .select("id, status, product_id")
+      .select("id, status, product_id, paid_at, source")
       .eq("id", id)
       .maybeSingle();
     if (!existing) return NextResponse.json({ error: "Not found." }, { status: 404 });
     if (existing.status === "void") {
       return NextResponse.json({ error: "This invoice is void. Raise a new one." }, { status: 400 });
     }
-    if (existing.product_id) {
-      const { data: paidOrder } = await db
-        .from("orders")
-        .select("id")
-        .eq("product_id", existing.product_id)
-        .eq("status", "paid")
-        .maybeSingle();
-      if (paidOrder) {
-        return NextResponse.json(
-          { error: "This invoice is paid. It cannot be changed." },
-          { status: 400 },
-        );
-      }
+    if (existing.paid_at) {
+      return NextResponse.json({ error: "This invoice is paid. It cannot be changed." }, { status: 400 });
+    }
+    if (existing.source === "highlevel") {
+      return NextResponse.json({ error: "This invoice was made in HighLevel. Edit it there." }, { status: 400 });
     }
 
     const parsed = parseInvoiceInput(body);
@@ -91,30 +86,44 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         due_date: inv.dueDate,
         project_id: inv.projectId,
         project_ids: inv.projectIds.length ? inv.projectIds : inv.projectId ? [inv.projectId] : [],
+        updated_at: new Date().toISOString(),
       })
       .eq("id", id);
     if (error) {
       return NextResponse.json({ error: "Could not update the invoice." }, { status: 500 });
     }
+    if (!existing.product_id) await nudgeInvoice(db, id);
   } else if (action === "sent") {
-    await db.from("invoices").update({ sent_at: new Date().toISOString() }).eq("id", id);
-    /* the link goes to the client with the invoice itself, so nobody pastes
-       it into a message by hand. Fail-soft: the stamp above already stands. */
-    try {
-      const { sendInvoiceSentEmail } = await import("@/lib/email/notify");
-      await sendInvoiceSentEmail(db, id);
-    } catch (e) {
-      console.error("[invoice] sent email failed:", e instanceof Error ? e.message : e);
+    const { data: inv } = await db
+      .from("invoices")
+      .update({ sent_at: new Date().toISOString() })
+      .eq("id", id)
+      .select("product_id")
+      .single();
+    if (inv?.product_id) {
+      /* legacy: the link goes to the client with the invoice itself, so nobody
+         pastes it into a message by hand. Fail-soft: the stamp already stands. */
+      try {
+        const { sendInvoiceSentEmail } = await import("@/lib/email/notify");
+        await sendInvoiceSentEmail(db, id);
+      } catch (e) {
+        console.error("[invoice] sent email failed:", e instanceof Error ? e.message : e);
+      }
+    } else {
+      /* HighLevel sends it, with its pay link */
+      await nudgeInvoice(db, id);
     }
   } else if (action === "void") {
     const { data: inv } = await db
       .from("invoices")
-      .update({ status: "void" })
+      .update({ status: "void", updated_at: new Date().toISOString() })
       .eq("id", id)
       .select("product_id")
       .single();
     if (inv?.product_id) {
       await db.from("products").update({ active: false }).eq("id", inv.product_id);
+    } else {
+      await nudgeInvoice(db, id);
     }
   } else {
     return NextResponse.json({ error: "Unknown action." }, { status: 400 });

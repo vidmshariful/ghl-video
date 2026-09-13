@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { verifyAdmin } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { drainOutbox, reconcile } from "@/lib/highlevel/sync";
+import { loadHlConfig } from "@/lib/highlevel/config";
+import { locationId } from "@/lib/highlevel/client";
+import { pullInvoices, syncProductsToHighLevel } from "@/lib/highlevel/money";
 import { raise } from "@/lib/alarm";
 
 export const runtime = "nodejs";
@@ -26,6 +29,20 @@ export async function GET(req: Request) {
   const sent = drift.provisioned ? await drainOutbox(db, { limit: 40 }) : null;
   const stuck = sent ? drift.stuck : 0;
 
+  /* the catalogue as HighLevel products, and every invoice made over there */
+  const cfg = drift.provisioned ? await loadHlConfig(db, locationId()) : null;
+  const products = cfg ? await syncProductsToHighLevel(db, cfg) : null;
+  const pulled = cfg ? await pullInvoices(db, cfg, { pages: 3 }) : null;
+  if (products?.errors.length) {
+    await raise(db, {
+      kind: "highlevel.products",
+      severity: "warn",
+      message: `${products.errors.length} catalogue ${products.errors.length === 1 ? "product" : "products"} could not be mirrored into HighLevel.`,
+      fingerprint: "highlevel:products",
+      context: { errors: products.errors.slice(0, 10) },
+    });
+  }
+
   if (drift.missing > 0) {
     await raise(db, {
       kind: "highlevel.drift",
@@ -44,5 +61,11 @@ export async function GET(req: Request) {
       context: { stuck, pending: drift.pending },
     });
   }
-  return NextResponse.json({ ok: true, ...drift, sent: sent ? { processed: sent.processed, failed: sent.failed } : null });
+  return NextResponse.json({
+    ok: true,
+    ...drift,
+    sent: sent ? { processed: sent.processed, failed: sent.failed } : null,
+    products,
+    invoices: pulled,
+  });
 }

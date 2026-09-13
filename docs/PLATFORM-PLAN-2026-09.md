@@ -250,6 +250,19 @@ private integration token and location were supplied for staging, and
 staging's writes to HighLevel are limited to test accounts by code. The
 webhook approach and the plan's enabled features are still open.
 
+Decided 13 September 2026, for phase 3: phase 3 is proven with Stripe
+connected to the sandbox in test mode (the owner connects it); a premade
+sale paid on the site is recorded in HighLevel as a paid invoice on the
+contact, with its Stripe reference; the retainer's monthly bill is a
+HighLevel recurring schedule on the 1st, sent by HighLevel; at go-live
+every existing invoice moves to HighLevel, the paid ones as paid records,
+so a client's whole billing history lives there and the invoice products
+retire. Verified on the sandbox: a client's pay page is
+https://link.msgsndr.com/invoice/{id}; HighLevel amounts are dollars with
+decimals; an invoice is sent as a named user of the sub-account
+(HIGHLEVEL_USER_ID); one open deal per contact per pipeline until
+"Allow duplicate opportunity" is switched on.
+
 1. **The boundary.** Work stays in Supabase, the customer moves to HighLevel,
    with a live mirror of the work in HighLevel custom objects. Confirm.
 2. **Premade checkout.** Stays native on the site (recommended), or moves to

@@ -79,6 +79,7 @@ const CONTACT_FIELDS = [
   ["lastSeen", "GHLV last seen", "YYYY-MM-DD, their last portal visit"],
   ["adminUrl", "GHLV admin record", "the client's record on ghlvideo.com"],
   ["customerId", "GHLV customer id", "our id for them"],
+  ["editingPlan", "GHLV editing plan", "Growth, active, renews 2026-10-02"],
 ];
 
 async function contactFields() {

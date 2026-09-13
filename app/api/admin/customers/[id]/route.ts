@@ -15,6 +15,7 @@ import { linesFrom, portalVisibility } from "@/lib/portal-visibility";
 import { currentCycle, topupCreditsLeft } from "@/lib/subscription-cycles";
 import { creditsUsed } from "@/lib/subscription-slots";
 import { customerLinks } from "@/lib/highlevel/links";
+import { invoiceDisplayNumber, invoiceOpen, invoiceSettled, invoiceStatusWord } from "@/lib/invoice-state";
 
 /** A short-lived signed URL for a private brand file, or null. */
 async function signBrand(db: ReturnType<typeof supabaseAdmin>, path: string | null) {
@@ -71,7 +72,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       .order("created_at", { ascending: false }),
     db
       .from("invoices")
-      .select("id, number, token, total_cents, status, due_date, sent_at, created_at, product_sku, product_id, parent_order_id, line_items")
+      .select("id, number, hl_number, token, total_cents, status, due_date, sent_at, created_at, product_sku, product_id, parent_order_id, line_items, paid_at, hl_status, hl_url, hl_invoice_id, kind, source, amount_paid_cents")
       .ilike("customer_email", email)
       .order("created_at", { ascending: false }),
     db
@@ -154,11 +155,6 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
   const kit = await getBrandKit(db, id);
 
-  const paidSkus = new Set(
-    ((orders ?? []) as Row[])
-      .filter((o) => String(o.status) === "paid")
-      .map((o) => String((o.product as { sku?: unknown } | null)?.sku ?? "")),
-  );
   /* which product each invoice bills through, so an order can say what it was */
   const invoiceByProduct = new Map<string, InvoiceLink>(
     ((invoices ?? []) as Row[])
@@ -190,8 +186,20 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       createdAt: String(s.created_at),
       currentPeriodEnd: (s.current_period_end as string | null) ?? null,
     })),
+    /* paid in HighLevel, with no order behind it: counted from the invoice */
+    paidInvoices: ((invoices ?? []) as Row[])
+      .filter((i) => !i.product_id && invoiceSettled(i))
+      .map((i) => ({
+        amountCents: Number(i.amount_paid_cents || i.total_cents),
+        kind: (["custom", "addon", "retainer", "premade", "plan"].includes(String(i.kind)) ? String(i.kind) : "custom") as
+          | "custom"
+          | "addon"
+          | "retainer"
+          | "premade"
+          | "plan",
+      })),
     openInvoices: ((invoices ?? []) as Row[])
-      .filter((i) => i.status === "open" && !paidSkus.has(String(i.product_sku)))
+      .filter((i) => invoiceOpen(i))
       .map((i) => ({ totalCents: Number(i.total_cents) })),
   };
   const value = lifetimeValue(money, new Date());
@@ -313,6 +321,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       lastSeenAt: (c.last_seen_at as string | null) ?? null,
       createdAt: String(c.created_at),
       highlevelContactId: (c.highlevel_contact_id as string | null) ?? null,
+      /* the partnership's monthly bill, scheduled in HighLevel */
+      retainerScheduleId: (c.hl_retainer_schedule_id as string | null) ?? null,
     },
     highlevel: hl.customer,
     lines,
@@ -369,11 +379,16 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     })),
     invoices: ((invoices ?? []) as Row[]).map((i) => ({
       id: String(i.id),
-      number: String(i.number),
+      number: invoiceDisplayNumber(i),
       token: String(i.token),
       totalCents: Number(i.total_cents),
-      status: String(i.status),
-      paid: paidSkus.has(String(i.product_sku)),
+      status: invoiceStatusWord(i),
+      paid: invoiceSettled(i),
+      paidAt: (i.paid_at as string | null) ?? null,
+      kind: String(i.kind ?? "custom"),
+      source: String(i.source ?? "platform"),
+      /* HighLevel's pay page, once the invoice is there */
+      payUrl: (i.hl_url as string | null) ?? null,
       parentOrderId: (i.parent_order_id as string | null) ?? null,
       dueDate: (i.due_date as string | null) ?? null,
       sentAt: (i.sent_at as string | null) ?? null,

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { applyInbound } from "@/lib/highlevel/inbound";
+import { applyInboundInvoice, inboundInvoiceId } from "@/lib/highlevel/money";
+import { loadHlConfig } from "@/lib/highlevel/config";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,7 +42,18 @@ export async function POST(req: Request) {
     "contact";
   const { data: row } = await db.from("hl_inbound").insert({ event, payload }).select("id").single();
 
-  const result = await applyInbound(db, payload, process.env.HIGHLEVEL_LOCATION_ID ?? null);
+  /* an invoice event (paid, viewed, void) or a contact event */
+  const invoiceId = inboundInvoiceId(payload);
+  const location = process.env.HIGHLEVEL_LOCATION_ID ?? null;
+  let result: { outcome: string; changed: string[] };
+  if (invoiceId && location) {
+    const cfg = await loadHlConfig(db, location);
+    result = cfg
+      ? { outcome: await applyInboundInvoice(db, cfg, invoiceId), changed: ["invoice"] }
+      : { outcome: "HighLevel is not provisioned here", changed: [] };
+  } else {
+    result = await applyInbound(db, payload, location);
+  }
   if (row?.id)
     await db
       .from("hl_inbound")

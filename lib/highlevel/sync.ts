@@ -36,11 +36,12 @@ import { parseRetainer, type Retainer } from "@/lib/retainer";
 import { linesFrom, type ServiceLines } from "@/lib/portal-visibility";
 import { isInvoiceProduct } from "@/lib/order-kind";
 import { normalizeProjectStatus, STUDIO_LABEL } from "@/lib/projects";
+import { syncInvoice, syncOrderSale, syncRetainerSchedule } from "./money";
 
 type Db = SupabaseClient;
 type Row = Record<string, unknown>;
 
-export type SyncKind = "customer" | "project" | "video";
+export type SyncKind = "customer" | "project" | "video" | "invoice" | "order";
 export type Outcome = { status: "done" | "unchanged" | "skipped"; note: string };
 
 /** Thrown inside a nested sync to say "not this one", never a failure. */
@@ -100,7 +101,17 @@ export type CustomerShape = {
   retainer: Retainer | null;
   directBrief: boolean;
   internal: boolean;
+  /** the latest editing plan, live or not, so the CRM can say which */
+  plan: { name: string; status: string; renewsOn: string | null } | null;
 };
+
+/** "Growth, active, renews 2026-10-02": the editing plan in one line. */
+export function planLine(plan: CustomerShape["plan"]): string {
+  if (!plan) return "";
+  const name = plan.name.replace(/^Editing:\s*/i, "");
+  const live = ["active", "trialing", "past_due"].includes(plan.status);
+  return `${name}, ${plan.status.replace(/_/g, " ")}${live && plan.renewsOn ? `, renews ${plan.renewsOn}` : ""}`;
+}
 
 /** What the account is, in the words the CRM's custom field shows. */
 export function arrangementOf(shape: CustomerShape): string {
@@ -141,6 +152,7 @@ export function contactPayload(c: Row, shape: CustomerShape, cfg: HlConfig): { b
     [f.lastSeen]: day(c.last_seen_at),
     [f.adminUrl]: `${siteUrl()}/admin/customers/${c.id}/`,
     [f.customerId]: String(c.id),
+    [f.editingPlan]: planLine(shape.plan),
   };
   const body: Row = {
     locationId: cfg.locationId,
@@ -158,24 +170,39 @@ export function contactPayload(c: Row, shape: CustomerShape, cfg: HlConfig): { b
 
 async function customerShape(db: Db, c: Row): Promise<CustomerShape> {
   const email = String(c.email ?? "").toLowerCase();
-  const [{ data: orders }, { count: projects }, { count: subs }] = await Promise.all([
+  const [{ data: orders }, { count: projects }, { data: subs }] = await Promise.all([
     db.from("orders").select("status, product:products(metadata)").ilike("customer_email", email).eq("status", "paid"),
     db
       .from("projects")
       .select("id", { count: "exact", head: true })
       .ilike("customer_email", email)
       .neq("status", "cancelled"),
-    db.from("subscriptions").select("id", { count: "exact", head: true }).ilike("customer_email", email),
+    db
+      .from("subscriptions")
+      .select("plan_name, status, current_period_end, created_at")
+      .ilike("customer_email", email)
+      .order("created_at", { ascending: false }),
   ]);
   const premadeOrders = ((orders ?? []) as Row[]).filter(
     (o) => !isInvoiceProduct((o.product as { metadata?: { invoice?: unknown } } | null)?.metadata),
   ).length;
   const directBrief = Boolean(c.can_submit_projects);
+  const subRows = (subs ?? []) as Row[];
+  /* the live plan first, else the most recent one */
+  const live = subRows.find((x) => ["active", "trialing", "past_due"].includes(String(x.status)));
+  const latest = live ?? subRows[0] ?? null;
   return {
-    lines: linesFrom({ premadeOrders, projects: projects ?? 0, directBrief, subscriptions: subs ?? 0 }),
+    lines: linesFrom({ premadeOrders, projects: projects ?? 0, directBrief, subscriptions: subRows.length }),
     retainer: parseRetainer(c.retainer),
     directBrief,
     internal: Boolean(c.internal),
+    plan: latest
+      ? {
+          name: String(latest.plan_name ?? "Editing plan"),
+          status: String(latest.status ?? ""),
+          renewsOn: typeof latest.current_period_end === "string" ? latest.current_period_end.slice(0, 10) : null,
+        }
+      : null,
   };
 }
 
@@ -229,14 +256,19 @@ export async function syncCustomer(db: Db, cfg: HlConfig, id: string): Promise<O
   await putLink(db, cfg, { kind: "customer", entity_id: id, hl_kind: "contact", hl_id: contact.id, fingerprint: fp });
   /* the legacy pointer the checkout webhook also writes; filled, never replaced */
   if (!c.highlevel_contact_id) await db.from("customers").update({ highlevel_contact_id: contact.id }).eq("id", id);
-  return { status: "done", note: `contact ${contact.id}${contact.isNew ? " (new)" : ""}` };
+  /* the partnership's monthly bill lives in HighLevel as a schedule */
+  const schedule = await syncRetainerSchedule(db, cfg, c, contact.id, fingerprint);
+  return {
+    status: "done",
+    note: [`contact ${contact.id}${contact.isNew ? " (new)" : ""}`, ...(schedule ? [schedule] : [])].join("; "),
+  };
 }
 
 /* ------------------------------------------------------------------ */
 /* links                                                               */
 /* ------------------------------------------------------------------ */
 
-type HlKind = "contact" | "opportunity" | "record";
+type HlKind = "contact" | "opportunity" | "record" | "invoice" | "schedule" | "estimate";
 type Link = { hl_id: string; fingerprint: string | null };
 
 async function getLink(db: Db, cfg: HlConfig, kind: SyncKind, entityId: string, hlKind: HlKind): Promise<Link | null> {
@@ -517,9 +549,16 @@ export async function syncVideo(db: Db, cfg: HlConfig, id: string): Promise<Outc
 /* ------------------------------------------------------------------ */
 
 export async function syncEntity(db: Db, cfg: HlConfig, kind: SyncKind, id: string): Promise<Outcome> {
+  const deps = {
+    contactIdFor: (customer: Row) => contactIdFor(db, cfg, customer),
+    allowed: syncAllowed,
+    fingerprint,
+  };
   try {
     if (kind === "customer") return await syncCustomer(db, cfg, id);
     if (kind === "project") return await syncProject(db, cfg, id);
+    if (kind === "invoice") return await syncInvoice(db, cfg, id, deps);
+    if (kind === "order") return await syncOrderSale(db, cfg, id, deps);
     return await syncVideo(db, cfg, id);
   } catch (e) {
     if (e instanceof SkipSync) return { status: "skipped", note: e.message };
@@ -538,7 +577,7 @@ export type DrainResult = {
   rows: { id: number; kind: SyncKind; entityId: string; status: Outcome["status"] | "failed"; note: string }[];
 };
 
-const KIND_ORDER: Record<SyncKind, number> = { customer: 0, project: 1, video: 2 };
+const KIND_ORDER: Record<SyncKind, number> = { customer: 0, project: 1, video: 2, invoice: 3, order: 4 };
 const MAX_WAIT_S = 6 * 3600;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -618,16 +657,25 @@ const LINK_OF: Record<SyncKind, { table: string; hlKind: HlKind }> = {
   customer: { table: "customers", hlKind: "contact" },
   project: { table: "projects", hlKind: "opportunity" },
   video: { table: "order_deliverables", hlKind: "record" },
+  invoice: { table: "invoices", hlKind: "invoice" },
+  order: { table: "orders", hlKind: "invoice" },
 };
 
 async function stillThere(cfg: HlConfig, l: { kind: SyncKind; hl_kind: HlKind; hl_id: string }): Promise<boolean> {
   const loc = encodeURIComponent(cfg.locationId);
+  const alt = `altId=${loc}&altType=location`;
   const path =
     l.hl_kind === "contact"
       ? `/contacts/${l.hl_id}`
       : l.hl_kind === "opportunity"
         ? `/opportunities/${l.hl_id}`
-        : `/objects/${l.kind === "project" ? cfg.objects.project.key : cfg.objects.video.key}/records/${l.hl_id}?locationId=${loc}`;
+        : l.hl_kind === "invoice"
+          ? `/invoices/${l.hl_id}?${alt}`
+          : l.hl_kind === "schedule"
+            ? `/invoices/schedule/${l.hl_id}?${alt}`
+            : l.hl_kind === "estimate"
+              ? `/invoices/estimate/list?${alt}&limit=1&offset=0`
+              : `/objects/${l.kind === "project" ? cfg.objects.project.key : cfg.objects.video.key}/records/${l.hl_id}?locationId=${loc}`;
   try {
     await hlFetch(path, { method: "GET" });
     return true;
@@ -648,7 +696,7 @@ export async function reconcile(db: Db, opts: { verify?: number } = {}): Promise
   const cfg = await loadHlConfig(db, loc);
   const result: ReconcileResult = {
     provisioned: Boolean(cfg),
-    enqueued: { customer: 0, project: 0, video: 0 },
+    enqueued: { customer: 0, project: 0, video: 0, invoice: 0, order: 0 },
     verified: 0,
     missing: 0,
     pending: 0,
@@ -656,10 +704,12 @@ export async function reconcile(db: Db, opts: { verify?: number } = {}): Promise
   };
   if (!cfg) return result;
 
-  for (const kind of ["customer", "project", "video"] as SyncKind[]) {
+  for (const kind of ["customer", "project", "video", "invoice", "order"] as SyncKind[]) {
     const { table, hlKind } = LINK_OF[kind];
+    /* orders: only paid ones are sales to record; legacy invoice payments are skipped by the sync itself */
+    const base = db.from(table).select("id, updated_at");
     const [{ data: rows }, { data: links }] = await Promise.all([
-      db.from(table).select("id, updated_at").order("updated_at", { ascending: false }).limit(5000),
+      (kind === "order" ? base.eq("status", "paid") : base).order("updated_at", { ascending: false }).limit(5000),
       db.from("hl_links").select("entity_id, synced_at").eq("kind", kind).eq("hl_kind", hlKind).eq("location_id", loc),
     ]);
     const synced = new Map(((links ?? []) as Row[]).map((l) => [String(l.entity_id), String(l.synced_at)]));

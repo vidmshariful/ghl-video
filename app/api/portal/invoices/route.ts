@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { contextCan, resolvePortalContext } from "@/lib/account-team";
+import { invoiceDisplayNumber, invoicePayUrl, invoiceSettled, invoiceVoided } from "@/lib/invoice-state";
 
 export const runtime = "nodejs";
 
@@ -31,17 +32,17 @@ export async function GET(req: Request) {
   const { data } = await db
     .from("invoices")
     .select(
-      "id, number, token, product_sku, line_items, currency, total_cents, subtotal_cents, discount_kind, discount_value, status, due_date, notes, created_at, sent_at, parent_order_id, project_id, project_ids",
+      "id, number, token, product_sku, line_items, currency, total_cents, subtotal_cents, discount_kind, discount_value, status, due_date, notes, created_at, sent_at, parent_order_id, project_id, project_ids, paid_at, hl_status, hl_url, hl_number, kind, source",
     )
     .ilike("customer_email", ctx.ownerEmail)
     .order("created_at", { ascending: false });
 
   const rows = (data ?? []) as Row[];
 
-  /* an invoice is settled when a paid order exists for its throwaway sku:
-   * the same test the admin invoice screen makes, so the two can never
-   * disagree about whether somebody has paid */
-  const skus = rows.map((r) => String(r.product_sku)).filter(Boolean);
+  /* paid_at is the one test for paid (lib/invoice-state). The order behind a
+   * LEGACY invoice, one paid through checkout before HighLevel held them, is
+   * still looked up so its receipt can be linked. */
+  const skus = rows.map((r) => (r.product_sku ? String(r.product_sku) : "")).filter(Boolean);
   const { data: paidOrders } = skus.length
     ? await db
         .from("orders")
@@ -81,15 +82,16 @@ export async function GET(req: Request) {
 
   return NextResponse.json({
     invoices: rows.map((r) => {
-      const orderId = paidBySku.get(String(r.product_sku)) ?? null;
-      const settled = Boolean(orderId);
-      const voided = String(r.status) === "void";
+      const orderId = r.product_sku ? (paidBySku.get(String(r.product_sku)) ?? null) : null;
+      const settled = invoiceSettled(r);
+      const voided = invoiceVoided(r);
       const due = (r.due_date as string | null) ?? null;
       return {
         id: String(r.id),
-        number: (r.number as string | null) ?? null,
-        /* the public pay page, which is where they actually settle it */
-        payUrl: !settled && !voided ? `/invoice/${String(r.token)}/` : null,
+        number: invoiceDisplayNumber(r) || null,
+        /* where they settle it: HighLevel's pay page, or the old checkout for a legacy one */
+        payUrl: invoicePayUrl(r) ? (r.hl_url ? String(r.hl_url) : `/invoice/${String(r.token)}/`) : null,
+        kind: String(r.kind ?? "custom"),
         /*
          * `description` is the field invoices are actually written with.
          * This read `l.label`, which no invoice has ever had, so every line
@@ -124,6 +126,7 @@ export async function GET(req: Request) {
         /* said plainly rather than left as a date to work out */
         overdue: Boolean(!settled && !voided && due && Date.parse(due) < now),
         settled,
+        paidAt: (r.paid_at as string | null) ?? null,
         voided,
         orderId,
         createdAt: String(r.created_at),
