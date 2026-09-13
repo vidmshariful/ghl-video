@@ -263,6 +263,26 @@ decimals; an invoice is sent as a named user of the sub-account
 (HIGHLEVEL_USER_ID); one open deal per contact per pipeline until
 "Allow duplicate opportunity" is switched on.
 
+Built 13 September 2026, for phase 4: client-side email leaves through
+HighLevel's conversations (lib/highlevel/email.ts decides the door; the
+templates, wording and email log stay ours, the log carries HighLevel's
+message id and its delivery verdict); team alerts stay on Brevo, because a
+teammate is not a CRM contact. The portal's Messages and the client's
+HighLevel thread are one conversation: portal messages go over as live
+chat, the studio's words from inside HighLevel come back marked with their
+channel. The contact carries "GHLV waiting on" (brief, review, approval)
+with the tag ghlv-waiting-on-client, and "GHLV check-in", so the three
+workflows can be built in the sub-account without our cron:
+
+- Chase sweep: trigger Contact Changed, filter GHLV waiting on is "brief";
+  wait 3 days; if still "brief", send the brief reminder email; repeat once.
+- Review nudge: the same on "review", 2 days, the review nudge email.
+- Quarterly check-in: trigger on the GHLV check-in date field; send the
+  check-in email and book the call.
+
+Our own chase cron keeps running, through HighLevel email, until those
+workflows exist; then it is switched off. SMS waits for A2P.
+
 1. **The boundary.** Work stays in Supabase, the customer moves to HighLevel,
    with a live mirror of the work in HighLevel custom objects. Confirm.
 2. **Premade checkout.** Stays native on the site (recommended), or moves to
