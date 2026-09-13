@@ -91,6 +91,8 @@ export async function GET(req: Request) {
         number: invoiceDisplayNumber(r) || null,
         /* where they settle it: HighLevel's pay page, or the old checkout for a legacy one */
         payUrl: invoicePayUrl(r) ? (r.hl_url ? String(r.hl_url) : `/invoice/${String(r.token)}/`) : null,
+        /* the invoice itself, paid or not: their copy of what was billed */
+        viewUrl: `/invoice/${String(r.token)}/`,
         kind: String(r.kind ?? "custom"),
         /*
          * `description` is the field invoices are actually written with.

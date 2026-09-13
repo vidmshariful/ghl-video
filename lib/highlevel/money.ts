@@ -111,8 +111,11 @@ export function invoiceStateFrom(hl: Row): Row {
     updated_at: new Date().toISOString(),
   };
   if (paid) patch.paid_at = typeof hl.lastPaidAt === "string" ? hl.lastPaidAt : new Date().toISOString();
-  else if (status === "void" || status === "refunded") patch.paid_at = null;
-  if (status === "void") patch.status = "void";
+  else if (status === "void" || status === "voided" || status === "refunded") patch.paid_at = null;
+  if (status === "void" || status === "voided") {
+    patch.status = "void";
+    patch.hl_status = "void";
+  }
   return patch;
 }
 
@@ -280,7 +283,10 @@ export async function syncInvoice(
   if (hlId) {
     const fresh = hl ?? (await fetchInvoice(cfg, hlId));
     if (fresh) await applyInvoiceState(db, id, fresh);
-    await putLink(db, cfg, { kind: "invoice", entity_id: id, hl_kind: "invoice", hl_id: hlId, fingerprint: fp });
+    /* HighLevel stops answering for a voided or deleted invoice, so the link
+       goes too: the nightly check would otherwise read it as drift forever */
+    if (wantVoid) await dropLink(db, "invoice", id, "invoice");
+    else await putLink(db, cfg, { kind: "invoice", entity_id: id, hl_kind: "invoice", hl_id: hlId, fingerprint: fp });
   }
   if (!notes.length) return { status: "unchanged", note: `invoice ${hlId}` };
   return { status: "done", note: [`invoice ${hlId}`, ...notes].join("; ") };

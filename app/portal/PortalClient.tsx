@@ -855,6 +855,8 @@ type Invoice = {
   id: string;
   number: string | null;
   payUrl: string | null;
+  viewUrl: string;
+  kind: string;
   lineItems: { label: string; amountCents: number; quantity: number; unitCents: number }[];
   projects: string[];
   totalCents: number;
@@ -863,6 +865,7 @@ type Invoice = {
   dueDate: string | null;
   overdue: boolean;
   settled: boolean;
+  paidAt: string | null;
   voided: boolean;
   createdAt: string;
 };
@@ -885,12 +888,51 @@ function OpenInvoices() {
   }, []);
 
   const owing = invoices.filter((i) => !i.settled && !i.voided);
-  if (owing.length === 0) return null;
+  /* what they have paid, newest first. Since invoices are paid in HighLevel
+     (September 2026) a paid one has no order behind it, so this is the only
+     place their receipt lives on this screen. */
+  const paid = invoices.filter((i) => i.settled).sort((a, b) => (b.paidAt ?? "").localeCompare(a.paidAt ?? ""));
+  if (owing.length === 0 && paid.length === 0) return null;
 
   const total = owing.reduce((sum, i) => sum + i.totalCents, 0);
 
   return (
-    <div className="mb-3">
+    <div className="mb-3 grid gap-3">
+      {paid.length > 0 && (
+        <Card title={paid.length === 1 ? "Paid invoice" : "Paid invoices"} padded={false}>
+          <ul className="divide-y divide-hair">
+            {paid.map((i) => (
+              <li key={i.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-5 py-3">
+                <div className="min-w-0">
+                  <p className="text-body-sm font-semibold text-ink">
+                    {i.lineItems[0]?.label ?? "Invoice"}
+                    {i.lineItems.length > 1 ? (
+                      <span className="text-muted"> and {i.lineItems.length - 1} more</span>
+                    ) : null}
+                  </p>
+                  <p className="mt-0.5 font-mono text-label uppercase text-dim">
+                    {i.number ?? "invoice"}
+                    {i.paidAt ? ` / paid ${day(i.paidAt)}` : ""}
+                    {i.kind === "retainer" ? " / retainer month" : ""}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-3">
+                  <span className="font-mono text-body-sm font-bold tabular-nums text-ink">
+                    {money(i.totalCents, i.currency)}
+                  </span>
+                  <span className="rounded-full border border-green/40 px-2.5 py-0.5 font-mono text-label uppercase text-green">
+                    Paid
+                  </span>
+                  <a href={i.viewUrl} target="_blank" rel="noopener" className="text-label text-muted hover:text-gold">
+                    View
+                  </a>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+      {owing.length > 0 && (
       <Card
         tone="dark"
         title={owing.length === 1 ? "One invoice to pay" : `${owing.length} invoices to pay`}
@@ -976,6 +1018,7 @@ function OpenInvoices() {
           ))}
         </ul>
       </Card>
+      )}
     </div>
   );
 }

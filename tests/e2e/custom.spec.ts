@@ -1,12 +1,13 @@
 import { test, expect } from "@playwright/test";
-import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import { api, ensureLogin, env, signIn, staging, tokenFor, watchConsole } from "./helpers";
 
 /*
  * The custom line, end to end, on staging: the studio opens a client and a
- * project, raises the invoice, the client pays it in Stripe test mode, and
- * the money lands on the project with no video row and no brief. Then the
+ * project, raises the invoice, HighLevel holds it and the client pays it
+ * there (the payment is recorded the way a card payment settles on
+ * HighLevel's page), and the money lands on the project with no order row,
+ * no video row and no brief. Then the
  * production line runs station by station, the client approves the
  * animation and the delivery, and finally briefs a second project directly.
  * Both sides, every step.
@@ -15,17 +16,18 @@ test.describe.configure({ mode: "serial" });
 
 const client = { email: "qa-custom@ghlvideo.test", password: "walk-through-2026!" };
 const admin = { email: env.QA_ADMIN_EMAIL ?? "", password: env.QA_ADMIN_PASSWORD ?? "" };
-const canRun = staging && Boolean(env.STRIPE_SECRET_KEY?.startsWith("sk_test_")) && Boolean(admin.password);
+const canRun = staging && Boolean(env.HIGHLEVEL_API_TOKEN) && Boolean(env.HIGHLEVEL_LOCATION_ID) && Boolean(admin.password);
 const stamp = Date.now().toString(36);
+const LOC = env.HIGHLEVEL_LOCATION_ID ?? "";
 
 let customerId = "";
 let projectId = "";
-let invoiceSku = "";
+let invoiceId = "";
 let invoiceNumber = "";
-let orderId = "";
+let hlInvoiceId = "";
 
 test.describe("custom, as the studio and the client", () => {
-  test.skip(!canRun, "needs staging, a Stripe test key and the QA admin in .env.local");
+  test.skip(!canRun, "needs staging, the sandbox token and the QA admin in .env.local");
 
   test("the studio opens the client, the project and the invoice", async () => {
     await ensureLogin(client);
@@ -67,55 +69,51 @@ test.describe("custom, as the studio and the client", () => {
         notes: "Walkthrough invoice.",
       },
     });
-    invoiceNumber = inv.invoice.number;
-    /* the pay link carries the sku; the API answer does not, so read the row */
+    invoiceId = inv.invoice.id;
+    /* no product, no checkout: the invoice is made in HighLevel by the sync,
+       and the client's pay link is HighLevel's page */
     const db = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
-    const { data: row } = await db.from("invoices").select("product_sku").eq("id", inv.invoice.id).single();
-    invoiceSku = String(row?.product_sku ?? "");
-    expect(invoiceSku).toMatch(/^inv-/);
+    let { data: row } = await db.from("invoices").select("product_sku, hl_invoice_id, hl_number, hl_url").eq("id", invoiceId).single();
+    if (!row?.hl_invoice_id) {
+      await api("/api/cron/hl-sync/", { token });
+      ({ data: row } = await db.from("invoices").select("product_sku, hl_invoice_id, hl_number, hl_url").eq("id", invoiceId).single());
+    }
+    expect(row?.product_sku).toBeNull();
+    hlInvoiceId = String(row?.hl_invoice_id ?? "");
+    expect(hlInvoiceId).toMatch(/^[0-9a-f]{24}$/);
+    expect(row?.hl_url).toBe(`https://link.msgsndr.com/invoice/${hlInvoiceId}`);
+    invoiceNumber = String(row?.hl_number ?? inv.invoice.number);
   });
 
-  test("the client pays the invoice and the money lands on the project, not as premade work", async () => {
-    const intent = await api<{ paymentIntentId: string; amountCents: number }>("/api/checkout/create-intent/", {
+  test("the client pays the invoice in HighLevel and the money lands on the project, not as premade work", async () => {
+    const db = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
+    const { count: ordersBefore } = await db.from("orders").select("id", { count: "exact", head: true }).ilike("customer_email", client.email);
+
+    /* the payment lands on HighLevel's side, recorded the way a card payment settles there */
+    const r = await fetch(`https://services.leadconnectorhq.com/invoices/${hlInvoiceId}/record-payment`, {
       method: "POST",
-      body: { sku: invoiceSku },
-    });
-    expect(intent.amountCents).toBe(150000);
-    const fin = await api<{ orderId: string }>("/api/checkout/finalize/", {
-      method: "POST",
-      body: {
-        paymentIntentId: intent.paymentIntentId,
-        email: client.email,
-        name: "QA Custom Client",
-        company: "QA Custom Co",
-        phone: "+15555550101",
-        password: client.password,
-        bumpIds: [],
-        couponCode: "",
+      headers: {
+        Authorization: `Bearer ${env.HIGHLEVEL_API_TOKEN}`,
+        Version: "2021-07-28",
+        "Content-Type": "application/json",
+        Accept: "application/json",
       },
+      body: JSON.stringify({ altId: LOC, altType: "location", mode: "card", card: { brand: "visa", last4: "4242" }, notes: `walkthrough ${stamp}`, amount: 1500 }),
     });
-    orderId = fin.orderId;
-    const stripe = new Stripe(env.STRIPE_SECRET_KEY);
-    const confirmed = await stripe.paymentIntents.confirm(intent.paymentIntentId, {
-      payment_method: "pm_card_visa",
-      return_url: "http://localhost:3200/checkout/thank-you/",
-    });
-    expect(confirmed.status).toBe("succeeded");
+    expect(r.ok, `record-payment -> ${r.status}: ${(await r.text()).slice(0, 200)}`).toBeTruthy();
 
-    let order: { status: string; kind: string | null; paysInvoice: string | null } = { status: "", kind: null, paysInvoice: null };
-    for (let i = 0; i < 10 && order.status !== "paid"; i += 1) {
-      order = await api(`/api/orders/${orderId}/`);
-      if (order.status !== "paid") await new Promise((r) => setTimeout(r, 1500));
-    }
-    expect(order.status).toBe("paid");
-    expect(order.kind).toBe("invoice");
-    expect(order.paysInvoice).toBe(invoiceNumber);
-
+    /* the minute cron reads it back */
     const token = await tokenFor(admin);
-    const vids = await api<{ deliverables: unknown[] }>(`/api/admin/orders/${orderId}/deliverables/`, { token });
-    expect(vids.deliverables.length).toBe(0);
-    const job = await api<{ job: { stage: string } }>(`/api/admin/orders/${orderId}/job/`, { token });
-    expect(job.job.stage).toBe("delivered");
+    const out = await api<{ failed: number; rows: unknown[] }>("/api/cron/hl-sync/", { token });
+    expect(out.failed, JSON.stringify(out.rows)).toBe(0);
+    const { data: row } = await db.from("invoices").select("paid_at, hl_status, amount_paid_cents").eq("id", invoiceId).single();
+    expect(row?.paid_at).toBeTruthy();
+    expect(row?.hl_status).toBe("paid");
+    expect(Number(row?.amount_paid_cents)).toBe(150000);
+
+    /* money, never work: no order row, so no video row and no brief to chase */
+    const { count: ordersAfter } = await db.from("orders").select("id", { count: "exact", head: true }).ilike("customer_email", client.email);
+    expect(ordersAfter).toBe(ordersBefore);
     const projects = await api<{ projects: { id: string; money: { paidCents: number; valueCents: number } }[] }>(
       "/api/admin/projects/",
       { token },
@@ -134,7 +132,9 @@ test.describe("custom, as the studio and the client", () => {
     await expect(page.getByText(`Walkthrough explainer ${stamp}`).first()).toBeVisible();
     await page.goto("/portal/orders/");
     await expect(page.getByRole("heading", { name: /billing/i })).toBeVisible();
-    await expect(page.getByText(new RegExp(`Invoice ${invoiceNumber}`)).first()).toBeVisible();
+    /* their receipt: the paid invoice, by HighLevel's number, with nothing to pay */
+    await expect(page.getByText(new RegExp(`${invoiceNumber} / paid`)).first()).toBeVisible();
+    await expect(page.getByText(/invoice to pay/i)).toHaveCount(0);
     await expect(page.getByText(/waiting on your brief/i)).toHaveCount(0);
     expect(errors, errors.join("\n")).toEqual([]);
   });

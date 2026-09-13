@@ -706,10 +706,12 @@ export async function reconcile(db: Db, opts: { verify?: number } = {}): Promise
 
   for (const kind of ["customer", "project", "video", "invoice", "order"] as SyncKind[]) {
     const { table, hlKind } = LINK_OF[kind];
-    /* orders: only paid ones are sales to record; legacy invoice payments are skipped by the sync itself */
+    /* orders: only paid ones are sales to record (legacy invoice payments are
+       skipped by the sync itself); invoices: a void one has nothing over there */
     const base = db.from(table).select("id, updated_at");
+    const scoped = kind === "order" ? base.eq("status", "paid") : kind === "invoice" ? base.neq("status", "void") : base;
     const [{ data: rows }, { data: links }] = await Promise.all([
-      (kind === "order" ? base.eq("status", "paid") : base).order("updated_at", { ascending: false }).limit(5000),
+      scoped.order("updated_at", { ascending: false }).limit(5000),
       db.from("hl_links").select("entity_id, synced_at").eq("kind", kind).eq("hl_kind", hlKind).eq("location_id", loc),
     ]);
     const synced = new Map(((links ?? []) as Row[]).map((l) => [String(l.entity_id), String(l.synced_at)]));

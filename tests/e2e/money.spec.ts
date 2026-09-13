@@ -140,9 +140,10 @@ test.describe("money, in HighLevel", () => {
       notes: `walkthrough ${stamp}`,
       amount: 1800,
     });
-    /* the minute cron reads it back */
-    const out = await api<{ invoices: { paid: number; changed: number } | null }>("/api/cron/hl-sync/", { token });
-    expect(out.invoices?.paid ?? 0).toBeGreaterThanOrEqual(1);
+    /* the minute cron reads it back, either through the outbox row the send
+       left behind or through the poll of open invoices; both end the same */
+    const out = await api<{ failed: number; rows: Row[] }>("/api/cron/hl-sync/", { token });
+    expect(out.failed, JSON.stringify(out.rows)).toBe(0);
     const { data: row } = await db().from("invoices").select("paid_at, hl_status, amount_paid_cents").eq("id", invoiceId).single();
     expect(row?.paid_at).toBeTruthy();
     expect(row?.hl_status).toBe("paid");
@@ -235,8 +236,16 @@ test.describe("money, in HighLevel", () => {
     await api(`/api/admin/invoices/${id}/`, { method: "PATCH", token, body: { action: "void" } });
     const { data: row } = await db().from("invoices").select("status, hl_status, hl_invoice_id, paid_at").eq("id", id).single();
     expect(row?.status).toBe("void");
+    expect(row?.hl_status).toBe("void");
     expect(row?.paid_at).toBeNull();
-    const hlInv = await hl("GET", `/invoices/${String(row?.hl_invoice_id)}?${Q}`);
-    expect(String(hlInv.status)).toBe("void");
+    /* HighLevel stops answering for a voided invoice: gone from its list and its pay page */
+    const r = await fetch(`${HL}/invoices/${String(row?.hl_invoice_id)}?${Q}`, {
+      headers: { Authorization: `Bearer ${env.HIGHLEVEL_API_TOKEN}`, Version: "2021-07-28", Accept: "application/json" },
+    });
+    const body = (await r.json().catch(() => ({}))) as Row;
+    expect(r.status === 404 || String(body.status) === "void", `HighLevel answered ${r.status} ${JSON.stringify(body).slice(0, 120)}`).toBeTruthy();
+    /* and no link is left for the nightly check to chase */
+    const { data: link } = await db().from("hl_links").select("hl_id").eq("kind", "invoice").eq("entity_id", id).maybeSingle();
+    expect(link).toBeNull();
   });
 });
