@@ -158,6 +158,7 @@ export function ChatThread({
               <div key={m.id} className={`flex flex-col ${mine ? "items-end" : "items-start"}`}>
                 <span className="mb-1 inline-flex items-center gap-1.5 font-mono text-label uppercase text-dim">
                   {studio ? "GHL Video" : m.senderName || "Client"}
+                  {m.channel === "email" ? " by email" : m.channel === "sms" ? " by text" : m.channel === "whatsapp" ? " on WhatsApp" : ""}
                   <span aria-hidden="true" className="inline-block h-0.5 w-0.5 rounded-full bg-current opacity-60" />
                   {timeLabel(m.createdAt)}
                 </span>

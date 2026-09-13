@@ -5,6 +5,8 @@ import { drainOutbox } from "@/lib/highlevel/sync";
 import { loadHlConfig } from "@/lib/highlevel/config";
 import { locationId } from "@/lib/highlevel/client";
 import { pollOpenInvoices, pullInvoices } from "@/lib/highlevel/money";
+import { mirrorMissing, pullRecentConversations } from "@/lib/highlevel/conversations";
+import { refreshEmailStatuses } from "@/lib/highlevel/email-log";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,13 +40,22 @@ export async function GET(req: Request) {
   /* money moves the other way too: what was paid on HighLevel's page, and
      invoices made over there (by hand or by a retainer schedule) */
   let invoices: unknown = null;
+  let messages: unknown = null;
+  let email: unknown = null;
   if (provisioned) {
     const cfg = await loadHlConfig(db, locationId());
     if (cfg) {
       const polled = await pollOpenInvoices(db, cfg);
       const pulled = await pullInvoices(db, cfg, { pages: 1 });
       invoices = { ...polled, imported: pulled.imported, seen: pulled.seen, skipped: pulled.skipped };
+      /* the conversation, both ways: the studio's words from inside HighLevel
+         onto the portal threads, and any portal message a hiccup left behind */
+      const pulledMessages = await pullRecentConversations(db, cfg);
+      const mirrored = await mirrorMissing(db);
+      messages = { ...pulledMessages, mirrored };
+      /* what became of the emails HighLevel queued */
+      email = await refreshEmailStatuses(db);
     }
   }
-  return NextResponse.json({ ok: true, provisioned, ...totals, rows, invoices });
+  return NextResponse.json({ ok: true, provisioned, ...totals, rows, invoices, messages, email });
 }

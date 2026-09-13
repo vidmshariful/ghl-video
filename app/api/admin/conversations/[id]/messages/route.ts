@@ -21,6 +21,7 @@ type MessageRow = {
   body: string;
   attachments: StoredAttachment[] | null;
   created_at: string;
+  channel?: string | null;
 };
 type CustomerJoin = { name: string | null; company: string | null } | null;
 
@@ -47,9 +48,25 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const order = (row as { order?: OrderJoin }).order ?? null;
   const customer = (row as { customer?: CustomerJoin }).customer ?? null;
 
+  /* the studio's own words from inside HighLevel, and the client's replies
+     by email or SMS, pulled onto this thread first */
+  try {
+    if (process.env.HIGHLEVEL_API_TOKEN && process.env.HIGHLEVEL_LOCATION_ID) {
+      const [{ loadHlConfig }, { locationId }, { pullConversation }] = await Promise.all([
+        import("@/lib/highlevel/config"),
+        import("@/lib/highlevel/client"),
+        import("@/lib/highlevel/conversations"),
+      ]);
+      const cfg = await loadHlConfig(db, locationId());
+      if (cfg) await pullConversation(db, cfg, row as unknown as Record<string, unknown>);
+    }
+  } catch (e) {
+    console.error(`[chat] pull from HighLevel failed: ${e instanceof Error ? e.message : e}`);
+  }
+
   const { data } = await db
     .from("messages")
-    .select("id, sender_role, sender_name, body, attachments, created_at")
+    .select("id, sender_role, sender_name, body, attachments, created_at, channel")
     .eq("conversation_id", id)
     .order("created_at", { ascending: true });
   const chat = await Promise.all(

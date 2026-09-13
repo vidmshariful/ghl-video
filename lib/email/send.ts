@@ -1,13 +1,18 @@
 import "server-only";
 import { logEmail } from "./log";
+import { emailRoute, sendViaHighLevel } from "@/lib/highlevel/email";
 
 /*
- * Transactional email via Brevo's HTTP API (the same Brevo account already used
- * for Supabase auth SMTP; generate an API key under SMTP & API -> API Keys).
+ * Transactional email. Since phase 4 (September 2026) every client-side email
+ * leaves through HighLevel's conversations, so it sits on the client's
+ * contact over there and a reply lands on the same thread; team alerts still
+ * go through Brevo's HTTP API (the same Brevo account used for Supabase auth
+ * SMTP). lib/highlevel/email.ts decides the door.
  *
- * Fail-soft by design: with no BREVO_API_KEY, or on any send error, it logs and
+ * Fail-soft by design: with no key, or on any send error, it logs and
  * returns false instead of throwing, so a failed email never breaks the action
- * that triggered it (e.g. posting an order update).
+ * that triggered it (e.g. posting an order update). A HighLevel failure falls
+ * back to Brevo when Brevo can send.
  *
  * Env:
  *  - BREVO_API_KEY    Brevo API key (required to actually send)
@@ -28,6 +33,41 @@ export type SendEmailInput = {
 export type SendResult = { ok: boolean; error?: string };
 
 export async function sendEmail(input: SendEmailInput): Promise<SendResult> {
+  if (emailRoute(input.log?.templateKey, input.to) === "highlevel") {
+    const hl = await sendViaHighLevel({
+      to: input.to,
+      toName: input.toName,
+      subject: input.subject,
+      html: input.html,
+      replyTo: input.replyTo,
+    });
+    if (hl.ok) {
+      await logEmail({
+        to: input.to,
+        toName: input.toName,
+        subject: input.subject,
+        status: "sent",
+        source: input.log?.source,
+        templateKey: input.log?.templateKey,
+        meta: { ...(input.log?.meta ?? {}), provider: "highlevel", hl_message_id: hl.messageId, hl_conversation_id: hl.conversationId },
+      });
+      return { ok: true };
+    }
+    console.error("[email] HighLevel send failed, falling back:", hl.error);
+    if (!process.env.BREVO_API_KEY) {
+      await logEmail({
+        to: input.to,
+        toName: input.toName,
+        subject: input.subject,
+        status: "failed",
+        error: `HighLevel: ${hl.error}`,
+        source: input.log?.source,
+        templateKey: input.log?.templateKey,
+        meta: { ...(input.log?.meta ?? {}), provider: "highlevel" },
+      });
+      return { ok: false, error: `HighLevel: ${hl.error}` };
+    }
+  }
   const key = process.env.BREVO_API_KEY;
   if (!key) {
     console.warn("[email] BREVO_API_KEY not set; skipping send to", input.to);

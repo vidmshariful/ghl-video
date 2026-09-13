@@ -20,7 +20,23 @@ type MessageRow = {
   body: string;
   attachments: StoredAttachment[] | null;
   created_at: string;
+  channel?: string | null;
 };
+
+async function pullForThread(db: DB, conv: ConversationRow) {
+  try {
+    if (!process.env.HIGHLEVEL_API_TOKEN || !process.env.HIGHLEVEL_LOCATION_ID) return;
+    const [{ loadHlConfig }, { locationId }, { pullConversation }] = await Promise.all([
+      import("@/lib/highlevel/config"),
+      import("@/lib/highlevel/client"),
+      import("@/lib/highlevel/conversations"),
+    ]);
+    const cfg = await loadHlConfig(db, locationId());
+    if (cfg) await pullConversation(db, cfg, conv as unknown as Record<string, unknown>);
+  } catch (e) {
+    console.error(`[chat] pull from HighLevel failed: ${e instanceof Error ? e.message : e}`);
+  }
+}
 
 /* The conversation, only if it belongs to this verified email. */
 async function owned(db: DB, id: string, email: string): Promise<ConversationRow | null> {
@@ -53,9 +69,13 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const conv = await owned(db, id, email);
   if (!conv) return NextResponse.json({ error: "Not found." }, { status: 404 });
 
+  /* anything the studio said from inside HighLevel since we last looked,
+     at most once every fifteen seconds; a hiccup there does not hide the thread */
+  await pullForThread(db, conv);
+
   const { data } = await db
     .from("messages")
-    .select("id, sender_role, sender_name, body, attachments, created_at")
+    .select("id, sender_role, sender_name, body, attachments, created_at, channel")
     .eq("conversation_id", id)
     .order("created_at", { ascending: true });
 

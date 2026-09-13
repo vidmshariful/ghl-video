@@ -158,6 +158,9 @@ test.describe("editing, as the client and the studio", () => {
   });
 
   test("a batch of shorts costs only its shorts, is told as one, and finishes when they do", async () => {
+    /* fourteen calls in a row, each a full round through the dev server: this
+       one step takes a minute on a quiet machine and the default budget is a minute */
+    test.slow();
     const me = await tokenFor(client);
     const token = await tokenFor(admin);
     const patch = (body: Record<string, unknown>) => api<Record<string, unknown>>("/api/admin/editing/", { method: "PATCH", token, body });

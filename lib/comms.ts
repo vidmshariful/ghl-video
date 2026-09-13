@@ -75,6 +75,19 @@ export type CommAction = {
   notifications: { kind: string; audience: Audience; to: CommTo; note?: string }[];
 };
 
+/**
+ * Who a template is addressed to, from the registry below. Client-side
+ * audiences (the client, a lead, a partner) leave through HighLevel so the
+ * email sits on their contact; team-side ones do not belong in the CRM.
+ */
+export function emailAudience(templateKey: string): CommTo | null {
+  for (const action of COMM_ACTIONS) {
+    const hit = action.emails.find((e) => e.key === templateKey);
+    if (hit) return hit.to;
+  }
+  return null;
+}
+
 export const COMM_ACTIONS: CommAction[] = [
   /* ---- new order ---- */
   {

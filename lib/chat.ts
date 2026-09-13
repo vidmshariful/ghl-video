@@ -30,6 +30,8 @@ type MessageRow = {
   body: string;
   attachments: StoredAttachment[] | null;
   created_at: string;
+  /* portal: typed here; email, sms, live_chat: said in HighLevel and pulled across */
+  channel?: string | null;
 };
 export type ShapedMessage = {
   id: string;
@@ -38,6 +40,7 @@ export type ShapedMessage = {
   body: string;
   attachments: SignedAttachment[];
   createdAt: string;
+  channel: string;
 };
 
 type DB = SupabaseClient;
@@ -82,6 +85,7 @@ export async function signAttachments(
 }
 
 export async function shapeMessage(db: DB, row: MessageRow): Promise<ShapedMessage> {
+  const channel = row.channel && row.channel !== "portal_only" ? row.channel : "portal";
   return {
     id: row.id,
     senderRole: row.sender_role,
@@ -89,6 +93,7 @@ export async function shapeMessage(db: DB, row: MessageRow): Promise<ShapedMessa
     body: row.body,
     attachments: await signAttachments(db, row.attachments),
     createdAt: row.created_at,
+    channel,
   };
 }
 
@@ -171,11 +176,27 @@ export async function postMessage(
       body,
       attachments,
     })
-    .select("id, sender_role, sender_name, body, attachments, created_at")
+    .select("id, sender_role, sender_name, body, attachments, created_at, channel")
     .single();
   if (error || !data) throw new Error(error?.message ?? "Could not send the message.");
 
   const row = data as MessageRow;
+
+  /* the same words on the client's HighLevel thread, so the studio's inbox
+     over there is the portal's; a hiccup here is caught up by the cron */
+  try {
+    const { mirrorMessage } = await import("@/lib/highlevel/conversations");
+    await mirrorMessage(db, {
+      id: row.id,
+      conversationId,
+      senderRole,
+      senderName,
+      body,
+      attachments: attachments.map((a) => ({ name: a.name })),
+    });
+  } catch (e) {
+    console.error(`[chat] message ${row.id} not mirrored to HighLevel: ${e instanceof Error ? e.message : e}`);
+  }
   await db
     .from("conversations")
     .update({

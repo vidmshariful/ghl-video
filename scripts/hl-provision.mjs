@@ -80,6 +80,8 @@ const CONTACT_FIELDS = [
   ["adminUrl", "GHLV admin record", "the client's record on ghlvideo.com"],
   ["customerId", "GHLV customer id", "our id for them"],
   ["editingPlan", "GHLV editing plan", "Growth, active, renews 2026-10-02"],
+  ["waitingOn", "GHLV waiting on", "brief, review, approval, or empty: what the client owes us right now"],
+  ["checkIn", "GHLV check-in", "YYYY-MM-DD, the retainer's next check-in"],
 ];
 
 async function contactFields() {

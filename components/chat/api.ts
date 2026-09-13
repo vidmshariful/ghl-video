@@ -23,6 +23,8 @@ export type ChatMessage = {
      went (or did not), an order update posted. Admin threads only; the
      portal API never sends the field, so clients never see the laundry. */
   kind?: "message" | "event";
+  /* portal: typed here; email, sms, live_chat: said in HighLevel and pulled across */
+  channel?: string;
 };
 
 async function token(): Promise<string | null> {

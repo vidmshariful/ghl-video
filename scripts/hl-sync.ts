@@ -17,6 +17,8 @@ import { createClient } from "@supabase/supabase-js";
 import { drainOutbox, enqueue, reconcile, type SyncKind } from "../lib/highlevel/sync";
 import { loadHlConfig } from "../lib/highlevel/config";
 import { pollOpenInvoices, pullInvoices, syncProductsToHighLevel } from "../lib/highlevel/money";
+import { mirrorMissing, pullRecentConversations } from "../lib/highlevel/conversations";
+import { refreshEmailStatuses } from "../lib/highlevel/email-log";
 
 for (const line of readFileSync(process.env.GHLV_ENV === "prod" ? ".env.prod.local" : ".env.local", "utf8").split("\n")) {
   const m = line.match(/^([A-Z0-9_]+)=(.*)$/);
@@ -54,6 +56,11 @@ async function money(): Promise<void> {
     console.log(
       `  money: ${polled.checked} open invoices checked, ${polled.paid} now paid, ${polled.changed} changed; ${pulled.imported} imported from HighLevel${pulled.skipped.length ? `; skipped: ${pulled.skipped.join(" | ")}` : ""}`,
     );
+  const talk = await pullRecentConversations(db, cfg);
+  const mirrored = await mirrorMissing(db);
+  if (talk.landed || mirrored) console.log(`  messages: ${talk.landed} pulled from HighLevel, ${mirrored} sent across`);
+  const mail = await refreshEmailStatuses(db);
+  if (mail.checked) console.log(`  email: ${mail.checked} checked, ${mail.failed} failed, ${mail.delivered} delivered`);
 }
 
 async function drainAll(): Promise<number> {

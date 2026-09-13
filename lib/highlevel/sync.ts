@@ -36,6 +36,7 @@ import { parseRetainer, type Retainer } from "@/lib/retainer";
 import { linesFrom, type ServiceLines } from "@/lib/portal-visibility";
 import { isInvoiceProduct } from "@/lib/order-kind";
 import { normalizeProjectStatus, STUDIO_LABEL } from "@/lib/projects";
+import { ballInCourt, normalizePipeline } from "@/lib/pipeline";
 import { syncInvoice, syncOrderSale, syncRetainerSchedule } from "./money";
 
 type Db = SupabaseClient;
@@ -103,6 +104,8 @@ export type CustomerShape = {
   internal: boolean;
   /** the latest editing plan, live or not, so the CRM can say which */
   plan: { name: string; status: string; renewsOn: string | null } | null;
+  /** what the client owes us right now: a brief, a review, an approval, or nothing */
+  waitingOn: "brief" | "review" | "approval" | "";
 };
 
 /** "Growth, active, renews 2026-10-02": the editing plan in one line. */
@@ -132,6 +135,7 @@ export function tagsFor(shape: CustomerShape): string[] {
   if (shape.directBrief) tags.push(HL_TAGS.directBrief);
   if (!shape.lines.premade && !shape.lines.custom && !shape.lines.editing && !shape.retainer) tags.push(HL_TAGS.lead);
   if (shape.internal) tags.push(HL_TAGS.internal);
+  if (shape.waitingOn) tags.push(HL_TAGS.waitingOnClient);
   return tags;
 }
 
@@ -153,6 +157,8 @@ export function contactPayload(c: Row, shape: CustomerShape, cfg: HlConfig): { b
     [f.adminUrl]: `${siteUrl()}/admin/customers/${c.id}/`,
     [f.customerId]: String(c.id),
     [f.editingPlan]: planLine(shape.plan),
+    [f.waitingOn]: shape.waitingOn,
+    [f.checkIn]: shape.retainer?.checkInOn ?? "",
   };
   const body: Row = {
     locationId: cfg.locationId,
@@ -168,31 +174,66 @@ export function contactPayload(c: Row, shape: CustomerShape, cfg: HlConfig): { b
   return { body, tags: tagsFor(shape) };
 }
 
+/*
+ * What the client owes us right now, in the order a workflow should nag:
+ * a stage handed to them on a custom job, a video waiting for their review,
+ * a paid order still without its brief. The contact carries the word and a
+ * tag, so HighLevel's workflows can chase without our cron.
+ */
+async function waitingOnClient(db: Db, orders: Row[], projects: Row[], subs: Row[]): Promise<CustomerShape["waitingOn"]> {
+  if (projects.some((p) => ballInCourt(normalizePipeline(p.pipeline)) === "client")) return "approval";
+  const orderIds = orders.map((o) => String(o.id));
+  const projectIds = projects.map((p) => String(p.id));
+  const subIds = subs.map((s) => String(s.id)).filter(Boolean);
+  const { data: cycles } = subIds.length
+    ? await db.from("subscription_cycles").select("id").in("subscription_id", subIds)
+    : { data: [] };
+  const cycleIds = ((cycles ?? []) as Row[]).map((x) => String(x.id));
+  const ors = [
+    orderIds.length ? `order_id.in.(${orderIds.join(",")})` : "",
+    projectIds.length ? `project_id.in.(${projectIds.join(",")})` : "",
+    cycleIds.length ? `cycle_id.in.(${cycleIds.join(",")})` : "",
+  ].filter(Boolean);
+  if (ors.length) {
+    const { count } = await db
+      .from("order_deliverables")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "ready")
+      .or(ors.join(","));
+    if ((count ?? 0) > 0) return "review";
+  }
+  if (orders.some((o) => !o.intake_completed)) return "brief";
+  return "";
+}
+
 async function customerShape(db: Db, c: Row): Promise<CustomerShape> {
   const email = String(c.email ?? "").toLowerCase();
-  const [{ data: orders }, { count: projects }, { data: subs }] = await Promise.all([
-    db.from("orders").select("status, product:products(metadata)").ilike("customer_email", email).eq("status", "paid"),
+  const [{ data: orders }, { data: projectRows }, { data: subs }] = await Promise.all([
     db
-      .from("projects")
-      .select("id", { count: "exact", head: true })
+      .from("orders")
+      .select("id, status, intake_completed, product:products(metadata)")
       .ilike("customer_email", email)
-      .neq("status", "cancelled"),
+      .eq("status", "paid"),
+    db.from("projects").select("id, pipeline").ilike("customer_email", email).neq("status", "cancelled"),
     db
       .from("subscriptions")
-      .select("plan_name, status, current_period_end, created_at")
+      .select("id, plan_name, status, current_period_end, created_at")
       .ilike("customer_email", email)
       .order("created_at", { ascending: false }),
   ]);
-  const premadeOrders = ((orders ?? []) as Row[]).filter(
+  const orderRows = ((orders ?? []) as Row[]).filter(
     (o) => !isInvoiceProduct((o.product as { metadata?: { invoice?: unknown } } | null)?.metadata),
-  ).length;
+  );
+  const premadeOrders = orderRows.length;
+  const projects = ((projectRows ?? []) as Row[]).length;
   const directBrief = Boolean(c.can_submit_projects);
   const subRows = (subs ?? []) as Row[];
+  const waitingOn = await waitingOnClient(db, orderRows, (projectRows ?? []) as Row[], subRows);
   /* the live plan first, else the most recent one */
   const live = subRows.find((x) => ["active", "trialing", "past_due"].includes(String(x.status)));
   const latest = live ?? subRows[0] ?? null;
   return {
-    lines: linesFrom({ premadeOrders, projects: projects ?? 0, directBrief, subscriptions: subRows.length }),
+    lines: linesFrom({ premadeOrders, projects, directBrief, subscriptions: subRows.length }),
     retainer: parseRetainer(c.retainer),
     directBrief,
     internal: Boolean(c.internal),
@@ -203,6 +244,7 @@ async function customerShape(db: Db, c: Row): Promise<CustomerShape> {
           renewsOn: typeof latest.current_period_end === "string" ? latest.current_period_end.slice(0, 10) : null,
         }
       : null,
+    waitingOn,
   };
 }
 
@@ -541,6 +583,9 @@ export async function syncVideo(db: Db, cfg: HlConfig, id: string): Promise<Outc
   const notes: string[] = [];
   const recId = await upsertRecord(cfg, cfg.objects.video.key, link, record, contactId, cfg.associations.videoContact, notes);
   await putLink(db, cfg, { kind: "video", entity_id: id, hl_kind: "record", hl_id: recId, fingerprint: fp });
+  /* a video going out for review, or coming back, changes what the client is
+     waiting on; the contact follows on the next pass (unchanged is free) */
+  await enqueue(db, "customer", String(customer.id), "video changed").catch(() => undefined);
   return { status: "done", note: [`record ${recId}`, ...notes].join("; ") };
 }
 

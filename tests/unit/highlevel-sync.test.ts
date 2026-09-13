@@ -31,6 +31,8 @@ const cfg: HlConfig = {
     adminUrl: "f_url",
     customerId: "f_id",
     editingPlan: "f_plan",
+    waitingOn: "f_wait",
+    checkIn: "f_checkin",
   },
   pipelines: {
     leads: { id: "pl", stages: { new: "s1", contacted: "s2", quoted: "s3", won: "s4", lost: "s5" } },
@@ -61,6 +63,7 @@ const none: CustomerShape = {
   directBrief: false,
   internal: false,
   plan: null,
+  waitingOn: "",
 };
 
 const field = (body: Record<string, unknown>, id: string) =>
@@ -84,9 +87,10 @@ test("a retainer partner is tagged and described as one", () => {
     directBrief: true,
     internal: false,
     plan: null,
+    waitingOn: "approval",
   };
   assert.equal(arrangementOf(shape), "Retainer partner");
-  assert.deepEqual(tagsFor(shape), ["ghlv-custom", "ghlv-retainer", "ghlv-direct-brief"]);
+  assert.deepEqual(tagsFor(shape), ["ghlv-custom", "ghlv-retainer", "ghlv-direct-brief", "ghlv-waiting-on-client"]);
   const { body, tags } = contactPayload(
     { id: "c1", email: "Chase@HighLevel.com", name: "Chase Buckner", company: "HighLevel", phone: "+1 (555) 010-0199" },
     shape,
@@ -102,6 +106,8 @@ test("a retainer partner is tagged and described as one", () => {
   assert.equal(field(body, "f_vid"), "8 to 12 videos a month");
   assert.equal(field(body, "f_url"), "https://www.ghlvideo.com/admin/customers/c1/");
   assert.equal(field(body, "f_id"), "c1");
+  assert.equal(field(body, "f_wait"), "approval");
+  assert.equal(field(body, "f_checkin"), "");
   assert.ok(tags.includes("ghlv-retainer"));
 });
 
@@ -121,6 +127,7 @@ test("a studio-owned account is marked, and each line earns its tag", () => {
     directBrief: false,
     internal: true,
     plan: { name: "Editing: Growth", status: "active", renewsOn: "2026-10-02" },
+    waitingOn: "",
   };
   assert.deepEqual(tagsFor(shape), ["ghlv-premade", "ghlv-editing", "ghlv-internal"]);
   assert.equal(arrangementOf(shape), "Editing plan");
