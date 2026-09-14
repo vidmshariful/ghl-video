@@ -351,8 +351,10 @@ in 20 minutes, no retries.
 
 - **The design.** Phase 6 is yours to lead, later. Until then new screens
   are built in the current look.
-- **One switch in the sandbox and the live sub-account:** "Allow duplicate
-  opportunity", so each project gets its own deal card.
+- **"Allow duplicate opportunity"** is on in the live sub-account since 15
+  September (set through the API with a token carrying `locations.write`;
+  the switch lives under Opportunities & Pipelines now, not Business
+  Profile). The sandbox still has it off.
 - **Before go-live (phase 7, from the plan):** in the live sub-account, a
   Private Integration token with the sandbox's scopes plus locations.write,
   Payments connected to Stripe in live mode, the switch above, and the
