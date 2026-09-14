@@ -18,7 +18,7 @@ import {
   sendRetainerCheckInEmail,
   sendReviewRequestEmail,
 } from "@/lib/email/notify";
-import { checkInDue, checkInSent, nextCheckIn, priorChases, reviewDue, withinWindow } from "@/lib/chase-rules";
+import { checkInDue, checkInSent, nextCheckInAfter, priorChases, reviewDue, withinWindow } from "@/lib/chase-rules";
 import { countLine, monthKey, monthLabel, monthSummary, parseRetainer, type RetainerJob } from "@/lib/retainer";
 import { likeLiteral } from "@/lib/pg-pattern";
 
@@ -46,7 +46,7 @@ export const maxDuration = 120;
  * sweep is therefore safe to run twice: the second run finds the ledger
  * full and sends nothing.
  *
- * Unlike the price-drift cron, this one SENDS MAIL, so it never runs open:
+ * Like every scheduled job now, this one never runs open (and it SENDS MAIL):
  * Vercel's cron must present CRON_SECRET, and a signed-in admin can trigger
  * it by hand. No secret and no admin means no sweep.
  */
@@ -83,6 +83,14 @@ async function allRows(what: string, page: PageQuery): Promise<Row[]> {
    a breath between sends. */
 const SEND_PAUSE_MS = 150;
 const pause = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+/* one case-insensitive look-up for a set of addresses: PostgREST's `or` of
+   `ilike` matches, each address escaped so it means itself and quoted so a
+   comma in one cannot break the filter. A page at a time keeps the request
+   line short. */
+const NAMES_PAGE = 40;
+const anyOf = (column: string, values: string[]) =>
+  values.map((v) => `${column}.ilike."${likeLiteral(v).replace(/["\\]/g, (ch) => `\\${ch}`)}"`).join(",");
 
 async function authorized(req: Request): Promise<boolean> {
   const secret = process.env.CRON_SECRET;
@@ -123,12 +131,10 @@ export async function GET(req: Request) {
   const chased: string[] = [];
   /* every piece waiting on a client, gathered first and sent per client:
      one email listing several pieces rather than one email per piece */
-  const nudges = new Map<string, { name: string | null; items: Nudge[] }>();
-  const queueNudge = (email: string, name: string | null, item: Nudge) => {
+  const nudges = new Map<string, Nudge[]>();
+  const queueNudge = (email: string, item: Nudge) => {
     const key = email.toLowerCase();
-    const mine = nudges.get(key) ?? { name, items: [] };
-    mine.items.push(item);
-    nudges.set(key, mine);
+    nudges.set(key, [...(nudges.get(key) ?? []), item]);
   };
   const briefs: string[] = [];
   const checkIns: string[] = [];
@@ -143,15 +149,6 @@ export async function GET(req: Request) {
     db.from("projects").select("*").not("status", "in", "(closed,cancelled)").order("id").range(from, to),
   );
 
-  const emails = [...new Set(projects.map((p) => String(p.customer_email).toLowerCase()))];
-  const { data: customers } = emails.length
-    ? await db.from("customers").select("email, name").in("email", emails)
-    : { data: [] };
-  const nameOf = (email: string) =>
-    ((((customers ?? []) as Row[]).find(
-      (c) => String(c.email).toLowerCase() === email.toLowerCase(),
-    )?.name as string | null) ?? null);
-
   for (const p of projects) {
     if (internal.has(String(p.customer_email).toLowerCase())) continue;
     const line = normalizePipeline(p.pipeline);
@@ -163,7 +160,7 @@ export async function GET(req: Request) {
       if (!withinWindow(st.at ?? null, now)) continue;
       const prior = priorChases(ledger as { meta?: unknown; created_at?: unknown }[], String(p.id), k);
       if (!needsChase(st.at ?? null, prior, now)) continue;
-      queueNudge(String(p.customer_email), nameOf(String(p.customer_email)), {
+      queueNudge(String(p.customer_email), {
         videoTitle: String(p.title),
         stageLabel: STATIONS[k as StationKey].label,
         daysWaiting: daysWaiting(st.at ?? now, now),
@@ -190,8 +187,7 @@ export async function GET(req: Request) {
     if (!withinWindow((f.ready_at as string | null) ?? null, now)) continue;
     const prior = priorChases(ledger as { meta?: unknown; created_at?: unknown }[], String(f.id), "review");
     if (!needsChase((f.ready_at as string | null) ?? null, prior, now)) continue;
-    const email = String(project.customer_email);
-    queueNudge(email, nameOf(email), {
+    queueNudge(String(project.customer_email), {
       videoTitle: String(f.title),
       stageLabel: "Your review",
       daysWaiting: daysWaiting(String(f.ready_at), now),
@@ -236,8 +232,7 @@ export async function GET(req: Request) {
     if (!withinWindow((r.ready_at as string | null) ?? null, now)) continue;
     const prior = priorChases(ledger as { meta?: unknown; created_at?: unknown }[], String(r.id), "review");
     if (!needsChase((r.ready_at as string | null) ?? null, prior, now)) continue;
-    const email = String(sub.customer_email);
-    queueNudge(email, nameOf(email), {
+    queueNudge(String(sub.customer_email), {
       videoTitle: String(r.title),
       stageLabel: "Your review",
       daysWaiting: daysWaiting(String(r.ready_at), now),
@@ -269,7 +264,7 @@ export async function GET(req: Request) {
     if (!withinWindow((r.ready_at as string | null) ?? null, now)) continue;
     const prior = priorChases(ledger as { meta?: unknown; created_at?: unknown }[], String(r.id), "review");
     if (!needsChase((r.ready_at as string | null) ?? null, prior, now)) continue;
-    queueNudge(email, nameOf(email), {
+    queueNudge(email, {
       videoTitle: String(r.title),
       stageLabel: "Your review",
       daysWaiting: daysWaiting(String(r.ready_at), now),
@@ -278,8 +273,24 @@ export async function GET(req: Request) {
     });
   }
 
+  /* ---- the names: every address the nudges and the digest greet ---- */
+  /* this knew only the clients with a project, so a premade or an editing
+     client was nudged as "there" (audit, 15 September 2026). The brief
+     reminder, the check-in and the review ask carry the name from their own
+     rows: the order's customer, the customers table itself. */
+  const names = new Map<string, string | null>();
+  const greeted = [...new Set([...nudges.keys(), ...(doDigest ? projects.map((p) => String(p.customer_email).toLowerCase()) : [])])];
+  for (let i = 0; i < greeted.length; i += NAMES_PAGE) {
+    const { data, error } = await db.from("customers").select("email, name").or(anyOf("email", greeted.slice(i, i + NAMES_PAGE)));
+    /* a name is a courtesy: a failed read greets everyone as "there" rather than sending nothing */
+    if (error) console.error("[chase] could not read customer names:", error.message);
+    for (const c of (data ?? []) as Row[]) names.set(String(c.email).toLowerCase(), (c.name as string | null) ?? null);
+  }
+  const nameOf = (email: string) => names.get(email.toLowerCase()) ?? null;
+
   /* ---- the nudges go out, one email per client ---- */
-  for (const [email, { name, items }] of nudges) {
+  for (const [email, items] of nudges) {
+    const name = nameOf(email);
     const sent =
       dry ||
       (items.length === 1
@@ -360,10 +371,11 @@ export async function GET(req: Request) {
     if (!sent) continue;
     checkIns.push(String(c.email).toLowerCase());
     if (dry) continue;
-    /* the next one, a quarter on; the record shows the new date */
+    /* the next one, a quarter on and always ahead of today, so a date that
+       fell behind is not due again tomorrow; the record shows the new date */
     await db
       .from("customers")
-      .update({ retainer: { ...retainer, checkInOn: nextCheckIn(checkInOn) }, updated_at: now })
+      .update({ retainer: { ...retainer, checkInOn: nextCheckInAfter(checkInOn, today) }, updated_at: now })
       .eq("id", String(c.id));
   }
 
@@ -393,7 +405,9 @@ export async function GET(req: Request) {
     const { data: askable } = await db
       .from("customers")
       .select("id, email, name, internal")
-      .in("email", [...firstDone.keys()]);
+      /* case-insensitive: an account stored with capitals in its email was
+         never asked (audit follow-up, 15 September 2026) */
+      .or(anyOf("email", [...firstDone.keys()]));
     for (const c of (askable ?? []) as Row[]) {
       const email = String(c.email).toLowerCase();
       if (c.internal || internal.has(email)) continue;
@@ -450,6 +464,6 @@ export async function GET(req: Request) {
     }
   }
 
-  const nudged = Object.fromEntries([...nudges].map(([email, v]) => [email, v.items.length]));
+  const nudged = Object.fromEntries([...nudges].map(([email, items]) => [email, items.length]));
   return NextResponse.json({ ok: true, dry, chased, nudged, briefs, checkIns, reviews, digested, digestRan: doDigest });
 }

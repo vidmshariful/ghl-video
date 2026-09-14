@@ -233,7 +233,7 @@ export async function sendOrderPaidEmails(db: SupabaseClient, orderId: string): 
       customer_email: escapeHtml(o.email),
       invoice_number: escapeHtml(String(invoice.number)),
       amount,
-      portal_url: `${SITE_URL}/portal`,
+      portal_url: `${SITE_URL}/portal/`,
       admin_url: `${SITE_URL}/admin`,
     };
     await sendTemplate(db, "invoice_paid", o.email, o.name, invVars);
@@ -267,7 +267,7 @@ export async function sendOrderPaidEmails(db: SupabaseClient, orderId: string): 
     order_code: escapeHtml(o.code),
     amount: money(o.amountCents, o.currency),
     intake_url: `${SITE_URL}/checkout/intake/${orderId}`,
-    portal_url: `${SITE_URL}/portal`,
+    portal_url: `${SITE_URL}/portal/`,
   };
   await sendTemplate(db, "order_confirmation", o.email, o.name, vars);
   await sendTemplate(db, "admin_new_order", adminAlertEmail(), null, {
@@ -315,14 +315,24 @@ export async function resendOrderEmail(
 ): Promise<{ ok: boolean; error?: string }> {
   const o = await orderFor(db, orderId);
   if (!o) return { ok: false, error: "Order not found." };
-  const sent = await sendTemplate(db, kind, o.email, o.name, {
-    customer_name: escapeHtml(o.name || "there"),
-    product_name: escapeHtml(o.productName),
-    order_code: escapeHtml(o.code),
-    amount: money(o.amountCents, o.currency),
-    intake_url: `${SITE_URL}/checkout/intake/${orderId}`,
-    portal_url: `${SITE_URL}/portal`,
-  });
+  const sent = await sendTemplate(
+    db,
+    kind,
+    o.email,
+    o.name,
+    {
+      customer_name: escapeHtml(o.name || "there"),
+      product_name: escapeHtml(o.productName),
+      order_code: escapeHtml(o.code),
+      amount: money(o.amountCents, o.currency),
+      intake_url: `${SITE_URL}/checkout/intake/${orderId}`,
+      portal_url: `${SITE_URL}/portal/`,
+    },
+    /* the order on the log row, as the sweep writes it: a brief reminder
+       sent by hand counts towards the two the sweep allows, so a third
+       cannot follow it (audit, 15 September 2026) */
+    kind === "intake_reminder" ? { orderId, station: "brief" } : { orderId },
+  );
   return sent
     ? { ok: true }
     : { ok: false, error: "Not sent. The email log has the reason." };
@@ -405,7 +415,7 @@ export async function sendOrderRefundedEmail(
     product_name: escapeHtml(o.productName),
     order_code: escapeHtml(o.code),
     amount: money(refundedCents || o.amountCents, o.currency),
-    portal_url: `${SITE_URL}/portal`,
+    portal_url: `${SITE_URL}/portal/`,
   }, "billing");
   const refunded = money(refundedCents || o.amountCents, o.currency);
   const bell = { amount: refunded, product_name: o.productName, customer_email: o.email, order_code: o.code };
@@ -454,7 +464,7 @@ export async function sendSubscriptionStartedEmail(db: SupabaseClient, rowId: st
     customer_name: escapeHtml(s.name || "there"),
     plan_name: escapeHtml(s.planName),
     amount: money(s.amountCents, s.currency),
-    portal_url: `${SITE_URL}/portal`,
+    portal_url: `${SITE_URL}/portal/`,
   }, "subscriptions");
   const bell = { plan_name: s.planName, amount: money(s.amountCents, s.currency), customer_email: s.email };
   await pushNotification(db, {
@@ -499,7 +509,7 @@ export async function sendSubscriptionPriceChangedEmail(
     new_amount: newAmount,
     effective_date: escapeHtml(opts.effective),
     reason: escapeHtml(opts.reason),
-    portal_url: `${SITE_URL}/portal`,
+    portal_url: `${SITE_URL}/portal/`,
   }, "billing");
   await pushNotification(db, {
     audience: "customer",
@@ -520,7 +530,7 @@ export async function sendSubscriptionCanceledEmail(db: SupabaseClient, rowId: s
   await sendTemplateToTeam(db, "subscription_canceled", { email: s.email, name: s.name }, {
     customer_name: escapeHtml(s.name || "there"),
     plan_name: escapeHtml(s.planName),
-    portal_url: `${SITE_URL}/portal`,
+    portal_url: `${SITE_URL}/portal/`,
   }, "subscriptions");
   const bell = { plan_name: s.planName, customer_email: s.email };
   await pushNotification(db, {
@@ -646,7 +656,7 @@ export async function sendApprovalRequestEmail(
     customer_name: escapeHtml(input.name || "there"),
     video_title: escapeHtml(input.videoTitle),
     stage_label: escapeHtml(input.stageLabel),
-    portal_url: `${SITE_URL}/portal`,
+    portal_url: `${SITE_URL}/portal/`,
   }, "orders");
 }
 
@@ -662,7 +672,7 @@ export async function sendPortalWelcomeEmail(
   await sendTemplate(db, "portal_welcome", input.email, input.name, {
     customer_name: escapeHtml(input.name || "there"),
     customer_email: escapeHtml(input.email),
-    portal_url: `${SITE_URL}/portal`,
+    portal_url: `${SITE_URL}/portal/`,
   });
 }
 
@@ -693,7 +703,7 @@ export async function sendApprovalReminderEmail(
       video_title: escapeHtml(input.videoTitle),
       stage_label: escapeHtml(input.stageLabel),
       days_waiting: String(input.daysWaiting),
-      portal_url: `${SITE_URL}/portal`,
+      portal_url: `${SITE_URL}/portal/`,
     },
     { chase: true, deliverableId: input.deliverableId, station: input.station },
   );
@@ -731,7 +741,7 @@ export async function sendApprovalReminderBatchEmail(
       count: String(items.length),
       video_list: `<ul style="margin:0 0 22px;padding-left:20px;font-size:15px;line-height:1.6;color:#9096a8;">${list}</ul>`,
       days_waiting: String(items[0]?.daysWaiting ?? 0),
-      portal_url: `${SITE_URL}/portal`,
+      portal_url: `${SITE_URL}/portal/`,
     },
     { chase: true, items: items.map((i) => ({ deliverableId: i.deliverableId, station: i.station })) },
   );
@@ -750,7 +760,7 @@ export async function sendProjectDigestEmail(
     {
       customer_name: escapeHtml(input.name || "there"),
       digest_lines: input.linesHtml,
-      portal_url: `${SITE_URL}/portal`,
+      portal_url: `${SITE_URL}/portal/`,
     },
     { digest: true },
   );
@@ -766,7 +776,7 @@ export async function sendTeamInviteEmail(
   },
 ): Promise<void> {
   const portalLabel = input.accountType === "customer" ? "customer portal" : "partner portal";
-  const portalPath = input.accountType === "customer" ? "/portal" : "/partners";
+  const portalPath = input.accountType === "customer" ? "/portal/" : "/partners";
   await sendTemplate(db, "team_invite", input.memberEmail, input.memberName || null, {
     member_name: escapeHtml(input.memberName || "there"),
     member_email: escapeHtml(input.memberEmail),
@@ -1092,7 +1102,7 @@ export async function sendBriefReceivedEmail(db: SupabaseClient, orderId: string
       order_code: escapeHtml(o.code),
       due_line: escapeHtml(dueLine),
       due_date: escapeHtml(dueDate),
-      portal_url: `${SITE_URL}/portal`,
+      portal_url: `${SITE_URL}/portal/`,
     }, "orders");
 
     const bell = {
@@ -1160,7 +1170,7 @@ export async function sendInvoiceSentEmail(db: SupabaseClient, invoiceId: string
       pay_url: payUrl,
       line_items: items || "See the invoice for the breakdown.",
       notes: escapeHtml(String(inv.notes ?? "")),
-      portal_url: `${SITE_URL}/portal`,
+      portal_url: `${SITE_URL}/portal/`,
     }, "billing");
     await pushNotification(db, {
       audience: "customer",
@@ -1281,7 +1291,7 @@ export async function sendBriefReminderEmail(db: SupabaseClient, orderId: string
       order_code: escapeHtml(o.code),
       amount: money(o.amountCents, o.currency),
       intake_url: `${SITE_URL}/checkout/intake/${orderId}`,
-      portal_url: `${SITE_URL}/portal`,
+      portal_url: `${SITE_URL}/portal/`,
     },
     { chase: true, orderId, station: "brief" },
   );
@@ -1311,7 +1321,7 @@ export async function sendRetainerCheckInEmail(
       this_month: escapeHtml(input.thisMonth),
       count_line: escapeHtml(input.countLine),
       book_url: `${SITE_URL}/contact`,
-      portal_url: `${SITE_URL}/portal`,
+      portal_url: `${SITE_URL}/portal/`,
     },
     { chase: true, customerId: input.customerId, checkInOn: input.checkInOn },
   );
@@ -1384,7 +1394,7 @@ export async function sendReviewRequestEmail(
     {
       customer_name: escapeHtml(input.name || "there"),
       review_url: reviewUrl,
-      portal_url: `${SITE_URL}/portal`,
+      portal_url: `${SITE_URL}/portal/`,
     },
     { chase: true, customerId: input.customerId, review: true },
   );

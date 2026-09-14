@@ -27,6 +27,21 @@ export function nextCheckIn(checkInOn: string, months = 3): string {
   return `${first.getUTCFullYear()}-${String(first.getUTCMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
+/**
+ * The check-in after this one, always ahead of today. A date that fell
+ * behind (terms naming a day the sweep was not yet running for) stepped one
+ * quarter from the old date, which could still be in the past, so the next
+ * morning found it due again and sent again, one email a day until the date
+ * caught up (audit, 15 September 2026). This steps a quarter at a time, from
+ * the original day of the month, until the date is past today.
+ */
+export function nextCheckInAfter(checkInOn: string, today: string, months = 3): string {
+  let next = nextCheckIn(checkInOn, months);
+  if (!DAY.test(checkInOn) || !DAY.test(today)) return next;
+  for (let k = 2; next <= today && k <= 400; k += 1) next = nextCheckIn(checkInOn, months * k);
+  return next;
+}
+
 /** The ledger's own answer: sent already for this exact check-in date? */
 export function checkInSent(ledger: { meta?: unknown }[], customerId: string, checkInOn: string): boolean {
   return ledger.some((r) => {

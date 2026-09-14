@@ -1,6 +1,15 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { checkInDue, checkInSent, nextCheckIn, priorChases, reviewDue, withinWindow, CHASE_WINDOW_DAYS } from "../../lib/chase-rules";
+import {
+  checkInDue,
+  checkInSent,
+  nextCheckIn,
+  nextCheckInAfter,
+  priorChases,
+  reviewDue,
+  withinWindow,
+  CHASE_WINDOW_DAYS,
+} from "../../lib/chase-rules";
 
 test("a check-in is due on its day and after it, never before", () => {
   assert.equal(checkInDue("2026-12-01", "2026-11-30"), false);
@@ -16,6 +25,20 @@ test("the next check-in is a quarter on, on the same day where the month has it"
   assert.equal(nextCheckIn("2026-11-30"), "2027-02-28");
   assert.equal(nextCheckIn("2026-08-31"), "2026-11-30");
   assert.equal(nextCheckIn("2026-01-15", 12), "2027-01-15");
+});
+
+test("the next check-in always lands ahead of today, however far behind the date fell", () => {
+  const today = "2026-09-16";
+  assert.equal(nextCheckInAfter("2026-09-16", today), "2026-12-16", "due today: one quarter on");
+  assert.equal(nextCheckInAfter("2026-03-10", today), "2026-12-10", "two quarters behind: one quarter past today");
+  assert.equal(nextCheckInAfter("2026-09-10", today), "2026-12-10", "six days behind: still one quarter on");
+  assert.equal(nextCheckInAfter("2025-09-16", today), "2026-12-16", "a year behind: the same quarter as one due today");
+  /* the day of the month is kept from the original date, not from the
+     short month it passed through on the way */
+  assert.equal(nextCheckInAfter("2026-11-30", "2027-03-01"), "2027-05-30");
+  assert.equal(nextCheckInAfter("2026-01-15", "2026-09-16", 12), "2027-01-15");
+  /* a date the sweep cannot read steps once, as before, rather than looping */
+  assert.equal(nextCheckInAfter("2026-09-16", "soon"), "2026-12-16");
 });
 
 test("the ledger says whether this exact check-in already went", () => {

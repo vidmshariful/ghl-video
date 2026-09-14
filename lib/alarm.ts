@@ -147,7 +147,14 @@ export async function raise(db: SupabaseClient, input: RaiseInput): Promise<void
   }
 }
 
-/** Tell the team: the bell in every admin top bar, plus email when critical. */
+/**
+ * Tell the team: the bell in every admin top bar, plus email for an error or
+ * a critical. Email went out for critical alone, which left the HighLevel
+ * failures and a crashed cron (all raised as errors) on the bell only, where
+ * nobody looks overnight (audit, 15 September 2026). The throttle and the
+ * notifyAfter count in `raise` gate both the bell and the email, so the
+ * inbox sees no more than the bell does.
+ */
 async function tell(
   db: SupabaseClient,
   a: {
@@ -176,7 +183,8 @@ async function tell(
     console.error("[alarm] bell failed:", e instanceof Error ? e.message : e);
   }
 
-  if (a.severity !== "critical") return;
+  /* a warn never reaches here (raise stops it), and it never mails */
+  if (a.severity === "warn") return;
 
   try {
     const { sendEmail } = await import("@/lib/email/send");
@@ -221,6 +229,7 @@ const HUMAN: Record<string, string> = {
   "highlevel.dead_letter": "A change to HighLevel failed twelve times and was set aside",
   "highlevel.sync_failed": "Changes to HighLevel are failing in the minute sync",
   "highlevel.reconcile_failed": "The nightly HighLevel check could not read one of its tables",
+  "highlevel.sync_stuck": "Some changes to HighLevel keep failing and are stuck in the queue",
   "cron.failed": "A scheduled job crashed",
 };
 
