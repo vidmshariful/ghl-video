@@ -278,23 +278,23 @@
   ],
   "crons": [
     {
-      "path": "/api/cron/price-drift",
+      "path": "/api/cron/price-drift/",
       "schedule": "0 6 * * *"
     },
     {
-      "path": "/api/cron/chase",
+      "path": "/api/cron/chase/",
       "schedule": "0 9 * * *"
     },
     {
-      "path": "/api/cron/invariants",
+      "path": "/api/cron/invariants/",
       "schedule": "0 3 * * *"
     },
     {
-      "path": "/api/cron/hl-sync",
+      "path": "/api/cron/hl-sync/",
       "schedule": "* * * * *"
     },
     {
-      "path": "/api/cron/hl-reconcile",
+      "path": "/api/cron/hl-reconcile/",
       "schedule": "0 4 * * *"
     }
   ]
