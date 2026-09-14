@@ -86,6 +86,7 @@ test.describe("custom, as the studio and the client", () => {
   });
 
   test("the client pays the invoice in HighLevel and the money lands on the project, not as premade work", async () => {
+    test.slow(); /* two HighLevel round trips and a drain: three times the room */
     const db = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
     const { count: ordersBefore } = await db.from("orders").select("id", { count: "exact", head: true }).ilike("customer_email", client.email);
 
