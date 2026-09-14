@@ -23,20 +23,34 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const db = supabaseAdmin();
-  const results = await runInvariants(db);
-  const failing = results.filter((r) => r.count > 0);
-  for (const r of failing) {
-    await raise(db, {
-      kind: `invariant.${r.key}`,
-      severity: r.severity === "error" ? "error" : "warn",
-      message: invariantMessage(r),
-      fingerprint: `invariant:${r.key}`,
-      context: { count: r.count, sample: r.sample },
+  try {
+    const results = await runInvariants(db);
+    const failing = results.filter((r) => r.count > 0);
+    for (const r of failing) {
+      await raise(db, {
+        kind: `invariant.${r.key}`,
+        severity: r.severity === "error" ? "error" : "warn",
+        message: invariantMessage(r),
+        fingerprint: `invariant:${r.key}`,
+        context: { count: r.count, sample: r.sample },
+      });
+    }
+    return NextResponse.json({
+      ok: true,
+      checked: results.length,
+      failing: failing.map((r) => ({ key: r.key, severity: r.severity, count: r.count, sample: r.sample })),
     });
+  } catch (e) {
+    /* the check itself failing looks exactly like nothing being wrong, so it
+       gets a bell of its own (audit, 15 September 2026) */
+    const message = e instanceof Error ? e.message : String(e);
+    await raise(db, {
+      kind: "cron.failed",
+      fingerprint: "cron:invariants",
+      notifyAfter: 2,
+      message: `The nightly invariant check could not run: ${message}`,
+      context: { route: "invariants", error: message },
+    });
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
-  return NextResponse.json({
-    ok: true,
-    checked: results.length,
-    failing: failing.map((r) => ({ key: r.key, severity: r.severity, count: r.count, sample: r.sample })),
-  });
 }

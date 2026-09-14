@@ -218,6 +218,10 @@ const HUMAN: Record<string, string> = {
   [ALARM_KINDS.PRICE_DRIFT]: "The site and checkout disagree about a price",
   [ALARM_KINDS.DRIFT_CHECK_FAILED]: "The daily price check could not run",
   [ALARM_KINDS.TEST]: "Test alarm, nothing is wrong",
+  "highlevel.dead_letter": "A change to HighLevel failed twelve times and was set aside",
+  "highlevel.sync_failed": "Changes to HighLevel are failing in the minute sync",
+  "highlevel.reconcile_failed": "The nightly HighLevel check could not read one of its tables",
+  "cron.failed": "A scheduled job crashed",
 };
 
 export const humanKind = (kind: string) => HUMAN[kind] ?? kind;

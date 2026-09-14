@@ -4,9 +4,9 @@
  * One thread per client on both sides. A message typed in the portal is
  * written to the contact's conversation in HighLevel as an inbound live
  * chat message; a studio reply typed in admin goes over as an outbound one;
- * and whatever the studio says from inside HighLevel (a live chat reply, an
- * email, an SMS) is pulled back into the portal thread here, so the client
- * never has to know where it was typed.
+ * and whatever the client says on that thread by any channel, plus the
+ * studio's live chat replies from inside HighLevel, is pulled back into the
+ * portal thread here, so the client never has to know where it was typed.
  *
  * Our tables stay the record the portal reads: HighLevel's copy is the
  * studio's inbox. Fail-soft throughout: a HighLevel hiccup never loses a
@@ -56,6 +56,23 @@ export function textOf(body: unknown, contentType?: unknown): string {
         .replace(/&#39;/g, "'")
     : raw;
   return text.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").replace(/[ \t]{2,}/g, " ").trim().slice(0, 4000);
+}
+
+/**
+ * Which HighLevel messages belong on the portal thread. Pure.
+ *
+ * Everything the client said, whatever channel they used; from the studio,
+ * only what was typed as live chat. An outbound email or SMS is not chat:
+ * the platform's own transactional mail leaves through HighLevel too, and
+ * every one of them was landing in the client's Messages as a studio bubble
+ * (audit, 15 September 2026). Calls and activity rows are bookkeeping in
+ * either direction, not something anybody said.
+ */
+export function keepPulledMessage(m: { direction?: unknown; messageType?: unknown }): boolean {
+  const channel = channelOf(m.messageType);
+  if (channel === "call" || channel === "note") return false;
+  if (String(m.direction ?? "") === "inbound") return true;
+  return channel === "live_chat";
 }
 
 async function contactIdFor(db: Db, cfg: HlConfig, customer: Row): Promise<string | null> {
@@ -176,9 +193,10 @@ export async function mirrorMessage(
 
 /**
  * Bring across what was said on the HighLevel thread since we last looked:
- * the studio's replies from inside HighLevel, and the client's replies by
- * email or SMS. Messages we wrote ourselves carry their HighLevel id and
- * are skipped. Returns how many landed.
+ * the studio's live chat replies from inside HighLevel, and the client's
+ * replies by any channel. Messages we wrote ourselves carry their HighLevel
+ * id, on the message row or in the email log, and are skipped. Returns how
+ * many landed.
  */
 export async function pullConversation(db: Db, cfg: HlConfig, conv: Row, opts: { force?: boolean } = {}): Promise<number> {
   const hlId = typeof conv.hl_conversation_id === "string" ? conv.hl_conversation_id : "";
@@ -201,17 +219,24 @@ export async function pullConversation(db: Db, cfg: HlConfig, conv: Row, opts: {
   const list = (((j.messages as Row)?.messages as Row[]) ?? []).slice().reverse();
   if (!list.length) return 0;
   const ids = list.map((m) => String(m.id));
-  const { data: have } = await db.from("messages").select("hl_message_id").in("hl_message_id", ids);
+  const [{ data: have }, { data: sent }] = await Promise.all([
+    db.from("messages").select("hl_message_id").in("hl_message_id", ids),
+    /* the platform's own sends: every email that left through HighLevel is
+       logged with its message id */
+    db.from("email_log").select("meta").in("meta->>hl_message_id", ids),
+  ]);
   const known = new Set(((have ?? []) as Row[]).map((r) => String(r.hl_message_id)));
+  for (const r of (sent ?? []) as Row[]) {
+    const id = (r.meta as Row | null)?.hl_message_id;
+    if (typeof id === "string" && id) known.add(id);
+  }
 
   let landed = 0;
   let last: string | null = null;
   for (const m of list) {
     const id = String(m.id);
-    if (known.has(id)) continue;
+    if (known.has(id) || !keepPulledMessage(m)) continue;
     const channel = channelOf(m.messageType);
-    /* calls and activity rows are the studio's bookkeeping, not a message to the client */
-    if (channel === "call" || channel === "note") continue;
     const inbound = String(m.direction) === "inbound";
     const subject = typeof m.subject === "string" && m.subject.trim() ? m.subject.trim() : "";
     const text = textOf(m.body, m.contentType);
@@ -245,28 +270,38 @@ export async function pullConversation(db: Db, cfg: HlConfig, conv: Row, opts: {
 }
 
 /** Every thread with a HighLevel conversation whose thread moved since we last looked. */
-export async function pullRecentConversations(db: Db, cfg: HlConfig): Promise<{ checked: number; landed: number }> {
+export async function pullRecentConversations(
+  db: Db,
+  cfg: HlConfig,
+  opts: { until?: number } = {},
+): Promise<{ checked: number; landed: number; outOfTime: boolean }> {
   const j = await hlFetch(
     `/conversations/search?locationId=${encodeURIComponent(cfg.locationId)}&sortBy=last_message_date&sort=desc&limit=50`,
     { method: "GET" },
   );
   const recent = ((j.conversations as Row[]) ?? []).map((c) => ({ id: String(c.id), at: Number(c.lastMessageDate ?? 0) }));
-  if (!recent.length) return { checked: 0, landed: 0 };
+  if (!recent.length) return { checked: 0, landed: 0, outOfTime: false };
   const { data: ours } = await db
     .from("conversations")
     .select("*")
     .in("hl_conversation_id", recent.map((r) => r.id));
   let checked = 0;
   let landed = 0;
+  let outOfTime = false;
   for (const conv of (ours ?? []) as Row[]) {
     const hl = recent.find((r) => r.id === conv.hl_conversation_id);
     const seen = typeof conv.hl_last_message_at === "string" ? Date.parse(conv.hl_last_message_at) : 0;
     if (!hl || hl.at <= seen + 1000) continue;
+    /* the caller's deadline: a thread left here is picked up next minute */
+    if (opts.until && Date.now() > opts.until) {
+      outOfTime = true;
+      break;
+    }
     checked += 1;
     landed += await pullConversation(db, cfg, conv, { force: true });
     await db.from("conversations").update({ hl_last_message_at: new Date(hl.at).toISOString() }).eq("id", String(conv.id));
   }
-  return { checked, landed };
+  return { checked, landed, outOfTime };
 }
 
 /** Portal messages that never reached HighLevel (a hiccup at the time): send them now. */

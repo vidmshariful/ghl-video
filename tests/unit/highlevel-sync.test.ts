@@ -285,3 +285,60 @@ test("a demo account's invoice and a zero-total invoice never go to HighLevel", 
   assert.equal(invoiceSkipReason({ total_cents: null }, { internal: false }), "nothing to bill: the total is zero");
   assert.equal(invoiceSkipReason({ total_cents: 44100 }, { internal: false }), null);
 });
+
+test("a client who is also a partner keeps the partner tag on every sync", async () => {
+  const { managedTagDiff } = await import("../../lib/highlevel/sync");
+  const have = ["ghlv-lead", "ghlv-partner", "vip", "ghlv-waiting-on-client"];
+  const want = ["ghlv-premade"];
+  const diff = managedTagDiff(have, want);
+  assert.deepEqual(diff.add, ["ghlv-premade"]);
+  assert.deepEqual(diff.remove, ["ghlv-lead", "ghlv-waiting-on-client"], "the partner tag is syncPartner's, the hand-made one is the studio's");
+  assert.deepEqual(managedTagDiff(["ghlv-premade"], ["ghlv-premade"]), { add: [], remove: [] });
+});
+
+test("a row that keeps failing is set aside instead of retried forever", async () => {
+  const { retryPlan } = await import("../../lib/highlevel/sync");
+  assert.deepEqual(retryPlan(1), { dead: false, waitS: 120 });
+  assert.deepEqual(retryPlan(4), { dead: false, waitS: 960 });
+  assert.equal(retryPlan(11).waitS, 6 * 3600, "the wait is capped at six hours");
+  assert.equal(retryPlan(11).dead, false);
+  assert.equal(retryPlan(12).dead, true);
+  assert.equal(retryPlan(30).dead, true);
+});
+
+test("the reconcile reads a change stamp that exists for every kind", async () => {
+  const { changedAt } = await import("../../lib/highlevel/sync");
+  assert.equal(changedAt("customer", { updated_at: "2026-09-14T10:00:00+00:00" }), "2026-09-14T10:00:00+00:00");
+  assert.equal(changedAt("order", { paid_at: "2026-09-01T08:00:00+00:00", updated_at: "never" }), "2026-09-01T08:00:00+00:00");
+  assert.equal(changedAt("order", { paid_at: null }), null, "an unpaid order has no moment to record");
+  /* a video's updated_at has no trigger, so the newest stamp it does carry wins */
+  assert.equal(
+    changedAt("video", {
+      created_at: "2026-09-01T00:00:00+00:00",
+      updated_at: "2026-09-02T00:00:00+00:00",
+      ready_at: "2026-09-10T00:00:00+00:00",
+      approved_at: "2026-09-12T00:00:00+00:00",
+    }),
+    "2026-09-12T00:00:00+00:00",
+  );
+  assert.equal(changedAt("video", { created_at: "2026-09-01T00:00:00+00:00", updated_at: "2026-09-02T00:00:00+00:00", ready_at: null, approved_at: null }), "2026-09-02T00:00:00+00:00");
+});
+
+test("the portal thread takes what the client said and only the studio's live chat", async () => {
+  const { keepPulledMessage } = await import("../../lib/highlevel/conversations");
+  assert.equal(keepPulledMessage({ direction: "inbound", messageType: "TYPE_EMAIL" }), true);
+  assert.equal(keepPulledMessage({ direction: "inbound", messageType: "TYPE_SMS" }), true);
+  assert.equal(keepPulledMessage({ direction: "inbound", messageType: "TYPE_LIVE_CHAT" }), true);
+  assert.equal(keepPulledMessage({ direction: "outbound", messageType: "TYPE_LIVE_CHAT" }), true);
+  assert.equal(keepPulledMessage({ direction: "outbound", messageType: "TYPE_EMAIL" }), false, "the platform's own emails leave through HighLevel");
+  assert.equal(keepPulledMessage({ direction: "outbound", messageType: "TYPE_SMS" }), false);
+  assert.equal(keepPulledMessage({ direction: "outbound", messageType: "TYPE_CALL" }), false);
+  assert.equal(keepPulledMessage({ direction: "inbound", messageType: "TYPE_ACTIVITY_INVOICE" }), false, "an activity row is bookkeeping, not a message");
+  assert.equal(keepPulledMessage({ direction: "outbound", messageType: undefined }), true, "no type means live chat, as channelOf says");
+});
+
+test("a refund is one line on the contact: what went back, when, and the Stripe reference", async () => {
+  const { refundNote } = await import("../../lib/highlevel/money");
+  assert.equal(refundNote({ amountCents: 149500, on: "2026-09-15T09:30:00.000Z", reference: "ch_3ABC" }), "Refunded $1,495 on 2026-09-15, Stripe ch_3ABC.");
+  assert.equal(refundNote({ amountCents: 44150, on: "2026-09-15", reference: null }), "Refunded $441.50 on 2026-09-15.");
+});

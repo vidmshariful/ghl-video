@@ -26,6 +26,24 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: true, note: "HighLevel is not configured here." });
 
   const db = supabaseAdmin();
+  try {
+    return NextResponse.json(await run(db));
+  } catch (e) {
+    /* a throw here was a 500 in Vercel's logs and nothing else, with Health
+       green all the while (audit, 15 September 2026) */
+    const message = e instanceof Error ? e.message : String(e);
+    await raise(db, {
+      kind: "cron.failed",
+      fingerprint: "cron:hl-reconcile",
+      notifyAfter: 2,
+      message: `The nightly HighLevel check stopped part way: ${message}`,
+      context: { route: "hl-reconcile", error: message },
+    });
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+  }
+}
+
+async function run(db: ReturnType<typeof supabaseAdmin>) {
   const drift = await reconcile(db);
   const sent = drift.provisioned ? await drainOutbox(db, { limit: 40 }) : null;
   const stuck = sent ? drift.stuck : 0;
@@ -36,6 +54,15 @@ export async function GET(req: Request) {
   const pulled = cfg ? await pullInvoices(db, cfg, { pages: 3 }) : null;
   /* a day's worth of contact edits, in case the minute cron missed any */
   const contacts = cfg ? await pullContactChanges(db, cfg.locationId, 25 * 3600_000) : null;
+  if (drift.errors.length) {
+    await raise(db, {
+      kind: "highlevel.reconcile_failed",
+      severity: "error",
+      fingerprint: "highlevel:reconcile_failed",
+      message: `The nightly HighLevel check could not read ${drift.errors.length} of its ${drift.errors.length === 1 ? "table" : "tables"}, so nothing was queued for ${drift.errors.length === 1 ? "it" : "them"}: ${drift.errors.join(" | ")}`,
+      context: { errors: drift.errors },
+    });
+  }
   if (products?.errors.length) {
     await raise(db, {
       kind: "highlevel.products",
@@ -64,12 +91,12 @@ export async function GET(req: Request) {
       context: { stuck, pending: drift.pending },
     });
   }
-  return NextResponse.json({
+  return {
     ok: true,
     ...drift,
-    sent: sent ? { processed: sent.processed, failed: sent.failed } : null,
+    sent: sent ? { processed: sent.processed, failed: sent.failed, deadLettered: sent.deadLettered } : null,
     products,
     invoices: pulled,
     contacts,
-  });
+  };
 }

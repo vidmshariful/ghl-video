@@ -19,6 +19,8 @@ import { batchStatusFor, creditCost, isBatch, tierFor, isPodcast, type EditType 
 import { PORTAL_SECTIONS } from "@/app/portal/sections";
 import { HIDEABLE_KEYS } from "@/app/admin/customer-sections";
 import { parseRetainer } from "@/lib/retainer";
+import { invoiceSkipReason } from "@/lib/highlevel/money";
+import { videoOwner } from "@/lib/highlevel/sync";
 
 type DB = SupabaseClient;
 type Row = Record<string, unknown>;
@@ -56,15 +58,26 @@ const CHECKS: { key: string; rule: string; severity: Severity; run: Check }[] = 
     severity: "warn",
     run: async (db) => {
       const cutoff = new Date(Date.now() - 5 * 60_000).toISOString();
-      const { data } = await db
-        .from("invoices")
-        .select("id, number")
-        .eq("source", "platform")
-        .eq("status", "open")
-        .is("product_id", null)
-        .is("hl_invoice_id", null)
-        .lt("created_at", cutoff);
-      return tally(data, (r) => String(r.number));
+      const [{ data }, { data: internal }] = await Promise.all([
+        db
+          .from("invoices")
+          .select("id, number, total_cents, customer_email")
+          .eq("source", "platform")
+          .eq("status", "open")
+          .is("product_id", null)
+          .is("hl_invoice_id", null)
+          .lt("created_at", cutoff),
+        db.from("customers").select("email").eq("internal", true),
+      ]);
+      /* the demo account's props and a bill for nothing are never sent, by
+         design: the sync's own rule says which, so the check cannot drift
+         from it (the two demo invoices tripped this every night; audit, 15
+         September 2026) */
+      const demo = new Set(((internal ?? []) as Row[]).map((c) => String(c.email ?? "").toLowerCase()));
+      const rows = ((data ?? []) as Row[]).filter(
+        (r) => invoiceSkipReason(r, { internal: demo.has(String(r.customer_email ?? "").toLowerCase()) }) === null,
+      );
+      return tally(rows, (r) => String(r.number));
     },
   },
   {
@@ -173,7 +186,7 @@ const CHECKS: { key: string; rule: string; severity: Severity; run: Check }[] = 
          cut for review lives on the line's station, so it is exempt */
       const { data } = await db
         .from("order_deliverables")
-        .select("id, status, category, edit_type")
+        .select("id, status, category, edit_type, order_id, project_id, cycle_id")
         .in("status", ["ready", "approved"])
         .is("video_url", null)
         .is("cancelled_at", null);
@@ -181,7 +194,23 @@ const CHECKS: { key: string; rule: string; severity: Severity; run: Check }[] = 
       const rows = ((data ?? []) as Row[]).filter(
         (r) => r.category !== "main" && !isBatch((r.edit_type as string | null) ?? null),
       );
-      return tally(rows, (r) => `${short(r.id)} ${String(r.status)}`);
+      if (!rows.length) return { count: 0, sample: [] };
+      /* the demo account's props are approved with no file on purpose; the
+         owner is found the way the sync finds it, through whichever of the
+         three the video hangs off */
+      const { data: internal } = await db.from("customers").select("id, email").eq("internal", true);
+      const demoIds = new Set(((internal ?? []) as Row[]).map((c) => String(c.id)));
+      const demoEmails = new Set(((internal ?? []) as Row[]).map((c) => String(c.email ?? "").toLowerCase()));
+      const kept: Row[] = [];
+      for (const r of rows) {
+        const owner = demoIds.size ? await videoOwner(db, r) : null;
+        const demo =
+          owner !== null &&
+          ((owner.customerId !== null && demoIds.has(owner.customerId)) ||
+            (owner.email !== null && demoEmails.has(owner.email.toLowerCase())));
+        if (!demo) kept.push(r);
+      }
+      return tally(kept, (r) => `${short(r.id)} ${String(r.status)}`);
     },
   },
   {

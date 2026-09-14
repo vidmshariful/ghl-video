@@ -277,9 +277,20 @@ async function upsertContact(body: Row): Promise<{ id: string; tags: string[]; i
  * and a tag the studio put on by hand must survive every sync. Only the
  * managed set is ever taken off.
  */
-async function setManagedTags(contactId: string, have: string[], want: string[]) {
+/**
+ * What to add and what to take off. Pure. The partner tag is managed, but
+ * by syncPartner: tagsFor never returns it, so a client who is also a
+ * partner was losing it on every customer or lead sync (audit, 15
+ * September 2026).
+ */
+export function managedTagDiff(have: string[], want: string[]): { add: string[]; remove: string[] } {
   const add = want.filter((t) => !have.includes(t));
-  const remove = have.filter((t) => HL_MANAGED_TAGS.includes(t) && !want.includes(t));
+  const remove = have.filter((t) => HL_MANAGED_TAGS.includes(t) && t !== HL_TAGS.partner && !want.includes(t));
+  return { add, remove };
+}
+
+async function setManagedTags(contactId: string, have: string[], want: string[]) {
+  const { add, remove } = managedTagDiff(have, want);
   if (add.length) await hlFetch(`/contacts/${contactId}/tags`, { method: "POST", body: JSON.stringify({ tags: add }) });
   if (remove.length)
     await hlFetch(`/contacts/${contactId}/tags`, { method: "DELETE", body: JSON.stringify({ tags: remove }) });
@@ -790,15 +801,51 @@ export type DrainResult = {
   unchanged: number;
   skipped: number;
   failed: number;
+  /** failed rows set aside for good this run (counted in failed too) */
+  deadLettered: number;
+  /** the deadline in opts.until arrived with rows still waiting */
+  outOfTime: boolean;
   /** what each row came to, for the log and the tests */
   rows: { id: number; kind: SyncKind; entityId: string; status: Outcome["status"] | "failed"; note: string }[];
 };
 
 const KIND_ORDER: Record<SyncKind, number> = { customer: 0, project: 1, video: 2, invoice: 3, order: 4, lead: 5, partner: 6 };
 const MAX_WAIT_S = 6 * 3600;
+/* a row that has failed this often is a dead letter: a permanent error (a
+   422 HighLevel will never accept) was being retried four times a day for
+   good, with only the nightly count to say so (audit, 15 September 2026) */
+const MAX_ATTEMPTS = 12;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 /* how long a worker holds a claimed row before another may retry it */
 const LEASE_MS = 2 * 60_000;
+
+/** What a failure means for a row: another try after a growing wait, or none. Pure. */
+export function retryPlan(attempts: number): { dead: boolean; waitS: number } {
+  return { dead: attempts >= MAX_ATTEMPTS, waitS: Math.min(MAX_WAIT_S, 60 * 2 ** attempts) };
+}
+
+type AlarmInput = {
+  kind: string;
+  message: string;
+  fingerprint: string;
+  severity?: "warn" | "error" | "critical";
+  notifyAfter?: number;
+  context?: Record<string, unknown>;
+};
+
+/**
+ * The Health screen's bell, reached without a static import: lib/alarm is
+ * server-only and this module also runs from npm run hl:sync, where there is
+ * no bell to ring. Never throws.
+ */
+async function alarm(db: Db, input: AlarmInput): Promise<void> {
+  try {
+    const { raise } = await import("@/lib/alarm");
+    await raise(db, input);
+  } catch (e) {
+    console.error(`[highlevel] alarm ${input.kind} not raised: ${e instanceof Error ? e.message : e}`);
+  }
+}
 
 /**
  * Send what is waiting. Customers go before projects before videos so a
@@ -806,8 +853,21 @@ const LEASE_MS = 2 * 60_000;
  * failure schedules that row again with a wait that doubles each time,
  * capped at six hours, and never blocks the rows behind it.
  */
-export async function drainOutbox(db: Db, opts: { limit?: number; pauseMs?: number } = {}): Promise<DrainResult> {
-  const result: DrainResult = { provisioned: true, processed: 0, done: 0, unchanged: 0, skipped: 0, failed: 0, rows: [] };
+export async function drainOutbox(
+  db: Db,
+  opts: { limit?: number; pauseMs?: number; until?: number } = {},
+): Promise<DrainResult> {
+  const result: DrainResult = {
+    provisioned: true,
+    processed: 0,
+    done: 0,
+    unchanged: 0,
+    skipped: 0,
+    failed: 0,
+    deadLettered: 0,
+    outOfTime: false,
+    rows: [],
+  };
   const cfg = await loadHlConfig(db, locationId());
   if (!cfg) return { ...result, provisioned: false };
 
@@ -825,6 +885,11 @@ export async function drainOutbox(db: Db, opts: { limit?: number; pauseMs?: numb
   );
 
   for (const r of rows) {
+    /* the caller's deadline: a row left here is simply still pending */
+    if (opts.until && Date.now() > opts.until) {
+      result.outOfTime = true;
+      break;
+    }
     /*
      * Claim the row before touching HighLevel. The minute cron, the nightly
      * reconcile (which fires in the same second at 04:00) and a hand run can
@@ -855,14 +920,32 @@ export async function drainOutbox(db: Db, opts: { limit?: number; pauseMs?: numb
       result.rows.push({ id: r.id, kind: r.kind, entityId: r.entity_id, status: out.status, note: out.note });
     } catch (e) {
       const attempts = r.attempts + 1;
-      const waitS = Math.min(MAX_WAIT_S, 60 * 2 ** attempts);
       const message = (e instanceof Error ? e.message : String(e)).slice(0, 500);
-      await db
-        .from("hl_sync_outbox")
-        .update({ attempts, next_attempt_at: new Date(Date.now() + waitS * 1000).toISOString(), last_error: message })
-        .eq("id", r.id);
+      const plan = retryPlan(attempts);
       result.failed += 1;
-      result.rows.push({ id: r.id, kind: r.kind, entityId: r.entity_id, status: "failed", note: message });
+      if (plan.dead) {
+        /* set aside: done, with the error kept, and a bell for the team.
+           The row is still there to read and to queue again by hand. */
+        await db
+          .from("hl_sync_outbox")
+          .update({ attempts, done_at: new Date().toISOString(), last_error: message })
+          .eq("id", r.id);
+        result.deadLettered += 1;
+        result.rows.push({ id: r.id, kind: r.kind, entityId: r.entity_id, status: "failed", note: `set aside after ${attempts} tries: ${message}` });
+        await alarm(db, {
+          kind: "highlevel.dead_letter",
+          severity: "error",
+          fingerprint: `highlevel:dead_letter:${r.kind}:${r.entity_id}`,
+          message: `A ${r.kind} could not be sent to HighLevel after ${attempts} tries and was set aside: ${message}`,
+          context: { kind: r.kind, entityId: r.entity_id, outboxId: r.id, error: message },
+        });
+      } else {
+        await db
+          .from("hl_sync_outbox")
+          .update({ attempts, next_attempt_at: new Date(Date.now() + plan.waitS * 1000).toISOString(), last_error: message })
+          .eq("id", r.id);
+        result.rows.push({ id: r.id, kind: r.kind, entityId: r.entity_id, status: "failed", note: message });
+      }
     }
     /* HighLevel allows a burst of 100 calls per 10 seconds per location */
     if (opts.pauseMs !== 0) await sleep(opts.pauseMs ?? 120);
@@ -884,6 +967,8 @@ export type ReconcileResult = {
   provisioned: boolean;
   /** rows queued because they had no link, or changed since the last send */
   enqueued: Record<SyncKind, number>;
+  /** a kind whose rows could not be read, with why; nothing was queued for it */
+  errors: string[];
   /** links checked against HighLevel, and how many pointed at nothing */
   verified: number;
   missing: number;
@@ -891,6 +976,34 @@ export type ReconcileResult = {
   pending: number;
   stuck: number;
 };
+
+/*
+ * When a row last changed, per kind, for "changed since its last send".
+ * Not every table has a moving updated_at: orders never had one (so orders
+ * were never reconciled at all, the query failing quietly; audit, 15
+ * September 2026) and paid_at is the moment a sale exists to record; a
+ * video's updated_at has no trigger, so the newest of the stamps it does
+ * carry stands in; an invoice's updated_at moves only on our own writes,
+ * which is exactly the changes worth sending.
+ */
+const STAMP_COLUMNS: Record<SyncKind, string[]> = {
+  customer: ["updated_at"],
+  project: ["updated_at"],
+  video: ["updated_at", "ready_at", "approved_at", "created_at"],
+  invoice: ["updated_at"],
+  order: ["paid_at"],
+  lead: ["updated_at"],
+  partner: ["updated_at"],
+};
+
+/** The newest of a row's stamps for its kind, or null when it has none. Pure. */
+export function changedAt(kind: SyncKind, row: Row): string | null {
+  const stamps = STAMP_COLUMNS[kind]
+    .map((c) => row[c])
+    .filter((v): v is string => typeof v === "string" && v.length > 0);
+  if (!stamps.length) return null;
+  return stamps.reduce((a, b) => (b > a ? b : a));
+}
 
 const LINK_OF: Record<SyncKind, { table: string; hlKind: HlKind }> = {
   customer: { table: "customers", hlKind: "contact" },
@@ -938,6 +1051,7 @@ export async function reconcile(db: Db, opts: { verify?: number } = {}): Promise
   const result: ReconcileResult = {
     provisioned: Boolean(cfg),
     enqueued: { customer: 0, project: 0, video: 0, invoice: 0, order: 0, lead: 0, partner: 0 },
+    errors: [],
     verified: 0,
     missing: 0,
     pending: 0,
@@ -947,20 +1061,44 @@ export async function reconcile(db: Db, opts: { verify?: number } = {}): Promise
 
   for (const kind of ["customer", "project", "video", "invoice", "order", "lead", "partner"] as SyncKind[]) {
     const { table, hlKind } = LINK_OF[kind];
-    /* orders: only paid ones are sales to record (legacy invoice payments are
-       skipped by the sync itself); invoices: a void one has nothing over there */
-    const base = db.from(table).select("id, updated_at");
-    const scoped = kind === "order" ? base.eq("status", "paid") : kind === "invoice" ? base.neq("status", "void") : base;
-    const [{ data: rows }, { data: links }] = await Promise.all([
-      scoped.order("updated_at", { ascending: false }).limit(5000),
+    const stamps = STAMP_COLUMNS[kind];
+    /* orders: paid ones are sales to record (legacy invoice payments are
+       skipped by the sync itself) and refunded ones with an invoice over there
+       carry the refund across; invoices: a void one has nothing over there */
+    const columns = kind === "order" ? ["id", "status", "hl_invoice_id", "metadata", ...stamps] : ["id", ...stamps];
+    const base = db.from(table).select(columns.join(", "));
+    const scoped =
+      kind === "order" ? base.in("status", ["paid", "refunded"]) : kind === "invoice" ? base.neq("status", "void") : base;
+    const [rowsRes, linksRes] = await Promise.all([
+      scoped.order(stamps[0], { ascending: false }).limit(5000),
       db.from("hl_links").select("entity_id, synced_at, fingerprint").eq("kind", kind).eq("hl_kind", hlKind).eq("location_id", loc),
     ]);
-    const synced = new Map(((links ?? []) as Row[]).map((l) => [String(l.entity_id), String(l.synced_at)]));
-    const untied = new Set(((links ?? []) as Row[]).filter((l) => String(l.fingerprint ?? "").startsWith(UNTIED)).map((l) => String(l.entity_id)));
-    for (const r of (rows ?? []) as Row[]) {
-      const s = synced.get(String(r.id));
-      if (!s || untied.has(String(r.id)) || (typeof r.updated_at === "string" && r.updated_at > s)) {
-        await enqueue(db, kind, String(r.id), untied.has(String(r.id)) ? "reconcile: tie the record" : "reconcile");
+    const failed = rowsRes.error ?? linksRes.error;
+    if (failed) {
+      /* said out loud: a kind whose read fails is a kind nobody is checking */
+      result.errors.push(`${kind}: ${failed.message}`);
+      continue;
+    }
+    const links = (linksRes.data ?? []) as Row[];
+    const synced = new Map(links.map((l) => [String(l.entity_id), String(l.synced_at)]));
+    const untied = new Set(links.filter((l) => String(l.fingerprint ?? "").startsWith(UNTIED)).map((l) => String(l.entity_id)));
+    /* the column list is built per kind, so the client cannot type the rows */
+    for (const r of (rowsRes.data ?? []) as unknown as Row[]) {
+      const id = String(r.id);
+      if (kind === "order" && r.status === "refunded") {
+        /* a refunded sale is mirrored as a note on the contact, once; the
+           order's metadata says when that was done */
+        const meta = (r.metadata as Row | null) ?? {};
+        if (r.hl_invoice_id && !meta.hl_refund_noted_at) {
+          await enqueue(db, kind, id, "reconcile: refund not noted");
+          result.enqueued[kind] += 1;
+        }
+        continue;
+      }
+      const s = synced.get(id);
+      const at = changedAt(kind, r);
+      if (!s || untied.has(id) || (at !== null && at > s)) {
+        await enqueue(db, kind, id, untied.has(id) ? "reconcile: tie the record" : "reconcile");
         result.enqueued[kind] += 1;
       }
     }

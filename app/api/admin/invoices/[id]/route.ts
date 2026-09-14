@@ -114,13 +114,30 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       await nudgeInvoice(db, id);
     }
   } else if (action === "void") {
+    /*
+     * A paid invoice is a record of money that moved, not a document to
+     * cancel. Voiding it here left our row void with its paid mark still on
+     * it and HighLevel's copy paid, and the nightly check shouting about
+     * both (audit, 15 September 2026). Money that has to go back is a refund.
+     */
+    const { data: existing } = await db.from("invoices").select("id, paid_at").eq("id", id).maybeSingle();
+    if (!existing) return NextResponse.json({ error: "Not found." }, { status: 404 });
+    if (existing.paid_at) {
+      return NextResponse.json(
+        { error: "This invoice is paid. It cannot be voided; refund the payment in HighLevel instead." },
+        { status: 400 },
+      );
+    }
     const { data: inv } = await db
       .from("invoices")
       .update({ status: "void", updated_at: new Date().toISOString() })
       .eq("id", id)
+      .is("paid_at", null)
       .select("product_id")
-      .single();
-    if (inv?.product_id) {
+      .maybeSingle();
+    /* paid between the read above and this write: the same answer */
+    if (!inv) return NextResponse.json({ error: "This invoice was just paid. It cannot be voided." }, { status: 400 });
+    if (inv.product_id) {
       await db.from("products").update({ active: false }).eq("id", inv.product_id);
     } else {
       await nudgeInvoice(db, id);

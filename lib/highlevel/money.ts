@@ -6,7 +6,9 @@
  *   invoice  -> HighLevel invoice   raised in admin, created and sent there,
  *                                  edited or voided there when we change it
  *   order    -> paid invoice        a premade sale paid on the site, recorded
- *                                  on the contact with its Stripe reference
+ *                                  on the contact with its Stripe reference;
+ *                                  refunded, the invoice is voided if it was
+ *                                  never paid there and the contact gets a note
  *   retainer -> recurring schedule  the partnership's monthly bill, on the 1st
  *   HighLevel -> invoices           what happens over there comes back: paid,
  *                                  viewed, void, and invoices made by hand or
@@ -40,6 +42,13 @@ const alt = (cfg: HlConfig) => ({ altId: cfg.locationId, altType: "location" as 
 const q = (cfg: HlConfig) => `altId=${encodeURIComponent(cfg.locationId)}&altType=location`;
 export const dollars = (cents: number) => Math.round(cents) / 100;
 export const cents = (dollarsIn: unknown) => Math.round(Number(dollarsIn || 0) * 100);
+/** "$1,500" or "$441.50": the words for an amount, the way the emails say it. */
+export const moneyText = (amountCents: number, currency = "usd") =>
+  (amountCents / 100).toLocaleString("en-US", {
+    style: "currency",
+    currency: currency.toUpperCase(),
+    minimumFractionDigits: amountCents % 100 === 0 ? 0 : 2,
+  });
 const day = (v: unknown) => (typeof v === "string" && v.length >= 10 ? v.slice(0, 10) : new Date().toISOString().slice(0, 10));
 /**
  * HighLevel refuses a due date that has passed, judged on the sub-account's
@@ -203,6 +212,81 @@ export async function applyInvoiceState(db: Db, rowId: string, hl: Row): Promise
 }
 
 /**
+ * Money arrived on HighLevel's pay page: the client gets the receipt and the
+ * bell a payment on the site gets, and the team is told. Until now a payment
+ * made there told nobody (audit, 15 September 2026).
+ *
+ * The words are the invoice branch of sendOrderPaidEmails in
+ * lib/email/notify.ts, which is keyed by an order this payment does not
+ * have; the same template keys, bell kinds and links are used here so the
+ * two paths read the same. Reached by dynamic import because those modules
+ * are server-only and this one also runs from npm run hl:sync. Money carries
+ * no email preference category, so nothing is held back. Fail-soft: the paid
+ * mark already stands.
+ */
+export async function notifyInvoicePaid(db: Db, invoiceId: string): Promise<boolean> {
+  try {
+    const { data: inv } = await db
+      .from("invoices")
+      .select("number, total_cents, amount_paid_cents, currency, customer_email, customer_name")
+      .eq("id", invoiceId)
+      .maybeSingle();
+    const email = String(inv?.customer_email ?? "").toLowerCase();
+    if (!inv || !email) return false;
+    const [{ loadTemplate }, { sendEmail }, { renderTemplate, wrapEmail, escapeHtml, SITE_URL }, { pushNotification, pushAdminNotifications }] =
+      await Promise.all([import("@/lib/email/notify"), import("@/lib/email/send"), import("@/lib/email/templates"), import("@/lib/notifications")]);
+    const { data: c } = await db.from("customers").select("name").ilike("email", likeLiteral(email)).maybeSingle();
+    const name = (c?.name as string | null) ?? (inv.customer_name as string | null) ?? null;
+    const paidCents = Number(inv.amount_paid_cents) > 0 ? Number(inv.amount_paid_cents) : Number(inv.total_cents ?? 0);
+    const amount = moneyText(paidCents, String(inv.currency ?? "usd"));
+    const number = String(inv.number ?? "");
+    const vars = {
+      customer_name: escapeHtml(name || "there"),
+      customer_email: escapeHtml(email),
+      invoice_number: escapeHtml(number),
+      amount,
+      portal_url: `${SITE_URL}/portal`,
+      admin_url: `${SITE_URL}/admin`,
+    };
+    const send = async (key: string, to: string, toName: string | null) => {
+      const tpl = await loadTemplate(db, key);
+      if (!tpl?.enabled) return;
+      await sendEmail({
+        to,
+        toName,
+        subject: renderTemplate(tpl.subject, vars),
+        html: wrapEmail(renderTemplate(tpl.body, vars)),
+        log: { source: "template", templateKey: key, meta: { invoice_id: invoiceId, paid_in: "highlevel" } },
+      });
+    };
+    await send("invoice_paid", email, name);
+    await send("admin_invoice_paid", process.env.ADMIN_ALERT_EMAIL ?? "hi@ghlvideo.com", null);
+    const bell = { invoice_number: number, amount, customer_email: email };
+    await pushNotification(db, {
+      audience: "customer",
+      email,
+      kind: "invoice_paid",
+      title: "Payment received",
+      body: `${number}, ${amount}. Thank you, nothing else is needed.`,
+      href: "orders",
+      feature: "orders",
+      vars: bell,
+    });
+    await pushAdminNotifications(db, {
+      kind: "invoice_paid",
+      title: `Invoice payment: ${amount}`,
+      body: `${number} from ${email}`,
+      href: "invoices",
+      vars: bell,
+    });
+    return true;
+  } catch (e) {
+    console.error(`[highlevel] invoice ${invoiceId} paid there, receipt not sent: ${e instanceof Error ? e.message : e}`);
+    return false;
+  }
+}
+
+/**
  * Why an invoice is not for HighLevel at all. Pure.
  *
  * The demo account's invoices are props for the demo portal, and a bill for
@@ -322,29 +406,44 @@ export async function syncInvoice(
 }
 
 /**
- * Read the state of every open mirrored invoice back from HighLevel: paid,
- * viewed, void. One GET per open invoice, so a client paying on HighLevel's
- * page shows paid here within the minute.
+ * Read the state of every mirrored invoice still owed back from HighLevel:
+ * paid, viewed, void. One GET per invoice, so a client paying on HighLevel's
+ * page shows paid here within the minute, and gets their receipt.
+ *
+ * Watched by paid_at rather than by our status: a row voided here while
+ * HighLevel's copy is still open keeps being read until the void lands over
+ * there, so the two never disagree for good (audit, 15 September 2026).
+ * HighLevel's own terminal states end the watch.
  */
-export async function pollOpenInvoices(db: Db, cfg: HlConfig, limit = 50): Promise<{ checked: number; paid: number; changed: number }> {
+export async function pollOpenInvoices(
+  db: Db,
+  cfg: HlConfig,
+  opts: { limit?: number; until?: number } = {},
+): Promise<{ checked: number; paid: number; changed: number; outOfTime: boolean }> {
   const { data } = await db
     .from("invoices")
     .select("id, hl_invoice_id, hl_status, amount_paid_cents")
     .not("hl_invoice_id", "is", null)
     .is("paid_at", null)
-    .eq("status", "open")
+    .or("hl_status.is.null,hl_status.not.in.(void,voided,refunded)")
     .order("updated_at", { ascending: true })
-    .limit(limit);
-  const out = { checked: 0, paid: 0, changed: 0 };
+    .limit(opts.limit ?? 50);
+  const out = { checked: 0, paid: 0, changed: 0, outOfTime: false };
   for (const r of (data ?? []) as Row[]) {
+    if (opts.until && Date.now() > opts.until) {
+      out.outOfTime = true;
+      break;
+    }
     const hl = await fetchInvoice(cfg, String(r.hl_invoice_id));
     out.checked += 1;
     if (!hl) continue;
     const status = String(hl.status ?? "");
     if (status !== String(r.hl_status ?? "") || cents(hl.amountPaid) !== Number(r.amount_paid_cents ?? 0)) {
-      await applyInvoiceState(db, String(r.id), hl);
+      const patch = await applyInvoiceState(db, String(r.id), hl);
       out.changed += 1;
       if (status === "paid") out.paid += 1;
+      /* the row had no paid_at a moment ago: this is the payment landing */
+      if (patch.paid_at) await notifyInvoicePaid(db, String(r.id));
     }
   }
   return out;
@@ -377,8 +476,12 @@ async function scheduleInvoiceIds(cfg: HlConfig, scheduleIds: string[]): Promise
  * mirror row with source "highlevel", which our screens show and never
  * edit; HighLevel leads for them.
  */
-export async function pullInvoices(db: Db, cfg: HlConfig, opts: { pages?: number } = {}): Promise<{ seen: number; imported: number; skipped: string[] }> {
-  const out = { seen: 0, imported: 0, skipped: [] as string[] };
+export async function pullInvoices(
+  db: Db,
+  cfg: HlConfig,
+  opts: { pages?: number } = {},
+): Promise<{ seen: number; foreign: number; imported: number; skipped: string[] }> {
+  const out = { seen: 0, foreign: 0, imported: 0, skipped: [] as string[] };
   const pages = opts.pages ?? 3;
   const listed: Row[] = [];
   for (let page = 0; page < pages; page += 1) {
@@ -390,12 +493,30 @@ export async function pullInvoices(db: Db, cfg: HlConfig, opts: { pages?: number
   out.seen = listed.length;
   if (!listed.length) return out;
 
-  const ids = listed.map((i) => String(i._id ?? i.id));
+  /* the sub-account bills other people too. An invoice whose contact email
+     is not one of our clients' is counted and left alone before any query:
+     every one of them was costing two reads and a "skipped" line a minute
+     (audit, 15 September 2026). A contact with no email at all is still
+     tried through its link. */
+  const { data: clients } = await db.from("customers").select("email");
+  const ours = new Set(((clients ?? []) as Row[]).map((c) => String(c.email ?? "").toLowerCase()).filter(Boolean));
+  const emailOf = (i: Row) => String(((i.contactDetails as Row | null) ?? {}).email ?? "").toLowerCase();
+  const candidates = listed.filter((i) => {
+    const e = emailOf(i);
+    if (e && !ours.has(e)) {
+      out.foreign += 1;
+      return false;
+    }
+    return true;
+  });
+  if (!candidates.length) return out;
+
+  const ids = candidates.map((i) => String(i._id ?? i.id));
   const { data: have } = await db.from("invoices").select("hl_invoice_id").in("hl_invoice_id", ids);
   const known = new Set(((have ?? []) as Row[]).map((r) => String(r.hl_invoice_id)));
   const { data: linkedOrders } = await db.from("orders").select("hl_invoice_id").in("hl_invoice_id", ids);
   for (const o of (linkedOrders ?? []) as Row[]) known.add(String(o.hl_invoice_id));
-  const missing = listed.filter((i) => !known.has(String(i._id ?? i.id)));
+  const missing = candidates.filter((i) => !known.has(String(i._id ?? i.id)));
   if (!missing.length) return out;
 
   const { data: partners } = await db.from("customers").select("id, hl_retainer_schedule_id").not("hl_retainer_schedule_id", "is", null);
@@ -477,18 +598,90 @@ export function saleItems(order: Row, productName: string): { name: string; curr
   return [{ name: text(productName, 150), currency: "USD", amount: dollars(total), qty: 1 }];
 }
 
-async function cardOf(paymentIntentId: unknown): Promise<Card> {
+/** The charge behind a payment intent, or null when Stripe cannot say. Fail-soft. */
+async function latestCharge(paymentIntentId: unknown): Promise<Stripe.Charge | null> {
   if (typeof paymentIntentId !== "string" || !paymentIntentId.startsWith("pi_") || !process.env.STRIPE_SECRET_KEY) return null;
   try {
     const { default: Stripe } = await import("stripe");
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
     const pi = await stripe.paymentIntents.retrieve(paymentIntentId, { expand: ["latest_charge"] });
-    const charge = pi.latest_charge as Stripe.Charge | null;
-    const card = charge?.payment_method_details?.card;
-    return card ? { brand: String(card.brand ?? "card"), last4: String(card.last4 ?? "") } : null;
+    const charge = pi.latest_charge;
+    return charge && typeof charge === "object" ? (charge as Stripe.Charge) : null;
   } catch {
     return null;
   }
+}
+
+async function cardOf(paymentIntentId: unknown): Promise<Card> {
+  const card = (await latestCharge(paymentIntentId))?.payment_method_details?.card;
+  return card ? { brand: String(card.brand ?? "card"), last4: String(card.last4 ?? "") } : null;
+}
+
+/** The line on the contact for money that went back. Pure. */
+export function refundNote(r: { amountCents: number; on: string; reference: string | null }): string {
+  return `Refunded ${moneyText(r.amountCents)} on ${r.on.slice(0, 10)}${r.reference ? `, Stripe ${r.reference}` : ""}.`;
+}
+
+/*
+ * A refund has no call in HighLevel's invoice API, so the ledger over there
+ * is corrected the way a bookkeeper would: the invoice is voided if it was
+ * never paid there, and the contact carries a note saying what went back
+ * and when, once. Before this the paid invoice recorded there stayed paid
+ * for good (audit, 15 September 2026). The mark lives in the order's
+ * metadata, so a retry never writes a second note.
+ */
+async function mirrorRefund(
+  db: Db,
+  cfg: HlConfig,
+  order: Row,
+  deps: { contactIdFor: (customer: Row) => Promise<string>; allowed: (email: string) => boolean },
+): Promise<Outcome> {
+  const orderId = String(order.id);
+  const hlId = typeof order.hl_invoice_id === "string" && order.hl_invoice_id ? order.hl_invoice_id : null;
+  if (!hlId) return { status: "skipped", note: "refunded before the sale was recorded in HighLevel; nothing to undo there" };
+  const meta = (order.metadata as Row | null) ?? {};
+  if (meta.hl_refund_noted_at) return { status: "unchanged", note: `refund already noted on invoice ${hlId}` };
+  const email = String(order.customer_email ?? "").toLowerCase();
+  if (!deps.allowed(email)) return { status: "skipped", note: `${email} is outside HIGHLEVEL_SYNC_ALLOW` };
+  const { data: customer } = await db.from("customers").select("*").ilike("email", likeLiteral(email)).maybeSingle();
+  if (!customer) return { status: "skipped", note: `no customer row for ${email}` };
+
+  const notes: string[] = [];
+  const hl = await fetchInvoice(cfg, hlId);
+  const hlStatus = String(hl?.status ?? "");
+  let gone = !hl;
+  if (!hl) notes.push("the invoice is gone in HighLevel");
+  else if (hlStatus === "paid" || hlStatus === "partially_paid") notes.push("paid there, so it stays paid: HighLevel has no refund call");
+  else if (hlStatus === "void" || hlStatus === "voided") {
+    notes.push("already void there");
+    gone = true;
+  } else {
+    await hlFetch(`/invoices/${hlId}/void`, { method: "POST", body: JSON.stringify(alt(cfg)) });
+    notes.push("voided in HighLevel");
+    gone = true;
+  }
+
+  /* what went back and when: Stripe's charge first, else the refund event, else the order */
+  const { data: events } = await db
+    .from("order_events")
+    .select("payload, created_at")
+    .eq("order_id", orderId)
+    .in("event_type", ["refunded", "dispute_lost"])
+    .order("created_at", { ascending: false })
+    .limit(1);
+  const event = ((events ?? []) as Row[])[0] ?? null;
+  const eventCents = Number(((event?.payload as Row | null) ?? {}).amount_cents ?? 0);
+  const charge = await latestCharge(order.stripe_payment_intent_id);
+  const amountCents = charge?.amount_refunded || eventCents || Number(order.amount_cents ?? 0);
+  const on = typeof event?.created_at === "string" ? event.created_at : new Date().toISOString();
+  const pi = typeof order.stripe_payment_intent_id === "string" ? order.stripe_payment_intent_id : null;
+  const line = refundNote({ amountCents, on, reference: charge?.id ?? pi });
+  const contactId = await deps.contactIdFor(customer);
+  await hlFetch(`/contacts/${contactId}/notes`, { method: "POST", body: JSON.stringify({ body: `${line} Invoice ${hlId}.` }) });
+  await db.from("orders").update({ metadata: { ...meta, hl_refund_noted_at: new Date().toISOString() } }).eq("id", orderId);
+  /* HighLevel stops answering for a voided invoice; a link kept would read as drift every night */
+  if (gone) await dropLink(db, "order", orderId, "invoice");
+  return { status: "done", note: ["refund noted on the contact", ...notes].join("; ") };
 }
 
 /**
@@ -509,6 +702,7 @@ export async function syncOrderSale(
     .eq("id", orderId)
     .maybeSingle();
   if (!order) return { status: "skipped", note: "order row is gone" };
+  if (order.status === "refunded") return await mirrorRefund(db, cfg, order, deps);
   if (order.status !== "paid") return { status: "skipped", note: `order is ${String(order.status)}, not paid` };
   const product = (order.product as { name?: string; sku?: string; metadata?: Row } | null) ?? null;
   if (order.hl_invoice_id) {
@@ -773,9 +967,10 @@ export function inboundInvoiceId(payload: Row): string | null {
 export async function applyInboundInvoice(db: Db, cfg: HlConfig, hlId: string): Promise<string> {
   const hl = await fetchInvoice(cfg, hlId);
   if (!hl) return `invoice ${hlId} is not in HighLevel`;
-  const { data: mine } = await db.from("invoices").select("id").eq("hl_invoice_id", hlId).maybeSingle();
+  const { data: mine } = await db.from("invoices").select("id, paid_at").eq("hl_invoice_id", hlId).maybeSingle();
   if (mine) {
     const patch = await applyInvoiceState(db, String(mine.id), hl);
+    if (patch.paid_at && !mine.paid_at) await notifyInvoicePaid(db, String(mine.id));
     return `invoice ${hlId}: ${String(patch.hl_status)}${patch.paid_at ? ", paid" : ""}`;
   }
   const { data: order } = await db.from("orders").select("id").eq("hl_invoice_id", hlId).maybeSingle();
