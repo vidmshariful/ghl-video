@@ -650,6 +650,161 @@ export function Facts({ items }: { items: { label: string; value: ReactNode }[] 
 }
 
 
+/* ================================================================
+   Rows, status, sections (the blueprint look, September 2026)
+   ================================================================ */
+
+/*
+ * The blueprints agreed on 13 September 2026 changed the grammar of every
+ * screen: one level of containers (the page is the surface; a card only for
+ * an object), rows instead of tiles, the status as a dot and a word instead
+ * of a chip, one gold action per screen, quiet uppercase labels only for
+ * metadata, and the same rhythm everywhere (40px between sections, 12px
+ * rows). These four are that grammar, so a screen composes them rather
+ * than re-deciding it.
+ */
+
+const DOT_TONES = {
+  gold: "bg-gold",
+  blue: "bg-blue",
+  green: "bg-green",
+  dim: "bg-dim",
+  error: "bg-error",
+} as const;
+
+/** The status: a dot and a word. Never a chip. */
+export function Status({
+  tone = "dim",
+  children,
+  quiet,
+}: {
+  tone?: keyof typeof DOT_TONES;
+  children: ReactNode;
+  /** metadata-sized, for a row's second line */
+  quiet?: boolean;
+}) {
+  return (
+    <span className={cx("inline-flex items-center gap-2", quiet ? "text-body-sm text-muted" : "text-body-sm text-ink")}>
+      <span aria-hidden="true" className={cx("h-2 w-2 shrink-0 rounded-full", DOT_TONES[tone])} />
+      {children}
+    </span>
+  );
+}
+
+/**
+ * A section of a page: a heading with its count, forty pixels below the
+ * one before, and one optional action on the right. Sections are the
+ * page's structure; cards are not.
+ */
+export function Section({
+  title,
+  count,
+  action,
+  children,
+  first,
+}: {
+  title: string;
+  count?: number;
+  action?: ReactNode;
+  children: ReactNode;
+  first?: boolean;
+}) {
+  return (
+    <section className={first ? "" : "mt-10"}>
+      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h2 className="flex items-baseline gap-2 text-h4 font-semibold text-ink">
+          {title}
+          {count != null && (
+            <span className="font-mono text-label tabular-nums text-dim">{count}</span>
+          )}
+        </h2>
+        {action && <div className="shrink-0">{action}</div>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+/** The list: twelve pixel rows, a hairline between, nothing around. */
+export function Rows({ children }: { children: ReactNode }) {
+  return <ul className="divide-y divide-hair/70 border-y border-hair/70">{children}</ul>;
+}
+
+/**
+ * One row: what it is, then where it stands, then one action. The title
+ * and the word are what a person scans; everything else is quiet.
+ */
+export function Row({
+  title,
+  meta,
+  status,
+  action,
+  onClick,
+  href,
+}: {
+  title: ReactNode;
+  /** the quiet second line: line, group, due */
+  meta?: ReactNode;
+  /** a Status, or any short word, right of the title on wide screens */
+  status?: ReactNode;
+  action?: ReactNode;
+  onClick?: () => void;
+  href?: string;
+}) {
+  const body = (
+    <>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-body-sm font-medium text-ink">{title}</p>
+        {meta && <p className="mt-0.5 font-mono text-label uppercase tracking-[0.06em] text-dim">{meta}</p>}
+      </div>
+      {status && <div className="shrink-0 sm:w-44">{status}</div>}
+      {action && <div className="shrink-0">{action}</div>}
+    </>
+  );
+  const cls = "flex flex-wrap items-center gap-x-5 gap-y-1.5 py-3 sm:flex-nowrap";
+  if (href)
+    return (
+      <li>
+        <a href={href} className={cx(cls, "tap -mx-2 rounded-[8px] px-2 transition-colors hover:bg-hair/30")}>
+          {body}
+        </a>
+      </li>
+    );
+  if (onClick)
+    return (
+      <li>
+        <button type="button" onClick={onClick} className={cx(cls, "tap -mx-2 w-[calc(100%+1rem)] rounded-[8px] px-2 text-left transition-colors hover:bg-hair/30")}>
+          {body}
+        </button>
+      </li>
+    );
+  return <li className={cls}>{body}</li>;
+}
+
+/** One quiet strip of figures, for the month: label above, value, a hint. */
+export function Strip({ items }: { items: { label: string; value: ReactNode; hint?: string; onClick?: () => void }[] }) {
+  return (
+    <div className="grid gap-x-8 gap-y-4 border-y border-hair/70 py-4 sm:grid-flow-col sm:auto-cols-fr">
+      {items.map((it) => {
+        const inner = (
+          <>
+            <p className="font-mono text-label uppercase tracking-[0.1em] text-dim">{it.label}</p>
+            <p className="mt-1 text-h4 font-semibold tabular-nums text-ink">{it.value}</p>
+            {it.hint && <p className="mt-0.5 text-body-sm text-muted">{it.hint}</p>}
+          </>
+        );
+        return it.onClick ? (
+          <button key={it.label} type="button" onClick={it.onClick} className="tap rounded-[8px] text-left hover:text-gold">
+            {inner}
+          </button>
+        ) : (
+          <div key={it.label}>{inner}</div>
+        );
+      })}
+    </div>
+  );
+}
+
 /*
  * The one popup for every add and edit form across admin, the customer
  * portal and the partner portal (owner decision, 22 August 2026: forms

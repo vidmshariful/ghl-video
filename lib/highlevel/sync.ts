@@ -440,6 +440,17 @@ async function upsertOpportunity(
   }
 }
 
+/** A link whose record exists but is not yet tied to its contact carries this mark. */
+const UNTIED = "untied:";
+
+/*
+ * Make or update a record, then tie it to the contact. The tie is its own
+ * call and HighLevel sometimes refuses it for a moment; when that happens
+ * the record is kept and marked untied rather than the whole row failing,
+ * because a failed row is retried from the top and would make a second
+ * record. The tie is tried again on the next change and by the nightly
+ * check. Returns the record id and whether it is tied.
+ */
 async function upsertRecord(
   cfg: HlConfig,
   objectKey: string,
@@ -448,30 +459,45 @@ async function upsertRecord(
   contactId: string,
   associationId: string,
   notes: string[],
-): Promise<string> {
+): Promise<{ id: string; tied: boolean }> {
   const loc = encodeURIComponent(cfg.locationId);
+  let id: string | null = null;
+  let needsTie = !link || Boolean(link.fingerprint?.startsWith(UNTIED));
   if (link) {
     try {
       await hlFetch(`/objects/${objectKey}/records/${link.hl_id}?locationId=${loc}`, {
         method: "PUT",
         body: JSON.stringify({ properties }),
       });
-      return link.hl_id;
+      id = link.hl_id;
     } catch (e) {
       if (!(e instanceof HighLevelError) || e.status !== 404) throw e;
       notes.push("the record had been deleted in HighLevel, made again");
+      needsTie = true;
     }
   }
-  const j = await hlFetch(`/objects/${objectKey}/records`, {
-    method: "POST",
-    body: JSON.stringify({ locationId: cfg.locationId, properties }),
-  });
-  const id = String(((j.record as Row) ?? j).id);
-  await hlFetch("/associations/relations", {
-    method: "POST",
-    body: JSON.stringify({ locationId: cfg.locationId, associationId, firstRecordId: contactId, secondRecordId: id }),
-  });
-  return id;
+  if (!id) {
+    const j = await hlFetch(`/objects/${objectKey}/records`, {
+      method: "POST",
+      body: JSON.stringify({ locationId: cfg.locationId, properties }),
+    });
+    id = String(((j.record as Row) ?? j).id);
+    needsTie = true;
+  }
+  if (!needsTie) return { id, tied: true };
+  try {
+    await hlFetch("/associations/relations", {
+      method: "POST",
+      body: JSON.stringify({ locationId: cfg.locationId, associationId, firstRecordId: contactId, secondRecordId: id }),
+    });
+    return { id, tied: true };
+  } catch (e) {
+    if (!(e instanceof HighLevelError) || e.status >= 500) throw e;
+    /* already tied, from an earlier attempt that did not get to say so */
+    if (/already|exists|duplicate/i.test(e.message)) return { id, tied: true };
+    notes.push("record made; HighLevel refused to tie it to the contact just now, will try again");
+    return { id, tied: false };
+  }
 }
 
 export async function syncProject(db: Db, cfg: HlConfig, id: string): Promise<Outcome> {
@@ -495,7 +521,7 @@ export async function syncProject(db: Db, cfg: HlConfig, id: string): Promise<Ou
   const notes: string[] = [];
   const oppId = await upsertOpportunity(cfg, oppLink, opportunity, contactId, notes);
   await putLink(db, cfg, { kind: "project", entity_id: id, hl_kind: "opportunity", hl_id: oppId, fingerprint: fp });
-  const recId = await upsertRecord(
+  const rec = await upsertRecord(
     cfg,
     cfg.objects.project.key,
     recLink,
@@ -504,8 +530,8 @@ export async function syncProject(db: Db, cfg: HlConfig, id: string): Promise<Ou
     cfg.associations.projectContact,
     notes,
   );
-  await putLink(db, cfg, { kind: "project", entity_id: id, hl_kind: "record", hl_id: recId, fingerprint: fp });
-  return { status: "done", note: [`deal ${oppId}`, `record ${recId}`, ...notes].join("; ") };
+  await putLink(db, cfg, { kind: "project", entity_id: id, hl_kind: "record", hl_id: rec.id, fingerprint: rec.tied ? fp : `${UNTIED}${fp}` });
+  return { status: "done", note: [`deal ${oppId}`, `record ${rec.id}`, ...notes].join("; ") };
 }
 
 /* ------------------------------------------------------------------ */
@@ -584,12 +610,12 @@ export async function syncVideo(db: Db, cfg: HlConfig, id: string): Promise<Outc
 
   const contactId = await contactIdFor(db, cfg, customer);
   const notes: string[] = [];
-  const recId = await upsertRecord(cfg, cfg.objects.video.key, link, record, contactId, cfg.associations.videoContact, notes);
-  await putLink(db, cfg, { kind: "video", entity_id: id, hl_kind: "record", hl_id: recId, fingerprint: fp });
+  const rec = await upsertRecord(cfg, cfg.objects.video.key, link, record, contactId, cfg.associations.videoContact, notes);
+  await putLink(db, cfg, { kind: "video", entity_id: id, hl_kind: "record", hl_id: rec.id, fingerprint: rec.tied ? fp : `${UNTIED}${fp}` });
   /* a video going out for review, or coming back, changes what the client is
      waiting on; the contact follows on the next pass (unchanged is free) */
   await enqueue(db, "customer", String(customer.id), "video changed").catch(() => undefined);
-  return { status: "done", note: [`record ${recId}`, ...notes].join("; ") };
+  return { status: "done", note: [`record ${rec.id}`, ...notes].join("; ") };
 }
 
 /* ------------------------------------------------------------------ */
@@ -901,13 +927,14 @@ export async function reconcile(db: Db, opts: { verify?: number } = {}): Promise
     const scoped = kind === "order" ? base.eq("status", "paid") : kind === "invoice" ? base.neq("status", "void") : base;
     const [{ data: rows }, { data: links }] = await Promise.all([
       scoped.order("updated_at", { ascending: false }).limit(5000),
-      db.from("hl_links").select("entity_id, synced_at").eq("kind", kind).eq("hl_kind", hlKind).eq("location_id", loc),
+      db.from("hl_links").select("entity_id, synced_at, fingerprint").eq("kind", kind).eq("hl_kind", hlKind).eq("location_id", loc),
     ]);
     const synced = new Map(((links ?? []) as Row[]).map((l) => [String(l.entity_id), String(l.synced_at)]));
+    const untied = new Set(((links ?? []) as Row[]).filter((l) => String(l.fingerprint ?? "").startsWith(UNTIED)).map((l) => String(l.entity_id)));
     for (const r of (rows ?? []) as Row[]) {
       const s = synced.get(String(r.id));
-      if (!s || (typeof r.updated_at === "string" && r.updated_at > s)) {
-        await enqueue(db, kind, String(r.id), "reconcile");
+      if (!s || untied.has(String(r.id)) || (typeof r.updated_at === "string" && r.updated_at > s)) {
+        await enqueue(db, kind, String(r.id), untied.has(String(r.id)) ? "reconcile: tie the record" : "reconcile");
         result.enqueued[kind] += 1;
       }
     }

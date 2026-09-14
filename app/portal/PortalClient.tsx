@@ -19,8 +19,9 @@ import {
   SocialXView,
   WhiteLabelView,
 } from "@/components/portal/booking";
-import { PORTAL_SECTIONS, type PortalSection } from "./sections";
-import { DashboardView } from "./DashboardView";
+import { NAV_SECTIONS, WORK_LINES, resolveSection, sectionPath, type PortalSection, type WorkLine } from "./sections";
+import { WorkSwitcher } from "./WorkView";
+import { HomeView } from "./HomeView";
 import { BrandKitView } from "./BrandKitView";
 import { ComingSoonView } from "./ComingSoonView";
 import { LibraryView } from "./LibraryView";
@@ -41,22 +42,14 @@ import {
 import { memberCan } from "@/lib/team-features";
 import Image from "next/image";
 import {
-  LibraryBig,
   Palette,
   Play,
   ArrowLeft,
   Clapperboard,
-  Handshake,
-  Layers,
   LayoutDashboard,
   LifeBuoy,
-  Megaphone,
   MessageSquare,
-  PhoneCall,
-  Repeat,
-  Scissors,
   Settings,
-  Sparkles,
   ShoppingCart,
 } from "lucide-react";
 import { MessagesView } from "./MessagesView";
@@ -1446,12 +1439,7 @@ function SettingsView({
 }
 
 /* ---- signed-in portal (app shell) ---- */
-const pathFor = (s: PortalSection, sub?: string | null) =>
-  s === "dashboard"
-    ? "/portal/"
-    : (s === "orders" || s === "library" || s === "projects") && sub
-      ? `/portal/${s}/${sub}/`
-      : `/portal/${s}/`;
+const pathFor = (s: PortalSection, sub?: string | null, line?: WorkLine | null) => sectionPath(s, line ?? null, sub ?? null);
 
 function PageHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
@@ -1467,17 +1455,21 @@ function PageHeader({ title, subtitle }: { title: string; subtitle?: string }) {
 function Portal({
   session,
   initialView,
+  initialLine,
   initialOrderId,
   initialItemCode,
   initialProjectId,
 }: {
   session: Session;
   initialView: PortalSection;
+  initialLine: WorkLine | null;
   initialOrderId: string | null;
   initialItemCode: string | null;
   initialProjectId: string | null;
 }) {
   const [section, setSection] = useState<PortalSection>(initialView);
+  /* which of the three lines My work shows; null until the account's lines are known */
+  const [line, setLine] = useState<WorkLine | null>(initialLine);
   const [openOrder, setOpenOrder] = useState<string | null>(initialOrderId);
   /* the library item open at /portal/library/<code>/, if any */
   const [openItem, setOpenItem] = useState<string | null>(initialItemCode);
@@ -1492,21 +1484,19 @@ function Portal({
   const [profile, setProfile] = useState<MyProfile | null>(null);
 
   /* clicking around pushes real URLs; back/forward walk the sections */
-  const pushUrl = (s: PortalSection, sub?: string | null) => {
-    const path = pathFor(s, sub);
+  const pushUrl = (s: PortalSection, sub?: string | null, l?: WorkLine | null) => {
+    const path = pathFor(s, sub, l);
     if (window.location.pathname !== path) window.history.pushState(null, "", path);
   };
   useEffect(() => {
     const onPop = () => {
       const segs = window.location.pathname.replace(/^\/portal\/?/, "").split("/").filter(Boolean);
-      const seg = segs[0] ?? "dashboard";
-      const next = (PORTAL_SECTIONS as readonly string[]).includes(seg)
-        ? (seg as PortalSection)
-        : "dashboard";
-      setSection(next);
-      setOpenOrder(next === "orders" && segs[1] ? segs[1] : null);
-      setOpenItem(next === "library" && segs[1] ? segs[1] : null);
-      setOpenProjectId(next === "projects" && segs[1] ? segs[1] : null);
+      const r = resolveSection(segs);
+      setSection(r.section);
+      if (r.line) setLine(r.line);
+      setOpenOrder(r.section === "billing" ? r.id : null);
+      setOpenItem(r.section === "library" ? r.id : null);
+      setOpenProjectId(r.section === "work" && r.line === "custom" ? r.id : null);
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
@@ -1542,9 +1532,22 @@ function Portal({
   const disabledSections = new Set(decided ? decided.disabled : (profile?.disabledSections ?? []));
   const isDisabled = (key: string) => disabledSections.has(key);
   const showOffers = decided ? decided.offers : true;
-  /* Typing the URL of a switched-off section lands on the dashboard. Gating
-   * only the menu would hide the door and leave the room open. */
-  const view: PortalSection = shows(section) ? section : "dashboard";
+  /*
+   * The six sections, over the finer keys the server decides with. My work
+   * shows when the account has any line; Billing when it has anything to
+   * pay; the strip's screens keep their own keys. Typing the URL of a
+   * switched-off section lands on Home: gating only the menu would hide the
+   * door and leave the room open.
+   */
+  const lineShown = (l: WorkLine) => (l === "premade" ? shows("videos") : l === "custom" ? shows("projects") : shows("subscriptions"));
+  const sectionShown = (s: PortalSection): boolean => {
+    if (s === "home" || s === "settings" || s === "help") return true;
+    if (s === "work") return WORK_LINES.some(lineShown);
+    if (s === "billing") return shows("orders") || shows("billing");
+    if (s === "affiliate" || s === "whitelabel" || s === "socialx") return showOffers && shows(s);
+    return shows(s);
+  };
+  const view: PortalSection = sectionShown(section) ? section : "home";
 
   // Who is signed in and which account they act for. Handles two edge
   // cases: a stale saved account (membership revoked -> fall back to self),
@@ -1643,38 +1646,40 @@ function Portal({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- restart when access changes
   }, [profile]);
 
-  const go = (s: PortalSection) => {
+  const go = (s: PortalSection, l?: WorkLine | null) => {
     setSection(s);
+    if (s === "work" && l) setLine(l);
     setOpenOrder(null);
     setOpenItem(null);
     setFocusVideo(null);
-    pushUrl(s);
+    pushUrl(s, null, s === "work" ? (l ?? line) : null);
+  };
+  /* an old section name from a link or a bell: the screen it means now */
+  const goKey = (key: string) => {
+    const r = resolveSection([key]);
+    go(r.section, r.line);
   };
 
   /*
-   * Open one video, on whichever screen it lives.
+   * Open one video, on whichever line it lives.
    *
    * Every video knows its line, so the caller never has to. Before this, the
    * dashboard sent everybody to Pre-made whatever they had pressed, which for
    * a custom or editing video meant landing on a screen it was not on.
    */
-  const LINE_SECTION: Record<string, PortalSection> = {
-    premade: "videos",
-    custom: "projects",
-    editing: "subscriptions",
-  };
-  const openVideo = (line: string, videoId: string) => {
-    const s = LINE_SECTION[line] ?? "videos";
-    setSection(s);
+  const openVideo = (l: string, videoId: string) => {
+    const wl: WorkLine = (WORK_LINES as readonly string[]).includes(l) ? (l as WorkLine) : "premade";
+    setSection("work");
+    setLine(wl);
     setOpenOrder(null);
     setOpenItem(null);
     setFocusVideo(videoId);
-    pushUrl(s);
+    pushUrl("work", null, wl);
   };
   const openOrderById = (id: string) => {
-    setSection("orders");
+    setSection("billing");
     setOpenOrder(id);
-    pushUrl("orders", id);
+    pushUrl("billing", id);
   };
   const messageStudio = (orderId: string) => {
     setPendingOrderId(orderId);
@@ -1688,26 +1693,25 @@ function Portal({
   };
 
   /* bell links: "orders", "orders/<id>", "projects/<id>", "videos", "messages",
-     "subscriptions". Older rows carry a full "/portal/videos/" path and the
-     pre-rename "custom", so both are folded in rather than dropped. */
+     "subscriptions", and today's names. Every old name still opens the screen
+     it meant, which is what keeps a month-old bell alive. */
   const openHref = (href: string) => {
     const segs = href.replace(/^\/portal\/?/, "").split("/").filter(Boolean);
-    const head = segs[0] === "custom" ? "projects" : (segs[0] ?? "");
-    const tail = segs[1];
-    if (head === "orders" && tail && can("orders")) {
-      openOrderById(tail);
+    const r = resolveSection(segs);
+    const needs = r.section === "messages" ? "messages" : r.section === "work" && r.line === "editing" ? "subscriptions" : r.section === "work" || r.section === "billing" ? "orders" : null;
+    if (needs && !can(needs)) return;
+    if (r.section === "billing" && r.id) {
+      openOrderById(r.id);
       return;
     }
-    if (head === "projects" && tail && can("orders")) {
-      setSection("projects");
-      setOpenProjectId(tail);
-      pushUrl("projects", tail);
+    if (r.section === "work" && r.line === "custom" && r.id) {
+      setSection("work");
+      setLine("custom");
+      setOpenProjectId(r.id);
+      pushUrl("work", r.id, "custom");
       return;
     }
-    if (["orders", "messages", "subscriptions", "projects", "videos"].includes(head) && !can(head === "projects" || head === "videos" ? "orders" : head)) return;
-    if ((PORTAL_SECTIONS as readonly string[]).includes(head)) {
-      go(head as PortalSection);
-    }
+    go(r.section, r.line);
   };
 
   const email = session.user.email ?? "";
@@ -1749,99 +1753,35 @@ function Portal({
    * and its billing moved to Orders and Invoices where the rest of the money
    * already was.
    */
+  /*
+   * Six sections (owner decision, 14 September 2026): Home, My work,
+   * Billing, Brand, Messages, and Settings at the bottom. The store and the
+   * offers are reached from Home's strip, so they keep their URLs without a
+   * place in the menu. A teammate with narrow access simply sees fewer.
+   */
+  const workLines = WORK_LINES.filter(lineShown);
+  const workVisible = workLines.length > 0 && (can("orders") || can("subscriptions"));
+  const billingVisible = (shows("orders") && can("orders")) || (shows("billing") && can("subscriptions"));
   const groups = [
     {
       title: "",
       items: [
-        { key: "dashboard", label: "Dashboard", icon: <LayoutDashboard /> },
-        ...(can("orders")
-          ? [
-              {
-                key: "brand",
-                label: "Brand Kit",
-                icon: <Palette />,
-                /* the portal's one nag, and it only appears when an order is
-                   genuinely stuck for want of these */
-                badge: brandIncomplete ? 1 : undefined,
-              },
-            ]
+        { key: "home", label: "Home", icon: <LayoutDashboard /> },
+        ...(workVisible ? [{ key: "work", label: "My work", icon: <Clapperboard /> }] : []),
+        ...(billingVisible ? [{ key: "billing", label: "Billing", icon: <ShoppingCart /> }] : []),
+        ...(can("orders") && shows("brand")
+          ? [{ key: "brand", label: "Brand", icon: <Palette />, badge: brandIncomplete ? 1 : undefined }]
           : []),
-        ...(can("messages")
-          ? [
-              {
-                key: "messages",
-                label: "Messages",
-                icon: <MessageSquare />,
-                badge: msgUnread || undefined,
-              },
-            ]
-          : []),
-        /* one screen for everything they pay: orders, invoices and plans.
-           Two screens showed the same money from two sides and invited the
-           question of whether it was charged twice. The key follows what the
-           account has, so a plan-only client still finds it. */
-        ...(can("orders") && shows("orders")
-          ? [{ key: "orders", label: "Billing", icon: <ShoppingCart /> }]
-          : can("subscriptions") && shows("billing")
-            ? [{ key: "billing", label: "Billing", icon: <Repeat /> }]
-            : []),
-      ],
-    },
-    {
-      title: "My Videos",
-      defaultOpen: true,
-      items: [
-        ...(can("orders")
-          ? [
-              { key: "videos", label: "Pre-made", icon: <Clapperboard /> },
-              { key: "projects", label: "Custom", icon: <Sparkles /> },
-            ]
-          : []),
-        ...(can("subscriptions")
-          ? [{ key: "subscriptions", label: "Editing", icon: <Scissors /> }]
+        ...(can("messages") && shows("messages")
+          ? [{ key: "messages", label: "Messages", icon: <MessageSquare />, badge: msgUnread || undefined }]
           : []),
       ],
     },
-    {
-      /* the lines they do not have yet, in one quiet group: the store for
-         premade, the call for custom. Which of these show is decided
-         server-side from what the account has. */
-      title: "Get more",
-      defaultOpen: true,
-      items: [
-        ...(can("orders")
-          ? [{ key: "library", label: "Video Library", icon: <LibraryBig /> }]
-          : []),
-        { key: "coming-soon", label: "Coming Soon", icon: <Sparkles /> },
-        /* the existing route to a custom video, until the quote thread lands */
-        { key: "book", label: "Book a Call", icon: <PhoneCall /> },
-      ],
-    },
-    /* these are offers aimed at the account owner, not at their team, and
-       never at a retainer partner who is already all the way in */
-    ...(profile.isOwner && showOffers
-      ? [
-          {
-            /* Closed by default. These are offers aimed at an owner, not
-               places somebody navigates to, and three of them open under a
-               heading pushes the client's actual work off a short screen. */
-            title: "More from us",
-            defaultOpen: false,
-            items: [
-              { key: "affiliate", label: "Affiliate program", icon: <Handshake /> },
-              { key: "whitelabel", label: "White-label", icon: <Layers /> },
-              { key: "socialx", label: "SocialX", icon: <Megaphone /> },
-            ],
-          },
-        ]
-      : []),
-    /* a teammate with narrow access can empty a whole group, and a heading
-     * over nothing looks like something failed to load */
   ]
     .map((g) => ({
       ...g,
       items: g.items
-        .filter((i) => shows(i.key))
+        .filter((i) => NAV_SECTIONS.includes(i.key as PortalSection))
         .map((i) =>
           isDisabled(i.key)
             ? {
@@ -1916,7 +1856,7 @@ function Portal({
                   pushUrl("library", hit.focus);
                   return;
                 }
-                go(hit.section as PortalSection);
+                goKey(hit.section);
               }}
             />
             {can("messages") ? (
@@ -1983,7 +1923,7 @@ function Portal({
             </div>
           ) : null}
           <div key={section + (openOrder ?? "") + (focusVideo ?? "")} className="portal-view">
-          {view !== "dashboard" && isDisabled(view) ? (
+          {view !== "home" && isDisabled(view) ? (
             /* a bookmark or a typed URL must not walk around the lock the
                menu shows; the same words, on a full screen */
             <div className="grid min-h-[50vh] place-items-center">
@@ -2002,32 +1942,36 @@ function Portal({
                 )}
               </div>
             </div>
-          ) : view === "dashboard" ? (
-            <DashboardView
+          ) : view === "home" ? (
+            <HomeView
               firstName={greetingName(profile)}
-              subtitle={
-                acting
-                  ? `Working in ${acting.name || acting.email}'s portal`
-                  : (session.user.email ?? "")
-              }
+              subtitle={acting ? `Working in ${acting.name || acting.email}'s portal` : ""}
               can={can}
               has={shows}
+              isOwner={profile.isOwner}
+              showOffers={showOffers}
               authedFetch={authedFetch}
               onOpenOrder={openOrderById}
               onOpenVideo={openVideo}
-              onGo={(s) => go(s as PortalSection)}
+              onOpenProject={(id) => {
+                setSection("work");
+                setLine("custom");
+                setOpenProjectId(id);
+                pushUrl("work", id, "custom");
+              }}
+              onGo={(key, l) => (l ? go("work", l) : goKey(key))}
               /* only when they are in their OWN account and belong to
                  somebody else's; acting already says where they are */
               otherAccounts={acting ? [] : profile.memberships}
               onSwitchAccount={(e) => switchAccount(e)}
             />
-          ) : view === "orders" && can("orders") ? (
+          ) : view === "billing" && billingVisible ? (
             openOrder ? (
               <OrderDetailView
                 id={openOrder}
                 onBack={() => {
                   setOpenOrder(null);
-                  pushUrl("orders");
+                  pushUrl("billing");
                 }}
                 onMessageStudio={messageStudio}
                 canMessage={can("messages")}
@@ -2040,32 +1984,68 @@ function Portal({
                 />
                 <div className="mt-6">
                   {/* what needs them first, then the record, then the plans */}
-                  <OpenQuotes />
-                    <OpenInvoices />
-                  <OrdersList onOpen={openOrderById} />
+                  {shows("orders") && can("orders") && (
+                    <>
+                      <OpenQuotes />
+                      <OpenInvoices />
+                      <OrdersList onOpen={openOrderById} />
+                    </>
+                  )}
                   {shows("billing") && can("subscriptions") && (
-                    <div className="mt-6">
+                    <div className={shows("orders") && can("orders") ? "mt-6" : ""}>
                       <SubscriptionsView canBilling={can("billing")} />
                     </div>
                   )}
                 </div>
               </div>
             )
-          ) : view === "videos" && can("orders") ? (
-            <div>
-              <PageHeader
-                title="Pre-made"
-                subtitle="Videos you ordered from the library, and where each one is."
-              />
-              <div className="mt-6">
-                <MyVideosView
-                  authedFetch={authedFetch}
-                  focusVideoId={focusVideo}
-                  onFocused={() => setFocusVideo(null)}
-                  onMessageStudio={can("messages") ? () => go("messages") : undefined}
-                />
-              </div>
-            </div>
+          ) : view === "work" && workVisible ? (
+            (() => {
+              const active: WorkLine = line && workLines.includes(line) ? line : workLines[0];
+              return (
+                <div>
+                  <WorkSwitcher
+                    lines={workLines.map((l) => ({ key: l, label: l === "premade" ? "Pre-made" : l === "custom" ? "Custom" : "Editing" }))}
+                    active={active}
+                    onChange={(l) => go("work", l)}
+                  />
+                  {active === "premade" && can("orders") ? (
+                    <div>
+                      <PageHeader title="Pre-made" subtitle="Videos you ordered from the library, and where each one is." />
+                      <div className="mt-6">
+                        <MyVideosView
+                          authedFetch={authedFetch}
+                          focusVideoId={focusVideo}
+                          onFocused={() => setFocusVideo(null)}
+                          onMessageStudio={can("messages") ? () => go("messages") : undefined}
+                        />
+                      </div>
+                    </div>
+                  ) : active === "custom" && can("orders") ? (
+                    <CustomView
+                      authedFetch={authedFetch}
+                      focusVideoId={focusVideo}
+                      onFocused={() => setFocusVideo(null)}
+                      onMessageStudio={can("messages") ? () => go("messages") : undefined}
+                      openProjectId={openProjectId}
+                      onOpenProject={(id) => {
+                        setOpenProjectId(id);
+                        pushUrl("work", id, "custom");
+                      }}
+                    />
+                  ) : active === "editing" && can("subscriptions") ? (
+                    <EditingView
+                      authedFetch={authedFetch}
+                      focusVideoId={focusVideo}
+                      onFocused={() => setFocusVideo(null)}
+                      onMessageStudio={can("messages") ? () => go("messages") : undefined}
+                    />
+                  ) : (
+                    <p className="text-body text-muted">Nothing to show here yet.</p>
+                  )}
+                </div>
+              );
+            })()
           ) : view === "library" && can("orders") ? (
             <LibraryView
               authedFetch={authedFetch}
@@ -2101,65 +2081,24 @@ function Portal({
             <SettingsView profile={profile} onSaved={loadProfile} />
           ) : view === "help" ? (
             <PortalHelp />
-          ) : view === "subscriptions" && can("subscriptions") ? (
-            /* Only the work. Billing moved to Orders and Invoices where the
-               rest of the money already was (owner decision). */
-            <EditingView
-              authedFetch={authedFetch}
-              focusVideoId={focusVideo}
-              onFocused={() => setFocusVideo(null)}
-              onMessageStudio={can("messages") ? () => go("messages") : undefined}
-            />
-          ) : view === "billing" && can("subscriptions") ? (
-            /* the same one screen, reached by the plan-only route */
-            <div>
-              <PageHeader
-                title="Billing"
-                subtitle="Your plan, what it costs, when it renews, and anything else you have paid for."
-              />
-              <div className="mt-6">
-                {shows("orders") && can("orders") && (
-                  <>
-                    <OpenQuotes />
-                    <OpenInvoices />
-                    <OrdersList onOpen={openOrderById} />
-                  </>
-                )}
-                <div className={shows("orders") && can("orders") ? "mt-6" : ""}>
-                  <SubscriptionsView canBilling={can("billing")} />
-                </div>
-              </div>
-            </div>
-          ) : view === "projects" && can("orders") ? (
-            <CustomView
-              authedFetch={authedFetch}
-              focusVideoId={focusVideo}
-              onFocused={() => setFocusVideo(null)}
-              onMessageStudio={can("messages") ? () => go("messages") : undefined}
-              openProjectId={openProjectId}
-              onOpenProject={(id) => {
-                setOpenProjectId(id);
-                pushUrl("projects", id);
-              }}
-            />
           ) : (
-            <DashboardView
+            <HomeView
               firstName={greetingName(profile)}
-              subtitle={
-                acting
-                  ? `Working in ${acting.name || acting.email}'s portal`
-                  : (session.user.email ?? "")
-              }
+              subtitle=""
               can={can}
               has={shows}
+              isOwner={profile.isOwner}
+              showOffers={showOffers}
               authedFetch={authedFetch}
               onOpenOrder={openOrderById}
               onOpenVideo={openVideo}
-              onGo={(s) => go(s as PortalSection)}
-              /* only when they are in their OWN account and belong to
-                 somebody else's; acting already says where they are */
-              otherAccounts={acting ? [] : profile.memberships}
-              onSwitchAccount={(e) => switchAccount(e)}
+              onOpenProject={(id) => {
+                setSection("work");
+                setLine("custom");
+                setOpenProjectId(id);
+                pushUrl("work", id, "custom");
+              }}
+              onGo={(key, l) => (l ? go("work", l) : goKey(key))}
             />
           )}
           </div>
@@ -2171,11 +2110,13 @@ function Portal({
 
 export function PortalClient({
   initialView,
+  initialLine = null,
   initialOrderId,
   initialItemCode,
   initialProjectId = null,
 }: {
   initialView: PortalSection;
+  initialLine?: WorkLine | null;
   initialOrderId: string | null;
   initialItemCode: string | null;
   initialProjectId?: string | null;
@@ -2238,6 +2179,7 @@ export function PortalClient({
         <Portal
           session={session}
           initialView={initialView}
+          initialLine={initialLine}
           initialOrderId={initialOrderId}
           initialItemCode={initialItemCode}
           initialProjectId={initialProjectId}

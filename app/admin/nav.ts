@@ -3,6 +3,7 @@
  * segment (/admin/<view>/); ALL_VIEWS is what the route validates against. */
 export type View =
   | "dashboard"
+  | "money"
   | "journal"
   | "reference"
   | "health"
@@ -32,6 +33,7 @@ export type View =
 
 export const ALL_VIEWS: View[] = [
   "dashboard",
+  "money",
   "journal",
   "reference",
   "health",

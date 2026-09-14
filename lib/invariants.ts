@@ -16,7 +16,7 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { batchStatusFor, creditCost, isBatch, tierFor, isPodcast, type EditType } from "@/lib/editing-credits";
-import { PORTAL_SECTIONS } from "@/app/portal/sections";
+import { isPortalHead } from "@/app/portal/sections";
 import { HIDEABLE_KEYS } from "@/app/admin/customer-sections";
 import { parseRetainer } from "@/lib/retainer";
 
@@ -325,9 +325,9 @@ const CHECKS: { key: string; rule: string; severity: Severity; run: Check }[] = 
         .select("id, href, created_at")
         .eq("audience", "customer")
         .gte("created_at", new Date(Date.now() - 30 * 86_400_000).toISOString());
-      const heads = new Set<string>(PORTAL_SECTIONS as readonly string[]);
+      /* today's names and the old ones both open a screen */
       const bad = ((data ?? []) as Row[])
-        .filter((n) => n.href && !heads.has(String(n.href).replace(/^\/?portal\//, "").split("/")[0]))
+        .filter((n) => n.href && !isPortalHead(String(n.href).replace(/^\/?portal\//, "").split("/")[0]))
         .map((n) => `${short(n.id)} -> ${String(n.href)}`);
       return { count: bad.length, sample: bad.slice(0, SAMPLE) };
     },

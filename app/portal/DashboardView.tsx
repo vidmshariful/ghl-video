@@ -144,9 +144,9 @@ function GettingStarted({ steps }: { steps: Step[] }) {
  * visit, chosen on the server. Skipping is honoured forever; "too early"
  * comes back a month later on purpose.
  */
-type FeedbackAskData = { deliverableId: string; title: string };
+export type FeedbackAskData = { deliverableId: string; title: string };
 
-function FeedbackAsk({
+export function FeedbackAsk({
   ask,
   authedFetch,
   onDone,
@@ -287,7 +287,7 @@ function FeedbackAsk({
  * the brief, and putting a discount above it says we would rather have their
  * money again than finish what they already paid for.
  */
-type Offer = {
+export type Offer = {
   id: string;
   title: string;
   body: string | null;
@@ -296,7 +296,7 @@ type Offer = {
   discount: string | null;
 };
 
-function OfferSlot({ offer }: { offer: Offer }) {
+export function OfferSlot({ offer }: { offer: Offer }) {
   const go = () => {
     /* counted, but never waited on: a counter must not stand between somebody
      * and the thing they just clicked */
