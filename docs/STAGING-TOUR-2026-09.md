@@ -384,3 +384,68 @@ the journal.
 | `npm run hl:sync -- --products` | mirror the catalogue into HighLevel products |
 | `npm run hl:migrate-invoices` | go-live only: move invoice history into HighLevel |
 | `node scripts/journal.mjs recent 20` | the journal, newest first |
+
+---
+
+## 7. Going live: how the merge works, and what happens to the data
+
+**The merge is a fast-forward.** Production's `main` is an ancestor of
+`design-update`, so there is nothing to merge and nothing can conflict. The
+release is one push, `git push origin design-update:main`, and Vercel builds
+it. Rolling back is Vercel's "promote previous deployment", which is
+instant.
+
+**Nothing is deleted or rewritten.** Production today holds 12 customers,
+13 projects, 9 invoices, 14 orders, 2 editing plans and 8 message threads.
+Four migrations are pending there (0095 to 0098). They add tables, columns
+and triggers; the only backfill stamps the paid date on invoices that were
+already paid, and the only loosened rule lets an invoice exist without a
+throwaway product. No table or column is dropped, so the old code keeps
+running against the new schema, which is what makes the rollback safe.
+
+**HighLevel's live sub-account is added to, not replaced.** Contacts are
+matched by email through HighLevel's own upsert, so the 8 customers who
+already have a contact are enriched with the GHLV fields and tags, not
+duplicated, and the other 4 are made. The two new pipelines and the two
+objects are created beside what is there; existing pipelines, deals, tags
+and conversations are untouched, and checkout keeps filing paid orders where
+it does today. Test accounts never reach it: staging's sandbox is a separate
+sub-account.
+
+**Past messages stay here.** A client's existing thread joins HighLevel from
+its next message; what was said before stays in the portal only.
+
+**Stripe is unchanged.** Premade checkout charges the website's Stripe
+account as today, editing plans keep their subscriptions, and HighLevel
+invoices charge through HighLevel's own Stripe connection.
+
+**The day, in order:**
+
+1. You set the live sub-account and Vercel as listed under "What is left".
+   The rollback note is written before anything is pushed.
+2. `GHLV_ENV=prod npm run migrate` applies 0095 to 0098. The old code keeps
+   running meanwhile.
+3. `git push origin design-update:main`, then confirm the deployment is
+   green before going further.
+4. `GHLV_ENV=prod npm run hl:provision` makes the fields, pipelines and
+   objects in the live sub-account and prints the lead pipeline ids to set
+   in Vercel.
+5. `GHLV_ENV=prod npm run hl:sync -- --all --products` is the first fill:
+   the 12 contacts, the 13 projects as deal cards (the cancelled one lands
+   in Closed as lost), every video as a record, and the 90 products.
+6. `GHLV_ENV=prod npm run hl:migrate-invoices` moves the 7 legacy invoices
+   across, paid ones as paid records. With `--email`, HighLevel also emails
+   the open ones their new pay link. That flag is your call on the day,
+   after a look at which of the 8 open invoices are still owed.
+7. A day watching the Health screen. The reconcile runs at 04:00 and the
+   invariants at 03:00 from then on.
+
+**Two calls that are yours:** whether the open legacy invoices are re-sent
+with the new pay link (step 6), and whether every past project should get a
+deal card or only the open ones (step 5 sends all 13; trimming it is a
+one-line change).
+
+**The one rollback caveat:** an invoice paid in HighLevel between the push
+and a rollback reads as open on the old screens until the new code is back.
+The money itself is safe in HighLevel and Stripe.
+
