@@ -45,15 +45,20 @@ export const runtime = "nodejs";
  */
 const TICKET_TTL_MS = 5 * 60 * 1000;
 
-/* Its own secret if there is one, otherwise derived from the service role key,
-   which is server-only and always present. The fallback matters: a download
-   must not start failing because an env var was missed on a deploy. */
+/* Its own secret if there is one, otherwise DERIVED from the service role key
+   (HMAC-SHA256 keyed with the service key, over the label "portal-download"),
+   which is server-only and always present. Derived rather than the key
+   itself, so the value that signs a download link is never the value that
+   can read the whole database (audit, 15 September 2026). The fallback
+   matters: a download must not start failing because an env var was missed
+   on a deploy. Tickets live five minutes (TICKET_TTL_MS), so every ticket
+   signed with the bare key had expired before this derivation could deploy;
+   nothing needed a transition. */
 function ticketSecret(): string {
-  return (
-    process.env.PORTAL_DOWNLOAD_SECRET ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    ""
-  );
+  if (process.env.PORTAL_DOWNLOAD_SECRET) return process.env.PORTAL_DOWNLOAD_SECRET;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceKey) return "";
+  return createHmac("sha256", serviceKey).update("portal-download").digest("hex");
 }
 
 function sign(id: string, stage: string, expiresAt: number): string {

@@ -19,7 +19,7 @@ import {
  *  - visitors on a VPN / proxy (via proxycheck.io), site-wide
  * Lets the team through from anywhere via a secret /unlock link (year-long
  * cookie) - that pass also exempts them from the VPN check, so the team can
- * work on a VPN.
+ * work on a VPN. The cookie holds a one-way HMAC of the key, never the key.
  *
  * Safety rules for a live storefront:
  *  1. Fail SAFE: nothing enforces unless ACCESS_BYPASS_KEY is set, so a missing
@@ -29,8 +29,9 @@ import {
  *     the API, so it always holds.
  *
  * Environment (set in Vercel + .env.local):
- *  - ACCESS_BYPASS_KEY    the OWNER key. Also the HMAC secret for the VPN
- *                         verdict cookie, so it must never be rotated casually.
+ *  - ACCESS_BYPASS_KEY    the OWNER key. The secret that signs the VPN
+ *                         verdict cookie is derived from it, so it must never
+ *                         be rotated casually.
  *  - ACCESS_BYPASS_KEYS   optional extra keys, comma separated, for the team.
  *                         Any of them unlocks. Revoke one by deleting it from
  *                         this list; the owner key is unaffected.
@@ -84,9 +85,9 @@ const VPN_PAGE = page(
   'This site can\'t be accessed over a VPN or proxy. Disable it and reload. Still stuck? Contact <a href="mailto:hi@ghlvideo.com">hi@ghlvideo.com</a>.',
 );
 
-/* Every key that may unlock, owner first. The owner key doubles as the HMAC
- * secret below, which is why it stays a separate variable: rotating a team key
- * must not invalidate everyone's VPN verdict cookies. */
+/* Every key that may unlock, owner first. The VPN verdict secret below is
+ * derived from the owner key, which is why it stays a separate variable:
+ * rotating a team key must not invalidate everyone's VPN verdict cookies. */
 function bypassKeys(): string[] {
   return [process.env.ACCESS_BYPASS_KEY, ...(process.env.ACCESS_BYPASS_KEYS ?? "").split(",")]
     .map((k) => (k ?? "").trim())
@@ -114,18 +115,22 @@ function clientIp(req: NextRequest): string | null {
   return ip;
 }
 
-/* ---- signed, IP-bound verdict cookie (the VPN cache; reuses ACCESS_BYPASS_KEY
- * as the HMAC secret, so no extra secret to manage) ---- */
-let keyPromise: Promise<CryptoKey> | null = null;
+/* ---- HMAC-SHA256 over the edge's Web Crypto, hex out. One imported key per
+ * secret: the pass tokens and the verdict secret each need their own. ---- */
+const keyCache = new Map<string, Promise<CryptoKey>>();
 function hmacKey(secret: string): Promise<CryptoKey> {
-  keyPromise ??= crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  return keyPromise;
+  let p = keyCache.get(secret);
+  if (!p) {
+    p = crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(secret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"],
+    );
+    keyCache.set(secret, p);
+  }
+  return p;
 }
 async function sign(secret: string, msg: string): Promise<string> {
   const sig = await crypto.subtle.sign("HMAC", await hmacKey(secret), new TextEncoder().encode(msg));
@@ -133,6 +138,34 @@ async function sign(secret: string, msg: string): Promise<string> {
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
 }
+/* constant-time compare, so a token check cannot leak by timing */
+function same(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i += 1) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+/*
+ * The key itself is never stored in a cookie or used as a signing secret.
+ * Each use gets its own value derived from it (HMAC-SHA256 keyed with the
+ * key, over a fixed label), so nothing a browser holds can be turned back
+ * into the key or pasted into the unlock link.
+ *
+ *  - the bypass cookie holds passToken(key). Until 15 September 2026 it held
+ *    the raw key, so a leaked cookie was a leaked key. Those cookies no
+ *    longer match and the team unlocks once more; they are deliberately not
+ *    accepted for a transition, since a cookie that still unlocks is a
+ *    cookie that still leaks the key.
+ *  - the VPN verdict cookie is signed with checkSecret(ownerKey), never with
+ *    the owner key itself.
+ */
+const PASS_LABEL = "ghlv-pass.v2";
+const CHECK_LABEL = "ghlv-check.v2";
+const passToken = (key: string) => sign(key, PASS_LABEL);
+const checkSecret = (ownerKey: string) => sign(ownerKey, CHECK_LABEL);
+
+/* ---- signed, IP-bound verdict cookie (the VPN cache) ---- */
 async function issueCheck(secret: string, verdict: "ok" | "vpn", ip: string): Promise<string> {
   const exp = Math.floor(Date.now() / 1000) + CHECK_TTL;
   return `${verdict}.${exp}.${await sign(secret, `${verdict}.${exp}.${ip}`)}`;
@@ -146,7 +179,7 @@ async function readCheck(
   const [verdict, expStr, sig] = cookie.split(".");
   if ((verdict !== "ok" && verdict !== "vpn") || !expStr || !sig) return null;
   if (Number(expStr) < Math.floor(Date.now() / 1000)) return null;
-  if ((await sign(secret, `${verdict}.${expStr}.${ip}`)) !== sig) return null;
+  if (!same(await sign(secret, `${verdict}.${expStr}.${ip}`), sig)) return null;
   return verdict;
 }
 
@@ -198,12 +231,25 @@ async function isProxy(ip: string, apiKey: string): Promise<boolean | null> {
  * Spoofing this string wins you the same pages any visitor can already read,
  * so the worst case is one more reader, while the cost of leaving it out is
  * every AI platform and part of Google.
+ *
+ * It wins you those pages and nothing else: the pass covers the marketing
+ * site only. The admin, the portals, checkout and the API are noindex, so
+ * no crawler has business there, and each carries its own login or ticket,
+ * so the gate stays in front of them whatever the user agent says (audit,
+ * 15 September 2026).
  */
 const CRAWLERS =
   /googlebot|google-inspectiontool|storebot-google|google-extended|chrome-lighthouse|google-pagespeed|bingbot|adidxbot|slurp|duckduckbot|baiduspider|yandexbot|applebot|gptbot|oai-searchbot|chatgpt-user|claudebot|claude-searchbot|claude-user|anthropic-ai|perplexitybot|perplexity-user|amazonbot|bytespider|facebookexternalhit|twitterbot|linkedinbot|slackbot|discordbot|telegrambot|whatsapp/i;
 
 function isCrawler(ua: string | null): boolean {
   return Boolean(ua && CRAWLERS.test(ua));
+}
+
+/* the prefixes a crawler's pass never covers */
+const NOT_FOR_CRAWLERS = ["/admin", "/portal", "/partners", "/checkout", "/api"];
+function crawlerMayPass(pathname: string): boolean {
+  const p = pathname.toLowerCase();
+  return !NOT_FOR_CRAWLERS.some((pre) => p === pre || p.startsWith(`${pre}/`));
 }
 
 export async function proxy(req: NextRequest) {
@@ -335,9 +381,12 @@ export async function proxy(req: NextRequest) {
    * engine asking for a retired URL still needs its 301, which is the whole
    * point of keeping those rules. It sits BEFORE the country and VPN checks,
    * which are the two things that were turning crawlers away.
-   * No cookies are set for a bot, so their responses stay clean.
+   * No cookies are set for a bot, so their responses stay clean. Marketing
+   * paths only: the portals, checkout and the API gate a bot like anyone.
    */
-  if (isCrawler(req.headers.get("user-agent"))) return NextResponse.next();
+  if (isCrawler(req.headers.get("user-agent")) && crawlerMayPass(req.nextUrl.pathname)) {
+    return NextResponse.next();
+  }
 
   try {
     const key = process.env.ACCESS_BYPASS_KEY;
@@ -351,9 +400,9 @@ export async function proxy(req: NextRequest) {
     // so the team can unlock from inside a blocked region.
     const keys = bypassKeys();
     const offered = searchParams.get("key");
-    if (path === "/unlock" && offered && keys.includes(offered)) {
+    if (path === "/unlock" && offered && keys.some((k) => same(k, offered))) {
       const res = NextResponse.redirect(new URL("/", req.url));
-      res.cookies.set(BYPASS_COOKIE, offered, {
+      res.cookies.set(BYPASS_COOKIE, await passToken(offered), {
         httpOnly: true,
         secure: true,
         sameSite: "lax",
@@ -364,9 +413,13 @@ export async function proxy(req: NextRequest) {
     }
 
     // The team bypass exempts the country block AND the VPN check. Any key in
-    // the list counts, so a teammate's key works exactly like the owner's.
+    // the list counts, so a teammate's key works exactly like the owner's. The
+    // cookie is compared with each key's token, never with the keys themselves.
     const held = req.cookies.get(BYPASS_COOKIE)?.value;
-    if (held && keys.includes(held)) return withRef(NextResponse.next());
+    if (held) {
+      const tokens = await Promise.all(keys.map(passToken));
+      if (tokens.some((t) => same(t, held))) return withRef(NextResponse.next());
+    }
 
     // 1) Country block (never needs the API, so it always holds).
     const country = (req.headers.get("x-vercel-ip-country") ?? "").toUpperCase();
@@ -379,7 +432,8 @@ export async function proxy(req: NextRequest) {
     const ip = clientIp(req);
     if (apiKey && ip) {
       const nowSec = Math.floor(Date.now() / 1000);
-      let verdict = await readCheck(key, req.cookies.get(CHECK_COOKIE)?.value, ip);
+      const secret = await checkSecret(key);
+      let verdict = await readCheck(secret, req.cookies.get(CHECK_COOKIE)?.value, ip);
       if (!verdict) {
         const cached = mem.get(ip);
         if (cached && cached.exp > nowSec) verdict = cached.v;
@@ -399,7 +453,7 @@ export async function proxy(req: NextRequest) {
       if (verdict === "vpn") {
         const res = new NextResponse(VPN_PAGE, { status: 403, headers: HTML_HEADERS });
         if (fresh) {
-          res.cookies.set(CHECK_COOKIE, await issueCheck(key, "vpn", ip), {
+          res.cookies.set(CHECK_COOKIE, await issueCheck(secret, "vpn", ip), {
             httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: CHECK_TTL,
           });
         }
@@ -407,7 +461,7 @@ export async function proxy(req: NextRequest) {
       }
       if (verdict === "ok" && fresh) {
         const res = NextResponse.next();
-        res.cookies.set(CHECK_COOKIE, await issueCheck(key, "ok", ip), {
+        res.cookies.set(CHECK_COOKIE, await issueCheck(secret, "ok", ip), {
           httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: CHECK_TTL,
         });
         return withRef(res);

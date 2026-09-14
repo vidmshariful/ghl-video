@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { passToken } from "@/lib/gate-token";
 import { verifyAdmin } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { checkLinks, crawlPages } from "@/lib/seo-crawl";
@@ -38,7 +39,7 @@ async function sitemapPaths(origin: string): Promise<string[]> {
   try {
     const res = await fetch(`${origin}/sitemap.xml`, {
       headers: process.env.ACCESS_BYPASS_KEY
-        ? { cookie: `ghlv_pass=${process.env.ACCESS_BYPASS_KEY}` }
+        ? { cookie: `ghlv_pass=${passToken(process.env.ACCESS_BYPASS_KEY)}` }
         : {},
       cache: "no-store",
       signal: AbortSignal.timeout(10_000),

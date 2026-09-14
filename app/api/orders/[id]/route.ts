@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { stripe } from "@/lib/checkout/stripe";
 import { settlePaidIntent } from "@/lib/checkout/settle";
@@ -16,6 +17,11 @@ export const runtime = "nodejs";
  * missed, or (in local dev) never reach the server at all, so the confirmation
  * must not depend on it. When Stripe reports the intent succeeded we settle
  * the order here (mark paid; HighLevel sync stays the webhook's job).
+ *
+ * Rate-limited per IP like the other public routes: every hit on a pending
+ * order is a Stripe call, and nothing authenticates the caller beyond the
+ * UUID, so an unmetered loop here was a free way to burn our Stripe quota
+ * (audit, 15 September 2026). A thank-you page polls a handful of times.
  */
 type Meta = {
   code?: string;
@@ -32,9 +38,17 @@ const SELECT =
   "status, amount_cents, currency, invoice_number, customer_email, metadata, stripe_payment_intent_id, product:products(name, sku, metadata)";
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const rl = rateLimit(`order:${clientIp(req)}`, 30, 60_000); // 30/min per IP
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again in a minute." },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
+    );
+  }
+
   const { id } = await params;
   const db = supabaseAdmin();
   const initial = await db

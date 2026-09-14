@@ -12,9 +12,11 @@
  * migration in this repo is idempotent, so the simplest bootstrap is to just
  * run the script: already-applied files re-run harmlessly and get recorded.
  *
- * Connection: SUPABASE_DB_URL from .env.local or the environment (the
- * Session-mode Postgres string; see .env.example). Never read by the app at
- * runtime; this is a trusted-shell tool.
+ * Connection: SUPABASE_DB_URL from the chosen env file (.env.local, or
+ * .env.prod.local with GHLV_ENV=prod, or GHLV_ENV_FILE), the Session-mode
+ * Postgres string; see .env.example. The shell's SUPABASE_DB_URL is used
+ * only when that file has none. Never read by the app at runtime; this is a
+ * trusted-shell tool.
  */
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -25,10 +27,8 @@ import pg from "pg";
 const dotenv = {};
 /* GHLV_ENV_FILE names another env file outright, for a database that is
    neither staging nor the current production: the new project during a move */
-const envPath = new URL(
-  `../${process.env.GHLV_ENV_FILE ?? (process.env.GHLV_ENV === "prod" ? ".env.prod.local" : ".env.local")}`,
-  import.meta.url,
-);
+const envFile = process.env.GHLV_ENV_FILE ?? (process.env.GHLV_ENV === "prod" ? ".env.prod.local" : ".env.local");
+const envPath = new URL(`../${envFile}`, import.meta.url);
 if (existsSync(envPath)) {
   for (const line of readFileSync(envPath, "utf8").split("\n")) {
     const t = line.trim();
@@ -37,15 +37,23 @@ if (existsSync(envPath)) {
     dotenv[t.slice(0, i).trim()] = t.slice(i + 1).trim().replace(/^["']|["']$/g, "");
   }
 }
-/* the environment wins over the file, so one migration can be pointed at a
-   database by hand: SUPABASE_DB_URL=... npm run migrate */
-const env = (k) => process.env[k] ?? dotenv[k];
+/* The chosen file wins over the shell, the same way the seeds read theirs.
+   It was the other way round, so a SUPABASE_DB_URL exported in a terminal
+   silently beat GHLV_ENV=prod and the migration ran against whichever
+   database the shell happened to hold (audit, 15 September 2026). The
+   shell value is used only when the file has none. */
+const env = (k) => dotenv[k] ?? process.env[k];
 
 const DB_URL = env("SUPABASE_DB_URL");
 if (!DB_URL || DB_URL.includes("PASSWORD")) {
   console.error("SUPABASE_DB_URL is unset (or still the .env.example placeholder).");
   process.exit(1);
 }
+console.log(
+  dotenv.SUPABASE_DB_URL
+    ? `Database: SUPABASE_DB_URL from ${envFile}`
+    : `Database: SUPABASE_DB_URL from the shell (${existsSync(envPath) ? `${envFile} has none` : `${envFile} not found`})`,
+);
 
 const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");

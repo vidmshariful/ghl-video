@@ -9,6 +9,10 @@ import { createClient } from "@supabase/supabase-js";
  *   node scripts/promote.mjs --from .env.prod.local --to .env.newprod.local
  *   node scripts/promote.mjs ... --data      only the logins and the tables
  *   node scripts/promote.mjs ... --files     only the uploaded files
+ *   node scripts/promote.mjs ... --i-mean-production <project ref>
+ *       the destination looks like production (its env says GHLV_ENV=prod,
+ *       or its orders table already holds rows) and you mean it anyway; the
+ *       ref is the subdomain of its NEXT_PUBLIC_SUPABASE_URL, spelled out
  *
  * What moves, in order:
  *   1. the logins: auth.users and auth.identities, with their ids and their
@@ -91,6 +95,33 @@ const { rows: mig } = await dst.query("select count(*)::int as n from public.sch
 if (mig[0].n === 0) {
   console.error("The destination has no migrations. Run GHLV_ENV_FILE=<to> npm run migrate first.");
   process.exit(1);
+}
+
+/* Production is never a destination by accident. The copy EMPTIES every
+   public table on the destination before it fills them, so a live project
+   named by mistake would lose its orders (audit, 15 September 2026). Two
+   signs say "this is live": the destination's env says GHLV_ENV=prod (in its
+   file or in the shell that chose it), or its orders table is not empty.
+   Either one stops the run unless --i-mean-production names the
+   destination's exact project ref. A dry run reads and changes nothing, so
+   it is always allowed. */
+if (!dry) {
+  const { rows: ord } = await dst
+    .query("select count(*)::int as n from public.orders")
+    .catch(() => ({ rows: [{ n: -1 }] }));
+  const live =
+    to.GHLV_ENV === "prod" || process.env.GHLV_ENV === "prod"
+      ? "its env says GHLV_ENV=prod"
+      : ord[0].n > 0
+        ? `its orders table already holds ${ord[0].n} row(s)`
+        : ord[0].n < 0
+          ? "its orders table could not be read"
+          : null;
+  if (live && opt("--i-mean-production", null) !== ref(to)) {
+    console.error(`Refusing: the destination ${ref(to)} looks like production (${live}).`);
+    console.error(`If you mean it, run again with --i-mean-production ${ref(to)}`);
+    process.exit(1);
+  }
 }
 
 /* ---- 1. the logins ---------------------------------------------------- */

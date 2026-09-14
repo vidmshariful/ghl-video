@@ -235,9 +235,9 @@ test.describe("HighLevel, both ways", () => {
 
   test("an edit made in HighLevel comes back, and goes out again", async () => {
     const phone = `+1555010${stamp.slice(-4).replace(/[^0-9]/g, "7").padStart(4, "0")}`;
-    const r = await fetch(`http://localhost:3200/api/webhooks/highlevel/?key=${encodeURIComponent(env.HIGHLEVEL_WEBHOOK_SECRET)}`, {
+    const r = await fetch(`http://localhost:3200/api/webhooks/highlevel/`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-ghlv-key": env.HIGHLEVEL_WEBHOOK_SECRET },
       body: JSON.stringify({
         type: "ContactUpdate",
         contact_id: contactId,
@@ -296,9 +296,9 @@ test.describe("HighLevel, both ways", () => {
 
   test("a wrong key is refused and nothing is written", async () => {
     const before = await db().from("hl_inbound").select("id", { count: "exact", head: true });
-    const r = await fetch(`http://localhost:3200/api/webhooks/highlevel/?key=not-the-key`, {
+    const r = await fetch(`http://localhost:3200/api/webhooks/highlevel/`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-ghlv-key": "not-the-key" },
       body: JSON.stringify({ contact_id: contactId, phone: "+15550000000" }),
     });
     expect(r.status).toBe(401);

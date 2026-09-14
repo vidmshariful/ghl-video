@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { verifyAdmin } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { findPriceDrift } from "@/lib/checkout/price-drift";
 import { ALARM_KINDS, raise } from "@/lib/alarm";
@@ -20,21 +21,23 @@ export const dynamic = "force-dynamic";
  * the admin, and asking somebody to then come back here and tick the alarm off
  * is how an alarm list fills with things that stopped being true. If the next
  * run finds nothing, the alarm closes itself.
+ *
+ * Never open, same rule as the chase sweep: Vercel's cron must present
+ * CRON_SECRET, and a signed-in admin can run it by hand. It used to run open
+ * until the secret was set, on the reasoning that it reads nothing a stranger
+ * could not see on the pricing page, but an endpoint anyone can call still
+ * queries the database and raises or closes alarms on every hit (audit,
+ * 15 September 2026). No secret and no admin means no check.
  */
-export async function GET(req: Request) {
-  /*
-   * Vercel signs its cron calls with CRON_SECRET. The guard only engages when
-   * the secret is set, so the endpoint keeps working before somebody adds it
-   * (the worst case being that a stranger can make us compare our own prices,
-   * which reads nothing they could not already see on the pricing page).
-   */
+async function authorized(req: Request): Promise<boolean> {
   const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const auth = req.headers.get("authorization");
-    if (auth !== `Bearer ${secret}`) {
-      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-    }
-  }
+  if (secret && req.headers.get("authorization") === `Bearer ${secret}`) return true;
+  return Boolean(await verifyAdmin(req));
+}
+
+export async function GET(req: Request) {
+  if (!(await authorized(req)))
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const db = supabaseAdmin();
 
