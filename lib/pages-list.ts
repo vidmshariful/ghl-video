@@ -28,6 +28,7 @@ export const sitePages: readonly SitePage[] = [
   { name: "About", path: "/about/", inNav: true },
   { name: "Contact / Book a Call", path: "/contact/", inNav: true },
   { name: "Request a Quote", path: "/quote/", inNav: false, note: "linked from CTAs only" },
+  { name: "A quote (by link)", path: "/q/", inNav: false, noindex: true, note: "one page per quote, reached from the quote email; /q/<token>/" },
   { name: "Blog", path: "/blog/", inNav: true, note: "posts managed in admin, CMS, Blog" },
   { name: "Studio Insights", path: "/studio-insights/", inNav: true },
   { name: "Free Resources", path: "/resources/", inNav: true, noindex: true, note: "stub" },

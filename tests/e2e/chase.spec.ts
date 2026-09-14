@@ -34,7 +34,7 @@ async function reminderRows(): Promise<Row[]> {
   const { data } = await db()
     .from("email_log")
     .select("template_key, to_email, status, meta, created_at")
-    .in("template_key", ["intake_reminder", "approval_reminder", "retainer_check_in"])
+    .in("template_key", ["intake_reminder", "approval_reminder", "retainer_check_in", "review_request"])
     .order("created_at", { ascending: false })
     .limit(50);
   return (data ?? []) as Row[];
@@ -91,6 +91,21 @@ test.describe("the morning sweep, our own follow-ups", () => {
       },
     });
     logBefore = (await reminderRows()).length;
+
+    /* the review ask: the buyer's first delivered order, four days ago, never asked */
+    const { data: delivered } = await d
+      .from("orders")
+      .select("id")
+      .ilike("customer_email", buyer)
+      .eq("status", "paid")
+      .eq("fulfillment_stage", "delivered")
+      .limit(1);
+    if (delivered?.length) {
+      await d.from("orders").update({ stage_changed_at: daysAgo(4) }).eq("id", String(delivered[0].id));
+      const { data: buyerRow } = await d.from("customers").select("id").ilike("email", buyer).single();
+      await d.from("email_log").delete().eq("template_key", "review_request").eq("to_email", buyer);
+      await d.from("customers").update({ email_prefs: {} }).eq("id", String(buyerRow?.id));
+    }
   });
 
   test("one sweep sends the brief reminder, the review nudge and the check-in, through HighLevel", async () => {
@@ -98,10 +113,12 @@ test.describe("the morning sweep, our own follow-ups", () => {
        staging that is a copy of production's clients, most of them skipped
        one by one. A minute is not enough for it. */
     test.slow();
-    const out = await api<{ chased: string[]; briefs: string[]; checkIns: string[] }>("/api/cron/chase/", { token });
+    const out = await api<{ chased: string[]; briefs: string[]; checkIns: string[]; reviews: string[] }>("/api/cron/chase/", { token });
     expect(out.briefs, JSON.stringify(out)).toContain(orderId);
     expect(out.checkIns, JSON.stringify(out)).toContain(partner);
     expect(out.chased.some((c) => c.endsWith("/ review")), JSON.stringify(out)).toBeTruthy();
+    /* the review ask, two days after the buyer's first finished job */
+    expect(out.reviews, JSON.stringify(out)).toContain(buyer);
 
     const rows = await reminderRows();
     const brief = rows.find((r) => ((r.meta ?? {}) as Row).orderId === orderId);
@@ -127,9 +144,10 @@ test.describe("the morning sweep, our own follow-ups", () => {
     expect(record.customer.retainer?.checkInOn).toBe(expected);
 
     const before = (await reminderRows()).length;
-    const again = await api<{ chased: string[]; briefs: string[]; checkIns: string[] }>("/api/cron/chase/", { token });
+    const again = await api<{ chased: string[]; briefs: string[]; checkIns: string[]; reviews: string[] }>("/api/cron/chase/", { token });
     expect(again.briefs).not.toContain(orderId);
     expect(again.checkIns).not.toContain(partner);
+    expect(again.reviews).not.toContain(buyer);
     const after = (await reminderRows()).length;
     const rows = await reminderRows();
     expect(rows.filter((r) => ((r.meta ?? {}) as Row).orderId === orderId).length).toBe(1);

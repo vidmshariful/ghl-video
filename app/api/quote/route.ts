@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { syncLeadToHighLevel } from "@/lib/checkout/highlevel";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -64,38 +63,40 @@ export async function POST(req: Request) {
    */
   const { supabaseAdmin: sbAdmin } = await import("@/lib/checkout/supabase-admin");
   const db = sbAdmin();
+  /*
+   * HighLevel hears about it through the outbox (phase 5): the enquiry's
+   * row is the event, the sync makes the contact and the deal card in the
+   * Leads pipeline within the minute, with retries, and the card follows
+   * the enquiry's status from admin. Nothing here talks to HighLevel.
+   */
+  let stored = false;
   try {
-    await db.from("project_requests").insert({
+    const { error } = await db.from("project_requests").insert({
       name: name || null,
       email,
       company: company || null,
       phone: phone || null,
-      brief: [type ? `Video type: ${type}` : "", details].filter(Boolean).join("\n\n"),
+      brief: [type ? `Video type: ${type}` : "", details, note.includes("Phone:") ? "" : ""].filter(Boolean).join("\n\n"),
       source: "website",
     });
+    stored = !error;
+    if (error) console.error("quote request not stored:", error.message);
   } catch (err) {
     console.error("quote request not stored:", (err as Error).message);
   }
-
-  try {
-    await syncLeadToHighLevel({
-      email,
-      name,
-      phone: phone || undefined,
-      company: company || undefined,
-      tags: ["website-quote-request"],
-      note,
-      opportunityName: `Quote: ${company || name}`,
-    });
-    // confirmation to the lead; fail-soft, never blocks the response
-    const { sendQuoteReceivedEmail } = await import("@/lib/email/notify");
-    await sendQuoteReceivedEmail(db, email, name);
-    return NextResponse.json({ ok: true });
-  } catch (err) {
-    console.error("quote lead sync failed:", (err as Error).message);
+  if (!stored) {
     return NextResponse.json(
       { error: "Something went wrong sending your request. Please email hi@ghlvideo.com and we'll jump on it." },
       { status: 502 },
     );
   }
+
+  // confirmation to the lead; fail-soft, never blocks the response
+  try {
+    const { sendQuoteReceivedEmail } = await import("@/lib/email/notify");
+    await sendQuoteReceivedEmail(db, email, name);
+  } catch (err) {
+    console.error("quote confirmation failed:", (err as Error).message);
+  }
+  return NextResponse.json({ ok: true });
 }

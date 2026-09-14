@@ -15,7 +15,9 @@ import {
   sendBriefReminderEmail,
   sendProjectDigestEmail,
   sendRetainerCheckInEmail,
+  sendReviewRequestEmail,
 } from "@/lib/email/notify";
+import { reviewDue } from "@/lib/chase-rules";
 import { checkInDue, checkInSent, nextCheckIn } from "@/lib/chase-rules";
 import { countLine, monthKey, monthLabel, monthSummary, parseRetainer, type RetainerJob } from "@/lib/retainer";
 
@@ -85,16 +87,18 @@ export async function GET(req: Request) {
   const { data: ledgerRows } = await db
     .from("email_log")
     .select("template_key, meta, created_at")
-    .in("template_key", ["approval_reminder", "intake_reminder", "retainer_check_in"])
+    .in("template_key", ["approval_reminder", "intake_reminder", "retainer_check_in", "review_request"])
     .eq("status", "sent");
   const allLedger = (ledgerRows ?? []) as Row[];
   const ledger = allLedger.filter((r) => r.template_key === "approval_reminder");
   const briefLedger = allLedger.filter((r) => r.template_key === "intake_reminder");
   const checkInLedger = allLedger.filter((r) => r.template_key === "retainer_check_in");
+  const reviewLedger = allLedger.filter((r) => r.template_key === "review_request");
 
   const chased: string[] = [];
   const briefs: string[] = [];
   const checkIns: string[] = [];
+  const reviews: string[] = [];
 
   /* studio-owned accounts are never chased */
   const { data: internalRows } = await db.from("customers").select("email").eq("internal", true);
@@ -303,6 +307,46 @@ export async function GET(req: Request) {
       .eq("id", String(c.id));
   }
 
+  /* ---- the review ask: two days after a client's first finished job ---- */
+  const { data: deliveredOrders } = await db
+    .from("orders")
+    .select("customer_email, stage_changed_at, archived, product:products(metadata)")
+    .eq("status", "paid")
+    .eq("fulfillment_stage", "delivered");
+  const { data: closedProjects } = await db.from("projects").select("customer_email, updated_at").eq("status", "closed");
+  /* the first finish per client, whichever line it was on */
+  const firstDone = new Map<string, string>();
+  for (const o of (deliveredOrders ?? []) as Row[]) {
+    if (o.archived) continue;
+    const meta = ((o.product as { metadata?: Row } | null)?.metadata ?? {}) as Row;
+    if (meta.invoice || meta.demo || meta.kind === "editing_credits") continue;
+    const email = String(o.customer_email).toLowerCase();
+    const at = String(o.stage_changed_at ?? "");
+    if (at && (!firstDone.has(email) || at < String(firstDone.get(email)))) firstDone.set(email, at);
+  }
+  for (const p of (closedProjects ?? []) as Row[]) {
+    const email = String(p.customer_email).toLowerCase();
+    const at = String(p.updated_at ?? "");
+    if (at && (!firstDone.has(email) || at < String(firstDone.get(email)))) firstDone.set(email, at);
+  }
+  if (firstDone.size) {
+    const { data: askable } = await db
+      .from("customers")
+      .select("id, email, name, internal")
+      .in("email", [...firstDone.keys()]);
+    for (const c of (askable ?? []) as Row[]) {
+      const email = String(c.email).toLowerCase();
+      if (c.internal || internal.has(email)) continue;
+      const mine = reviewLedger
+        .filter((r) => ((r.meta ?? {}) as Row).customerId === String(c.id))
+        .map((r) => String(r.created_at))
+        .sort();
+      if (!reviewDue(firstDone.get(email) ?? null, mine[mine.length - 1] ?? null, now)) continue;
+      const sent = await sendReviewRequestEmail(db, { email, name: (c.name as string | null) ?? null, customerId: String(c.id) });
+      if (sent) reviews.push(email);
+    }
+  }
+
   /* ---- Monday: one digest per client with a project in motion ---- */
   const digested: string[] = [];
   if (doDigest) {
@@ -345,5 +389,5 @@ export async function GET(req: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true, chased, briefs, checkIns, digested, digestRan: doDigest });
+  return NextResponse.json({ ok: true, chased, briefs, checkIns, reviews, digested, digestRan: doDigest });
 }

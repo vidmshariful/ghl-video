@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { checkInDue, checkInSent, nextCheckIn } from "../../lib/chase-rules";
+import { checkInDue, checkInSent, nextCheckIn, reviewDue } from "../../lib/chase-rules";
 
 test("a check-in is due on its day and after it, never before", () => {
   assert.equal(checkInDue("2026-12-01", "2026-11-30"), false);
@@ -23,4 +23,13 @@ test("the ledger says whether this exact check-in already went", () => {
   assert.equal(checkInSent(ledger, "c1", "2026-12-01"), true);
   assert.equal(checkInSent(ledger, "c1", "2027-03-01"), false);
   assert.equal(checkInSent(ledger, "c2", "2026-12-01"), false);
+});
+
+test("the review ask waits two days, goes once, and returns after six months", () => {
+  const now = "2026-09-14T09:00:00Z";
+  assert.equal(reviewDue("2026-09-13T09:00:00Z", null, now), false, "one day is too soon");
+  assert.equal(reviewDue("2026-09-11T09:00:00Z", null, now), true);
+  assert.equal(reviewDue("2026-09-11T09:00:00Z", "2026-09-01T09:00:00Z", now), false, "asked two weeks ago");
+  assert.equal(reviewDue("2026-01-11T09:00:00Z", "2026-02-01T09:00:00Z", now), true, "asked seven months ago");
+  assert.equal(reviewDue(null, null, now), false);
 });

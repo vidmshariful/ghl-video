@@ -203,13 +203,26 @@ Done when: every email the platform sends today has a HighLevel equivalent,
 the email log shows the sends, and a client reply in a conversation appears
 in the portal.
 
-### Phase 5. Documents, forms, reviews, affiliates (4 days)
-Proposals and the retainer agreement through Documents. The quote form as a
-HighLevel form. A review request after final approval. The affiliate program
-on HighLevel's Affiliate Manager, with Affixo retired. The marketing side of
-Offers through HighLevel campaigns.
-Done when: a quote becomes a signed document, a paid job asks for a review,
-and a partner link tracks a sale end to end in the test sub-account.
+### Phase 5. Quotes, the agreement, reviews, leads and partners (4 days)
+Decided 14 September 2026: nothing is managed inside HighLevel; every act
+happens on our portal and HighLevel mirrors it. So, instead of HighLevel
+Documents, Forms and the Affiliate Manager (none of which can be run
+through the API): quotes are raised in admin and accepted or declined by
+the client on our quote page or in their portal, and accepting one opens
+or prices the project and marks the enquiry won; the retainer agreement is
+the terms on the record, accepted in the portal with a typed name, kept
+with the time and address; the review request goes from the morning sweep
+two days after a client's first finished job, once, and again only after
+six months; the quote form stays ours and every enquiry mirrors into the
+Leads pipeline through the outbox, its card following the status set in
+admin; partners mirror into HighLevel as tagged contacts, and Affixo keeps
+running the program for now. HighLevel gets a note on the contact for
+every quote sent, accepted or declined and for the signed agreement, the
+agreed-on date in a field, and the deal card's value from the project.
+Done when: a quote raised in admin is accepted on our page and the project
+reads the agreed price on both sides, the agreement is accepted in the
+portal and the contact shows it, a finished job asks for a review from the
+sweep, and an enquiry and a partner appear in the sub-account.
 
 ### Phase 6. One vocabulary, fewer screens (5 days)
 One status language across the three lines. One work card and one detail

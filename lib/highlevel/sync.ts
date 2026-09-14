@@ -31,7 +31,7 @@ import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { HighLevelError, existingOpportunityId } from "@/lib/checkout/highlevel-errors";
 import { hlFetch, locationId } from "./client";
-import { HL_MANAGED_TAGS, HL_TAGS, loadHlConfig, type HlConfig, type ProjectStageKey } from "./config";
+import { HL_MANAGED_TAGS, HL_TAGS, loadHlConfig, type HlConfig, type LeadStageKey, type ProjectStageKey } from "./config";
 import { parseRetainer, type Retainer } from "@/lib/retainer";
 import { linesFrom, type ServiceLines } from "@/lib/portal-visibility";
 import { isInvoiceProduct } from "@/lib/order-kind";
@@ -42,7 +42,7 @@ import { syncInvoice, syncOrderSale, syncRetainerSchedule } from "./money";
 type Db = SupabaseClient;
 type Row = Record<string, unknown>;
 
-export type SyncKind = "customer" | "project" | "video" | "invoice" | "order";
+export type SyncKind = "customer" | "project" | "video" | "invoice" | "order" | "lead" | "partner";
 export type Outcome = { status: "done" | "unchanged" | "skipped"; note: string };
 
 /** Thrown inside a nested sync to say "not this one", never a failure. */
@@ -159,6 +159,9 @@ export function contactPayload(c: Row, shape: CustomerShape, cfg: HlConfig): { b
     [f.editingPlan]: planLine(shape.plan),
     [f.waitingOn]: shape.waitingOn,
     [f.checkIn]: shape.retainer?.checkInOn ?? "",
+    [f.retainerAgreed]: shape.retainer?.agreedOn
+      ? `${shape.retainer.agreedOn.slice(0, 10)}${shape.retainer.agreedBy ? ` by ${shape.retainer.agreedBy}` : ""}`
+      : "",
   };
   const body: Row = {
     locationId: cfg.locationId,
@@ -590,6 +593,134 @@ export async function syncVideo(db: Db, cfg: HlConfig, id: string): Promise<Outc
 }
 
 /* ------------------------------------------------------------------ */
+/* lead -> contact + deal in the Leads pipeline                        */
+/* ------------------------------------------------------------------ */
+
+const LEAD_STAGE: Record<string, LeadStageKey> = { new: "new", contacted: "contacted", quoted: "quoted", won: "won", lost: "lost" };
+
+/**
+ * An enquiry from the quote form becomes a contact and a deal card in
+ * "GHL Video: Leads", and the card follows the enquiry's status in admin.
+ * When the enquiry becomes a client, the customer sync takes over the
+ * contact; the lead card is marked won and left as the record of how
+ * they arrived.
+ */
+export async function syncLead(db: Db, cfg: HlConfig, id: string): Promise<Outcome> {
+  const { data: r } = await db.from("project_requests").select("*").eq("id", id).maybeSingle();
+  if (!r) return { status: "skipped", note: "enquiry row is gone" };
+  const email = String(r.email ?? "").toLowerCase();
+  if (!email) return { status: "skipped", note: "enquiry has no email" };
+  if (!syncAllowed(email)) return { status: "skipped", note: `${email} is outside HIGHLEVEL_SYNC_ALLOW` };
+  const status = String(r.status ?? "new");
+  const stageKey = LEAD_STAGE[status] ?? "new";
+  const { firstName, lastName } = splitName(r.name);
+  const body: Row = { locationId: cfg.locationId, email, source: "ghlvideo.com quote form" };
+  if (firstName) body.firstName = firstName;
+  if (lastName) body.lastName = lastName;
+  if (typeof r.company === "string" && r.company.trim()) body.companyName = r.company.trim().slice(0, 160);
+  const phone = cleanPhone(r.phone);
+  if (phone) body.phone = phone;
+  const opportunity = {
+    pipelineId: cfg.pipelines.leads.id,
+    pipelineStageId: cfg.pipelines.leads.stages[stageKey],
+    name: `Quote: ${text(r.company || r.name || email, 100)}`,
+    status: status === "won" ? "won" : status === "lost" ? "lost" : "open",
+    monetaryValue: 0,
+  };
+  const fp = fingerprint({ body, opportunity, brief: text(r.brief, 2000) });
+  const link = await getLink(db, cfg, "lead", id, "opportunity");
+  if (link && link.fingerprint === fp) return { status: "unchanged", note: `deal ${link.hl_id}` };
+
+  const contact = await upsertContact(body);
+  /* a lead who is already a client keeps the client's tags; a new one is marked a lead */
+  const { data: customer } = await db.from("customers").select("id").ilike("email", email).maybeSingle();
+  if (!customer) await setManagedTags(contact.id, contact.tags, [HL_TAGS.lead]);
+  const notes: string[] = [];
+  const oppId = await upsertOpportunity(cfg, link, opportunity, contact.id, notes);
+  if (!link && typeof r.brief === "string" && r.brief.trim()) {
+    await hlFetch(`/contacts/${contact.id}/notes`, {
+      method: "POST",
+      body: JSON.stringify({ body: `Quote request from the website:\n\n${r.brief.trim().slice(0, 4000)}` }),
+    });
+  }
+  await putLink(db, cfg, { kind: "lead", entity_id: id, hl_kind: "opportunity", hl_id: oppId, fingerprint: fp });
+  return { status: "done", note: [`deal ${oppId}`, ...notes].join("; ") };
+}
+
+/* ------------------------------------------------------------------ */
+/* partner -> contact                                                  */
+/* ------------------------------------------------------------------ */
+
+const TIER_NAME: Record<string, string> = {
+  affiliate: "Affiliate Partner",
+  vip: "VIP Affiliate Partner",
+  partnership: "Partnership Program",
+};
+
+/**
+ * A partner is a contact too, tagged, with their handle and tier on the
+ * record, so the team sees them in the CRM with everyone else. The
+ * program itself (commissions, payouts) stays where it runs.
+ */
+export async function syncPartner(db: Db, cfg: HlConfig, id: string): Promise<Outcome> {
+  const { data: p } = await db.from("partners").select("*").eq("id", id).maybeSingle();
+  if (!p) return { status: "skipped", note: "partner row is gone" };
+  const email = String(p.email ?? "").toLowerCase();
+  if (!email) return { status: "skipped", note: "partner has no email" };
+  if (!syncAllowed(email)) return { status: "skipped", note: `${email} is outside HIGHLEVEL_SYNC_ALLOW` };
+  const { firstName, lastName } = splitName(p.name);
+  const f = cfg.contactFields;
+  const body: Row = {
+    locationId: cfg.locationId,
+    email,
+    source: "GHL Video partner program",
+    customFields: [
+      { id: f.partnerRef, field_value: String(p.ref ?? "") },
+      { id: f.partnerTier, field_value: TIER_NAME[String(p.tier)] ?? String(p.tier ?? "") },
+    ],
+  };
+  if (firstName) body.firstName = firstName;
+  if (lastName) body.lastName = lastName;
+  const active = ["active", "invited"].includes(String(p.status));
+  const fp = fingerprint({ body, active });
+  const link = await getLink(db, cfg, "partner", id, "contact");
+  if (link && link.fingerprint === fp) return { status: "unchanged", note: `contact ${link.hl_id}` };
+  const contact = await upsertContact(body);
+  const add = active ? [HL_TAGS.partner] : [];
+  const remove = active ? [] : [HL_TAGS.partner];
+  if (add.length) await hlFetch(`/contacts/${contact.id}/tags`, { method: "POST", body: JSON.stringify({ tags: add }) });
+  if (remove.length && contact.tags.includes(HL_TAGS.partner))
+    await hlFetch(`/contacts/${contact.id}/tags`, { method: "DELETE", body: JSON.stringify({ tags: remove }) });
+  await putLink(db, cfg, { kind: "partner", entity_id: id, hl_kind: "contact", hl_id: contact.id, fingerprint: fp });
+  return { status: "done", note: `contact ${contact.id}${active ? "" : " (not active, untagged)"}` };
+}
+
+/* ------------------------------------------------------------------ */
+/* a note on the contact: what happened, in a sentence                 */
+/* ------------------------------------------------------------------ */
+
+/**
+ * One line on the client's contact for a moment worth keeping (a quote
+ * sent or accepted, an agreement signed). Fail-soft: a note is a nicety,
+ * never a reason to fail the thing it describes.
+ */
+export async function noteOnContact(db: Db, email: string, body: string): Promise<boolean> {
+  try {
+    if (!process.env.HIGHLEVEL_API_TOKEN || !process.env.HIGHLEVEL_LOCATION_ID) return false;
+    const cfg = await loadHlConfig(db, locationId());
+    if (!cfg || !syncAllowed(email.toLowerCase())) return false;
+    const { data: customer } = await db.from("customers").select("*").ilike("email", email).maybeSingle();
+    if (!customer) return false;
+    const contactId = await contactIdFor(db, cfg, customer);
+    await hlFetch(`/contacts/${contactId}/notes`, { method: "POST", body: JSON.stringify({ body: body.slice(0, 4000) }) });
+    return true;
+  } catch (e) {
+    console.error(`[highlevel] note for ${email} not written: ${e instanceof Error ? e.message : e}`);
+    return false;
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /* the outbox                                                          */
 /* ------------------------------------------------------------------ */
 
@@ -604,6 +735,8 @@ export async function syncEntity(db: Db, cfg: HlConfig, kind: SyncKind, id: stri
     if (kind === "project") return await syncProject(db, cfg, id);
     if (kind === "invoice") return await syncInvoice(db, cfg, id, deps);
     if (kind === "order") return await syncOrderSale(db, cfg, id, deps);
+    if (kind === "lead") return await syncLead(db, cfg, id);
+    if (kind === "partner") return await syncPartner(db, cfg, id);
     return await syncVideo(db, cfg, id);
   } catch (e) {
     if (e instanceof SkipSync) return { status: "skipped", note: e.message };
@@ -622,7 +755,7 @@ export type DrainResult = {
   rows: { id: number; kind: SyncKind; entityId: string; status: Outcome["status"] | "failed"; note: string }[];
 };
 
-const KIND_ORDER: Record<SyncKind, number> = { customer: 0, project: 1, video: 2, invoice: 3, order: 4 };
+const KIND_ORDER: Record<SyncKind, number> = { customer: 0, project: 1, video: 2, invoice: 3, order: 4, lead: 5, partner: 6 };
 const MAX_WAIT_S = 6 * 3600;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -704,6 +837,8 @@ const LINK_OF: Record<SyncKind, { table: string; hlKind: HlKind }> = {
   video: { table: "order_deliverables", hlKind: "record" },
   invoice: { table: "invoices", hlKind: "invoice" },
   order: { table: "orders", hlKind: "invoice" },
+  lead: { table: "project_requests", hlKind: "opportunity" },
+  partner: { table: "partners", hlKind: "contact" },
 };
 
 async function stillThere(cfg: HlConfig, l: { kind: SyncKind; hl_kind: HlKind; hl_id: string }): Promise<boolean> {
@@ -741,7 +876,7 @@ export async function reconcile(db: Db, opts: { verify?: number } = {}): Promise
   const cfg = await loadHlConfig(db, loc);
   const result: ReconcileResult = {
     provisioned: Boolean(cfg),
-    enqueued: { customer: 0, project: 0, video: 0, invoice: 0, order: 0 },
+    enqueued: { customer: 0, project: 0, video: 0, invoice: 0, order: 0, lead: 0, partner: 0 },
     verified: 0,
     missing: 0,
     pending: 0,
@@ -749,7 +884,7 @@ export async function reconcile(db: Db, opts: { verify?: number } = {}): Promise
   };
   if (!cfg) return result;
 
-  for (const kind of ["customer", "project", "video", "invoice", "order"] as SyncKind[]) {
+  for (const kind of ["customer", "project", "video", "invoice", "order", "lead", "partner"] as SyncKind[]) {
     const { table, hlKind } = LINK_OF[kind];
     /* orders: only paid ones are sales to record (legacy invoice payments are
        skipped by the sync itself); invoices: a void one has nothing over there */

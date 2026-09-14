@@ -29,6 +29,7 @@ import { EmailPrefsView } from "./EmailPrefsView";
 import { PortalSearch } from "./PortalSearch";
 import { EditingView } from "./EditingView";
 import { Button, Card, Chip, EmptyState, Table, Td, Th } from "@/components/portal/ui";
+import { OpenQuotes } from "./OpenQuotes";
 import {
   actForHeader,
   getActFor,
@@ -2039,7 +2040,8 @@ function Portal({
                 />
                 <div className="mt-6">
                   {/* what needs them first, then the record, then the plans */}
-                  <OpenInvoices />
+                  <OpenQuotes />
+                    <OpenInvoices />
                   <OrdersList onOpen={openOrderById} />
                   {shows("billing") && can("subscriptions") && (
                     <div className="mt-6">
@@ -2118,6 +2120,7 @@ function Portal({
               <div className="mt-6">
                 {shows("orders") && can("orders") && (
                   <>
+                    <OpenQuotes />
                     <OpenInvoices />
                     <OrdersList onOpen={openOrderById} />
                   </>

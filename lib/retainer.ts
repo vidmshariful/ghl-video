@@ -35,6 +35,13 @@ export type Retainer = {
   /** the next check-in, YYYY-MM-DD, or null */
   checkInOn: string | null;
   note: string | null;
+  /**
+   * The agreement: when and by whom the partner accepted these terms in
+   * their portal (phase 5). Null until they do; cleared when the terms
+   * change in a way that needs a fresh acceptance (the fee or the count).
+   */
+  agreedOn: string | null;
+  agreedBy: string | null;
 };
 
 export const RETAINER_KINDS = ["video", "animation"] as const;
@@ -79,7 +86,25 @@ export function parseRetainer(raw: unknown): Retainer | null {
     startedOn,
     checkInOn: typeof r.checkInOn === "string" && DAY.test(r.checkInOn) ? r.checkInOn : null,
     note: typeof r.note === "string" && r.note.trim() ? r.note.trim().slice(0, 1000) : null,
+    agreedOn: typeof r.agreedOn === "string" && r.agreedOn.length >= 10 ? r.agreedOn : null,
+    agreedBy: typeof r.agreedBy === "string" && r.agreedBy.trim() ? r.agreedBy.trim().slice(0, 120) : null,
   };
+}
+
+/**
+ * Do new terms need the partner to accept again? A new fee or a new
+ * video count is a new deal; a moved check-in or a note is not.
+ */
+export function needsFreshAgreement(before: Retainer | null, after: Retainer): boolean {
+  if (!before) return true;
+  return (
+    before.monthlyCents !== after.monthlyCents ||
+    before.videosMin !== after.videosMin ||
+    before.videosMax !== after.videosMax ||
+    before.activeMax !== after.activeMax ||
+    before.turnaroundDays !== after.turnaroundDays ||
+    before.whiteLabel !== after.whiteLabel
+  );
 }
 
 /** YYYY-MM for a date, in UTC, which is the month the platform files under. */

@@ -41,6 +41,8 @@ export const EMAIL_CATEGORIES: {
  * us rather than to them.
  */
 export const CATEGORY_FOR: Record<string, EmailCategory> = {
+  /* the review ask is a favour we ask, not progress they need */
+  review_request: "offers",
   project_digest: "progress",
   video_ready: "progress",
   video_reply: "progress",

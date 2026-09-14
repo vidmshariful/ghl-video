@@ -1266,3 +1266,76 @@ export async function sendRetainerCheckInEmail(
     { chase: true, customerId: input.customerId, checkInOn: input.checkInOn },
   );
 }
+
+/** The quote itself, with the page where the client accepts it. */
+export async function sendQuoteEmail(
+  db: SupabaseClient,
+  q: { number: string; token: string; title: string; total_cents: number; valid_until: string | null; customer_email: string; customer_name: string | null },
+): Promise<boolean> {
+  const validLine = q.valid_until ? ` It is good until ${shortDate(q.valid_until)}.` : "";
+  return sendTemplate(
+    db,
+    "quote_sent",
+    q.customer_email,
+    q.customer_name,
+    {
+      customer_name: escapeHtml(q.customer_name || "there"),
+      quote_number: escapeHtml(q.number),
+      quote_title: escapeHtml(q.title),
+      amount: money(q.total_cents),
+      valid_line: escapeHtml(validLine),
+      quote_url: `${SITE_URL}/q/${q.token}/`,
+    },
+    { quoteNumber: q.number },
+  );
+}
+
+/** The team's alert when a client accepts. */
+export async function sendQuoteAcceptedAlert(
+  db: SupabaseClient,
+  q: { number: string; title: string; total_cents: number; customer_email: string; customer_name: string | null; project_id: string | null; customer_id: string | null },
+): Promise<boolean> {
+  return sendTemplate(db, "admin_quote_accepted", adminAlertEmail(), null, {
+    customer_name: escapeHtml(q.customer_name || q.customer_email),
+    customer_email: escapeHtml(q.customer_email),
+    quote_number: escapeHtml(q.number),
+    quote_title: escapeHtml(q.title),
+    amount: money(q.total_cents),
+    admin_url: q.project_id ? `${SITE_URL}/admin/custom/${q.project_id}/` : q.customer_id ? `${SITE_URL}/admin/customers/${q.customer_id}/` : `${SITE_URL}/admin/custom/`,
+  });
+}
+
+/** The partner is told their agreement is ready to accept in the portal. */
+export async function sendAgreementReadyEmail(
+  db: SupabaseClient,
+  input: { email: string; name: string | null; partnershipName: string; feeLine: string },
+): Promise<boolean> {
+  return sendTemplate(db, "agreement_ready", input.email, input.name, {
+    customer_name: escapeHtml(input.name || "there"),
+    partnership_name: escapeHtml(input.partnershipName),
+    fee_line: escapeHtml(input.feeLine),
+    portal_url: `${SITE_URL}/portal/projects/`,
+  });
+}
+
+/** The review ask, from the morning sweep. */
+export async function sendReviewRequestEmail(
+  db: SupabaseClient,
+  input: { email: string; name: string | null; customerId: string },
+): Promise<boolean> {
+  const { googleReviewUrl } = await import("@/lib/content/core");
+  const reviewUrl = (process.env.GOOGLE_REVIEW_URL ?? googleReviewUrl ?? "").trim();
+  if (!reviewUrl) return false;
+  return sendTemplate(
+    db,
+    "review_request",
+    input.email,
+    input.name,
+    {
+      customer_name: escapeHtml(input.name || "there"),
+      review_url: reviewUrl,
+      portal_url: `${SITE_URL}/portal`,
+    },
+    { chase: true, customerId: input.customerId, review: true },
+  );
+}

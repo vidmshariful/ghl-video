@@ -34,3 +34,21 @@ export function checkInSent(ledger: { meta?: unknown }[], customerId: string, ch
     return m.customerId === customerId && m.checkInOn === checkInOn;
   });
 }
+
+const DAY_MS = 86_400_000;
+export const REVIEW_AFTER_DAYS = 2;
+export const REVIEW_AGAIN_AFTER_DAYS = 180;
+
+/**
+ * Ask for a review two days after the client's first finished job, once,
+ * and again only after six months. A finished job is a delivered order or
+ * a closed project; the earliest of them is the one that counts.
+ */
+export function reviewDue(firstDoneIso: string | null, lastAskedIso: string | null, nowIso: string): boolean {
+  if (!firstDoneIso) return false;
+  const now = Date.parse(nowIso);
+  const done = Date.parse(firstDoneIso);
+  if (!Number.isFinite(done) || now - done < REVIEW_AFTER_DAYS * DAY_MS) return false;
+  if (lastAskedIso && now - Date.parse(lastAskedIso) < REVIEW_AGAIN_AFTER_DAYS * DAY_MS) return false;
+  return true;
+}

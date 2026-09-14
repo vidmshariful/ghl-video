@@ -69,6 +69,10 @@ export const TEMPLATE_VARIABLES: Record<string, string[]> = {
   admin_dispute: ["customer_email", "product_name", "order_code", "amount", "reason", "admin_url"],
   intake_reminder: ["customer_name", "product_name", "order_code", "intake_url", "portal_url"],
   retainer_check_in: ["customer_name", "partnership_name", "this_month", "count_line", "book_url", "portal_url"],
+  quote_sent: ["customer_name", "quote_number", "quote_title", "amount", "valid_line", "quote_url"],
+  admin_quote_accepted: ["customer_name", "customer_email", "quote_number", "quote_title", "amount", "admin_url"],
+  agreement_ready: ["customer_name", "partnership_name", "fee_line", "portal_url"],
+  review_request: ["customer_name", "review_url", "portal_url"],
   video_ready: ["customer_name", "video_title", "portal_url"],
   video_reply: ["customer_name", "video_title", "message", "portal_url"],
   admin_video_feedback: ["headline", "customer_name", "video_title", "where", "message", "admin_url"],
@@ -270,6 +274,45 @@ ${btn("{{portal_url}}", "Review it now")}
 <p style="${P}">Hi {{customer_name}}, the <strong style="${STRONG}">{{stage_label}}</strong> for <strong style="${STRONG}">{{video_title}}</strong> has been waiting on you for {{days_waiting}} days. Nothing moves until you have had your look, and a quick yes today keeps your delivery date honest.</p>
 ${btn("{{portal_url}}", "Review it now")}
 <p style="${SMALL}margin-top:22px;">Two minutes does it: approve it, or tell us what to change.</p>`,
+  },
+  {
+    key: "quote_sent",
+    name: "Quote sent",
+    description: "The quote itself: what the work is, what it costs, and the page where the client accepts it.",
+    subject: "Your quote from GHL Video: {{quote_title}}",
+    body: `<h1 style="${H}">Here is the scope and the price.</h1>
+<p style="${P}">Hi {{customer_name}}, quote <strong style="${STRONG}">{{quote_number}}</strong> for <strong style="${STRONG}">{{quote_title}}</strong> comes to <strong style="${STRONG}">{{amount}}</strong>.{{valid_line}} Everything included is on the quote page; accepting it books the work in, and we invoice from there.</p>
+${btn("{{quote_url}}", "Open the quote")}
+<p style="${SMALL}margin-top:22px;">Questions or changes? Reply to this email and we will adjust it.</p>`,
+  },
+  {
+    key: "admin_quote_accepted",
+    name: "Team: a quote was accepted",
+    description: "The team's alert the moment a client accepts a quote on our page.",
+    subject: "Quote accepted: {{quote_title}} ({{amount}})",
+    body: `<h1 style="${H}">{{customer_name}} said yes.</h1>
+<p style="${P}"><strong style="${STRONG}">{{quote_number}}</strong>, <strong style="${STRONG}">{{quote_title}}</strong>, for <strong style="${STRONG}">{{amount}}</strong>, accepted by {{customer_email}}. The project is booked in at the agreed price; raise the invoice from it.</p>
+${btn("{{admin_url}}", "Open the project")}`,
+  },
+  {
+    key: "agreement_ready",
+    name: "Retainer agreement ready",
+    description: "Sent by hand from the client record when the partnership terms are ready for the partner to accept in their portal.",
+    subject: "Your partnership agreement is ready to accept",
+    body: `<h1 style="${H}">The terms, in writing.</h1>
+<p style="${P}">Hi {{customer_name}}, the terms of <strong style="${STRONG}">{{partnership_name}}</strong> are on your portal: {{fee_line}} Read them over and accept with your name. That is the agreement; nothing to print.</p>
+${btn("{{portal_url}}", "Read and accept")}
+<p style="${SMALL}margin-top:22px;">Anything you would change, reply here before you accept.</p>`,
+  },
+  {
+    key: "review_request",
+    name: "Review request",
+    description: "Sent automatically two days after a client's first finished job, once, and again only after six months.",
+    subject: "One small favour, {{customer_name}}",
+    body: `<h1 style="${H}">If we did right by you.</h1>
+<p style="${P}">Hi {{customer_name}}, your first video with us is done and out in the world. A review takes a minute and helps other HighLevel businesses find us, which matters more than any ad we could run.</p>
+${btn("{{review_url}}", "Leave a review")}
+<p style="${SMALL}margin-top:22px;">And if something was not right, reply to this email instead. We would rather fix it.</p>`,
   },
   {
     key: "retainer_check_in",

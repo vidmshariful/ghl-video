@@ -44,6 +44,7 @@ import {
   type RequestStatus,
 } from "@/lib/projects";
 import { RETAINER_KIND_LABEL, monthLabel, type RetainerKind } from "@/lib/retainer";
+import { QuoteModal, type QuoteSeed } from "./QuoteModal";
 
 /*
  * Custom video, the simple way (owner decision, 21 August 2026).
@@ -142,6 +143,27 @@ type Enquiry = {
   lostReason: string | null;
   projectId: string | null;
   createdAt: string;
+};
+
+type QuoteRow = {
+  id: string;
+  number: string;
+  title: string;
+  totalCents: number;
+  status: string;
+  open: boolean;
+  token: string;
+  requestId: string | null;
+  projectId: string | null;
+  createdAt: string;
+};
+const QUOTE_TONE: Record<string, "info" | "warn" | "good" | "neutral"> = {
+  draft: "neutral",
+  sent: "warn",
+  accepted: "good",
+  declined: "neutral",
+  void: "neutral",
+  expired: "neutral",
 };
 
 const REQUEST_TONE: Record<RequestStatus, "info" | "warn" | "good" | "neutral"> = {
@@ -262,25 +284,35 @@ export function CustomVideoScreen({
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  /* quotes, by the enquiry or the project they are for; and the one being written */
+  const [quotes, setQuotes] = useState<QuoteRow[]>([]);
+  const [quoteSeed, setQuoteSeed] = useState<QuoteSeed | null>(null);
 
   const load = useCallback(async () => {
     setErr("");
     try {
       const h = await authHeader();
-      const [p, r, c] = await Promise.all([
+      const [p, r, c, q] = await Promise.all([
         fetch("/api/admin/projects", { headers: h }).then((x) => x.json()),
         fetch("/api/admin/project-requests", { headers: h }).then((x) => x.json()),
         fetch("/api/admin/customers", { headers: h }).then((x) => x.json()),
+        fetch("/api/admin/quotes", { headers: h }).then((x) => x.json()),
       ]);
       if (p.error || r.error) return setErr(p.error ?? r.error);
       setProjects(p.projects as Project[]);
       setTeam((p.team as { email: string; name: string }[]) ?? []);
       setEnquiries(r.requests as Enquiry[]);
       setClients((c.customers as Client[]) ?? []);
+      setQuotes((q.quotes as QuoteRow[]) ?? []);
     } catch {
       setErr("Could not load custom video.");
     }
   }, []);
+  const latestQuoteFor = useCallback(
+    (where: { requestId?: string | null; projectId?: string | null }) =>
+      quotes.find((x) => (where.projectId && x.projectId === where.projectId) || (where.requestId && x.requestId === where.requestId)) ?? null,
+    [quotes],
+  );
 
   /*
    * Just the board, for after an edit.
@@ -447,6 +479,8 @@ export function CustomVideoScreen({
     return (
       <ProjectPage
         p={opened}
+        quote={latestQuoteFor({ projectId: opened.id })}
+        onQuote={setQuoteSeed}
         team={team}
         contacts={clients.find((c) => c.email === opened.customerEmail)?.contacts ?? []}
         onBack={() => setOpen(null)}
@@ -458,6 +492,15 @@ export function CustomVideoScreen({
 
   return (
     <div className="w-full">
+      {quoteSeed && (
+        <QuoteModal
+          seed={quoteSeed}
+          onClose={() => setQuoteSeed(null)}
+          onSent={() => {
+            void load();
+          }}
+        />
+      )}
       <PageHeader
         title="Custom video"
         description="Bespoke work, and the enquiries that have not become work yet."
@@ -907,6 +950,16 @@ export function CustomVideoScreen({
                       {e.company || e.name || e.email}
                     </p>
                     <Chip tone={REQUEST_TONE[e.status]}>{REQUEST_LABEL[e.status]}</Chip>
+                    {(() => {
+                      const q = latestQuoteFor({ requestId: e.id });
+                      return q ? (
+                        <a href={`/q/${q.token}/`} target="_blank" rel="noopener" className="inline-flex">
+                          <Chip tone={QUOTE_TONE[q.status] ?? "neutral"}>
+                            {q.number} {q.status} {money(q.totalCents)}
+                          </Chip>
+                        </a>
+                      ) : null;
+                    })()}
                     <span className="font-mono text-label uppercase text-dim">
                       {e.email}
                       {e.phone ? ` / ${e.phone}` : ""} / {when(e.createdAt)}
@@ -928,6 +981,24 @@ export function CustomVideoScreen({
                       </option>
                     ))}
                   </Select>
+                  {!e.projectId && e.status !== "lost" && !latestQuoteFor({ requestId: e.id })?.open && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() =>
+                        setQuoteSeed({
+                          customerEmail: e.email,
+                          customerName: e.name,
+                          customerCompany: e.company,
+                          requestId: e.id,
+                          title: e.company ? `Custom video for ${e.company}` : "Custom video",
+                          scope: e.brief ?? "",
+                        })
+                      }
+                    >
+                      Send a quote
+                    </Button>
+                  )}
                   {!e.projectId && e.status !== "lost" && (
                     <Button
                       variant="brand"
@@ -967,6 +1038,8 @@ function ProjectPage({
   p,
   team,
   contacts,
+  quote,
+  onQuote,
   onBack,
   onPatch,
   onReload,
@@ -974,6 +1047,9 @@ function ProjectPage({
   p: Project;
   team: { email: string; name: string }[];
   contacts: { id: string; name: string; email: string | null; role: string; title: string | null }[];
+  /* the latest quote for this project, and the way to raise one */
+  quote: QuoteRow | null;
+  onQuote: (seed: QuoteSeed) => void;
   onBack: () => void;
   onPatch: (
     body: Record<string, unknown>,
@@ -1377,6 +1453,37 @@ function ProjectPage({
                 </span>
               )}
             </span>
+          </Fact>
+
+          <Fact label="Quote">
+            {(() => {
+              const q = quote;
+              return q ? (
+                <span className="flex flex-wrap items-center gap-2">
+                  <a href={`/q/${q.token}/`} target="_blank" rel="noopener" className="text-ink hover:text-gold">
+                    {q.number}
+                  </a>
+                  <Chip tone={QUOTE_TONE[q.status] ?? "neutral"}>{q.status}</Chip>
+                  <span className="tabular-nums">{money(q.totalCents)}</span>
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  className="text-body-sm text-muted underline-offset-2 hover:text-gold hover:underline"
+                  onClick={() =>
+                    onQuote({
+                      customerEmail: p.customerEmail,
+                      customerName: p.customerName,
+                      projectId: p.id,
+                      title: p.title,
+                      scope: p.brief ?? "",
+                    })
+                  }
+                >
+                  Send a quote
+                </button>
+              );
+            })()}
           </Fact>
 
           <Fact label="Invoice">

@@ -37,7 +37,7 @@
     "hl:provision": "node scripts/hl-provision.mjs",
     "hl:sync": "tsx scripts/hl-sync.ts",
     "hl:migrate-invoices": "tsx scripts/hl-migrate-invoices.ts",
-    "test:walk": "playwright test tests/e2e/walkthrough.spec.ts tests/e2e/premade.spec.ts tests/e2e/custom.spec.ts tests/e2e/editing.spec.ts tests/e2e/highlevel.spec.ts tests/e2e/money.spec.ts tests/e2e/messages.spec.ts tests/e2e/chase.spec.ts --workers=1"
+    "test:walk": "playwright test tests/e2e/walkthrough.spec.ts tests/e2e/premade.spec.ts tests/e2e/custom.spec.ts tests/e2e/editing.spec.ts tests/e2e/highlevel.spec.ts tests/e2e/money.spec.ts tests/e2e/messages.spec.ts tests/e2e/chase.spec.ts tests/e2e/quotes.spec.ts --workers=1"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

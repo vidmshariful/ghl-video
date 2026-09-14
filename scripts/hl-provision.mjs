@@ -82,6 +82,9 @@ const CONTACT_FIELDS = [
   ["editingPlan", "GHLV editing plan", "Growth, active, renews 2026-10-02"],
   ["waitingOn", "GHLV waiting on", "brief, review, approval, or empty: what the client owes us right now"],
   ["checkIn", "GHLV check-in", "YYYY-MM-DD, the retainer's next check-in"],
+  ["retainerAgreed", "GHLV retainer agreed", "YYYY-MM-DD by Name: when the partner accepted the terms in the portal"],
+  ["partnerRef", "GHLV partner ref", "the partner's referral handle, for a partner contact"],
+  ["partnerTier", "GHLV partner tier", "Affiliate Partner, VIP Affiliate Partner, Partnership Program"],
 ];
 
 async function contactFields() {

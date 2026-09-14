@@ -33,6 +33,9 @@ const cfg: HlConfig = {
     editingPlan: "f_plan",
     waitingOn: "f_wait",
     checkIn: "f_checkin",
+    retainerAgreed: "f_agreed",
+    partnerRef: "f_pref",
+    partnerTier: "f_ptier",
   },
   pipelines: {
     leads: { id: "pl", stages: { new: "s1", contacted: "s2", quoted: "s3", won: "s4", lost: "s5" } },
@@ -83,6 +86,8 @@ test("a retainer partner is tagged and described as one", () => {
       startedOn: "2026-09-01",
       checkInOn: null,
       note: null,
+      agreedOn: "2026-09-10T10:00:00Z",
+      agreedBy: "Chase Buckner",
     },
     directBrief: true,
     internal: false,
@@ -108,6 +113,7 @@ test("a retainer partner is tagged and described as one", () => {
   assert.equal(field(body, "f_id"), "c1");
   assert.equal(field(body, "f_wait"), "approval");
   assert.equal(field(body, "f_checkin"), "");
+  assert.equal(field(body, "f_agreed"), "2026-09-10 by Chase Buckner");
   assert.ok(tags.includes("ghlv-retainer"));
 });
 

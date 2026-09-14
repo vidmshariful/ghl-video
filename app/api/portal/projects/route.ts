@@ -149,6 +149,13 @@ export async function GET(req: Request) {
           monthLabel: monthLabel(month),
           summary,
           line: countLine(summary, retainer),
+          /* the agreement: accepted, or waiting for the owner's name */
+          monthlyCents: retainer.monthlyCents,
+          startedOn: retainer.startedOn,
+          note: retainer.note,
+          agreedOn: retainer.agreedOn,
+          agreedBy: retainer.agreedBy,
+          canAccept: ctx.selfEmail.toLowerCase() === ctx.ownerEmail.toLowerCase(),
         }
       : null;
 

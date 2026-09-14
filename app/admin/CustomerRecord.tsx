@@ -1085,6 +1085,11 @@ export function CustomerRecord({
               /* no optimistic value: the route answers with the parsed terms,
                  which is what every other screen will read */
               onSave={(terms) => patch({ retainer: terms })}
+              onSendAgreement={async () => {
+                const r = await fetch(`/api/admin/customers/${id}/agreement`, { method: "POST", headers: await authHeader() });
+                const j = (await r.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+                return j.ok ? null : (j.error ?? "Not sent.");
+              }}
             />
           </div>
         </div>
@@ -1659,13 +1664,18 @@ function PartnershipPanel({
   retainer,
   partnership,
   onSave,
+  onSendAgreement,
 }: {
   retainer: Retainer | null;
   partnership: Record_["partnership"];
   onSave: (terms: Record<string, unknown> | null) => Promise<unknown>;
+  /* "Send the agreement": returns null when sent, else the reason */
+  onSendAgreement: () => Promise<string | null>;
 }) {
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sendNote, setSendNote] = useState("");
   const blank = {
     name: "Retainer partnership",
     monthly: "",
@@ -1749,12 +1759,36 @@ function PartnershipPanel({
               End it
             </Button>
           )}
+          {retainer && !retainer.agreedOn && (
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={sending}
+              onClick={async () => {
+                setSending(true);
+                setSendNote("");
+                const why = await onSendAgreement();
+                setSendNote(why ?? "Sent. They accept it in their portal.");
+                setSending(false);
+              }}
+            >
+              Send the agreement
+            </Button>
+          )}
           <Button size="sm" variant={retainer ? "secondary" : "brand"} onClick={open}>
             {retainer ? "Edit terms" : "Set up a retainer"}
           </Button>
         </span>
       }
     >
+      {retainer && (
+        <p className="mb-3 font-mono text-label uppercase tracking-[0.08em] text-dim">
+          {retainer.agreedOn
+            ? `Agreement accepted ${when(retainer.agreedOn)}${retainer.agreedBy ? ` by ${retainer.agreedBy}` : ""}`
+            : "Agreement not yet accepted in their portal"}
+          {sendNote ? ` / ${sendNote}` : ""}
+        </p>
+      )}
       {retainer && thisMonth && (
         <div className="grid gap-4">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

@@ -6,6 +6,7 @@ import { completeness, getBrandKit } from "@/lib/brand-kit";
 import { orderKind, type InvoiceLink } from "@/lib/order-kind";
 import {
   monthSummary,
+  needsFreshAgreement,
   parseRetainer,
   retainerMonths,
   type RetainerJob,
@@ -520,7 +521,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       const terms = parseRetainer(b.retainer);
       if (!terms)
         return NextResponse.json({ error: "A retainer needs a monthly fee." }, { status: 400 });
-      patch.retainer = terms;
+      /* the partner's acceptance is theirs, not the form's: it survives an
+         edit that leaves the deal as it was, and is cleared by one that
+         changes the fee or the count, which needs accepting again */
+      const { data: current } = await db.from("customers").select("retainer").eq("id", id).maybeSingle();
+      const before = parseRetainer(current?.retainer);
+      const keep = before && !needsFreshAgreement(before, terms);
+      patch.retainer = keep ? { ...terms, agreedOn: before.agreedOn, agreedBy: before.agreedBy } : { ...terms, agreedOn: null, agreedBy: null };
     }
   }
   if (!Object.keys(patch).length) {

@@ -21,6 +21,9 @@ export const CONTACT_FIELD_KEYS = [
   "editingPlan",
   "waitingOn",
   "checkIn",
+  "retainerAgreed",
+  "partnerRef",
+  "partnerTier",
 ] as const;
 export type ContactFieldKey = (typeof CONTACT_FIELD_KEYS)[number];
 
@@ -74,6 +77,7 @@ export const HL_TAGS = {
   lead: "ghlv-lead",
   internal: "ghlv-internal",
   waitingOnClient: "ghlv-waiting-on-client",
+  partner: "ghlv-partner",
 } as const;
 /** Only these are ever removed by the sync; a tag the studio adds by hand is theirs. */
 export const HL_MANAGED_TAGS: readonly string[] = Object.values(HL_TAGS);
