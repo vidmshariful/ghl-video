@@ -2,6 +2,7 @@ import "server-only";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { salesPages, salesPageUrl } from "@/lib/sales/pages";
 import { site } from "@/lib/site";
+import { likeLiteral } from "@/lib/pg-pattern";
 
 /*
  * Data layer for the affiliate partner portal (/partners) and its admin
@@ -62,7 +63,7 @@ export async function partnerByEmail(email: string): Promise<PartnerRow | null> 
   const { data, error } = await supabaseAdmin()
     .from("partners")
     .select("*")
-    .ilike("email", clean)
+    .ilike("email", likeLiteral(clean))
     .maybeSingle();
   if (error) throw new Error(`partner lookup failed: ${error.message}`);
   return (data as PartnerRow | null) ?? null;

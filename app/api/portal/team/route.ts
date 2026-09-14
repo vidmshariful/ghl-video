@@ -9,6 +9,7 @@ import {
   setMemberStatus,
   updateMember,
 } from "@/lib/account-team";
+import { likeLiteral } from "@/lib/pg-pattern";
 
 export const runtime = "nodejs";
 
@@ -53,7 +54,7 @@ export async function POST(req: Request) {
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
 
   // the invite email + bell note; fail-soft, the add already succeeded
-  const { data: me } = await db.from("customers").select("name").ilike("email", email).maybeSingle();
+  const { data: me } = await db.from("customers").select("name").ilike("email", likeLiteral(email)).maybeSingle();
   const { sendTeamInviteEmail } = await import("@/lib/email/notify");
   await sendTeamInviteEmail(db, {
     accountType: "customer",
@@ -82,7 +83,7 @@ export async function PATCH(req: Request) {
   if (action === "resend") {
     const member = await getMember(db, "customer", email, id);
     if (!member) return NextResponse.json({ error: "Not found." }, { status: 404 });
-    const { data: me } = await db.from("customers").select("name").ilike("email", email).maybeSingle();
+    const { data: me } = await db.from("customers").select("name").ilike("email", likeLiteral(email)).maybeSingle();
     const { sendTeamInviteEmail } = await import("@/lib/email/notify");
     await sendTeamInviteEmail(db, {
       accountType: "customer",

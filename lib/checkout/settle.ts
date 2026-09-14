@@ -1,4 +1,5 @@
 import "server-only";
+import { settleCheckoutLogin } from "@/lib/checkout/account";
 import type Stripe from "stripe";
 import type { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { syncPaidOrderToHighLevel } from "@/lib/checkout/fulfill";
@@ -87,6 +88,16 @@ export async function settlePaidIntent(
       order.status = "paid";
       order.highlevel_opportunity_id = flipped.highlevel_opportunity_id;
       order.metadata = flipped.metadata;
+      /* the portal login is made now, with the password typed at checkout
+         when there was one; the hash goes the moment it is used. Never
+         blocks settlement: a login can also be opened from the sign-in page. */
+      try {
+        const hash = typeof flipped.password_hash === "string" && flipped.password_hash ? flipped.password_hash : null;
+        await settleCheckoutLogin(String(order.customer_email), hash);
+        if (hash) await db.from("orders").update({ password_hash: null }).eq("id", order.id);
+      } catch (e) {
+        console.error(`[settle] login not settled for order ${order.id}:`, e);
+      }
       await db.from("order_events").insert({
         order_id: order.id,
         event_type: "payment_succeeded",

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { contextCan, resolvePortalContext } from "@/lib/account-team";
 import { acceptQuote, declineQuote, publicQuote } from "@/lib/quote-flow";
+import { likeLiteral } from "@/lib/pg-pattern";
 
 export const runtime = "nodejs";
 
@@ -21,7 +22,7 @@ export async function GET(req: Request) {
   const { data } = await db
     .from("quotes")
     .select("*")
-    .ilike("customer_email", ctx.ownerEmail)
+    .ilike("customer_email", likeLiteral(ctx.ownerEmail))
     .neq("status", "draft")
     .neq("status", "void")
     .order("created_at", { ascending: false });
@@ -37,7 +38,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Only the account owner can answer a quote." }, { status: 403 });
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const id = typeof body.id === "string" ? body.id : "";
-  const { data: q } = await db.from("quotes").select("*").eq("id", id).ilike("customer_email", ctx.ownerEmail).maybeSingle();
+  const { data: q } = await db.from("quotes").select("*").eq("id", id).ilike("customer_email", likeLiteral(ctx.ownerEmail)).maybeSingle();
   if (!q) return NextResponse.json({ error: "Not found." }, { status: 404 });
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
   if (body.action === "accept") {

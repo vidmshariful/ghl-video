@@ -11,6 +11,7 @@ import {
 } from "@/lib/pipeline";
 import { ensureMainCarrier, syncProjectState } from "@/lib/project-station";
 import { addComment, stamp } from "@/lib/review";
+import { likeLiteral } from "@/lib/pg-pattern";
 
 export const runtime = "nodejs";
 
@@ -44,7 +45,7 @@ async function guard(req: Request, id: string) {
     .from("projects")
     .select("id, title, customer_email, pipeline")
     .eq("id", id)
-    .ilike("customer_email", ctx.ownerEmail)
+    .ilike("customer_email", likeLiteral(ctx.ownerEmail))
     .maybeSingle();
   if (!project) return { fail: NextResponse.json({ error: "Not found." }, { status: 404 }) };
 

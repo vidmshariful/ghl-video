@@ -23,6 +23,7 @@ import { HighLevelError } from "@/lib/checkout/highlevel-errors";
 import { hlFetch } from "./client";
 import type { HlConfig } from "./config";
 import { parseRetainer, type Retainer } from "@/lib/retainer";
+import { likeLiteral } from "@/lib/pg-pattern";
 
 type Db = SupabaseClient;
 type Row = Record<string, unknown>;
@@ -228,7 +229,7 @@ export async function syncInvoice(
   if (!email) return { status: "skipped", note: "invoice has no client email" };
   if (!deps.allowed(email)) return { status: "skipped", note: `${email} is outside HIGHLEVEL_SYNC_ALLOW` };
 
-  const { data: customer } = await db.from("customers").select("*").ilike("email", email).maybeSingle();
+  const { data: customer } = await db.from("customers").select("*").ilike("email", likeLiteral(email)).maybeSingle();
   if (!customer) return { status: "skipped", note: `no customer row for ${email}` };
   const why = invoiceSkipReason(inv, customer);
   if (why) return { status: "skipped", note: why };
@@ -401,7 +402,7 @@ export async function pullInvoices(db: Db, cfg: HlConfig, opts: { pages?: number
     const email = String(contact?.email ?? "").toLowerCase();
     let customer: Row | null = contactId ? await customerByContact(db, cfg, contactId) : null;
     if (!customer && email) {
-      const { data } = await db.from("customers").select("*").ilike("email", email).maybeSingle();
+      const { data } = await db.from("customers").select("*").ilike("email", likeLiteral(email)).maybeSingle();
       customer = data ?? null;
     }
     if (!customer) {
@@ -502,13 +503,21 @@ export async function syncOrderSale(
     .maybeSingle();
   if (!order) return { status: "skipped", note: "order row is gone" };
   if (order.status !== "paid") return { status: "skipped", note: `order is ${String(order.status)}, not paid` };
-  if (order.hl_invoice_id) return { status: "unchanged", note: `invoice ${String(order.hl_invoice_id)}` };
   const product = (order.product as { name?: string; sku?: string; metadata?: Row } | null) ?? null;
+  if (order.hl_invoice_id) {
+    /* made on an earlier pass: finish recording the payment if that part
+       failed, and never make a second invoice (audit, 15 September 2026) */
+    const existing = await hlFetch(`/invoices/${String(order.hl_invoice_id)}?${q(cfg)}`, { method: "GET" }).catch(() => null);
+    if (existing && String(existing.status ?? "") === "paid")
+      return { status: "unchanged", note: `invoice ${String(order.hl_invoice_id)}` };
+    await recordSalePayment(cfg, String(order.hl_invoice_id), order);
+    return { status: "done", note: `payment recorded on invoice ${String(order.hl_invoice_id)}` };
+  }
   if (product?.metadata?.invoice) return { status: "skipped", note: "a legacy invoice payment; the invoice itself is what moves" };
   if (Number(order.amount_cents ?? 0) <= 0) return { status: "skipped", note: "nothing was charged" };
   const email = String(order.customer_email ?? "").toLowerCase();
   if (!deps.allowed(email)) return { status: "skipped", note: `${email} is outside HIGHLEVEL_SYNC_ALLOW` };
-  const { data: customer } = await db.from("customers").select("*").ilike("email", email).maybeSingle();
+  const { data: customer } = await db.from("customers").select("*").ilike("email", likeLiteral(email)).maybeSingle();
   if (!customer) return { status: "skipped", note: `no customer row for ${email}` };
 
   const contactId = await deps.contactIdFor(customer);
@@ -535,6 +544,16 @@ export async function syncOrderSale(
     }),
   });
   const hlId = String(made._id ?? made.id);
+  /* our side first: a failure past this line retries into the branch above
+     instead of making another invoice */
+  await db.from("orders").update({ hl_invoice_id: hlId }).eq("id", orderId);
+  await putLink(db, cfg, { kind: "order", entity_id: orderId, hl_kind: "invoice", hl_id: hlId, fingerprint: hlId });
+  const card = await recordSalePayment(cfg, hlId, order);
+  return { status: "done", note: `paid invoice ${hlId} recorded (${card ? `${card.brand} ${card.last4}` : "card on file"})` };
+}
+
+/** The payment that already happened on the site, recorded on its HighLevel invoice. */
+async function recordSalePayment(cfg: HlConfig, hlId: string, order: Row): Promise<Card> {
   const card = await cardOf(order.stripe_payment_intent_id);
   const pi = typeof order.stripe_payment_intent_id === "string" ? order.stripe_payment_intent_id : "";
   await hlFetch(`/invoices/${hlId}/record-payment`, {
@@ -547,9 +566,7 @@ export async function syncOrderSale(
       amount: dollars(Number(order.amount_cents)),
     }),
   });
-  await db.from("orders").update({ hl_invoice_id: hlId }).eq("id", orderId);
-  await putLink(db, cfg, { kind: "order", entity_id: orderId, hl_kind: "invoice", hl_id: hlId, fingerprint: hlId });
-  return { status: "done", note: `paid invoice ${hlId} recorded (${card ? `${card.brand} ${card.last4}` : "card on file"})` };
+  return card;
 }
 
 /* ------------------------------------------------------------------ */
@@ -591,6 +608,9 @@ export function schedulePayload(retainer: Retainer, contact: Contact, cfg: HlCon
  * started when the terms appear, updated when they change, cancelled when
  * they go. Runs inside the customer sync, after the contact is there.
  */
+/** A schedule link that exists in HighLevel but was not yet started carries this mark. */
+const UNSTARTED = "unstarted:";
+
 export async function syncRetainerSchedule(
   db: Db,
   cfg: HlConfig,
@@ -616,16 +636,31 @@ export async function syncRetainerSchedule(
   /* the start date moves every month; what matters is the terms */
   const fp = fingerprint({ ...payload, schedule: undefined });
   if (link && link.fingerprint === fp) return null;
-  if (!link) {
-    const made = await hlFetch("/invoices/schedule", { method: "POST", body: JSON.stringify(payload) });
-    const sid = String(made._id ?? made.id);
-    await hlFetch(`/invoices/schedule/${sid}/schedule`, {
+  const start = (sid: string) =>
+    hlFetch(`/invoices/schedule/${sid}/schedule`, {
       method: "POST",
       body: JSON.stringify({ ...alt(cfg), liveMode: liveMode(), autoPayment: { enable: false } }),
     });
-    await putLink(db, cfg, { kind: "customer", entity_id: id, hl_kind: "schedule", hl_id: sid, fingerprint: fp });
+  if (!link) {
+    const made = await hlFetch("/invoices/schedule", { method: "POST", body: JSON.stringify(payload) });
+    const sid = String(made._id ?? made.id);
+    /* the link first, marked not yet started, so a failure to start retries
+       the start and never makes a second schedule */
+    await putLink(db, cfg, { kind: "customer", entity_id: id, hl_kind: "schedule", hl_id: sid, fingerprint: `${UNSTARTED}${fp}` });
     await db.from("customers").update({ hl_retainer_schedule_id: sid }).eq("id", id);
+    await start(sid);
+    await putLink(db, cfg, { kind: "customer", entity_id: id, hl_kind: "schedule", hl_id: sid, fingerprint: fp });
     return `retainer schedule ${sid} started, first bill ${payload.schedule.rrule.startDate}`;
+  }
+  if (link.fingerprint === `${UNSTARTED}${fp}`) {
+    try {
+      await start(link.hl_id);
+    } catch (e) {
+      /* already running from the earlier attempt that did not get to say so */
+      if (!(e instanceof HighLevelError) || e.status >= 500) throw e;
+    }
+    await putLink(db, cfg, { kind: "customer", entity_id: id, hl_kind: "schedule", hl_id: link.hl_id, fingerprint: fp });
+    return `retainer schedule ${link.hl_id} started`;
   }
   await hlFetch(`/invoices/schedule/${link.hl_id}`, { method: "PUT", body: JSON.stringify(payload) });
   await putLink(db, cfg, { kind: "customer", entity_id: id, hl_kind: "schedule", hl_id: link.hl_id, fingerprint: fp });

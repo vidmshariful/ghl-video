@@ -5,6 +5,7 @@ import { profileByEmail, upsertProfile } from "@/lib/profiles";
 import { membershipsForMember, resolvePortalContext } from "@/lib/account-team";
 import { linesFrom, portalVisibility, type PortalVisibility } from "@/lib/portal-visibility";
 import { parseRetainer } from "@/lib/retainer";
+import { likeLiteral } from "@/lib/pg-pattern";
 
 export const runtime = "nodejs";
 
@@ -59,7 +60,7 @@ export async function GET(req: Request) {
     const { data } = await db
       .from("customers")
       .select("*")
-      .ilike("email", user.email)
+      .ilike("email", likeLiteral(user.email))
       .maybeSingle();
     if (data?.id) void touchLastSeen(db, String(data.id));
     return NextResponse.json({
@@ -77,7 +78,7 @@ export async function GET(req: Request) {
   const { data: owner } = await db
     .from("customers")
     .select("*")
-    .ilike("email", ctx.ownerEmail)
+    .ilike("email", likeLiteral(ctx.ownerEmail))
     .maybeSingle();
   /* staff looking is not the client visiting: stamping last seen here would
      tell us a client had been in the portal when nobody had */
@@ -119,17 +120,17 @@ async function sectionsFor(
       db
         .from("orders")
         .select("id, status, product:products(metadata)")
-        .ilike("customer_email", email),
+        .ilike("customer_email", likeLiteral(email)),
       db
         .from("projects")
         .select("id", { count: "exact", head: true })
-        .ilike("customer_email", email)
+        .ilike("customer_email", likeLiteral(email))
         .neq("status", "cancelled"),
-      db.from("subscriptions").select("id", { count: "exact", head: true }).ilike("customer_email", email),
+      db.from("subscriptions").select("id", { count: "exact", head: true }).ilike("customer_email", likeLiteral(email)),
       db
         .from("invoices")
         .select("id", { count: "exact", head: true })
-        .ilike("customer_email", email)
+        .ilike("customer_email", likeLiteral(email))
         .neq("status", "void"),
     ]);
   const rows = (orders ?? []) as Record<string, unknown>[];

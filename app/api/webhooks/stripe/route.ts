@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { settleCheckoutLogin } from "@/lib/checkout/account";
 import type Stripe from "stripe";
 import { stripe } from "@/lib/checkout/stripe";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
@@ -506,6 +507,15 @@ async function handleSubscription(
       .select("id")
       .maybeSingle();
     if (claimed) {
+      /* the portal login is made now, with the password typed at plan
+         checkout when there was one; the hash goes the moment it is used */
+      try {
+        const hash = typeof row.password_hash === "string" && row.password_hash ? row.password_hash : null;
+        await settleCheckoutLogin(String(row.customer_email), hash);
+        if (hash) await db.from("subscriptions").update({ password_hash: null }).eq("id", row.id);
+      } catch (e) {
+        console.error(`[webhook] login not settled for plan ${row.id}:`, e);
+      }
       await syncSubscriptionToHighLevel(db, row);
       // same atomic claim = exactly-once welcome email; fail-soft inside
       const { sendSubscriptionStartedEmail } = await import("@/lib/email/notify");

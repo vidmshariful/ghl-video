@@ -5,6 +5,7 @@ import { lifetimeValue, serviceTags, type MoneySource } from "@/lib/customer-rec
 import { invoiceOpen, invoiceSettled } from "@/lib/invoice-state";
 import { orderKind, type InvoiceLink } from "@/lib/order-kind";
 import { ensureAccount } from "@/lib/accounts";
+import { likeLiteral } from "@/lib/pg-pattern";
 
 export const runtime = "nodejs";
 
@@ -211,7 +212,7 @@ export async function POST(req: Request) {
   const { data: existing } = await db
     .from("customers")
     .select("id")
-    .ilike("email", email)
+    .ilike("email", likeLiteral(email))
     .maybeSingle();
   if (existing) {
     return NextResponse.json(

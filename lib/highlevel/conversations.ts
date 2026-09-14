@@ -17,6 +17,7 @@ import { HighLevelError } from "@/lib/checkout/highlevel-errors";
 import { hlFetch, locationId } from "./client";
 import { loadHlConfig, type HlConfig } from "./config";
 import { syncAllowed, syncCustomer } from "./sync";
+import { likeLiteral } from "@/lib/pg-pattern";
 
 type Db = SupabaseClient;
 type Row = Record<string, unknown>;
@@ -93,7 +94,7 @@ export async function ensureHlConversation(
 ): Promise<{ conversationId: string; contactId: string } | null> {
   const email = String(conv.customer_email ?? "").toLowerCase();
   if (!email || !syncAllowed(email)) return null;
-  const { data: customer } = await db.from("customers").select("*").ilike("email", email).maybeSingle();
+  const { data: customer } = await db.from("customers").select("*").ilike("email", likeLiteral(email)).maybeSingle();
   if (!customer) return null;
   const contactId = await contactIdFor(db, cfg, customer);
   if (!contactId) return null;

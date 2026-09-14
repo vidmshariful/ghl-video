@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { contextCan, resolvePortalContext } from "@/lib/account-team";
 import { pushAdminNotifications } from "@/lib/notifications";
+import { likeLiteral } from "@/lib/pg-pattern";
 
 export const runtime = "nodejs";
 
@@ -34,7 +35,7 @@ export async function POST(req: Request) {
   const { data: customer } = await db
     .from("customers")
     .select("name, company")
-    .ilike("email", email)
+    .ilike("email", likeLiteral(email))
     .maybeSingle();
 
   const { error } = await db.from("project_requests").insert({

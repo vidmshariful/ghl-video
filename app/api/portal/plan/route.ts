@@ -16,6 +16,7 @@ import {
 } from "@/lib/subscription-slots";
 import { ASPECTS, CLIENT_STATUS_WORD, columnFor, type Aspect } from "@/lib/editing-sop";
 import { EDIT_TIERS, TOPUP_PACKS, creditCost, isPodcast, tierFor, type EditType, typeLabelFor } from "@/lib/editing-credits";
+import { likeLiteral } from "@/lib/pg-pattern";
 
 export const runtime = "nodejs";
 
@@ -42,7 +43,7 @@ async function planFor(db: ReturnType<typeof supabaseAdmin>, email: string) {
     .select(
       "id, status, amount_cents, currency, current_period_end, cancel_at_period_end, plan_name, created_at, metadata, product:products(sku, name)",
     )
-    .ilike("customer_email", email)
+    .ilike("customer_email", likeLiteral(email))
     .in("status", ["active", "trialing", "past_due"])
     .order("created_at", { ascending: false })
     .maybeSingle();

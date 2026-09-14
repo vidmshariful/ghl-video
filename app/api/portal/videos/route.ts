@@ -9,6 +9,7 @@ import {
   REVISIONS_INCLUDED,
   type DeliverableStatus,
 } from "@/lib/deliverable-status";
+import { likeLiteral } from "@/lib/pg-pattern";
 
 export const runtime = "nodejs";
 
@@ -56,7 +57,7 @@ export async function GET(req: Request) {
   const { data: projects } = await db
     .from("projects")
     .select("id, title, status, created_at, due_at")
-    .ilike("customer_email", email)
+    .ilike("customer_email", likeLiteral(email))
     .neq("status", "cancelled")
     .order("created_at", { ascending: false });
   const projectIds = ((projects ?? []) as { id: string }[]).map((p) => p.id);
@@ -72,7 +73,7 @@ export async function GET(req: Request) {
   const { data: subs } = await db
     .from("subscriptions")
     .select("id, plan_name")
-    .ilike("customer_email", email);
+    .ilike("customer_email", likeLiteral(email));
   const subIds = ((subs ?? []) as { id: string }[]).map((s) => s.id);
   const { data: months } = subIds.length
     ? await db

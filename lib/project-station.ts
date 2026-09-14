@@ -10,6 +10,7 @@ import {
   type StationState,
 } from "@/lib/pipeline";
 import { addVersion } from "@/lib/versions";
+import { likeLiteral } from "@/lib/pg-pattern";
 
 /*
  * The project-level half of the production line: move a station, keep its
@@ -158,7 +159,7 @@ export async function handleStationOp(
     const { data: cust } = await db
       .from("customers")
       .select("name")
-      .ilike("email", email)
+      .ilike("email", likeLiteral(email))
       .maybeSingle();
     const { sendApprovalRequestEmail } = await import("@/lib/email/notify");
     await sendApprovalRequestEmail(db, {

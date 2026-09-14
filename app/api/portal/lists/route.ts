@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { contextCan, resolvePortalContext } from "@/lib/account-team";
 import { resolveList } from "@/lib/shared-lists";
+import { likeLiteral } from "@/lib/pg-pattern";
 
 export const runtime = "nodejs";
 
@@ -27,7 +28,7 @@ export async function GET(req: Request) {
   const { data } = await db
     .from("shared_lists")
     .select("token, title, item_codes, quoted_cents, opened_count, requested_at, created_at")
-    .ilike("owner_email", ctx.ownerEmail)
+    .ilike("owner_email", likeLiteral(ctx.ownerEmail))
     .order("created_at", { ascending: false })
     .limit(MAX_LISTS);
 
@@ -120,6 +121,6 @@ export async function DELETE(req: Request) {
     .from("shared_lists")
     .delete()
     .eq("token", token)
-    .ilike("owner_email", ctx.ownerEmail);
+    .ilike("owner_email", likeLiteral(ctx.ownerEmail));
   return NextResponse.json({ ok: true });
 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { contextCan, resolvePortalContext, actorName } from "@/lib/account-team";
 import { addProjectFile, listProjectFiles, removeProjectFile } from "@/lib/project-files";
+import { likeLiteral } from "@/lib/pg-pattern";
 
 export const runtime = "nodejs";
 
@@ -26,7 +27,7 @@ async function guard(req: Request, id: string) {
     .from("projects")
     .select("id, customer_email")
     .eq("id", id)
-    .ilike("customer_email", ctx.ownerEmail)
+    .ilike("customer_email", likeLiteral(ctx.ownerEmail))
     .maybeSingle();
   if (!project) return { fail: NextResponse.json({ error: "Not found." }, { status: 404 }) };
 

@@ -12,6 +12,7 @@ import {
   type ProjectStatus,
 } from "@/lib/projects";
 import { RETAINER_KINDS, isMonthKey, monthKey, parseRetainer, type RetainerKind } from "@/lib/retainer";
+import { likeLiteral } from "@/lib/pg-pattern";
 
 export const runtime = "nodejs";
 
@@ -189,7 +190,7 @@ export async function POST(req: Request) {
     /* the whole row on purpose: naming a column that a not-yet-run migration
        adds would fail the lookup and file the job under no customer */
     .select("*")
-    .ilike("email", email)
+    .ilike("email", likeLiteral(email))
     .maybeSingle();
 
   /*

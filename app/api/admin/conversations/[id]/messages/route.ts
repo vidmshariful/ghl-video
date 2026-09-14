@@ -10,6 +10,7 @@ import {
   type OrderJoin,
   type StoredAttachment,
 } from "@/lib/chat";
+import { likeLiteral } from "@/lib/pg-pattern";
 
 export const runtime = "nodejs";
 
@@ -92,7 +93,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const { data: theirOrders } = await db
     .from("orders")
     .select("id, invoice_number, product:products(name)")
-    .ilike("customer_email", conv.customer_email);
+    .ilike("customer_email", likeLiteral(conv.customer_email));
   const orderIds = ((theirOrders ?? []) as Record<string, unknown>[]).map((o) => String(o.id));
   const orderName = (oid: string) => {
     const o = ((theirOrders ?? []) as Record<string, unknown>[]).find((x) => String(x.id) === oid);
@@ -118,7 +119,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const { data: mails } = await db
     .from("email_log")
     .select("id, subject, status, error, template_key, source, created_at")
-    .ilike("to_email", conv.customer_email)
+    .ilike("to_email", likeLiteral(conv.customer_email))
     .order("created_at", { ascending: true })
     .limit(100);
   for (const e of mails ?? []) {
@@ -198,7 +199,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   // sign with the teammate's display name, not their raw email
   const [profile, { data: adminRow }] = await Promise.all([
     import("@/lib/profiles").then((m) => m.profileByEmail(db, admin.email)),
-    db.from("admins").select("name").ilike("email", admin.email).maybeSingle(),
+    db.from("admins").select("name").ilike("email", likeLiteral(admin.email)).maybeSingle(),
   ]);
   const senderName =
     profile.displayName || ((adminRow?.name as string | null) ?? null) || admin.email;

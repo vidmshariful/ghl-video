@@ -8,6 +8,7 @@ import {
   type FeedbackVerdict,
   type PriorAnswer,
 } from "@/lib/feedback-ask";
+import { likeLiteral } from "@/lib/pg-pattern";
 
 export const runtime = "nodejs";
 
@@ -40,9 +41,9 @@ const VERDICTS: FeedbackVerdict[] = ["working", "too_early", "not_really", "skip
  */
 async function accountVideos(db: ReturnType<typeof supabaseAdmin>, email: string) {
   const [{ data: orders }, { data: projects }, { data: subs }] = await Promise.all([
-    db.from("orders").select("id").ilike("customer_email", email).eq("status", "paid"),
-    db.from("projects").select("id").ilike("customer_email", email),
-    db.from("subscriptions").select("id").ilike("customer_email", email),
+    db.from("orders").select("id").ilike("customer_email", likeLiteral(email)).eq("status", "paid"),
+    db.from("projects").select("id").ilike("customer_email", likeLiteral(email)),
+    db.from("subscriptions").select("id").ilike("customer_email", likeLiteral(email)),
   ]);
   const ids = ((orders ?? []) as Row[]).map((o) => String(o.id));
   const projectIds = ((projects ?? []) as Row[]).map((p) => String(p.id));

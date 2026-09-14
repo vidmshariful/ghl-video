@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { firstTouchFromCookieHeader } from "@/lib/first-touch";
 import { getActiveProductBySku } from "@/lib/checkout/products";
 import { ensureAccount } from "@/lib/accounts";
+import { hashCheckoutPassword } from "@/lib/checkout/account";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { stripe } from "@/lib/checkout/stripe";
 import { fpTidFromCookieHeader, normalizeRef, refFromCookieHeader } from "@/lib/affiliates";
@@ -108,8 +109,12 @@ export async function POST(req: Request) {
     company,
     phone,
     source: "plan-checkout",
-    password: asStr(payload.password) || null,
+    /* no login and no password before the money moves: the login is made
+       when the plan first activates, with the typed password, if none exists */
+    password: null,
+    login: false,
   });
+  const passwordHash = hashCheckoutPassword(asStr(payload.password) || null);
   const { data: customer } = ensured
     ? await db.from("customers").select("*").eq("id", ensured.id).single()
     : { data: null };
@@ -292,6 +297,7 @@ export async function POST(req: Request) {
     amount_cents: product.price_cents,
     currency: product.currency,
     interval: "month",
+    ...(passwordHash ? { password_hash: passwordHash } : {}),
     metadata: {
       sku,
       ...(ref ? { ref } : {}),

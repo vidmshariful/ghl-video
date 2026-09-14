@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { verifyAdmin } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { addFile, listFiles, removeFile, type FileOwner } from "@/lib/project-files";
+import { likeLiteral } from "@/lib/pg-pattern";
 
 export const runtime = "nodejs";
 
@@ -27,7 +28,7 @@ function ownerFrom(get: (k: string) => string | null): FileOwner | null {
 }
 
 async function nameOf(db: ReturnType<typeof supabaseAdmin>, email: string): Promise<string | null> {
-  const { data } = await db.from("admins").select("name").ilike("email", email).maybeSingle();
+  const { data } = await db.from("admins").select("name").ilike("email", likeLiteral(email)).maybeSingle();
   return (data?.name as string | null) ?? null;
 }
 

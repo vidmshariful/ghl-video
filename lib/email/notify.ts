@@ -5,6 +5,7 @@ import { DEFAULT_TEMPLATES, P, SITE_URL, emailButton, escapeHtml, renderTemplate
 import { pushNotification, pushAdminNotifications } from "@/lib/notifications";
 import { mayEmail, type EmailPrefs } from "./prefs";
 import { logEmail } from "./log";
+import { likeLiteral } from "@/lib/pg-pattern";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -111,7 +112,7 @@ async function sendTemplate(
     const { data: who } = await db
       .from("customers")
       .select("email_prefs")
-      .ilike("email", to)
+      .ilike("email", likeLiteral(to))
       .maybeSingle();
     if (!mayEmail(key, (who?.email_prefs as EmailPrefs | null) ?? null)) {
       await logEmail({
@@ -802,7 +803,7 @@ async function recipientFor(
     const { data: c } = await db
       .from("customers")
       .select("name")
-      .ilike("email", email)
+      .ilike("email", likeLiteral(email))
       .maybeSingle();
     return { email, name: (c?.name as string | null) ?? "there", url, title };
   };
@@ -1087,7 +1088,7 @@ export async function sendInvoiceSentEmail(db: SupabaseClient, invoiceId: string
       .maybeSingle();
     if (!inv?.customer_email) return;
     const email = String(inv.customer_email);
-    const { data: c } = await db.from("customers").select("name").ilike("email", email).maybeSingle();
+    const { data: c } = await db.from("customers").select("name").ilike("email", likeLiteral(email)).maybeSingle();
     const name = (c?.name as string | null) ?? null;
 
     const amount = money(Number(inv.total_cents ?? 0), (inv.currency as string | null) ?? "usd");
@@ -1195,7 +1196,7 @@ export async function sendEditRequestedAlert(
     const { data: c } = await db
       .from("customers")
       .select("name")
-      .ilike("email", args.customerEmail)
+      .ilike("email", likeLiteral(args.customerEmail))
       .maybeSingle();
     await sendTemplate(db, "admin_edit_requested", adminAlertEmail(), null, {
       customer_name: escapeHtml((c?.name as string | null) || args.customerEmail),

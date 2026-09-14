@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { resolvePortalContext } from "@/lib/account-team";
 import { EMAIL_CATEGORIES, sanitizePrefs, type EmailPrefs } from "@/lib/email/prefs";
+import { likeLiteral } from "@/lib/pg-pattern";
 
 export const runtime = "nodejs";
 
@@ -23,7 +24,7 @@ export async function GET(req: Request) {
   const { data } = await db
     .from("customers")
     .select("email_prefs")
-    .ilike("email", ctx.ownerEmail)
+    .ilike("email", likeLiteral(ctx.ownerEmail))
     .maybeSingle();
 
   return NextResponse.json({
@@ -53,7 +54,7 @@ export async function PUT(req: Request) {
   const { error } = await db
     .from("customers")
     .update({ email_prefs: prefs })
-    .ilike("email", ctx.ownerEmail);
+    .ilike("email", likeLiteral(ctx.ownerEmail));
   if (error) return NextResponse.json({ error: "Could not save that." }, { status: 500 });
 
   return NextResponse.json({ ok: true, prefs });

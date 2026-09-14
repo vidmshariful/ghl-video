@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { editingPlans } from "@/lib/content/premade";
 import { cycleWindow } from "@/lib/subscription-slots";
+import { likeLiteral } from "@/lib/pg-pattern";
 
 /*
  * The billing month a plan is currently in, created on demand.
@@ -200,7 +201,7 @@ export async function grantCreditsForOrder(db: DB, orderId: string): Promise<num
   const { data: sub } = await db
     .from("subscriptions")
     .select("id")
-    .ilike("customer_email", String(order.customer_email))
+    .ilike("customer_email", likeLiteral(String(order.customer_email)))
     .in("status", ["active", "trialing", "past_due"])
     .order("created_at", { ascending: false })
     .maybeSingle();

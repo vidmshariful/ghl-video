@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { contextCan, resolvePortalContext } from "@/lib/account-team";
 import { isWatchable, STATUS_LABEL, type DeliverableStatus } from "@/lib/deliverable-status";
 import { CLIENT_LABEL, type ProjectStatus } from "@/lib/projects";
+import { likeLiteral } from "@/lib/pg-pattern";
 
 export const runtime = "nodejs";
 
@@ -60,7 +61,7 @@ export async function GET(req: Request) {
       ? await db
           .from("orders")
           .select("id, invoice_number, created_at, product:products(name, sku)")
-          .ilike("customer_email", email)
+          .ilike("customer_email", likeLiteral(email))
           .eq("status", "paid")
       : { data: [] };
 
@@ -68,12 +69,12 @@ export async function GET(req: Request) {
       ? await db
           .from("projects")
           .select("id, title, status")
-          .ilike("customer_email", email)
+          .ilike("customer_email", likeLiteral(email))
           .neq("status", "cancelled")
       : { data: [] };
 
     const { data: subs } = canPlans
-      ? await db.from("subscriptions").select("id").ilike("customer_email", email)
+      ? await db.from("subscriptions").select("id").ilike("customer_email", likeLiteral(email))
       : { data: [] };
     const { data: cycles } = (subs ?? []).length
       ? await db
@@ -144,7 +145,7 @@ export async function GET(req: Request) {
       ? await db
           .from("invoices")
           .select("id, number, line_items, total_cents, status")
-          .ilike("customer_email", email)
+          .ilike("customer_email", likeLiteral(email))
       : { data: [] };
     for (const i of (invoices ?? []) as Row[]) {
       const label = Array.isArray(i.line_items)
@@ -194,7 +195,7 @@ export async function GET(req: Request) {
     const { data: convos } = await db
       .from("conversations")
       .select("id, last_message_preview, last_message_at, order_id")
-      .ilike("customer_email", email);
+      .ilike("customer_email", likeLiteral(email));
     for (const c of (convos ?? []) as Row[]) {
       if (!matches(term, c.last_message_preview as string)) continue;
       hits.push({

@@ -14,6 +14,7 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { hlFetch } from "./client";
+import { likeLiteral } from "@/lib/pg-pattern";
 
 type Row = Record<string, unknown>;
 
@@ -95,7 +96,7 @@ export async function applyInbound(
     }
   }
   if (!customer && c.email) {
-    const { data } = await db.from("customers").select("*").ilike("email", c.email).maybeSingle();
+    const { data } = await db.from("customers").select("*").ilike("email", likeLiteral(c.email)).maybeSingle();
     customer = data ?? null;
   }
   if (!customer) return { outcome: "no matching customer", customerId: null, changed: [] };
@@ -125,23 +126,36 @@ export async function applyInbound(
  * not of polls. The webhook endpoint remains the faster door when a
  * workflow points at it.
  */
+const PAGE = 100;
+const MAX_PAGES = 10;
+
 export async function pullContactChanges(
   db: SupabaseClient,
   locationId: string,
   windowMs: number,
 ): Promise<{ seen: number; changed: number; outcomes: string[] }> {
   const since = new Date(Date.now() - windowMs).toISOString();
-  const j = await hlFetch("/contacts/search", {
-    method: "POST",
-    body: JSON.stringify({
-      locationId,
-      pageLimit: 100,
-      filters: [{ field: "dateUpdated", operator: "range", value: { gte: since } }],
-      sort: [{ field: "dateUpdated", direction: "desc" }],
-    }),
-  });
+  /* page through everything edited in the window: after a bulk pass of our
+     own, the newest hundred are all our writes, and a person's edit behind
+     them was being dropped (audit, 15 September 2026) */
+  const listedAll: Row[] = [];
+  for (let page = 1; page <= MAX_PAGES; page += 1) {
+    const j = await hlFetch("/contacts/search", {
+      method: "POST",
+      body: JSON.stringify({
+        locationId,
+        page,
+        pageLimit: PAGE,
+        filters: [{ field: "dateUpdated", operator: "range", value: { gte: since } }],
+        sort: [{ field: "dateUpdated", direction: "desc" }],
+      }),
+    });
+    const batch = ((j.contacts as Row[]) ?? []);
+    listedAll.push(...batch);
+    if (batch.length < PAGE) break;
+  }
   const out = { seen: 0, changed: 0, outcomes: [] as string[] };
-  for (const listed of (j.contacts as Row[]) ?? []) {
+  for (const listed of listedAll) {
     out.seen += 1;
     /* the search only says which contacts moved: its copy lags and can still
        show one deleted a moment ago, so the truth is read by id */

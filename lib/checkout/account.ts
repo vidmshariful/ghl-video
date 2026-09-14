@@ -1,4 +1,5 @@
 import "server-only";
+import bcrypt from "bcryptjs";
 import { supabaseAdmin } from "./supabase-admin";
 import { isUsablePassword } from "./password-rules";
 
@@ -33,6 +34,47 @@ export type EnsureAccountResult = {
   /** true when the buyer can sign in with the password they just typed */
   passwordSet: boolean;
 };
+
+/**
+ * The password typed at checkout, kept as a hash until the money moves.
+ *
+ * Applied only at settlement (lib/checkout/settle.ts, the plan activation
+ * in the Stripe webhook), and only when this checkout is the one that made
+ * the login: a login that already exists keeps the password it has. Too
+ * short is treated as not supplied, as before.
+ */
+export function hashCheckoutPassword(password: string | null | undefined): string | null {
+  if (typeof password !== "string" || !isUsablePassword(password)) return null;
+  return bcrypt.hashSync(password, 10);
+}
+
+/**
+ * The portal login, made now that the payment settled.
+ *
+ * Created with the password typed at checkout when there was one (as a
+ * hash: GoTrue applies a hash on create only, never on update, which is
+ * why the login is held back until this moment rather than created early
+ * and updated). An email that already has a login keeps the password it
+ * has, exactly as before; the checkout password is then simply ignored.
+ */
+export async function settleCheckoutLogin(email: string, passwordHash: string | null): Promise<EnsureAccountResult> {
+  const clean = email.trim().toLowerCase();
+  if (!clean) return { created: false, passwordSet: false };
+  try {
+    const { error } = await supabaseAdmin().auth.admin.createUser({
+      email: clean,
+      email_confirm: true,
+      ...(passwordHash ? { password_hash: passwordHash } : {}),
+    });
+    if (!error) return { created: true, passwordSet: Boolean(passwordHash) };
+    if (/already|exist|registered/i.test(error.message)) return { created: false, passwordSet: false };
+    console.error(`[account] createUser at settlement failed for ${clean}: ${error.message}`);
+    return { created: false, passwordSet: false };
+  } catch (err) {
+    console.error(`[account] settleCheckoutLogin error: ${(err as Error).message}`);
+    return { created: false, passwordSet: false };
+  }
+}
 
 export async function ensureAuthAccount(
   email: string,

@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSessionUser } from "@/lib/account/session";
 import { memberCan, sanitizeFeatures } from "@/lib/team-features";
+import { likeLiteral } from "@/lib/pg-pattern";
 
 /*
  * Team members for the customer and partner portals: the rows, the CRUD the
@@ -286,8 +287,8 @@ export async function actorName(
       .from("account_members")
       .select("member_name")
       .eq("account_type", "customer")
-      .ilike("owner_email", ctx.ownerEmail)
-      .ilike("member_email", self)
+      .ilike("owner_email", likeLiteral(ctx.ownerEmail))
+      .ilike("member_email", likeLiteral(self))
       .maybeSingle();
     const named = (m?.member_name as string | null)?.trim();
     if (named) return named;
@@ -295,7 +296,7 @@ export async function actorName(
     const { data: c } = await db
       .from("customers")
       .select("name")
-      .ilike("email", self)
+      .ilike("email", likeLiteral(self))
       .maybeSingle();
     const named = (c?.name as string | null)?.trim();
     if (named) return named;
@@ -306,7 +307,7 @@ export async function actorName(
   const { data: p } = await db
     .from("profiles")
     .select("display_name")
-    .ilike("email", self)
+    .ilike("email", likeLiteral(self))
     .maybeSingle();
   return ((p?.display_name as string | null)?.trim() || ctx.selfEmail) ?? null;
 }

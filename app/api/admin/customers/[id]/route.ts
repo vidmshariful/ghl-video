@@ -17,6 +17,7 @@ import { currentCycle, topupCreditsLeft } from "@/lib/subscription-cycles";
 import { creditsUsed } from "@/lib/subscription-slots";
 import { customerLinks } from "@/lib/highlevel/links";
 import { invoiceDisplayNumber, invoiceOpen, invoiceSettled, invoiceStatusWord } from "@/lib/invoice-state";
+import { likeLiteral } from "@/lib/pg-pattern";
 
 /** A short-lived signed URL for a private brand file, or null. */
 async function signBrand(db: ReturnType<typeof supabaseAdmin>, path: string | null) {
@@ -64,23 +65,23 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       .select(
         "id, product_id, amount_cents, currency, status, fulfillment_stage, invoice_number, created_at, paid_at, intake_completed, product:products(name, sku, metadata)",
       )
-      .ilike("customer_email", email)
+      .ilike("customer_email", likeLiteral(email))
       .order("created_at", { ascending: false }),
     db
       .from("subscriptions")
       .select("id, amount_cents, status, created_at, current_period_end, cancel_at_period_end, plan_name, metadata, product:products(name, sku)")
-      .ilike("customer_email", email)
+      .ilike("customer_email", likeLiteral(email))
       .order("created_at", { ascending: false }),
     db
       .from("invoices")
       .select("id, number, hl_number, token, total_cents, status, due_date, sent_at, created_at, product_sku, product_id, parent_order_id, line_items, paid_at, hl_status, hl_url, hl_invoice_id, kind, source, amount_paid_cents")
-      .ilike("customer_email", email)
+      .ilike("customer_email", likeLiteral(email))
       .order("created_at", { ascending: false }),
     db
       .from("account_members")
       .select("id, member_email, member_name, features, status, created_at")
       .eq("account_type", "customer")
-      .ilike("owner_email", email),
+      .ilike("owner_email", likeLiteral(email)),
     db
       .from("customer_notes")
       .select("id, author, body, created_at")
@@ -89,7 +90,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     db
       .from("conversations")
       .select("id, order_id, last_message_at, last_message_preview, last_sender_role")
-      .ilike("customer_email", email)
+      .ilike("customer_email", likeLiteral(email))
       .order("last_message_at", { ascending: false, nullsFirst: false }),
     db
       .from("customer_contacts")
@@ -113,14 +114,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const { data: theirProjects } = await db
     .from("projects")
     .select("id, title, status, retainer_month, retainer_kind, created_at, due_at, owner_email, agreed_cents, quoted_cents")
-    .ilike("customer_email", email)
+    .ilike("customer_email", likeLiteral(email))
     .order("created_at", { ascending: false });
   const projectIds = ((theirProjects ?? []) as Row[]).map((p) => String(p.id));
 
   const { data: theirSubs } = await db
     .from("subscriptions")
     .select("id")
-    .ilike("customer_email", email);
+    .ilike("customer_email", likeLiteral(email));
   const { data: theirCycles } = theirSubs?.length
     ? await db
         .from("subscription_cycles")

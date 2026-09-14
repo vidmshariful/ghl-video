@@ -5,6 +5,7 @@ import { normalizePipeline, STATIONS, type StationKey } from "@/lib/pipeline";
 import { ensureMainCarrier, syncProjectState } from "@/lib/project-station";
 import { addComment } from "@/lib/review";
 import { pushAdminNotifications } from "@/lib/notifications";
+import { likeLiteral } from "@/lib/pg-pattern";
 
 export const runtime = "nodejs";
 
@@ -39,7 +40,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     .from("projects")
     .select("*")
     .eq("id", id)
-    .ilike("customer_email", ctx.ownerEmail)
+    .ilike("customer_email", likeLiteral(ctx.ownerEmail))
     .maybeSingle();
   if (!project) return NextResponse.json({ error: "Not found." }, { status: 404 });
 

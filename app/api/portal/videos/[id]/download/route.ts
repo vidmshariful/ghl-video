@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { contextCan, resolvePortalContext } from "@/lib/account-team";
 import { isWatchable, type DeliverableStatus } from "@/lib/deliverable-status";
 import { normalizePipeline } from "@/lib/pipeline";
+import { likeLiteral } from "@/lib/pg-pattern";
 
 export const runtime = "nodejs";
 
@@ -96,7 +97,7 @@ async function ownedBy(
       .from("orders")
       .select("id, status")
       .eq("id", d.order_id as string)
-      .ilike("customer_email", email)
+      .ilike("customer_email", likeLiteral(email))
       .maybeSingle();
     return { owned: Boolean(data), refunded: data?.status === "refunded" };
   }
@@ -105,7 +106,7 @@ async function ownedBy(
       .from("projects")
       .select("id")
       .eq("id", d.project_id as string)
-      .ilike("customer_email", email)
+      .ilike("customer_email", likeLiteral(email))
       .maybeSingle();
     return { owned: Boolean(data), refunded: false };
   }

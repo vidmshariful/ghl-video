@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ensureAuthAccount, type EnsureAccountResult } from "@/lib/checkout/account";
 import { freeSlug, slugStem } from "@/lib/account-slug";
+import { likeLiteral } from "@/lib/pg-pattern";
 
 /*
  * One door for every customer, whichever way they arrive.
@@ -51,6 +52,9 @@ export type EnsureAccountInput = {
   password?: string | null;
   /** false to hold the welcome back (a screen that sends its own) */
   welcome?: boolean;
+  /** false to hold the login back: checkout makes it only when the payment
+      settles, with the password typed then (audit, 15 September 2026) */
+  login?: boolean;
 };
 
 export type EnsuredAccount = {
@@ -84,7 +88,7 @@ export async function ensureAccount(
   const { data: existing } = await db
     .from("customers")
     .select("id, email, name, company, phone, slug, highlevel_contact_id, welcomed_at")
-    .ilike("email", email)
+    .ilike("email", likeLiteral(email))
     .maybeSingle();
 
   let row: Row;
@@ -116,7 +120,7 @@ export async function ensureAccount(
       const { data: again } = await db
         .from("customers")
         .select("id, email, name, company, phone, slug, welcomed_at")
-        .ilike("email", email)
+        .ilike("email", likeLiteral(email))
         .maybeSingle();
       if (!again) {
         console.error(`[accounts] could not create ${email}: ${error?.message ?? "no row"}`);
@@ -129,8 +133,10 @@ export async function ensureAccount(
     }
   }
 
-  /* the login, so the portal door opens the moment they are told about it */
-  const login = await ensureAuthAccount(email, input.password ?? null);
+  /* the login, so the portal door opens the moment they are told about it;
+     a checkout holds it back until the money moves */
+  const login =
+    input.login === false ? { created: false, passwordSet: false } : await ensureAuthAccount(email, input.password ?? null);
 
   let welcomed = false;
   if (input.welcome !== false && !WELCOME_COVERED.has(input.source) && !row.welcomed_at) {
@@ -182,9 +188,9 @@ async function nextSlug(
 
 async function hasAnyWork(db: SupabaseClient, email: string): Promise<boolean> {
   const [{ count: orders }, { count: projects }, { count: subs }] = await Promise.all([
-    db.from("orders").select("id", { count: "exact", head: true }).ilike("customer_email", email),
-    db.from("projects").select("id", { count: "exact", head: true }).ilike("customer_email", email),
-    db.from("subscriptions").select("id", { count: "exact", head: true }).ilike("customer_email", email),
+    db.from("orders").select("id", { count: "exact", head: true }).ilike("customer_email", likeLiteral(email)),
+    db.from("projects").select("id", { count: "exact", head: true }).ilike("customer_email", likeLiteral(email)),
+    db.from("subscriptions").select("id", { count: "exact", head: true }).ilike("customer_email", likeLiteral(email)),
   ]);
   return (orders ?? 0) + (projects ?? 0) + (subs ?? 0) > 0;
 }

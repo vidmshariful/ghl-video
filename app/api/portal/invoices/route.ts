@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { contextCan, resolvePortalContext } from "@/lib/account-team";
 import { invoiceDisplayNumber, invoicePayUrl, invoiceSettled, invoiceVoided } from "@/lib/invoice-state";
+import { likeLiteral } from "@/lib/pg-pattern";
 
 export const runtime = "nodejs";
 
@@ -34,7 +35,7 @@ export async function GET(req: Request) {
     .select(
       "id, number, token, product_sku, line_items, currency, total_cents, subtotal_cents, discount_kind, discount_value, status, due_date, notes, created_at, sent_at, parent_order_id, project_id, project_ids, paid_at, hl_status, hl_url, hl_number, kind, source",
     )
-    .ilike("customer_email", ctx.ownerEmail)
+    .ilike("customer_email", likeLiteral(ctx.ownerEmail))
     .order("created_at", { ascending: false });
 
   const rows = (data ?? []) as Row[];

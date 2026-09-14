@@ -1,5 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { likeLiteral } from "@/lib/pg-pattern";
 
 /*
  * Profiles: the person behind a portal login, shared by all three portals.
@@ -36,7 +37,7 @@ export async function profileByEmail(db: SupabaseClient, email: string): Promise
   const { data } = await db
     .from("profiles")
     .select("display_name, avatar_path")
-    .ilike("email", email)
+    .ilike("email", likeLiteral(email))
     .maybeSingle();
   const displayName = (data?.display_name as string | null) ?? null;
   const avatarPath = (data?.avatar_path as string | null) ?? null;

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { contextCan, resolvePortalContext } from "@/lib/account-team";
+import { likeLiteral } from "@/lib/pg-pattern";
 
 export const runtime = "nodejs";
 
@@ -48,7 +49,7 @@ async function guard(req: Request, deliverableId: string) {
       .from("orders")
       .select("id")
       .eq("id", d.order_id)
-      .ilike("customer_email", ctx.ownerEmail)
+      .ilike("customer_email", likeLiteral(ctx.ownerEmail))
       .maybeSingle();
     if (!order) return { fail: NextResponse.json({ error: "Not found." }, { status: 404 }) };
     return { db, deliverable: d };
@@ -58,7 +59,7 @@ async function guard(req: Request, deliverableId: string) {
       .from("projects")
       .select("id")
       .eq("id", d.project_id)
-      .ilike("customer_email", ctx.ownerEmail)
+      .ilike("customer_email", likeLiteral(ctx.ownerEmail))
       .maybeSingle();
     if (!project) return { fail: NextResponse.json({ error: "Not found." }, { status: 404 }) };
     return { db, deliverable: d };

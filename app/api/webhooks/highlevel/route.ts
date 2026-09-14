@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 /*
  * What HighLevel tells us. A workflow in the sub-account posts here on
  * "Contact Changed" (Automation > Workflows > Webhook action), with the
- * shared secret in the URL: /api/webhooks/highlevel?key=<HIGHLEVEL_WEBHOOK_SECRET>
+ * shared secret in the URL: /api/webhooks/highlevel/?key=<HIGHLEVEL_WEBHOOK_SECRET>
  * or in an x-ghlv-key header. Every event is kept raw in hl_inbound with
  * how it was handled; only the contact's own details are applied.
  */

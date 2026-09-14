@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { resolvePortalContext } from "@/lib/account-team";
 import { rateLimit } from "@/lib/rate-limit";
+import { likeLiteral } from "@/lib/pg-pattern";
 
 export const runtime = "nodejs";
 
@@ -38,7 +39,7 @@ export async function POST(req: Request) {
   const { data: customer } = await db
     .from("customers")
     .select("name, company")
-    .ilike("email", email)
+    .ilike("email", likeLiteral(email))
     .maybeSingle();
   const name = (customer?.name as string | null) ?? email;
 

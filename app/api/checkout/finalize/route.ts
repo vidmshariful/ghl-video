@@ -10,6 +10,7 @@ import {
 } from "@/lib/affiliates";
 import { firstTouchFromCookieHeader } from "@/lib/first-touch";
 import { ensureAccount } from "@/lib/accounts";
+import { hashCheckoutPassword } from "@/lib/checkout/account";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { stripe } from "@/lib/checkout/stripe";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
@@ -243,11 +244,15 @@ export async function POST(req: Request) {
     company,
     phone,
     source: "checkout",
-    password: asStr(payload.password) || null,
+    /* no login and no password before the money moves: the login is made
+       at settlement, with the typed password, and only if none exists */
+    password: null,
+    login: false,
   });
   if (!ensured) {
     return NextResponse.json({ error: "Could not complete checkout." }, { status: 500 });
   }
+  const passwordHash = hashCheckoutPassword(asStr(payload.password) || null);
   const { data: customer, error: custErr } = await db
     .from("customers")
     .select("*")
@@ -329,6 +334,7 @@ export async function POST(req: Request) {
         ...(couponMeta ? { coupon: couponMeta } : {}),
         ...(ref ? { ref } : {}),
       },
+      ...(passwordHash ? { password_hash: passwordHash } : {}),
       ...firstTouchColumns,
     })
     .select()

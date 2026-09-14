@@ -11,6 +11,7 @@ import {
 import { addComment, clientVerdict, listComments, stamp } from "@/lib/review";
 import { listVersions } from "@/lib/versions";
 import { pushAdminNotifications, pushOrderOwnerNotification } from "@/lib/notifications";
+import { likeLiteral } from "@/lib/pg-pattern";
 
 export const runtime = "nodejs";
 
@@ -69,7 +70,7 @@ async function guard(req: Request, deliverableId: string) {
       .from("projects")
       .select("id, customer_email")
       .eq("id", d.project_id)
-      .ilike("customer_email", ctx.ownerEmail)
+      .ilike("customer_email", likeLiteral(ctx.ownerEmail))
       .maybeSingle();
     if (!project) return { fail: NextResponse.json({ error: "Not found." }, { status: 404 }) };
     return { db, ctx, deliverable: d, order: null };

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { lookup } from "dns/promises";
 import net from "net";
+import { likeLiteral } from "@/lib/pg-pattern";
 
 /*
  * The visual style guide we hand a client, as a document.
@@ -168,7 +169,7 @@ export async function guideFor(db: DB, email: string) {
     .select(
       "id, version, path, external_url, link_ok, filename, size_bytes, note, uploaded_by, created_at",
     )
-    .ilike("customer_email", email)
+    .ilike("customer_email", likeLiteral(email))
     .order("version", { ascending: false });
 
   const docs: Doc[] = [];
@@ -222,7 +223,7 @@ export async function nextVersion(db: DB, email: string) {
   const { data } = await db
     .from("style_guide_docs")
     .select("version")
-    .ilike("customer_email", email)
+    .ilike("customer_email", likeLiteral(email))
     .order("version", { ascending: false })
     .limit(1)
     .maybeSingle();

@@ -30,6 +30,7 @@ import {
   STATIONS,
   type Pipeline,
 } from "@/lib/pipeline";
+import { likeLiteral } from "@/lib/pg-pattern";
 
 export const runtime = "nodejs";
 
@@ -64,7 +65,7 @@ async function canSubmit(db: ReturnType<typeof supabaseAdmin>, email: string): P
   const { data } = await db
     .from("customers")
     .select("can_submit_projects")
-    .ilike("email", email)
+    .ilike("email", likeLiteral(email))
     .maybeSingle();
   return Boolean(data?.can_submit_projects);
 }
@@ -77,7 +78,7 @@ export async function GET(req: Request) {
   const { data: projects } = await db
     .from("projects")
     .select("*")
-    .ilike("customer_email", ctx.ownerEmail)
+    .ilike("customer_email", likeLiteral(ctx.ownerEmail))
     .order("created_at", { ascending: false });
 
   const ids = ((projects ?? []) as Row[]).map((p) => String(p.id));
@@ -126,7 +127,7 @@ export async function GET(req: Request) {
   const { data: cust } = await db
     .from("customers")
     .select("*")
-    .ilike("email", ctx.ownerEmail)
+    .ilike("email", likeLiteral(ctx.ownerEmail))
     .maybeSingle();
   const retainer = parseRetainer(cust?.retainer);
   const month = monthKey(new Date());
@@ -340,7 +341,7 @@ export async function POST(req: Request) {
   const { data: customer } = await db
     .from("customers")
     .select("*")
-    .ilike("email", ctx.ownerEmail)
+    .ilike("email", likeLiteral(ctx.ownerEmail))
     .maybeSingle();
 
   /* a partner's brief lands under the partnership, counted in the month it

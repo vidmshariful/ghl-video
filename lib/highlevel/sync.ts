@@ -38,6 +38,7 @@ import { isInvoiceProduct } from "@/lib/order-kind";
 import { normalizeProjectStatus, STUDIO_LABEL } from "@/lib/projects";
 import { ballInCourt, normalizePipeline } from "@/lib/pipeline";
 import { syncInvoice, syncOrderSale, syncRetainerSchedule } from "./money";
+import { likeLiteral } from "@/lib/pg-pattern";
 
 type Db = SupabaseClient;
 type Row = Record<string, unknown>;
@@ -215,13 +216,13 @@ async function customerShape(db: Db, c: Row): Promise<CustomerShape> {
     db
       .from("orders")
       .select("id, status, intake_completed, product:products(metadata)")
-      .ilike("customer_email", email)
+      .ilike("customer_email", likeLiteral(email))
       .eq("status", "paid"),
-    db.from("projects").select("id, pipeline").ilike("customer_email", email).neq("status", "cancelled"),
+    db.from("projects").select("id, pipeline").ilike("customer_email", likeLiteral(email)).neq("status", "cancelled"),
     db
       .from("subscriptions")
       .select("id, plan_name, status, current_period_end, created_at")
-      .ilike("customer_email", email)
+      .ilike("customer_email", likeLiteral(email))
       .order("created_at", { ascending: false }),
   ]);
   const orderRows = ((orders ?? []) as Row[]).filter(
@@ -298,11 +299,14 @@ export async function syncCustomer(db: Db, cfg: HlConfig, id: string): Promise<O
 
   const contact = await upsertContact(body);
   await setManagedTags(contact.id, contact.tags, tags);
-  await putLink(db, cfg, { kind: "customer", entity_id: id, hl_kind: "contact", hl_id: contact.id, fingerprint: fp });
   /* the legacy pointer the checkout webhook also writes; filled, never replaced */
   if (!c.highlevel_contact_id) await db.from("customers").update({ highlevel_contact_id: contact.id }).eq("id", id);
-  /* the partnership's monthly bill lives in HighLevel as a schedule */
+  /* the partnership's monthly bill lives in HighLevel as a schedule. It runs
+     before the contact's link is written on purpose: a schedule that fails
+     to start must leave the row retryable, and the fingerprint written below
+     is what would otherwise say "unchanged" forever (audit, 15 September 2026). */
   const schedule = await syncRetainerSchedule(db, cfg, c, contact.id, fingerprint);
+  await putLink(db, cfg, { kind: "customer", entity_id: id, hl_kind: "contact", hl_id: contact.id, fingerprint: fp });
   return {
     status: "done",
     note: [`contact ${contact.id}${contact.isNew ? " (new)" : ""}`, ...(schedule ? [schedule] : [])].join("; "),
@@ -350,7 +354,7 @@ async function customerFor(db: Db, email: unknown, customerId: unknown): Promise
     if (data) return data;
   }
   if (typeof email !== "string" || !email) return null;
-  const { data } = await db.from("customers").select("*").ilike("email", email).maybeSingle();
+  const { data } = await db.from("customers").select("*").ilike("email", likeLiteral(email)).maybeSingle();
   return data ?? null;
 }
 
@@ -659,7 +663,7 @@ export async function syncLead(db: Db, cfg: HlConfig, id: string): Promise<Outco
 
   const contact = await upsertContact(body);
   /* a lead who is already a client keeps the client's tags; a new one is marked a lead */
-  const { data: customer } = await db.from("customers").select("id").ilike("email", email).maybeSingle();
+  const { data: customer } = await db.from("customers").select("id").ilike("email", likeLiteral(email)).maybeSingle();
   if (!customer) await setManagedTags(contact.id, contact.tags, [HL_TAGS.lead]);
   const notes: string[] = [];
   const oppId = await upsertOpportunity(cfg, link, opportunity, contact.id, notes);
@@ -736,13 +740,13 @@ export async function noteOnContact(db: Db, email: string, body: string): Promis
     const cfg = await loadHlConfig(db, locationId());
     const address = email.toLowerCase();
     if (!cfg || !syncAllowed(address)) return false;
-    const { data: customer } = await db.from("customers").select("*").ilike("email", address).maybeSingle();
+    const { data: customer } = await db.from("customers").select("*").ilike("email", likeLiteral(address)).maybeSingle();
     let contactId: string;
     if (customer) contactId = await contactIdFor(db, cfg, customer);
     else {
       /* a lead has no customer row yet, only an enquiry; their contact is
          the one the lead sync made, found by email rather than made anew */
-      const { count } = await db.from("project_requests").select("id", { count: "exact", head: true }).ilike("email", address);
+      const { count } = await db.from("project_requests").select("id", { count: "exact", head: true }).ilike("email", likeLiteral(address));
       if (!count) return false;
       const contact = await upsertContact({ locationId: cfg.locationId, email: address });
       contactId = contact.id;
@@ -793,6 +797,8 @@ export type DrainResult = {
 const KIND_ORDER: Record<SyncKind, number> = { customer: 0, project: 1, video: 2, invoice: 3, order: 4, lead: 5, partner: 6 };
 const MAX_WAIT_S = 6 * 3600;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+/* how long a worker holds a claimed row before another may retry it */
+const LEASE_MS = 2 * 60_000;
 
 /**
  * Send what is waiting. Customers go before projects before videos so a
@@ -805,11 +811,12 @@ export async function drainOutbox(db: Db, opts: { limit?: number; pauseMs?: numb
   const cfg = await loadHlConfig(db, locationId());
   if (!cfg) return { ...result, provisioned: false };
 
+  const nowIso = new Date().toISOString();
   const { data, error } = await db
     .from("hl_sync_outbox")
     .select("id, kind, entity_id, attempts")
     .is("done_at", null)
-    .lte("next_attempt_at", new Date().toISOString())
+    .lte("next_attempt_at", nowIso)
     .order("next_attempt_at")
     .limit(opts.limit ?? 40);
   if (error) throw new Error(`hl_sync_outbox: ${error.message}`);
@@ -818,6 +825,25 @@ export async function drainOutbox(db: Db, opts: { limit?: number; pauseMs?: numb
   );
 
   for (const r of rows) {
+    /*
+     * Claim the row before touching HighLevel. The minute cron, the nightly
+     * reconcile (which fires in the same second at 04:00) and a hand run can
+     * all be draining at once; without a claim two of them would both create
+     * the same invoice, schedule or deal card (audit, 15 September 2026). The
+     * claim is a lease: the row's next attempt moves two minutes out, only if
+     * nobody moved it first, so the loser of the race sees no row and skips.
+     */
+    const { data: claimed } = await db
+      .from("hl_sync_outbox")
+      .update({ next_attempt_at: new Date(Date.now() + LEASE_MS).toISOString() })
+      .eq("id", r.id)
+      .is("done_at", null)
+      .lte("next_attempt_at", nowIso)
+      .select("id");
+    if (!claimed?.length) {
+      result.rows.push({ id: r.id, kind: r.kind, entityId: r.entity_id, status: "skipped", note: "claimed by another worker" });
+      continue;
+    }
     result.processed += 1;
     try {
       const out = await syncEntity(db, cfg, r.kind, r.entity_id);

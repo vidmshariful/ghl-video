@@ -11,6 +11,7 @@ import { creditsUsed, nextPosition, queueOrder } from "@/lib/subscription-slots"
 import { BATCH_TYPE, creditCost, isBatch, tierFor, typeLabelFor, type EditType } from "@/lib/editing-credits";
 import { ASPECTS, columnFor, qcPassed, type Aspect, type Qc } from "@/lib/editing-sop";
 import { DELIVERABLE_STATUSES, type DeliverableStatus } from "@/lib/deliverable-status";
+import { likeLiteral } from "@/lib/pg-pattern";
 
 export const runtime = "nodejs";
 
@@ -65,7 +66,7 @@ async function subscriptionForSlug(db: ReturnType<typeof supabaseAdmin>, slug: s
   const { data: sub } = await db
     .from("subscriptions")
     .select("id")
-    .ilike("customer_email", String(customer.email))
+    .ilike("customer_email", likeLiteral(String(customer.email)))
     .in("status", ["active", "trialing", "past_due"])
     .order("created_at", { ascending: false })
     .maybeSingle();

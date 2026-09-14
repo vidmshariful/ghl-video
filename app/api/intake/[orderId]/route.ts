@@ -103,7 +103,11 @@ export async function GET(
    * shows what was actually sent for it, never a later edit of the kit: the
    * studio worked from what was on the order. */
   let prefill: Record<string, unknown> | null = null;
-  if (!intake) {
+  /* the account's kit is shown only once this order is paid: before that the
+     order id is a key anyone with a checkout tab holds, and an unpaid order
+     for an existing client's email must not hand over their brand (audit,
+     15 September 2026) */
+  if (!intake && order.status === "paid") {
     const kit = await loadKit(db, (order.customer_id as string | null) ?? null);
     if (kit) {
       prefill = {
@@ -321,11 +325,13 @@ export async function POST(
   try {
     const { data: ord } = await db
       .from("orders")
-      .select("customer_id")
+      .select("customer_id, status")
       .eq("id", orderId)
       .maybeSingle();
     const customerId = ord?.customer_id as string | null;
-    if (customerId) {
+    /* the brief lifts onto the account only from a paid order, for the same
+       reason the kit is only shown from one */
+    if (customerId && ord?.status === "paid") {
       const { saveBrandKit } = await import("@/lib/brand-kit");
       await saveBrandKit(db, customerId, {
         brandName,
