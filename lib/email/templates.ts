@@ -104,8 +104,18 @@ const btn = emailButton;
  * into a broken light hybrid), and the dark <body> background stops clients from
  * painting their own white behind it. bgcolor attributes back up the CSS for
  * older/Outlook renderers.
+ *
+ * The foot carries the preferences link for a client, who chooses what they
+ * are sent at /portal/settings/. A team alert, or an email to a lead or a
+ * partner, has no such screen, so a caller that knows its audience says so
+ * and the line is left out; a caller that does not know gets the link, since
+ * nearly everything sent here is to a client.
  */
-export function wrapEmail(content: string): string {
+export function wrapEmail(content: string, opts: { audience?: string | null } = {}): string {
+  const prefsLine =
+    !opts.audience || opts.audience === "client"
+      ? `<p style="margin:6px 0 0;font-size:12px;line-height:1.6;color:#5a6076;"><a href="${SITE_URL}/portal/settings/" style="color:#5a6076;">Email preferences</a></p>`
+      : "";
   return `<!doctype html>
 <html lang="en" style="margin:0;padding:0;">
 <head>
@@ -125,7 +135,7 @@ export function wrapEmail(content: string): string {
         ${content}
       </td></tr>
       <tr><td style="padding:18px 36px;font-family:'Helvetica Neue',Arial,sans-serif;">
-        <p style="margin:0;font-size:12px;line-height:1.6;color:#5a6076;">GHL Video, a brand of Vidiosa LLC. Questions? <a href="mailto:hi@ghlvideo.com" style="color:#9096a8;">hi@ghlvideo.com</a></p>
+        <p style="margin:0;font-size:12px;line-height:1.6;color:#5a6076;">GHL Video, a brand of Vidiosa LLC. Questions? <a href="mailto:hi@ghlvideo.com" style="color:#9096a8;">hi@ghlvideo.com</a></p>${prefsLine}
       </td></tr>
     </table>
   </td></tr>

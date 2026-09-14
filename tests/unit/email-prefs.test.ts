@@ -1,11 +1,14 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import {
+  ALWAYS_SENT,
   CATEGORY_FOR,
   EMAIL_CATEGORIES,
   mayEmail,
   sanitizePrefs,
 } from "@/lib/email/prefs";
+import { DEFAULT_TEMPLATES } from "@/lib/email/templates";
+import { emailAudience } from "@/lib/comms";
 
 /*
  * Who gets emailed what. Both failure directions are bad and one is illegal
@@ -74,5 +77,68 @@ describe("the two lists agree", () => {
         `"${c.key}" is offered but no email uses it`,
       );
     }
+  });
+});
+
+describe("every client email is a decision", () => {
+  /* the team's own alerts are not the client's to switch off, so they sit
+     outside this check */
+  const OURS = new Set(["team", "owner", "producer"]);
+  const templateKeys = DEFAULT_TEMPLATES.map((t) => t.key);
+  const clientFacing = templateKeys.filter((key) => {
+    const audience = emailAudience(key);
+    return audience !== null && !OURS.has(audience);
+  });
+
+  test("each one has a category or is named as always sent", () => {
+    assert.ok(clientFacing.length > 10, "the registry should know most templates as client emails");
+    for (const key of clientFacing) {
+      assert.ok(
+        key in CATEGORY_FOR || key in ALWAYS_SENT,
+        `"${key}" is sent to clients but nobody decided whether it is a choice: file it under a category in CATEGORY_FOR, or name it in ALWAYS_SENT with the reason`,
+      );
+    }
+  });
+
+  test("none is both a choice and always sent", () => {
+    for (const key of Object.keys(ALWAYS_SENT)) {
+      assert.ok(!(key in CATEGORY_FOR), `"${key}" is in both lists`);
+    }
+  });
+
+  test("the always-sent list names real client templates only", () => {
+    const known = new Set(templateKeys);
+    for (const key of Object.keys(ALWAYS_SENT)) {
+      assert.ok(known.has(key), `"${key}" is not a template`);
+      assert.ok(!OURS.has(emailAudience(key) ?? ""), `"${key}" goes to the team; it does not belong in a client list`);
+    }
+  });
+
+  test("every template is registered with an audience", () => {
+    /* an unregistered template has no audience, so it would leave through
+       Brevo instead of the client's HighLevel thread, and no screen could
+       say when it fires */
+    for (const key of templateKeys) {
+      assert.notEqual(emailAudience(key), null, `"${key}" is not listed in lib/comms.ts`);
+    }
+  });
+
+  test("the morning sweep's reminders and the order update honour the progress switch", () => {
+    /* until 15 September 2026 these carried no category, so a client who had
+       switched progress emails off was still nudged by them */
+    for (const key of [
+      "approval_reminder",
+      "approval_reminder_batch",
+      "intake_reminder",
+      "retainer_check_in",
+      "order_update",
+      "brief_received",
+    ]) {
+      assert.equal(mayEmail(key, { progress: false }), false, `${key} should be held`);
+      assert.equal(mayEmail(key, { offers: false }), true, `${key} is not an offer`);
+    }
+    /* the review ask stays a favour, under offers */
+    assert.equal(mayEmail("review_request", { progress: false }), true);
+    assert.equal(mayEmail("review_request", { offers: false }), false);
   });
 });

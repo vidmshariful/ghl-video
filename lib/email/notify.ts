@@ -4,6 +4,7 @@ import { sendEmail } from "./send";
 import { DEFAULT_TEMPLATES, P, SITE_URL, emailButton, escapeHtml, renderTemplate, wrapEmail } from "./templates";
 import { pushNotification, pushAdminNotifications } from "@/lib/notifications";
 import { mayEmail, type EmailPrefs } from "./prefs";
+import { emailAudience } from "@/lib/comms";
 import { logEmail } from "./log";
 import { likeLiteral } from "@/lib/pg-pattern";
 
@@ -44,8 +45,12 @@ export async function loadTemplate(db: SupabaseClient, key: string) {
  * has muted a category stays muted, and every send gets its own log row.
  * The owner's name only makes sense in the owner's copy, so a member's copy
  * greets them neutrally.
+ *
+ * Exported for the order update (lib/email/order-update.ts), which carried
+ * its own copy of these rails and so skipped the preference gate and left
+ * the template key off its log row.
  */
-async function sendTemplateToTeam(
+export async function sendTemplateToTeam(
   db: SupabaseClient,
   key: string,
   owner: { email: string; name: string | null },
@@ -130,7 +135,9 @@ async function sendTemplate(
       to,
       toName,
       subject: renderTemplate(tpl.subject, vars),
-      html: wrapEmail(renderTemplate(tpl.body, vars)),
+      /* the frame adds the preferences link for a client and leaves it off
+         a team alert, which has no such screen */
+      html: wrapEmail(renderTemplate(tpl.body, vars), { audience: emailAudience(key) }),
       log: { source: "template", templateKey: key, meta },
     });
     if (!result.ok) console.error(`[email] ${key} not sent to ${to}:`, result.error);
@@ -860,7 +867,11 @@ async function recipientFor(
       .select("customer_email")
       .eq("id", d.project_id as string)
       .maybeSingle();
-    return named(p?.customer_email as string | null, `${SITE_URL}/portal/custom/`);
+    /* the project screen is /portal/projects/. This said /portal/custom/,
+       which is not a section, so the email landed on the dashboard while the
+       bell, built by portalSectionFor, went to the right place (audit,
+       15 September 2026). */
+    return named(p?.customer_email as string | null, `${SITE_URL}/portal/projects/`);
   }
   if (d.cycle_id) {
     const { data: c } = await db

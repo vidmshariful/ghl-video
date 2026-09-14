@@ -1,8 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { sendEmail } from "./send";
-import { loadTemplate, productLabel } from "./notify";
-import { SITE_URL, escapeHtml, renderTemplate, wrapEmail } from "./templates";
+import { productLabel, sendTemplateToTeam } from "./notify";
+import { SITE_URL, escapeHtml } from "./templates";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -18,6 +17,13 @@ const STAGE_LABELS: Record<string, string> = {
  * Email the client the order-update template for one order. Fail-soft: any
  * problem (template disabled, no customer email, send error) is logged and
  * returns false, so the caller (posting an order update) never breaks.
+ *
+ * On the same rails as every other client email (sendTemplateToTeam): the
+ * template key on the log row, the client's own preference gate, HighLevel
+ * as the door, and the fan-out to teammates whose grants cover orders. This
+ * file used to carry its own copy of the send with no template key, so the
+ * email was routed to Brevo, the log row named no template, and a client who
+ * had switched progress emails off got it anyway (audit, 15 September 2026).
  */
 export async function sendOrderUpdateEmail(
   db: SupabaseClient,
@@ -50,9 +56,6 @@ export async function sendOrderUpdateEmail(
       },
     });
 
-    const tpl = await loadTemplate(db, "order_update");
-    if (!tpl || !tpl.enabled) return false;
-
     const code = o.products?.metadata?.code ?? o.products?.sku?.toUpperCase() ?? "";
     const vars: Record<string, string> = {
       customer_name: escapeHtml(o.customers?.name || "there"),
@@ -60,35 +63,18 @@ export async function sendOrderUpdateEmail(
       order_code: escapeHtml(code),
       update_message: escapeHtml(updateMessage).replace(/\n/g, "<br>"),
       stage: escapeHtml(STAGE_LABELS[o.fulfillment_stage ?? ""] ?? o.fulfillment_stage ?? ""),
-      portal_url: `${SITE_URL}/portal`,
+      /* the order the update is about, where the bell also points */
+      portal_url: `${SITE_URL}/portal/orders/${orderId}/`,
       delivery_url: escapeHtml(o.delivery_url || ""),
     };
 
-    const result = await sendEmail({
-      log: { source: "order-update" },
-      to: o.customer_email,
-      toName: o.customers?.name ?? null,
-      subject: renderTemplate(tpl.subject, vars),
-      html: wrapEmail(renderTemplate(tpl.body, vars)),
-    });
-    if (!result.ok) console.error("[email] order update not sent:", result.error);
-
-    // project progress also reaches team members who can see orders
-    const { teamRecipients } = await import("@/lib/account-team");
-    const team = (
-      await teamRecipients(db, "customer", o.customer_email as string, "orders")
-    ).filter((e) => e !== (o.customer_email as string).toLowerCase());
-    for (const memberEmail of team) {
-      const memberVars = { ...vars, customer_name: escapeHtml("there") };
-      await sendEmail({
-        log: { source: "order-update" },
-        to: memberEmail,
-        toName: null,
-        subject: renderTemplate(tpl.subject, memberVars),
-        html: wrapEmail(renderTemplate(tpl.body, memberVars)),
-      }).catch(() => {});
-    }
-    return result.ok;
+    return await sendTemplateToTeam(
+      db,
+      "order_update",
+      { email: o.customer_email as string, name: (o.customers?.name as string | null) ?? null },
+      vars,
+      "orders",
+    );
   } catch (e) {
     console.error("[email] order update send failed", e instanceof Error ? e.message : e);
     return false;

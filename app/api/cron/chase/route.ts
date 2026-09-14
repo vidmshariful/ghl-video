@@ -53,6 +53,37 @@ export const maxDuration = 120;
 
 type Row = Record<string, unknown>;
 
+/*
+ * Every row of a query, a thousand at a time. PostgREST answers at most a
+ * thousand rows per call and says nothing about the rest, so a ledger past
+ * that would quietly forget reminders already sent and the sweep would send
+ * them again (audit, 15 September 2026). A failed read throws rather than
+ * reading as empty, for the same reason: an empty ledger means chase
+ * everyone. Each page is ordered by id so the pages never overlap.
+ */
+const PAGE = 1000;
+type PageQuery = (
+  from: number,
+  to: number,
+) => PromiseLike<{ data: unknown[] | null; error: { message: string } | null }>;
+async function allRows(what: string, page: PageQuery): Promise<Row[]> {
+  const out: Row[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await page(from, from + PAGE - 1);
+    if (error) throw new Error(`Could not read ${what}: ${error.message}`);
+    const rows = (data ?? []) as Row[];
+    out.push(...rows);
+    if (rows.length < PAGE) return out;
+  }
+}
+
+/* HighLevel allows a hundred calls in ten seconds and every reminder is two
+   of them (the contact, then the message). A burst past that is refused and
+   the send falls back to Brevo, off the client's thread, so the sweep takes
+   a breath between sends. */
+const SEND_PAUSE_MS = 150;
+const pause = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
 async function authorized(req: Request): Promise<boolean> {
   const secret = process.env.CRON_SECRET;
   if (secret && req.headers.get("authorization") === `Bearer ${secret}`) return true;
@@ -75,12 +106,15 @@ export async function GET(req: Request) {
 
   /* every reminder ever sent, once; the sweep slices it in memory. A failed
      row counts too: an address that bounced is not chased again tomorrow. */
-  const { data: ledgerRows } = await db
-    .from("email_log")
-    .select("template_key, meta, created_at")
-    .in("template_key", ["approval_reminder", "approval_reminder_batch", "intake_reminder", "retainer_check_in", "review_request"])
-    .in("status", ["sent", "failed"]);
-  const allLedger = (ledgerRows ?? []) as Row[];
+  const allLedger = await allRows("the chase ledger", (from, to) =>
+    db
+      .from("email_log")
+      .select("template_key, meta, created_at")
+      .in("template_key", ["approval_reminder", "approval_reminder_batch", "intake_reminder", "retainer_check_in", "review_request"])
+      .in("status", ["sent", "failed"])
+      .order("id")
+      .range(from, to),
+  );
   const ledger = allLedger.filter((r) => r.template_key === "approval_reminder" || r.template_key === "approval_reminder_batch");
   const briefLedger = allLedger.filter((r) => r.template_key === "intake_reminder");
   const checkInLedger = allLedger.filter((r) => r.template_key === "retainer_check_in");
@@ -105,14 +139,11 @@ export async function GET(req: Request) {
   const internal = new Set(((internalRows ?? []) as Row[]).map((c) => String(c.email).toLowerCase()));
 
   /* ---- custom projects: any gated station in the client's court ---- */
-  const { data: projects } = await db
-    .from("projects")
-    .select("*")
-    .not("status", "in", "(closed,cancelled)");
+  const projects = await allRows("open projects", (from, to) =>
+    db.from("projects").select("*").not("status", "in", "(closed,cancelled)").order("id").range(from, to),
+  );
 
-  const emails = [
-    ...new Set(((projects ?? []) as Row[]).map((p) => String(p.customer_email).toLowerCase())),
-  ];
+  const emails = [...new Set(projects.map((p) => String(p.customer_email).toLowerCase()))];
   const { data: customers } = emails.length
     ? await db.from("customers").select("email, name").in("email", emails)
     : { data: [] };
@@ -121,7 +152,7 @@ export async function GET(req: Request) {
       (c) => String(c.email).toLowerCase() === email.toLowerCase(),
     )?.name as string | null) ?? null);
 
-  for (const p of (projects ?? []) as Row[]) {
+  for (const p of projects) {
     if (internal.has(String(p.customer_email).toLowerCase())) continue;
     const line = normalizePipeline(p.pipeline);
     for (const k of STATION_ORDER) {
@@ -143,13 +174,17 @@ export async function GET(req: Request) {
   }
 
   /* ---- extra formats sitting in review ---- */
-  const { data: readyFormats } = await db
-    .from("order_deliverables")
-    .select("id, title, status, ready_at, project_id")
-    .eq("category", "format")
-    .eq("status", "ready");
-  for (const f of (readyFormats ?? []) as Row[]) {
-    const project = ((projects ?? []) as Row[]).find((p) => String(p.id) === String(f.project_id));
+  const readyFormats = await allRows("formats in review", (from, to) =>
+    db
+      .from("order_deliverables")
+      .select("id, title, status, ready_at, project_id")
+      .eq("category", "format")
+      .eq("status", "ready")
+      .order("id")
+      .range(from, to),
+  );
+  for (const f of readyFormats) {
+    const project = projects.find((p) => String(p.id) === String(f.project_id));
     if (!project) continue;
     if (internal.has(String(project.customer_email).toLowerCase())) continue;
     if (!withinWindow((f.ready_at as string | null) ?? null, now)) continue;
@@ -166,12 +201,16 @@ export async function GET(req: Request) {
   }
 
   /* ---- editing plan work sitting unwatched: ready with nobody looking ---- */
-  const { data: editingReady } = await db
-    .from("order_deliverables")
-    .select("id, title, status, ready_at, cycle_id")
-    .not("cycle_id", "is", null)
-    .eq("status", "ready");
-  const cycleIds = [...new Set(((editingReady ?? []) as Row[]).map((r) => String(r.cycle_id)))];
+  const editingReady = await allRows("editing cuts in review", (from, to) =>
+    db
+      .from("order_deliverables")
+      .select("id, title, status, ready_at, cycle_id")
+      .not("cycle_id", "is", null)
+      .eq("status", "ready")
+      .order("id")
+      .range(from, to),
+  );
+  const cycleIds = [...new Set(editingReady.map((r) => String(r.cycle_id)))];
   /* the table is subscription_cycles. `editing_cycles` never existed, and
      because only `data` was destructured the error was swallowed: the map
      below stayed empty, every row hit the `continue`, and no editing client
@@ -190,7 +229,7 @@ export async function GET(req: Request) {
     ]),
   );
 
-  for (const r of (editingReady ?? []) as Row[]) {
+  for (const r of editingReady) {
     const sub = subByCycle.get(String(r.cycle_id));
     if (!sub) continue;
     if (internal.has(String(sub.customer_email).toLowerCase())) continue;
@@ -208,17 +247,21 @@ export async function GET(req: Request) {
   }
 
   /* ---- premade videos sitting in review: bought, made, and not yet watched ---- */
-  const { data: orderReady } = await db
-    .from("order_deliverables")
-    .select("id, title, ready_at, order_id, parent_id")
-    .not("order_id", "is", null)
-    .eq("status", "ready");
-  const readyOrderIds = [...new Set(((orderReady ?? []) as Row[]).map((r) => String(r.order_id)))];
+  const orderReady = await allRows("videos in review", (from, to) =>
+    db
+      .from("order_deliverables")
+      .select("id, title, ready_at, order_id, parent_id")
+      .not("order_id", "is", null)
+      .eq("status", "ready")
+      .order("id")
+      .range(from, to),
+  );
+  const readyOrderIds = [...new Set(orderReady.map((r) => String(r.order_id)))];
   const { data: readyOrders } = readyOrderIds.length
     ? await db.from("orders").select("id, customer_email, archived").in("id", readyOrderIds)
     : { data: [] };
   const orderById = new Map(((readyOrders ?? []) as Row[]).map((o) => [String(o.id), o]));
-  for (const r of (orderReady ?? []) as Row[]) {
+  for (const r of orderReady) {
     const order = orderById.get(String(r.order_id));
     if (!order || order.archived) continue;
     const email = String(order.customer_email).toLowerCase();
@@ -243,6 +286,7 @@ export async function GET(req: Request) {
         ? await sendApprovalReminderEmail(db, { email, name, ...items[0] })
         : await sendApprovalReminderBatchEmail(db, { email, name, items }));
     if (sent) for (const i of items) chased.push(`${i.videoTitle} / ${i.station}`);
+    if (!dry) await pause(SEND_PAUSE_MS);
   }
 
   /* ---- paid orders still without their brief: nothing can start ---- */
@@ -270,6 +314,7 @@ export async function GET(req: Request) {
     if (!withinWindow((o.paid_at as string | null) ?? null, now)) continue;
     if (!needsChase((o.paid_at as string | null) ?? null, prior, now)) continue;
     const sent = dry || await sendBriefReminderEmail(db, String(o.id));
+    if (!dry) await pause(SEND_PAUSE_MS);
     if (sent) briefs.push(String(o.id));
   }
 
@@ -311,6 +356,7 @@ export async function GET(req: Request) {
       thisMonth: monthLabel(month),
       countLine: countLine(summary, retainer),
     });
+    if (!dry) await pause(SEND_PAUSE_MS);
     if (!sent) continue;
     checkIns.push(String(c.email).toLowerCase());
     if (dry) continue;
@@ -358,6 +404,7 @@ export async function GET(req: Request) {
       if (!withinWindow(firstDone.get(email) ?? null, now)) continue;
       if (!reviewDue(firstDone.get(email) ?? null, mine[mine.length - 1] ?? null, now)) continue;
       const sent = dry || await sendReviewRequestEmail(db, { email, name: (c.name as string | null) ?? null, customerId: String(c.id) });
+      if (!dry) await pause(SEND_PAUSE_MS);
       if (sent) reviews.push(email);
     }
   }
@@ -374,14 +421,12 @@ export async function GET(req: Request) {
       .gte("created_at", new Date(Date.now() - 6 * 86_400_000).toISOString());
     const already = new Set(((recent ?? []) as Row[]).map((r) => String(r.to_email).toLowerCase()));
 
-    for (const p of (projects ?? []) as Row[]) {
+    for (const p of projects) {
       const email = String(p.customer_email).toLowerCase();
       if (already.has(email) || internal.has(email)) continue;
       already.add(email);
 
-      const theirs = ((projects ?? []) as Row[]).filter(
-        (x) => String(x.customer_email).toLowerCase() === email,
-      );
+      const theirs = projects.filter((x) => String(x.customer_email).toLowerCase() === email);
       if (!theirs.length) continue;
       const esc = (t: string) =>
         t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -400,6 +445,7 @@ export async function GET(req: Request) {
         name: nameOf(email),
         linesHtml: lines,
       });
+      if (!dry) await pause(SEND_PAUSE_MS);
       if (ok) digested.push(email);
     }
   }

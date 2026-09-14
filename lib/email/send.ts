@@ -12,7 +12,9 @@ import { emailRoute, sendViaHighLevel } from "@/lib/highlevel/email";
  * Fail-soft by design: with no key, or on any send error, it logs and
  * returns false instead of throwing, so a failed email never breaks the action
  * that triggered it (e.g. posting an order update). A HighLevel failure falls
- * back to Brevo when Brevo can send.
+ * back to Brevo when Brevo can send, and every log row says which door the
+ * email finally took (meta.provider), with what HighLevel answered when the
+ * door was not the one meant.
  *
  * Env:
  *  - BREVO_API_KEY    Brevo API key (required to actually send)
@@ -32,15 +34,32 @@ export type SendEmailInput = {
 
 export type SendResult = { ok: boolean; error?: string };
 
+/* hlFetch folds the status into its message: "HL POST /conversations/messages -> 429: ..." */
+const rateLimited = (error: string) => /-> 429\b/.test(error);
+const pause = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
 export async function sendEmail(input: SendEmailInput): Promise<SendResult> {
+  /* what HighLevel answered when Brevo ends up taking an email meant for it */
+  let fallbackFrom: string | null = null;
   if (emailRoute(input.log?.templateKey, input.to) === "highlevel") {
-    const hl = await sendViaHighLevel({
+    const message = {
       to: input.to,
       toName: input.toName,
       subject: input.subject,
       html: input.html,
       replyTo: input.replyTo,
-    });
+    };
+    let hl = await sendViaHighLevel(message);
+    let retried = false;
+    if (!hl.ok && rateLimited(hl.error)) {
+      /* HighLevel allows a hundred calls in ten seconds and a morning sweep
+         can brush that. One second and one more try keeps the email on the
+         client's thread instead of quietly leaving through Brevo. */
+      console.warn("[email] HighLevel rate limited, retrying once:", input.to);
+      await pause(1000);
+      hl = await sendViaHighLevel(message);
+      retried = true;
+    }
     if (hl.ok) {
       await logEmail({
         to: input.to,
@@ -49,7 +68,13 @@ export async function sendEmail(input: SendEmailInput): Promise<SendResult> {
         status: "sent",
         source: input.log?.source,
         templateKey: input.log?.templateKey,
-        meta: { ...(input.log?.meta ?? {}), provider: "highlevel", hl_message_id: hl.messageId, hl_conversation_id: hl.conversationId },
+        meta: {
+          ...(input.log?.meta ?? {}),
+          provider: "highlevel",
+          hl_message_id: hl.messageId,
+          hl_conversation_id: hl.conversationId,
+          ...(retried ? { hl_retried: true } : {}),
+        },
       });
       return { ok: true };
     }
@@ -67,6 +92,7 @@ export async function sendEmail(input: SendEmailInput): Promise<SendResult> {
       });
       return { ok: false, error: `HighLevel: ${hl.error}` };
     }
+    fallbackFrom = hl.error;
   }
   const key = process.env.BREVO_API_KEY;
   if (!key) {
@@ -85,6 +111,13 @@ export async function sendEmail(input: SendEmailInput): Promise<SendResult> {
     });
     return { ok: false, error: "BREVO_API_KEY is not set on the server (check the Vercel env + redeploy)." };
   }
+  /* the door this finally took, on every Brevo row; a fallback also keeps
+     what HighLevel said, so the log can tell a chosen door from a forced one */
+  const meta: Record<string, unknown> = {
+    ...(input.log?.meta ?? {}),
+    provider: "brevo",
+    ...(fallbackFrom ? { fallback_from: "highlevel", hl_error: fallbackFrom.slice(0, 300) } : {}),
+  };
   const from = process.env.EMAIL_FROM ?? "hi@ghlvideo.com";
   const fromName = process.env.EMAIL_FROM_NAME ?? "GHL Video";
   try {
@@ -114,7 +147,7 @@ export async function sendEmail(input: SendEmailInput): Promise<SendResult> {
         error: `Brevo returned ${res.status}. ${detail}`,
         source: input.log?.source,
         templateKey: input.log?.templateKey,
-        meta: input.log?.meta,
+        meta,
       });
       return { ok: false, error: `Brevo returned ${res.status}. ${detail}` };
     }
@@ -125,7 +158,7 @@ export async function sendEmail(input: SendEmailInput): Promise<SendResult> {
       status: "sent",
       source: input.log?.source,
       templateKey: input.log?.templateKey,
-      meta: input.log?.meta,
+      meta,
     });
     return { ok: true };
   } catch (e) {
@@ -139,7 +172,7 @@ export async function sendEmail(input: SendEmailInput): Promise<SendResult> {
       error: msg,
       source: input.log?.source,
       templateKey: input.log?.templateKey,
-      meta: input.log?.meta,
+      meta,
     });
     return { ok: false, error: msg };
   }
