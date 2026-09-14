@@ -158,8 +158,24 @@ async function copyPublic() {
   for (const t of tables) visit(t, new Set());
 
   const { rows: colRows } = await dst.query(
-    "select table_name, column_name, is_identity from information_schema.columns where table_schema='public'",
+    "select table_name, column_name, is_identity, is_generated from information_schema.columns where table_schema='public'",
   );
+  /* only the columns the source has: a column the destination's newer
+     schema added takes its default, instead of an explicit null that a
+     not-null constraint refuses */
+  const { rows: srcCols } = await src.query(
+    "select table_name, column_name from information_schema.columns where table_schema='public'",
+  );
+  const srcHas = new Map();
+  for (const c of srcCols) {
+    if (!srcHas.has(c.table_name)) srcHas.set(c.table_name, new Set());
+    srcHas.get(c.table_name).add(c.column_name);
+  }
+  const colsFor = (t) =>
+    colRows
+      .filter((c) => c.table_name === t && c.is_generated === "NEVER" && srcHas.get(t)?.has(c.column_name))
+      .map((c) => `"${c.column_name}"`)
+      .join(", ");
   const hasCreatedAt = new Set(colRows.filter((c) => c.column_name === "created_at").map((c) => c.table_name));
   const identity = new Map();
   for (const c of colRows) if (c.is_identity === "YES") identity.set(c.table_name, c.column_name);
@@ -189,12 +205,13 @@ async function copyPublic() {
       if (t === "schema_migrations") continue;
       if (!have.has(t)) { console.log(`  ${t.padEnd(26)} new table, left empty`); continue; }
       const order = hasCreatedAt.has(t) ? ` order by created_at` : "";
-      const { rows } = await src.query(`select * from public."${t}"${order}`);
+      const list = colsFor(t);
+      const { rows } = await src.query(`select ${list} from public."${t}"${order}`);
       const overriding = identity.has(t) ? " overriding system value" : "";
       for (let i = 0; i < rows.length; i += 500) {
         const chunk = rows.slice(i, i + 500);
         await dst.query(
-          `insert into public."${t}"${overriding} select * from json_populate_recordset(null::public."${t}", $1::json)`,
+          `insert into public."${t}" (${list})${overriding} select ${list} from json_populate_recordset(null::public."${t}", $1::json)`,
           [JSON.stringify(chunk)],
         );
       }
@@ -262,7 +279,7 @@ try {
   if (doData) {
     console.log("Logins");
     await copyAuthTable("users", "(id)");
-    await copyAuthTable("identities", "do");
+    await copyAuthTable("identities", "");
     console.log("Tables");
     await copyPublic();
   }
