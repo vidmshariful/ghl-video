@@ -13,6 +13,7 @@
  * portal message, the cron catches up on anything unmirrored.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { HighLevelError } from "@/lib/checkout/highlevel-errors";
 import { hlFetch, locationId } from "./client";
 import { loadHlConfig, type HlConfig } from "./config";
 import { syncAllowed, syncCustomer } from "./sync";
@@ -88,6 +89,7 @@ export async function ensureHlConversation(
   db: Db,
   cfg: HlConfig,
   conv: Row,
+  opts: { fresh?: boolean } = {},
 ): Promise<{ conversationId: string; contactId: string } | null> {
   const email = String(conv.customer_email ?? "").toLowerCase();
   if (!email || !syncAllowed(email)) return null;
@@ -96,7 +98,7 @@ export async function ensureHlConversation(
   const contactId = await contactIdFor(db, cfg, customer);
   if (!contactId) return null;
 
-  if (typeof conv.hl_conversation_id === "string" && conv.hl_conversation_id)
+  if (typeof conv.hl_conversation_id === "string" && conv.hl_conversation_id && !opts.fresh)
     return { conversationId: conv.hl_conversation_id, contactId };
 
   /* HighLevel keeps one thread per contact: reuse it before making another */
@@ -128,8 +130,6 @@ export async function mirrorMessage(
   if (!cfg) return null;
   const { data: conv } = await db.from("conversations").select("*").eq("id", message.conversationId).maybeSingle();
   if (!conv) return null;
-  const hl = await ensureHlConversation(db, cfg, conv);
-  if (!hl) return null;
 
   const files = message.attachments.map((a) => a.name).filter(Boolean);
   const text = [message.body.trim(), files.length ? `(${files.length === 1 ? "attachment" : "attachments"} in the portal: ${files.join(", ")})` : ""]
@@ -137,19 +137,34 @@ export async function mirrorMessage(
     .join("\n") || "(empty message)";
   const signed = message.senderRole === "studio" && message.senderName ? `${message.senderName}: ${text}` : text;
 
-  let hlMessageId = "";
-  if (message.senderRole === "customer") {
-    const j = await hlFetch("/conversations/messages/inbound", {
-      method: "POST",
-      body: JSON.stringify({ type: "Live_Chat", conversationId: hl.conversationId, message: signed, direction: "inbound" }),
-    });
-    hlMessageId = String(j.messageId ?? "");
-  } else {
+  const post = async (hl: { conversationId: string; contactId: string }): Promise<string> => {
+    if (message.senderRole === "customer") {
+      const j = await hlFetch("/conversations/messages/inbound", {
+        method: "POST",
+        body: JSON.stringify({ type: "Live_Chat", conversationId: hl.conversationId, message: signed, direction: "inbound" }),
+      });
+      return String(j.messageId ?? "");
+    }
     const j = await hlFetch("/conversations/messages", {
       method: "POST",
       body: JSON.stringify({ type: "Live_Chat", contactId: hl.contactId, conversationId: hl.conversationId, message: signed }),
     });
-    hlMessageId = String(j.messageId ?? "");
+    return String(j.messageId ?? "");
+  };
+
+  let hl = await ensureHlConversation(db, cfg, conv);
+  if (!hl) return null;
+  let hlMessageId = "";
+  try {
+    hlMessageId = await post(hl);
+  } catch (e) {
+    /* the thread we remembered is gone over there (a contact deleted or
+       merged in HighLevel takes its conversation with it): find or make the
+       contact's current one and say it there */
+    if (!(e instanceof HighLevelError) || (e.status !== 404 && e.status !== 400)) throw e;
+    hl = await ensureHlConversation(db, cfg, conv, { fresh: true });
+    if (!hl) return null;
+    hlMessageId = await post(hl);
   }
   if (hlMessageId) {
     await db.from("messages").update({ hl_message_id: hlMessageId }).eq("id", message.id);
@@ -171,7 +186,17 @@ export async function pullConversation(db: Db, cfg: HlConfig, conv: Row, opts: {
   if (!opts.force && Date.now() - pulledAt < PULL_EVERY_MS) return 0;
   await db.from("conversations").update({ hl_pulled_at: new Date().toISOString() }).eq("id", String(conv.id));
 
-  const j = await hlFetch(`/conversations/${hlId}/messages?limit=50`, { method: "GET" });
+  let j: Row;
+  try {
+    j = await hlFetch(`/conversations/${hlId}/messages?limit=50`, { method: "GET" });
+  } catch (e) {
+    /* a thread deleted over there: forget the link; the next message finds the contact's current one */
+    if (e instanceof HighLevelError && (e.status === 404 || e.status === 400)) {
+      await db.from("conversations").update({ hl_conversation_id: null }).eq("id", String(conv.id));
+      return 0;
+    }
+    throw e;
+  }
   const list = (((j.messages as Row)?.messages as Row[]) ?? []).slice().reverse();
   if (!list.length) return 0;
   const ids = list.map((m) => String(m.id));

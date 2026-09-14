@@ -140,6 +140,8 @@ test.describe("HighLevel, both ways", () => {
   });
 
   test("the sync makes the contact with our fields and tags", async () => {
+    /* the first drain of a run carries whatever the other walkthroughs queued */
+    test.slow();
     const out = await api<{ provisioned: boolean; done: number; failed: number; rows: Row[] }>("/api/cron/hl-sync/", { token });
     expect(out.provisioned).toBeTruthy();
     expect(out.failed, JSON.stringify(out.rows)).toBe(0);
