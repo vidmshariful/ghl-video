@@ -63,6 +63,7 @@ export const TEMPLATE_VARIABLES: Record<string, string[]> = {
   invoice_paid: ["customer_name", "invoice_number", "amount", "portal_url"],
   admin_invoice_paid: ["customer_name", "customer_email", "invoice_number", "amount", "admin_url"],
   approval_reminder: ["customer_name", "video_title", "stage_label", "days_waiting", "portal_url"],
+  approval_reminder_batch: ["customer_name", "count", "video_list", "days_waiting", "portal_url"],
   project_digest: ["customer_name", "digest_lines", "portal_url"],
   admin_new_order: ["customer_name", "customer_email", "product_name", "order_code", "amount", "admin_url"],
   admin_new_application: ["name", "email", "channel", "audience", "admin_url"],
@@ -274,6 +275,18 @@ ${btn("{{portal_url}}", "Review it now")}
 <p style="${P}">Hi {{customer_name}}, the <strong style="${STRONG}">{{stage_label}}</strong> for <strong style="${STRONG}">{{video_title}}</strong> has been waiting on you for {{days_waiting}} days. Nothing moves until you have had your look, and a quick yes today keeps your delivery date honest.</p>
 ${btn("{{portal_url}}", "Review it now")}
 <p style="${SMALL}margin-top:22px;">Two minutes does it: approve it, or tell us what to change.</p>`,
+  },
+  {
+    key: "approval_reminder_batch",
+    name: "Approval reminder, several pieces",
+    description:
+      "The same nudge when more than one piece is waiting on the client: one email listing them all, instead of one email per piece. At most two per piece, three days apart.",
+    subject: "Still with you: {{count}} pieces waiting for your look",
+    body: `<h1 style="${H}">Your videos are paused on your say.</h1>
+<p style="${P}">Hi {{customer_name}}, <strong style="${STRONG}">{{count}} pieces</strong> are waiting on you, the longest for {{days_waiting}} days. Nothing moves until you have had your look, and a quick yes today keeps your delivery dates honest.</p>
+{{video_list}}
+${btn("{{portal_url}}", "Review them now")}
+<p style="${SMALL}margin-top:22px;">A few minutes does it: approve each one, or tell us what to change.</p>`,
   },
   {
     key: "quote_sent",

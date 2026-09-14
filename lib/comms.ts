@@ -133,7 +133,7 @@ export const COMM_ACTIONS: CommAction[] = [
     key: "review_reminder", group: "premade", label: "Nudge: a video is waiting for their review",
     when: "The morning sweep finds a video that has sat in Ready for three days. At most twice, three days apart. The same rule covers extra formats and editing plan work.",
     mode: "scheduled",
-    emails: [{ key: "approval_reminder", to: "client" }],
+    emails: [{ key: "approval_reminder", to: "client" }, { key: "approval_reminder_batch", to: "client" }],
     notifications: [],
   },
   {
@@ -251,7 +251,7 @@ export const COMM_ACTIONS: CommAction[] = [
     key: "approval_reminder", group: "custom", label: "Nudge: still with the client",
     when: "Daily at 09:00 UTC. Anything sitting with the client for three full days, at most twice, three days apart. Covers custom stations, extra formats and editing cuts.",
     mode: "scheduled",
-    emails: [{ key: "approval_reminder", to: "client" }],
+    emails: [{ key: "approval_reminder", to: "client" }, { key: "approval_reminder_batch", to: "client" }],
     notifications: [],
   },
   {

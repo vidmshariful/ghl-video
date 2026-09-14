@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { checkInDue, checkInSent, nextCheckIn, reviewDue, withinWindow, CHASE_WINDOW_DAYS } from "../../lib/chase-rules";
+import { checkInDue, checkInSent, nextCheckIn, priorChases, reviewDue, withinWindow, CHASE_WINDOW_DAYS } from "../../lib/chase-rules";
 
 test("a check-in is due on its day and after it, never before", () => {
   assert.equal(checkInDue("2026-12-01", "2026-11-30"), false);
@@ -43,4 +43,16 @@ test("the sweep only acts on what became due inside its window", () => {
   assert.equal(withinWindow("2026-08-22T00:00:00.000Z", now), false);
   assert.equal(withinWindow(null, now), false);
   assert.equal(withinWindow("not a date", now), false);
+});
+
+test("the ledger counts a piece whether it was nudged alone or in a grouped email", () => {
+  const ledger = [
+    { meta: { deliverableId: "v1", station: "review" }, created_at: "2026-09-10T09:00:00.000Z" },
+    { meta: { items: [{ deliverableId: "v1", station: "review" }, { deliverableId: "v2", station: "review" }] }, created_at: "2026-09-13T09:00:00.000Z" },
+    { meta: { deliverableId: "v2", station: "animation" }, created_at: "2026-09-11T09:00:00.000Z" },
+  ];
+  assert.deepEqual(priorChases(ledger, "v1", "review"), { count: 2, lastAtIso: "2026-09-13T09:00:00.000Z" });
+  assert.deepEqual(priorChases(ledger, "v2", "review"), { count: 1, lastAtIso: "2026-09-13T09:00:00.000Z" });
+  assert.deepEqual(priorChases(ledger, "v2", "animation"), { count: 1, lastAtIso: "2026-09-11T09:00:00.000Z" });
+  assert.deepEqual(priorChases(ledger, "v3", "review"), { count: 0, lastAtIso: null });
 });

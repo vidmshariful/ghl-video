@@ -692,6 +692,44 @@ export async function sendApprovalReminderEmail(
   );
 }
 
+/**
+ * The same nudge for a client with several pieces waiting: one email that
+ * lists them, instead of one email per piece (a client with a pack of five
+ * in review was about to get five in the same minute, 15 September 2026).
+ * The log row carries every piece, so the sweep's ledger still counts each
+ * one on its own.
+ */
+export async function sendApprovalReminderBatchEmail(
+  db: SupabaseClient,
+  input: {
+    email: string;
+    name: string | null;
+    items: { videoTitle: string; stageLabel: string; daysWaiting: number; deliverableId: string; station: string }[];
+  },
+): Promise<boolean> {
+  const items = [...input.items].sort((a, b) => b.daysWaiting - a.daysWaiting);
+  const list = items
+    .map(
+      (i) =>
+        `<li style="margin:0 0 6px;"><strong style="color:#eef0f6;">${escapeHtml(i.videoTitle)}</strong>: ${escapeHtml(i.stageLabel.toLowerCase())}, ${i.daysWaiting} ${i.daysWaiting === 1 ? "day" : "days"}</li>`,
+    )
+    .join("");
+  return sendTemplate(
+    db,
+    "approval_reminder_batch",
+    input.email,
+    input.name,
+    {
+      customer_name: escapeHtml(input.name || "there"),
+      count: String(items.length),
+      video_list: `<ul style="margin:0 0 22px;padding-left:20px;font-size:15px;line-height:1.6;color:#9096a8;">${list}</ul>`,
+      days_waiting: String(items[0]?.daysWaiting ?? 0),
+      portal_url: `${SITE_URL}/portal`,
+    },
+    { chase: true, items: items.map((i) => ({ deliverableId: i.deliverableId, station: i.station })) },
+  );
+}
+
 /** Monday's one-email answer to "where are my videos". */
 export async function sendProjectDigestEmail(
   db: SupabaseClient,

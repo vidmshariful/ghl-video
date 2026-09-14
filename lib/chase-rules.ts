@@ -69,3 +69,25 @@ export function withinWindow(atIso: string | null | undefined, nowIso: string, d
   if (!Number.isFinite(at) || !Number.isFinite(now)) return false;
   return now - at <= days * DAY_MS;
 }
+
+/**
+ * Prior chases for one piece and station, read from the email log. A row
+ * is either one nudge about one piece (deliverableId and station on the
+ * row) or one email about several (an items list); both count.
+ */
+export function priorChases(
+  ledger: { meta?: unknown; created_at?: unknown }[],
+  deliverableId: string,
+  station: string,
+): { count: number; lastAtIso: string | null } {
+  const mine = ledger
+    .filter((r) => {
+      const m = (r.meta ?? {}) as Record<string, unknown>;
+      if (m.deliverableId === deliverableId && m.station === station) return true;
+      const items = Array.isArray(m.items) ? (m.items as Record<string, unknown>[]) : [];
+      return items.some((i) => i.deliverableId === deliverableId && i.station === station);
+    })
+    .map((r) => String(r.created_at))
+    .sort();
+  return { count: mine.length, lastAtIso: mine[mine.length - 1] ?? null };
+}

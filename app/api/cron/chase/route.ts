@@ -11,13 +11,14 @@ import {
   type StationKey,
 } from "@/lib/pipeline";
 import {
+  sendApprovalReminderBatchEmail,
   sendApprovalReminderEmail,
   sendBriefReminderEmail,
   sendProjectDigestEmail,
   sendRetainerCheckInEmail,
   sendReviewRequestEmail,
 } from "@/lib/email/notify";
-import { checkInDue, checkInSent, nextCheckIn, reviewDue, withinWindow } from "@/lib/chase-rules";
+import { checkInDue, checkInSent, nextCheckIn, priorChases, reviewDue, withinWindow } from "@/lib/chase-rules";
 import { countLine, monthKey, monthLabel, monthSummary, parseRetainer, type RetainerJob } from "@/lib/retainer";
 import { likeLiteral } from "@/lib/pg-pattern";
 
@@ -58,21 +59,7 @@ async function authorized(req: Request): Promise<boolean> {
   return Boolean(await verifyAdmin(req));
 }
 
-/** prior chases for one deliverable+station, read from the log */
-function chasesFrom(
-  ledger: Row[],
-  deliverableId: string,
-  station: string,
-): { count: number; lastAtIso: string | null } {
-  const mine = ledger
-    .filter((r) => {
-      const m = (r.meta ?? {}) as Row;
-      return m.deliverableId === deliverableId && m.station === station;
-    })
-    .map((r) => String(r.created_at))
-    .sort();
-  return { count: mine.length, lastAtIso: mine[mine.length - 1] ?? null };
-}
+type Nudge = { videoTitle: string; stageLabel: string; daysWaiting: number; deliverableId: string; station: string };
 
 export async function GET(req: Request) {
   if (!(await authorized(req)))
@@ -91,15 +78,24 @@ export async function GET(req: Request) {
   const { data: ledgerRows } = await db
     .from("email_log")
     .select("template_key, meta, created_at")
-    .in("template_key", ["approval_reminder", "intake_reminder", "retainer_check_in", "review_request"])
+    .in("template_key", ["approval_reminder", "approval_reminder_batch", "intake_reminder", "retainer_check_in", "review_request"])
     .in("status", ["sent", "failed"]);
   const allLedger = (ledgerRows ?? []) as Row[];
-  const ledger = allLedger.filter((r) => r.template_key === "approval_reminder");
+  const ledger = allLedger.filter((r) => r.template_key === "approval_reminder" || r.template_key === "approval_reminder_batch");
   const briefLedger = allLedger.filter((r) => r.template_key === "intake_reminder");
   const checkInLedger = allLedger.filter((r) => r.template_key === "retainer_check_in");
   const reviewLedger = allLedger.filter((r) => r.template_key === "review_request");
 
   const chased: string[] = [];
+  /* every piece waiting on a client, gathered first and sent per client:
+     one email listing several pieces rather than one email per piece */
+  const nudges = new Map<string, { name: string | null; items: Nudge[] }>();
+  const queueNudge = (email: string, name: string | null, item: Nudge) => {
+    const key = email.toLowerCase();
+    const mine = nudges.get(key) ?? { name, items: [] };
+    mine.items.push(item);
+    nudges.set(key, mine);
+  };
   const briefs: string[] = [];
   const checkIns: string[] = [];
   const reviews: string[] = [];
@@ -134,18 +130,15 @@ export async function GET(req: Request) {
       /* the sweep starts from where it is switched on: nothing handed over
          before its window is chased by mail; that is a phone call */
       if (!withinWindow(st.at ?? null, now)) continue;
-      const prior = chasesFrom(ledger, String(p.id), k);
+      const prior = priorChases(ledger as { meta?: unknown; created_at?: unknown }[], String(p.id), k);
       if (!needsChase(st.at ?? null, prior, now)) continue;
-      const sent = dry || await sendApprovalReminderEmail(db, {
-        email: String(p.customer_email),
-        name: nameOf(String(p.customer_email)),
+      queueNudge(String(p.customer_email), nameOf(String(p.customer_email)), {
         videoTitle: String(p.title),
         stageLabel: STATIONS[k as StationKey].label,
         daysWaiting: daysWaiting(st.at ?? now, now),
         deliverableId: String(p.id),
         station: k,
       });
-      if (sent) chased.push(`${String(p.title)} / ${k}`);
     }
   }
 
@@ -160,19 +153,16 @@ export async function GET(req: Request) {
     if (!project) continue;
     if (internal.has(String(project.customer_email).toLowerCase())) continue;
     if (!withinWindow((f.ready_at as string | null) ?? null, now)) continue;
-    const prior = chasesFrom(ledger, String(f.id), "review");
+    const prior = priorChases(ledger as { meta?: unknown; created_at?: unknown }[], String(f.id), "review");
     if (!needsChase((f.ready_at as string | null) ?? null, prior, now)) continue;
     const email = String(project.customer_email);
-    const sent = dry || await sendApprovalReminderEmail(db, {
-      email,
-      name: nameOf(email),
+    queueNudge(email, nameOf(email), {
       videoTitle: String(f.title),
       stageLabel: "Your review",
       daysWaiting: daysWaiting(String(f.ready_at), now),
       deliverableId: String(f.id),
       station: "review",
     });
-    if (sent) chased.push(`${String(f.title)} / review`);
   }
 
   /* ---- editing plan work sitting unwatched: ready with nobody looking ---- */
@@ -205,19 +195,16 @@ export async function GET(req: Request) {
     if (!sub) continue;
     if (internal.has(String(sub.customer_email).toLowerCase())) continue;
     if (!withinWindow((r.ready_at as string | null) ?? null, now)) continue;
-    const prior = chasesFrom(ledger, String(r.id), "review");
+    const prior = priorChases(ledger as { meta?: unknown; created_at?: unknown }[], String(r.id), "review");
     if (!needsChase((r.ready_at as string | null) ?? null, prior, now)) continue;
     const email = String(sub.customer_email);
-    const sent = dry || await sendApprovalReminderEmail(db, {
-      email,
-      name: nameOf(email),
+    queueNudge(email, nameOf(email), {
       videoTitle: String(r.title),
       stageLabel: "Your review",
       daysWaiting: daysWaiting(String(r.ready_at), now),
       deliverableId: String(r.id),
       station: "review",
     });
-    if (sent) chased.push(`${String(r.title)} / review`);
   }
 
   /* ---- premade videos sitting in review: bought, made, and not yet watched ---- */
@@ -237,18 +224,25 @@ export async function GET(req: Request) {
     const email = String(order.customer_email).toLowerCase();
     if (internal.has(email)) continue;
     if (!withinWindow((r.ready_at as string | null) ?? null, now)) continue;
-    const prior = chasesFrom(ledger, String(r.id), "review");
+    const prior = priorChases(ledger as { meta?: unknown; created_at?: unknown }[], String(r.id), "review");
     if (!needsChase((r.ready_at as string | null) ?? null, prior, now)) continue;
-    const sent = dry || await sendApprovalReminderEmail(db, {
-      email,
-      name: nameOf(email),
+    queueNudge(email, nameOf(email), {
       videoTitle: String(r.title),
       stageLabel: "Your review",
       daysWaiting: daysWaiting(String(r.ready_at), now),
       deliverableId: String(r.id),
       station: "review",
     });
-    if (sent) chased.push(`${String(r.title)} / review`);
+  }
+
+  /* ---- the nudges go out, one email per client ---- */
+  for (const [email, { name, items }] of nudges) {
+    const sent =
+      dry ||
+      (items.length === 1
+        ? await sendApprovalReminderEmail(db, { email, name, ...items[0] })
+        : await sendApprovalReminderBatchEmail(db, { email, name, items }));
+    if (sent) for (const i of items) chased.push(`${i.videoTitle} / ${i.station}`);
   }
 
   /* ---- paid orders still without their brief: nothing can start ---- */
@@ -410,5 +404,6 @@ export async function GET(req: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true, dry, chased, briefs, checkIns, reviews, digested, digestRan: doDigest });
+  const nudged = Object.fromEntries([...nudges].map(([email, v]) => [email, v.items.length]));
+  return NextResponse.json({ ok: true, dry, chased, nudged, briefs, checkIns, reviews, digested, digestRan: doDigest });
 }

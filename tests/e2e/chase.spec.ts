@@ -35,7 +35,7 @@ async function reminderRows(): Promise<Row[]> {
   const { data } = await db()
     .from("email_log")
     .select("template_key, to_email, status, meta, created_at")
-    .in("template_key", ["intake_reminder", "approval_reminder", "retainer_check_in", "review_request"])
+    .in("template_key", ["intake_reminder", "approval_reminder", "approval_reminder_batch", "retainer_check_in", "review_request"])
     .order("created_at", { ascending: false })
     .limit(50);
   return (data ?? []) as Row[];
@@ -131,7 +131,7 @@ test.describe("the morning sweep, our own follow-ups", () => {
 
     const rows = await reminderRows();
     const brief = rows.find((r) => ((r.meta ?? {}) as Row).orderId === orderId);
-    const review = rows.find((r) => ((r.meta ?? {}) as Row).deliverableId === videoId);
+    const review = rows.find((r) => (((r.meta ?? {}) as Row).deliverableId === videoId || ((((r.meta ?? {}) as Row).items as Row[] | undefined) ?? []).some((i) => i.deliverableId === videoId)));
     const checkIn = rows.find((r) => ((r.meta ?? {}) as Row).customerId === partnerId && ((r.meta ?? {}) as Row).checkInOn === today);
     expect(brief, "the brief reminder should be in the log").toBeTruthy();
     expect(review, "the review nudge should be in the log").toBeTruthy();
@@ -160,7 +160,7 @@ test.describe("the morning sweep, our own follow-ups", () => {
     const after = (await reminderRows()).length;
     const rows = await reminderRows();
     expect(rows.filter((r) => ((r.meta ?? {}) as Row).orderId === orderId).length).toBe(1);
-    expect(rows.filter((r) => ((r.meta ?? {}) as Row).deliverableId === videoId).length).toBe(1);
+    expect(rows.filter((r) => (((r.meta ?? {}) as Row).deliverableId === videoId || ((((r.meta ?? {}) as Row).items as Row[] | undefined) ?? []).some((i) => i.deliverableId === videoId))).length).toBe(1);
     expect(after).toBeGreaterThanOrEqual(before);
     expect(logBefore).toBeLessThanOrEqual(after);
   });
