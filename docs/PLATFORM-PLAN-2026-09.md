@@ -232,6 +232,14 @@ screen not already rebuilt in phases 2 to 5.
 Done when: every screen uses the shared components and the blueprint look,
 and the walkthrough suite still passes.
 
+Update, 14 September 2026: a first cut of this (six portal sections with
+the old links redirecting, a seven-item admin menu with the rest under
+Settings, money as one quiet row, the three boards as one ordered list,
+the dashboard as sections) was built on staging and reverted the same
+day. The owner prefers the screens as they are on main and will lead the
+design and the restructure later; the cut is parked on the
+phase-6-blueprint branch. Until then the screens stay as they are.
+
 ### Phase 7. Go live (2 days)
 One release: migrations, data migration for invoices, keys in Vercel, DNS
 unchanged. A rollback plan written before the push. The first week after,
