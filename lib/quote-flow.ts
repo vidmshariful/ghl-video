@@ -53,11 +53,15 @@ export async function acceptQuote(
         status: "backlog",
         quoted_cents: Number(quote.total_cents),
         agreed_cents: Number(quote.total_cents),
-        source: "quote",
+        /* the studio scoped and priced it; the client's yes is on the quote row */
+        source: "studio",
       })
       .select("id")
       .single();
-    if (error || !made) return { ok: false, error: "The quote was accepted but the project could not be opened. We have been told.", status: 500 };
+    if (error || !made) {
+      console.error(`[quote] project for ${String(quote.number)} not opened: ${error?.message ?? "no row"}`);
+      return { ok: false, error: "The quote was accepted but the project could not be opened. We have been told.", status: 500 };
+    }
     projectId = String(made.id);
   }
 

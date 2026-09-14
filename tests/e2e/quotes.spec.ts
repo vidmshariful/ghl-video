@@ -164,7 +164,7 @@ test.describe("quotes, the agreement, leads and partners", () => {
     const { data: p } = await db().from("projects").select("agreed_cents, quoted_cents, status, customer_email, source").eq("id", projectId).single();
     expect(Number(p?.agreed_cents)).toBe(252000);
     expect(p?.status).toBe("backlog");
-    expect(p?.source).toBe("quote");
+    expect(p?.source).toBe("studio");
     const { data: req } = await db().from("project_requests").select("status, project_id").eq("id", requestId).single();
     expect(req?.status).toBe("won");
     expect(req?.project_id).toBe(projectId);
@@ -212,9 +212,14 @@ test.describe("quotes, the agreement, leads and partners", () => {
   });
 
   test("the retainer agreement is accepted in the portal, and the contact shows it", async () => {
+    /* runnable on its own, so a retry or a filtered run does not depend on the first step */
+    if (!token) token = await tokenFor(admin);
+    if (!cfg) cfg = ((await db().from("hl_config").select("config").eq("location_id", LOC).single()).data!.config) as typeof cfg;
     const list = await api<{ customers: { id: string; email: string }[] }>("/api/admin/customers/", { token });
     const partnerId = String(list.customers.find((c) => c.email === partnerClient.email)?.id ?? "");
     expect(partnerId, "run the HighLevel walkthrough first: it makes this client").toMatch(/^[0-9a-f-]{36}$/);
+    /* fresh terms, so a retried run does not inherit an earlier acceptance */
+    await api(`/api/admin/customers/${partnerId}/`, { method: "PATCH", token, body: { retainer: null } });
     await api(`/api/admin/customers/${partnerId}/`, {
       method: "PATCH",
       token,
@@ -256,6 +261,8 @@ test.describe("quotes, the agreement, leads and partners", () => {
   });
 
   test("a partner appears in the sub-account as a tagged contact with their handle", async () => {
+    if (!token) token = await tokenFor(admin);
+    if (!cfg) cfg = ((await db().from("hl_config").select("config").eq("location_id", LOC).single()).data!.config) as typeof cfg;
     const d = db();
     const email = "qa-partner@ghlvideo.test";
     const { data: existing } = await d.from("partners").select("id").eq("email", email).maybeSingle();

@@ -708,10 +708,19 @@ export async function noteOnContact(db: Db, email: string, body: string): Promis
   try {
     if (!process.env.HIGHLEVEL_API_TOKEN || !process.env.HIGHLEVEL_LOCATION_ID) return false;
     const cfg = await loadHlConfig(db, locationId());
-    if (!cfg || !syncAllowed(email.toLowerCase())) return false;
-    const { data: customer } = await db.from("customers").select("*").ilike("email", email).maybeSingle();
-    if (!customer) return false;
-    const contactId = await contactIdFor(db, cfg, customer);
+    const address = email.toLowerCase();
+    if (!cfg || !syncAllowed(address)) return false;
+    const { data: customer } = await db.from("customers").select("*").ilike("email", address).maybeSingle();
+    let contactId: string;
+    if (customer) contactId = await contactIdFor(db, cfg, customer);
+    else {
+      /* a lead has no customer row yet, only an enquiry; their contact is
+         the one the lead sync made, found by email rather than made anew */
+      const { count } = await db.from("project_requests").select("id", { count: "exact", head: true }).ilike("email", address);
+      if (!count) return false;
+      const contact = await upsertContact({ locationId: cfg.locationId, email: address });
+      contactId = contact.id;
+    }
     await hlFetch(`/contacts/${contactId}/notes`, { method: "POST", body: JSON.stringify({ body: body.slice(0, 4000) }) });
     return true;
   } catch (e) {
