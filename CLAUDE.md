@@ -143,7 +143,10 @@ npm run test:e2e            # Playwright smoke suite
 `.env.local`, which points at the STAGING Supabase project
 (`udawvwkirafbwgmcbcip`) and carries no Stripe, HighLevel, Affixo or email
 keys, so nothing run locally can charge, sync or mail anyone. Production
-credentials live in `.env.prod.local` and are reached only on purpose:
+credentials live in `.env.prod.local` and are reached only on purpose
+(since 15 September 2026 production is the East US project
+`mlfuwyghqjqkrokyiurn`; the old Asia project `xdarleyimthsnareuoxl` sits in
+`.env.oldprod.local`, untouched, as a fallback until 15 October 2026):
 `GHLV_ENV=prod node scripts/<x>` or `GHLV_ENV=prod npm run migrate`. Staging
 is a snapshot of production's public schema: `npm run staging:refresh`
 recopies it (children first, foreign-key order, sequences advanced), and

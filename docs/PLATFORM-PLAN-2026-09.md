@@ -241,6 +241,12 @@ design and the restructure later; the cut is parked on the
 phase-6-blueprint branch. Until then the screens stay as they are.
 
 ### Phase 7. Go live (2 days)
+Done 15 September 2026: production moved to a new Supabase project in East
+US (mlfuwyghqjqkrokyiurn; the old Asia project xdarleyimthsnareuoxl is kept
+untouched as a fallback until 15 October), the branch pushed to main behind
+a maintenance page, the main sub-account "GHL Video (US)" provisioned and
+first-filled, the six legacy invoices moved quietly. Client email stays on
+Brevo (HIGHLEVEL_EMAIL=off) until the sending domain is verified there.
 One release: migrations, data migration for invoices, keys in Vercel, DNS
 unchanged. A rollback plan written before the push. The first week after,
 invariants and reconciliation run daily and every alarm is read.

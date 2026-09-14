@@ -1,11 +1,14 @@
 # The staging tour: what was built, how to try it, how it works
 
-Written 14 September 2026 for Shariful. This covers everything on the
-`design-update` branch since the last release (12 September, the retainer
-partnership): 25 commits, none pushed. It is all running locally against
-the staging database, Stripe in test mode and the HighLevel sandbox
-sub-account "Video Storage". The phase 6 look and restructure were reverted
-today at your request, so every screen looks the way it does on main.
+Written 14 September 2026 for Shariful, the day before go-live. It covers
+everything built since the 12 September release (the retainer partnership).
+On 15 September 2026 all of it went live: the site moved to a new Supabase
+project in East US (the old one in Asia is kept untouched for thirty days as
+a fallback), and the HighLevel mirror points at the main sub-account
+"GHL Video (US)". The staging project, Stripe test mode and the sandbox
+sub-account "Video Storage" remain the place to try things first, exactly
+as described below. The phase 6 look and restructure were reverted on 14
+September at the owner's request, so every screen looks as it did.
 
 The short version: a client, their projects, their videos, their invoices,
 their messages and their quotes now exist in HighLevel as well as here, kept
@@ -417,6 +420,11 @@ its next message; what was said before stays in the portal only.
 **Stripe is unchanged.** Premade checkout charges the website's Stripe
 account as today, editing plans keep their subscriptions, and HighLevel
 invoices charge through HighLevel's own Stripe connection.
+
+**What happened on the day (15 September 2026):** the move ran exactly as
+below, behind a maintenance page, in about twenty minutes. The one surprise
+was a demo invoice for nothing that HighLevel refused; demo and zero-total
+invoices are now never sent.
 
 **The day, in order:**
 
