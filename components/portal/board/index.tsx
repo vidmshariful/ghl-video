@@ -429,7 +429,7 @@ export function ItemNotes({
   useEffect(() => {
     let live = true;
     (async () => {
-      const r = await fetch(`/api/admin/work-notes?${qs}`, { headers: await authHeader() });
+      const r = await fetch(`/api/admin/work-notes/?${qs}`, { headers: await authHeader() });
       const j = await r.json();
       if (live && r.ok) setNotes(j.notes ?? []);
     })();
@@ -443,7 +443,7 @@ export function ItemNotes({
     if (!draft.trim()) return;
     setBusy(true);
     try {
-      const r = await fetch("/api/admin/work-notes", {
+      const r = await fetch("/api/admin/work-notes/", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(await authHeader()) },
         body: JSON.stringify({ ...target, body: draft }),

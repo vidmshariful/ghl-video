@@ -38,7 +38,7 @@ export function LibraryFiltersTab() {
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch("/api/admin/library-features", { headers: await authHeader() });
+      const r = await fetch("/api/admin/library-features/", { headers: await authHeader() });
       const j = await r.json();
       if (!r.ok) return setErr(j.error ?? "Could not load the filters.");
       setFeatures(j.features as Feature[]);
@@ -54,7 +54,7 @@ export function LibraryFiltersTab() {
 
   async function call(method: string, body?: Record<string, unknown>, query = "") {
     setErr("");
-    const r = await fetch(`/api/admin/library-features${query}`, {
+    const r = await fetch(`/api/admin/library-features${query}/`, {
       method,
       headers: { "Content-Type": "application/json", ...(await authHeader()) },
       ...(body ? { body: JSON.stringify(body) } : {}),

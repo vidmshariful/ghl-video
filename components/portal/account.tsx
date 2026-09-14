@@ -29,7 +29,7 @@ export function AvatarUploader({
   name?: string | null;
   email: string;
   avatarUrl: string | null;
-  /* e.g. "/api/portal/me/avatar" */
+  /* e.g. "/api/portal/me/avatar/" */
   endpoint: string;
   onChanged: (avatarUrl: string | null) => void;
 }) {

@@ -203,7 +203,7 @@ export function EditingClients({ onOpen }: { onOpen: (id: string) => void }) {
   useEffect(() => {
     (async () => {
       try {
-        const r = await fetch("/api/admin/editing", { headers: await authHeader() });
+        const r = await fetch("/api/admin/editing/", { headers: await authHeader() });
         const j = await r.json();
         if (!r.ok) return setErr(j.error ?? "Could not load editing clients.");
         setClients(j.clients as Client[]);
@@ -276,7 +276,7 @@ export function EditingBoard({ slug, onBack }: { slug: string; onBack: () => voi
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch(`/api/admin/editing?client=${encodeURIComponent(slug)}`, {
+      const r = await fetch(`/api/admin/editing/?client=${encodeURIComponent(slug)}`, {
         headers: await authHeader(),
       });
       const j = await r.json();
@@ -326,7 +326,7 @@ export function EditingBoard({ slug, onBack }: { slug: string; onBack: () => voi
       setErr("");
     }
     try {
-      const r = await fetch("/api/admin/editing", {
+      const r = await fetch("/api/admin/editing/", {
         method: "PATCH",
         headers: { "Content-Type": "application/json", ...(await authHeader()) },
         body: JSON.stringify({ id: reqId, ...patch }),
@@ -358,7 +358,7 @@ export function EditingBoard({ slug, onBack }: { slug: string; onBack: () => voi
     setBusy(true);
     setErr("");
     try {
-      const r = await fetch("/api/admin/editing", {
+      const r = await fetch("/api/admin/editing/", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(await authHeader()) },
         body: JSON.stringify({
@@ -537,7 +537,7 @@ export function EditingBoard({ slug, onBack }: { slug: string; onBack: () => voi
             onMove={async (reqId, to) => {
               const item = b.requests.find((x) => x.id === reqId);
               if (!item) return null;
-              const r = await fetch("/api/admin/editing", {
+              const r = await fetch("/api/admin/editing/", {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json", ...(await authHeader()) },
                 body: JSON.stringify({
@@ -990,7 +990,7 @@ function EditingJob({
               way. An editor opening this should not have to go looking through
               email for the logo. */}
           <Attachments
-            endpoint={`/api/admin/projects/files?deliverableId=${r.id}`}
+            endpoint={`/api/admin/projects/files/?deliverableId=${r.id}`}
             extraFields={{ deliverableId: r.id }}
             viewer="studio"
             title="Resources for this video"
@@ -1064,7 +1064,7 @@ function ReviewRoom({
   }
 
   const load = useCallback(async () => {
-    const r = await fetch(`/api/admin/deliverables/${requestId}/comments`, {
+    const r = await fetch(`/api/admin/deliverables/${requestId}/comments/`, {
       headers: await authHeader(),
     }).catch(() => null);
     const j = await r?.json().catch(() => null);
@@ -1078,7 +1078,7 @@ function ReviewRoom({
   async function post(patch: Record<string, unknown>) {
     setBusy(true);
     setErr("");
-    const r = await fetch(`/api/admin/deliverables/${requestId}/comments`, {
+    const r = await fetch(`/api/admin/deliverables/${requestId}/comments/`, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...(await authHeader()) },
       body: JSON.stringify(patch),

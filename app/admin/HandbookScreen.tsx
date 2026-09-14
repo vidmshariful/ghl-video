@@ -37,7 +37,7 @@ export function HandbookScreen({ initialSlug }: { initialSlug?: string | null })
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch("/api/admin/handbook", { headers: await authHeader() });
+      const r = await fetch("/api/admin/handbook/", { headers: await authHeader() });
       const j = await r.json();
       if (!r.ok) return setErr(j.error ?? "Could not load the handbook.");
       setData(j as Payload);

@@ -85,7 +85,7 @@ export function SalesScreen() {
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch("/api/admin/sales", { headers: await authHeader() });
+      const r = await fetch("/api/admin/sales/", { headers: await authHeader() });
       const j = await r.json();
       if (!r.ok) return setErr(j.error ?? "Could not load sales.");
       setData(j as Data);

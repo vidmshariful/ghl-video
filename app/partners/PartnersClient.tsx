@@ -417,7 +417,7 @@ function DashboardView({
   const { copied, copy } = useCopy();
   const first = (actingLabel ? me.viewer?.name ?? p.name : p.name).split(" ")[0];
   const canPerf = can("performance");
-  const { data: st } = useFpData<StatsPayload>(canPerf ? "/api/partners/stats" : "");
+  const { data: st } = useFpData<StatsPayload>(canPerf ? "/api/partners/stats/" : "");
   const live = canPerf && st?.configured && st.found && st.stats;
 
   return (
@@ -572,7 +572,7 @@ function DashboardView({
 
 /* ---- performance ---- */
 function PerformanceView() {
-  const { data, err } = useFpData<StatsPayload>("/api/partners/stats");
+  const { data, err } = useFpData<StatsPayload>("/api/partners/stats/");
   const gate = <FpStateCard data={data} err={err} />;
   const series = data?.series ?? [];
   const maxClicks = Math.max(1, ...series.map((s) => s.clicks));
@@ -690,7 +690,7 @@ const REF_STATE_STYLE: Record<string, string> = {
 };
 
 function ReferralsView() {
-  const { data, err } = useFpData<ReferralsPayload>("/api/partners/referrals");
+  const { data, err } = useFpData<ReferralsPayload>("/api/partners/referrals/");
   const rows = data?.referrals ?? [];
   return (
     <div className="w-full">
@@ -747,7 +747,7 @@ const PAYOUT_STYLE: Record<string, string> = {
 };
 
 function EarningsView() {
-  const { data, err } = useFpData<PayoutsPayload>("/api/partners/payouts");
+  const { data, err } = useFpData<PayoutsPayload>("/api/partners/payouts/");
   const rows = data?.payouts ?? [];
   return (
     <div className="w-full">
@@ -835,7 +835,7 @@ function AssetsView({ me }: { me: Me }) {
   const [err, setErr] = useState("");
 
   useEffect(() => {
-    authedFetch<{ assets?: Asset[]; error?: string }>("/api/partners/assets")
+    authedFetch<{ assets?: Asset[]; error?: string }>("/api/partners/assets/")
       .then((j) => (j.assets ? setAssets(j.assets) : setErr(j.error ?? "Could not load assets.")))
       .catch(() => setErr("Could not load assets."));
   }, []);
@@ -1133,7 +1133,7 @@ function SettingsView({
     setBusy(true);
     setMsg("");
     setErr("");
-    const j = await authedFetch<{ ok?: boolean; error?: string }>("/api/partners/me", {
+    const j = await authedFetch<{ ok?: boolean; error?: string }>("/api/partners/me/", {
       method: "PATCH",
       body: JSON.stringify({ name, tagline, bio }),
     });
@@ -1202,7 +1202,7 @@ function SettingsView({
                 name={viewerName}
                 email={p.email ?? ""}
                 avatarUrl={viewerAvatar}
-                endpoint="/api/partners/me/avatar"
+                endpoint="/api/partners/me/avatar/"
                 onChanged={() => onSaved()}
               />
               <p className="mt-2 text-body-sm text-dim">
@@ -1307,11 +1307,11 @@ export function PartnersClient({ initialView }: { initialView: View }) {
 
   const loadMe = async () => {
     initActFor(ACT_FOR_KEY);
-    let j = await authedFetch<Me & { error?: string }>("/api/partners/me").catch(() => null);
+    let j = await authedFetch<Me & { error?: string }>("/api/partners/me/").catch(() => null);
     // a stale saved account (membership revoked): fall back to self
     if ((!j || j.error) && getActFor()) {
       setActFor(ACT_FOR_KEY, null);
-      j = await authedFetch<Me & { error?: string }>("/api/partners/me").catch(() => null);
+      j = await authedFetch<Me & { error?: string }>("/api/partners/me/").catch(() => null);
     }
     if (!j || j.error) {
       // a session the server no longer accepts: back to the login screen
@@ -1329,7 +1329,7 @@ export function PartnersClient({ initialView }: { initialView: View }) {
       (j.memberships ?? []).length === 1
     ) {
       setActFor(ACT_FOR_KEY, j.memberships![0].ownerEmail);
-      const acted = await authedFetch<Me & { error?: string }>("/api/partners/me").catch(() => null);
+      const acted = await authedFetch<Me & { error?: string }>("/api/partners/me/").catch(() => null);
       if (acted && !acted.error) {
         setMe(acted);
         return;
@@ -1516,7 +1516,7 @@ export function PartnersClient({ initialView }: { initialView: View }) {
               <LifeBuoy size={16} />
             </TopIconButton>
             <NotificationsBell
-              endpoint="/api/partners/notifications"
+              endpoint="/api/partners/notifications/"
               fetcher={(path, init) => authedFetch(path, init)}
               onOpenHref={openHref}
             />

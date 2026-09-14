@@ -293,10 +293,10 @@ export function CustomVideoScreen({
     try {
       const h = await authHeader();
       const [p, r, c, q] = await Promise.all([
-        fetch("/api/admin/projects", { headers: h }).then((x) => x.json()),
-        fetch("/api/admin/project-requests", { headers: h }).then((x) => x.json()),
-        fetch("/api/admin/customers", { headers: h }).then((x) => x.json()),
-        fetch("/api/admin/quotes", { headers: h }).then((x) => x.json()),
+        fetch("/api/admin/projects/", { headers: h }).then((x) => x.json()),
+        fetch("/api/admin/project-requests/", { headers: h }).then((x) => x.json()),
+        fetch("/api/admin/customers/", { headers: h }).then((x) => x.json()),
+        fetch("/api/admin/quotes/", { headers: h }).then((x) => x.json()),
       ]);
       if (p.error || r.error) return setErr(p.error ?? r.error);
       setProjects(p.projects as Project[]);
@@ -323,7 +323,7 @@ export function CustomVideoScreen({
    */
   const refreshProjects = useCallback(async () => {
     try {
-      const r = await fetch("/api/admin/projects", { headers: await authHeader() });
+      const r = await fetch("/api/admin/projects/", { headers: await authHeader() });
       const j = await r.json();
       if (!j.error) setProjects(j.projects as Project[]);
     } catch {
@@ -351,7 +351,7 @@ export function CustomVideoScreen({
       const isNew =
         Boolean(draft.customerEmail) && !clients.some((c) => c.email === draft.customerEmail);
       if (isNew) {
-        const cr = await fetch("/api/admin/customers", {
+        const cr = await fetch("/api/admin/customers/", {
           method: "POST",
           headers: h,
           body: JSON.stringify({
@@ -365,7 +365,7 @@ export function CustomVideoScreen({
         newClientId = cj.id ?? null;
       }
 
-      const r = await fetch("/api/admin/projects", {
+      const r = await fetch("/api/admin/projects/", {
         method: "POST",
         headers: h,
         body: JSON.stringify({
@@ -382,7 +382,7 @@ export function CustomVideoScreen({
          and tells them how to set a password. Fail-soft: a mail problem
          must not undo a project that already saved. */
       if (isNew && newClientId && draft.sendWelcome) {
-        const wr = await fetch(`/api/admin/customers/${newClientId}/welcome-email`, {
+        const wr = await fetch(`/api/admin/customers/${newClientId}/welcome-email/`, {
           method: "POST",
           headers: h,
           body: JSON.stringify({ email: draft.customerEmail }),
@@ -426,7 +426,7 @@ export function CustomVideoScreen({
       setProjects((list) => (list ?? []).map((x) => (x.id === id ? { ...x, ...optimistic } : x)));
     }
     try {
-      const r = await fetch("/api/admin/projects", {
+      const r = await fetch("/api/admin/projects/", {
         method: "PATCH",
         headers: { ...(await authHeader()), "Content-Type": "application/json" },
         body: JSON.stringify({ id, ...body }),
@@ -446,7 +446,7 @@ export function CustomVideoScreen({
   }
 
   async function markEnquiry(e: Enquiry, status: RequestStatus) {
-    await fetch("/api/admin/project-requests", {
+    await fetch("/api/admin/project-requests/", {
       method: "PATCH",
       headers: { ...(await authHeader()), "Content-Type": "application/json" },
       body: JSON.stringify({ id: e.id, status }),
@@ -1943,7 +1943,7 @@ function FormatList({ p, onReload }: { p: Project; onReload: () => Promise<void>
     if (local) setRows(local(rows));
     else setBusy(true);
     try {
-      const r = await fetch("/api/admin/projects/videos", {
+      const r = await fetch("/api/admin/projects/videos/", {
         method,
         headers: { ...(await authHeader()), "Content-Type": "application/json" },
         body: JSON.stringify({ projectId: p.id, ...body }),
@@ -2048,7 +2048,7 @@ function ProjectThread({ projectId }: { projectId: string }) {
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch(`/api/admin/projects/talk?projectId=${projectId}`, {
+      const r = await fetch(`/api/admin/projects/talk/?projectId=${projectId}`, {
         headers: await authHeader(),
       });
       const j = await r.json();
@@ -2065,7 +2065,7 @@ function ProjectThread({ projectId }: { projectId: string }) {
   async function send() {
     if (!draft.trim()) return;
     setBusy(true);
-    await fetch("/api/admin/projects/talk", {
+    await fetch("/api/admin/projects/talk/", {
       method: "POST",
       headers: { ...(await authHeader()), "Content-Type": "application/json" },
       body: JSON.stringify({ projectId, body: draft.trim() }),
@@ -2188,7 +2188,7 @@ function AdminAttachments({ projectId }: { projectId: string }) {
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch(`/api/admin/projects/files?projectId=${projectId}`, {
+      const r = await fetch(`/api/admin/projects/files/?projectId=${projectId}`, {
         headers: await authHeader(),
       });
       const j = await r.json();
@@ -2215,7 +2215,7 @@ function AdminAttachments({ projectId }: { projectId: string }) {
       const fd = new FormData();
       fd.append("projectId", projectId);
       fd.append("file", file);
-      const r = await fetch("/api/admin/projects/files", {
+      const r = await fetch("/api/admin/projects/files/", {
         method: "POST",
         headers: await authHeader(),
         body: fd,
@@ -2232,7 +2232,7 @@ function AdminAttachments({ projectId }: { projectId: string }) {
 
   async function remove(id: string) {
     setBusy(true);
-    await fetch(`/api/admin/projects/files?projectId=${projectId}&fileId=${id}`, {
+    await fetch(`/api/admin/projects/files/?projectId=${projectId}&fileId=${id}`, {
       method: "DELETE",
       headers: await authHeader(),
     }).catch(() => null);
@@ -2428,7 +2428,7 @@ function ReviewRoom({
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch(`/api/admin/projects/notes?projectId=${projectId}`, {
+      const r = await fetch(`/api/admin/projects/notes/?projectId=${projectId}`, {
         headers: await authHeader(),
       });
       const j = await r.json();
@@ -2458,7 +2458,7 @@ function ReviewRoom({
     setBusy(true);
     setErr("");
     try {
-      const r = await fetch("/api/admin/projects/notes", {
+      const r = await fetch("/api/admin/projects/notes/", {
         method: "POST",
         headers: { ...(await authHeader()), "Content-Type": "application/json" },
         body: JSON.stringify({ projectId, ...body }),

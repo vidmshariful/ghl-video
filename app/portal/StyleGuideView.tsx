@@ -88,7 +88,7 @@ export function StyleGuideView({
   const [err, setErr] = useState("");
 
   const load = useCallback(async () => {
-    const j = await authedFetch("/api/portal/style-guide").catch(() => null);
+    const j = await authedFetch("/api/portal/style-guide/").catch(() => null);
     setG((j?.guide as Guide | null) ?? null);
   }, [authedFetch]);
 
@@ -102,7 +102,7 @@ export function StyleGuideView({
     setErr("");
     setSaved(false);
     try {
-      const j = (await authedFetch("/api/portal/style-guide", {
+      const j = (await authedFetch("/api/portal/style-guide/", {
         method: "PUT",
         body: JSON.stringify(g),
       })) as { ok?: boolean; error?: string };

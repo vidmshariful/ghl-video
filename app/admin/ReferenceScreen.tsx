@@ -47,7 +47,7 @@ export function ReferenceScreen() {
   const load = useCallback(async () => {
     setErr("");
     try {
-      const r = await fetch("/api/admin/reference", { headers: await authHeader() });
+      const r = await fetch("/api/admin/reference/", { headers: await authHeader() });
       const j = await r.json();
       if (!r.ok) return setErr(j.error ?? "Could not load these.");
       setItems(j.items as Item[]);
@@ -66,7 +66,7 @@ export function ReferenceScreen() {
   async function reveal(i: Item): Promise<string | null> {
     if (!i.secret) return i.value;
     if (shown[i.id]) return shown[i.id];
-    const r = await fetch(`/api/admin/reference?reveal=${i.id}`, { headers: await authHeader() });
+    const r = await fetch(`/api/admin/reference/?reveal=${i.id}`, { headers: await authHeader() });
     const j = await r.json().catch(() => null);
     if (!r.ok || !j?.value) {
       setErr(j?.error ?? "Could not fetch that.");
@@ -92,7 +92,7 @@ export function ReferenceScreen() {
     if (!draft) return;
     setBusy(true);
     setErr("");
-    const r = await fetch("/api/admin/reference", {
+    const r = await fetch("/api/admin/reference/", {
       method: draft.id ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json", ...(await authHeader()) },
       body: JSON.stringify(draft),
@@ -109,7 +109,7 @@ export function ReferenceScreen() {
   async function remove(i: Item) {
     if (!confirm(`Delete "${i.label}"? This cannot be undone.`)) return;
     setBusy(true);
-    await fetch(`/api/admin/reference?id=${i.id}`, {
+    await fetch(`/api/admin/reference/?id=${i.id}`, {
       method: "DELETE",
       headers: await authHeader(),
     }).catch(() => null);

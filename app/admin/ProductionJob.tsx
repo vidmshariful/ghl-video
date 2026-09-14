@@ -81,7 +81,7 @@ export function ProductionJob({ id, onBack }: { id: string; onBack: () => void }
   const load = useCallback(async () => {
     setErr("");
     try {
-      const r = await fetch(`/api/admin/orders/${id}/job`, { headers: await authHeader() });
+      const r = await fetch(`/api/admin/orders/${id}/job/`, { headers: await authHeader() });
       const j = await r.json();
       if (!r.ok) {
         setErr(j.error ?? "Could not load this job.");
@@ -94,7 +94,7 @@ export function ProductionJob({ id, onBack }: { id: string; onBack: () => void }
           Object.fromEntries((j.videos as Deliverable[]).map((d) => [d.id, d.video_url ?? ""])),
         );
         // unanswered client notes per video, for the badge on each row
-        const c = await fetch(`/api/admin/orders/${id}/comments`, { headers: await authHeader() })
+        const c = await fetch(`/api/admin/orders/${id}/comments/`, { headers: await authHeader() })
           .then((r) => r.json())
           .catch(() => null);
         setOpenNotes((c?.open as Record<string, number>) ?? {});
@@ -113,7 +113,7 @@ export function ProductionJob({ id, onBack }: { id: string; onBack: () => void }
     setBusy(vid);
     setErr("");
     try {
-      const r = await fetch(`/api/admin/orders/${id}/deliverables`, {
+      const r = await fetch(`/api/admin/orders/${id}/deliverables/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", ...(await authHeader()) },
         body: JSON.stringify({ deliverableId: vid, ...patch }),
@@ -144,7 +144,7 @@ export function ProductionJob({ id, onBack }: { id: string; onBack: () => void }
     setBusy("job");
     setErr("");
     for (const v of targets) {
-      const r = await fetch(`/api/admin/orders/${id}/deliverables`, {
+      const r = await fetch(`/api/admin/orders/${id}/deliverables/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", ...(await authHeader()) },
         body: JSON.stringify({ deliverableId: v.id, status }),
@@ -163,7 +163,7 @@ export function ProductionJob({ id, onBack }: { id: string; onBack: () => void }
     setBusy("job");
     setErr("");
     try {
-      const r = await fetch(`/api/admin/orders/${id}/job`, {
+      const r = await fetch(`/api/admin/orders/${id}/job/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", ...(await authHeader()) },
         body: JSON.stringify(patch),
@@ -184,7 +184,7 @@ export function ProductionJob({ id, onBack }: { id: string; onBack: () => void }
     setBusy("job");
     setErr("");
     try {
-      const r = await fetch(`/api/admin/orders/${id}/fulfillment`, {
+      const r = await fetch(`/api/admin/orders/${id}/fulfillment/`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(await authHeader()) },
         body: JSON.stringify(body),
@@ -550,7 +550,7 @@ function StudioThread({
   const [err, setErr] = useState("");
 
   const load = useCallback(async () => {
-    const r = await fetch(`/api/admin/orders/${orderId}/comments?video=${deliverableId}`, {
+    const r = await fetch(`/api/admin/orders/${orderId}/comments/?video=${deliverableId}`, {
       headers: await authHeader(),
     });
     const j = await r.json().catch(() => null);
@@ -565,7 +565,7 @@ function StudioThread({
   async function post(patch: Record<string, unknown>) {
     setBusy(true);
     setErr("");
-    const r = await fetch(`/api/admin/orders/${orderId}/comments`, {
+    const r = await fetch(`/api/admin/orders/${orderId}/comments/`, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...(await authHeader()) },
       body: JSON.stringify({ deliverableId, ...patch }),

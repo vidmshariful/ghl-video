@@ -102,7 +102,7 @@ function OrderActions({ order, onChanged }: { order: OrderRow; onChanged: () => 
     setBusy(kind);
     setMsg(null);
     try {
-      const r = await fetch(`/api/admin/orders/${order.id}/${kind}`, {
+      const r = await fetch(`/api/admin/orders/${order.id}/${kind}/`, {
         method: "POST",
         headers: await authHeader(),
       });
@@ -460,7 +460,7 @@ function ManualOrderForm({ onDone }: { onDone: () => void }) {
     setBusy(true);
     setErr("");
     const custom = sku === "__custom";
-    const res = await fetch("/api/admin/orders/manual", {
+    const res = await fetch("/api/admin/orders/manual/", {
       method: "POST",
       headers: { ...(await authHeader()), "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -635,7 +635,7 @@ export function OrdersScreen({ onNavigate }: { onNavigate?: (v: View) => void } 
   async function archive(id: string, archived: boolean) {
     setBusyId(id);
     try {
-      await fetch(`/api/admin/orders/${id}/fulfillment`, {
+      await fetch(`/api/admin/orders/${id}/fulfillment/`, {
         method: "POST",
         headers: { ...(await authHeader()), "content-type": "application/json" },
         body: JSON.stringify({ archived }),

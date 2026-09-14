@@ -34,7 +34,7 @@ export function ShareVideo({
   useEffect(() => setMounted(true), []);
 
   const load = useCallback(async () => {
-    const j = (await authedFetch(`/api/portal/videos/${videoId}/share`).catch(() => null)) as {
+    const j = (await authedFetch(`/api/portal/videos/${videoId}/share/`).catch(() => null)) as {
       url?: string | null;
     } | null;
     setUrl(j?.url ?? null);
@@ -59,7 +59,7 @@ export function ShareVideo({
   async function create() {
     setBusy(true);
     setErr("");
-    const j = (await authedFetch(`/api/portal/videos/${videoId}/share`, { method: "POST" }).catch(
+    const j = (await authedFetch(`/api/portal/videos/${videoId}/share/`, { method: "POST" }).catch(
       () => null,
     )) as { url?: string | null; error?: string } | null;
     setBusy(false);
@@ -70,7 +70,7 @@ export function ShareVideo({
   async function stop() {
     setBusy(true);
     setErr("");
-    await authedFetch(`/api/portal/videos/${videoId}/share`, { method: "DELETE" }).catch(() => null);
+    await authedFetch(`/api/portal/videos/${videoId}/share/`, { method: "DELETE" }).catch(() => null);
     setBusy(false);
     setUrl(null);
     setCopied(false);

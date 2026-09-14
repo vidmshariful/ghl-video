@@ -61,7 +61,7 @@ export function EmailLogView() {
       const params = new URLSearchParams();
       if (filter !== "all") params.set("status", filter);
       if (q.trim()) params.set("q", q.trim());
-      const r = await fetch(`/api/admin/email-log?${params}`, { headers: await authHeader() });
+      const r = await fetch(`/api/admin/email-log/?${params}`, { headers: await authHeader() });
       const j = await r.json();
       if (!r.ok) return setErr(j.error ?? "Could not load the log.");
       setData(j as Payload);

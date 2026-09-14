@@ -171,7 +171,7 @@ export function CustomView({
   const [partnership, setPartnership] = useState<Partnership | null>(null);
 
   const load = useCallback(async () => {
-    const j = await authedFetch("/api/portal/projects").catch(() => null);
+    const j = await authedFetch("/api/portal/projects/").catch(() => null);
     setProjects((j?.projects as Project[] | undefined) ?? []);
     setCanSubmit(Boolean(j?.canSubmit));
     setPartnership((j?.partnership as Partnership | null | undefined) ?? null);
@@ -627,7 +627,7 @@ function ProjectPage({
             </Card>
           )}
 
-          <Attachments endpoint={`/api/portal/projects/${p.id}/files`} authedFetch={authedFetch} />
+          <Attachments endpoint={`/api/portal/projects/${p.id}/files/`} authedFetch={authedFetch} />
 
           <ClientThread projectId={p.id} authedFetch={authedFetch} system={p.activity} />
         </div>
@@ -674,7 +674,7 @@ function BriefEditor({
 
   async function save() {
     setBusy(true);
-    await authedFetch(`/api/portal/projects/${projectId}/brief`, {
+    await authedFetch(`/api/portal/projects/${projectId}/brief/`, {
       method: "PATCH",
       body: JSON.stringify({ brief: text }),
     }).catch(() => null);
@@ -787,7 +787,7 @@ function StageRow({
     setBusy(true);
     setErr("");
     try {
-      const j = await authedFetch(`/api/portal/projects/${p.id}/provide`, {
+      const j = await authedFetch(`/api/portal/projects/${p.id}/provide/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ stage: st.key, url: provideUrl.trim() }),
@@ -980,7 +980,7 @@ function SubmitProject({
     setBusy(true);
     setErr("");
     try {
-      const j = (await authedFetch("/api/portal/projects", {
+      const j = (await authedFetch("/api/portal/projects/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(f),
@@ -1123,7 +1123,7 @@ function QuoteFormats({
     setBusy(true);
     setErr("");
     try {
-      const j = await authedFetch("/api/portal/projects/request", {
+      const j = await authedFetch("/api/portal/projects/request/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ format: picked, brief }),
@@ -1223,7 +1223,7 @@ function ClientThread({
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
-    const j = await authedFetch(`/api/portal/projects/${projectId}/notes`).catch(() => null);
+    const j = await authedFetch(`/api/portal/projects/${projectId}/notes/`).catch(() => null);
     setNotes(((j?.notes as typeof notes) ?? []) as never);
   }, [projectId, authedFetch]);
 
@@ -1234,7 +1234,7 @@ function ClientThread({
   async function send() {
     if (!draft.trim()) return;
     setBusy(true);
-    await authedFetch(`/api/portal/projects/${projectId}/notes`, {
+    await authedFetch(`/api/portal/projects/${projectId}/notes/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ body: draft.trim() }),

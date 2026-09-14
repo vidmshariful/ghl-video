@@ -200,7 +200,7 @@ export function ProductsScreen() {
     setSyncing(true);
     setSyncMsg("");
     try {
-      const r = await fetch("/api/admin/sync-products", {
+      const r = await fetch("/api/admin/sync-products/", {
         method: "POST",
         headers: await authHeader(),
       });

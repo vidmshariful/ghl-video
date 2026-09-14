@@ -81,7 +81,7 @@ function Agreement({ p, onAccepted }: { p: Partnership; onAccepted: (agreedOn: s
             setBusy(true);
             setErr("");
             try {
-              const j = await chatPostJson<{ error?: string; agreedOn?: string; agreedBy?: string }>("/api/portal/agreement", { name });
+              const j = await chatPostJson<{ error?: string; agreedOn?: string; agreedBy?: string }>("/api/portal/agreement/", { name });
               if (j.error) setErr(String(j.error));
               else onAccepted(String(j.agreedOn), String(j.agreedBy));
             } finally {

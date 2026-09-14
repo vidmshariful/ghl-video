@@ -33,7 +33,7 @@ export function MessagesView({
   });
 
   const open = useCallback(async () => {
-    const j = await chatPostJson<{ id?: string }>("/api/portal/conversations/ensure", {});
+    const j = await chatPostJson<{ id?: string }>("/api/portal/conversations/ensure/", {});
     if (j.id) setOpenId(j.id);
   }, []);
 
@@ -44,7 +44,7 @@ export function MessagesView({
   /* the unread badge in the shell still needs feeding */
   useEffect(() => {
     const load = async () => {
-      const j = await chatGet<{ unreadCount?: number }>("/api/portal/conversations");
+      const j = await chatGet<{ unreadCount?: number }>("/api/portal/conversations/");
       onUnreadRef.current?.(j.unreadCount ?? 0);
     };
     void load();
@@ -67,7 +67,7 @@ export function MessagesView({
       <div ref={fillRef} className="min-h-0 flex-1" style={{ height: fillHeight ?? undefined }}>
         {openId ? (
           <ChatThread
-            base={`/api/portal/conversations/${openId}`}
+            base={`/api/portal/conversations/${openId}/`}
             selfRole="customer"
             emptyLine="Say hello. A real person answers, usually within the hour."
           />

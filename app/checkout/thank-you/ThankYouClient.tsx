@@ -61,7 +61,7 @@ export function ThankYouClient() {
 
     const poll = async () => {
       try {
-        const r = await fetch(`/api/orders/${orderId}`, { cache: "no-store" });
+        const r = await fetch(`/api/orders/${orderId}/`, { cache: "no-store" });
         if (!r.ok) {
           if (active) setStatus("error");
           return;

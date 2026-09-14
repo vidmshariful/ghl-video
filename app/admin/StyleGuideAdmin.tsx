@@ -57,7 +57,7 @@ export function StyleGuideAdmin({ email }: { email: string }) {
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch(`/api/admin/style-guide?email=${encodeURIComponent(email)}`, {
+      const r = await fetch(`/api/admin/style-guide/?email=${encodeURIComponent(email)}`, {
         headers: await authHeader(),
       });
       const j = await r.json();
@@ -86,7 +86,7 @@ export function StyleGuideAdmin({ email }: { email: string }) {
       body.append("note", what.trim());
       /* no Content-Type here on purpose: the browser sets the multipart
          boundary, and stamping json over it silently corrupts the upload */
-      const r = await fetch("/api/admin/style-guide", {
+      const r = await fetch("/api/admin/style-guide/", {
         method: "POST",
         headers: await authHeader(),
         body,
@@ -110,7 +110,7 @@ export function StyleGuideAdmin({ email }: { email: string }) {
     setBusy(true);
     setErr("");
     try {
-      const r = await fetch("/api/admin/style-guide", {
+      const r = await fetch("/api/admin/style-guide/", {
         method: "PATCH",
         headers: { "Content-Type": "application/json", ...(await authHeader()) },
         body: JSON.stringify(payload),

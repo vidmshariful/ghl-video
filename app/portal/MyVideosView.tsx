@@ -118,7 +118,7 @@ export function MyVideosView({
   const [playing, setPlaying] = useState<Owned | null>(null);
 
   const load = useCallback(async () => {
-    const j = (await authedFetch("/api/portal/videos").catch(() => null)) as {
+    const j = (await authedFetch("/api/portal/videos/").catch(() => null)) as {
       groups?: Group[];
     } | null;
     /* Premade only. Custom work and editing plans have screens of their own,

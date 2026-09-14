@@ -102,7 +102,7 @@ export function VideoReview({
   const [liveStatus, setLiveStatus] = useState(status);
 
   const load = useCallback(async () => {
-    const j = (await authedFetch(`/api/portal/videos/${videoId}/review`).catch(() => null)) as {
+    const j = (await authedFetch(`/api/portal/videos/${videoId}/review/`).catch(() => null)) as {
       comments?: Comment[];
       versions?: { version: number }[];
       status?: string;
@@ -125,7 +125,7 @@ export function VideoReview({
 
     setBusy(true);
     setErr("");
-    const j = (await authedFetch(`/api/portal/videos/${videoId}/review`, {
+    const j = (await authedFetch(`/api/portal/videos/${videoId}/review/`, {
       method: "POST",
       body: JSON.stringify(
         action === "comment"

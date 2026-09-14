@@ -81,7 +81,7 @@ export function CatalogScreen({
     setPublishing(true);
     setPublished("");
     try {
-      const r = await fetch("/api/admin/sync-catalog", {
+      const r = await fetch("/api/admin/sync-catalog/", {
         method: "POST",
         headers: await authHeader(),
       });

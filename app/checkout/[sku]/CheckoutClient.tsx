@@ -129,7 +129,7 @@ function useKnownBuyer(): KnownBuyer {
         const token = data.session?.access_token;
         const email = data.session?.user?.email;
         if (!token || !email || !live) return;
-        const r = await fetch("/api/portal/me", {
+        const r = await fetch("/api/portal/me/", {
           headers: { Authorization: `Bearer ${token}` },
           cache: "no-store",
         });
@@ -276,7 +276,7 @@ function OneTimeCheckout({
       setCouponBusy(true);
       setCouponErr(null);
       try {
-        const r = await fetch("/api/checkout/coupon", {
+        const r = await fetch("/api/checkout/coupon/", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ code: attempt, sku }),
@@ -308,7 +308,7 @@ function OneTimeCheckout({
     let active = true;
     (async () => {
       try {
-        const r = await fetch("/api/checkout/create-intent", {
+        const r = await fetch("/api/checkout/create-intent/", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ sku }),
@@ -551,7 +551,7 @@ function PayBox({
     setLoading(true);
     setError(null);
     try {
-      const r = await fetch("/api/checkout/finalize", {
+      const r = await fetch("/api/checkout/finalize/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -678,7 +678,7 @@ function SubscriptionCheckout({
       setCouponBusy(true);
       setCouponErr(null);
       try {
-        const r = await fetch("/api/checkout/coupon", {
+        const r = await fetch("/api/checkout/coupon/", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ code: attempt, sku }),
@@ -773,7 +773,7 @@ function SubscriptionCheckout({
     setDetailErr(null);
     setStarting(true);
     try {
-      const r = await fetch("/api/checkout/create-subscription", {
+      const r = await fetch("/api/checkout/create-subscription/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -71,7 +71,7 @@ export function SubscriptionDetail({ id, onBack }: { id: string; onBack: () => v
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch(`/api/admin/subscriptions/${id}/detail`, {
+      const r = await fetch(`/api/admin/subscriptions/${id}/detail/`, {
         headers: await authHeader(),
       });
       const j = await r.json();
@@ -110,7 +110,7 @@ export function SubscriptionDetail({ id, onBack }: { id: string; onBack: () => v
     setBusy(true);
     setErr("");
     try {
-      const r = await fetch(`/api/admin/subscriptions/${id}/price`, {
+      const r = await fetch(`/api/admin/subscriptions/${id}/price/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", ...(await authHeader()) },
         body: JSON.stringify({ amountCents: Math.round(dollars * 100), reason }),
@@ -133,7 +133,7 @@ export function SubscriptionDetail({ id, onBack }: { id: string; onBack: () => v
     setBusy(true);
     setErr("");
     try {
-      const r = await fetch(`/api/admin/subscriptions/${id}`, {
+      const r = await fetch(`/api/admin/subscriptions/${id}/`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(await authHeader()) },
         body: JSON.stringify({ action }),

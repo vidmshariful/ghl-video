@@ -86,7 +86,7 @@ export function CustomersScreen({
   const load = useCallback(async () => {
     setErr("");
     try {
-      const r = await fetch("/api/admin/customers", { headers: await authHeader() });
+      const r = await fetch("/api/admin/customers/", { headers: await authHeader() });
       const j = await r.json();
       if (!r.ok) return setErr(j.error ?? "Could not load the clients.");
       setRows(j.customers as Row[]);
@@ -126,7 +126,7 @@ export function CustomersScreen({
     setBusy(true);
     setErr("");
     try {
-      const r = await fetch("/api/admin/customers", {
+      const r = await fetch("/api/admin/customers/", {
         method: "POST",
         headers: { ...(await authHeader()), "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -139,7 +139,7 @@ export function CustomersScreen({
       /* the welcome is the door's email for an account the studio makes:
          nothing else ever tells this person their portal exists */
       if (j.id && draft.sendWelcome) {
-        await fetch(`/api/admin/customers/${j.id}/welcome-email`, {
+        await fetch(`/api/admin/customers/${j.id}/welcome-email/`, {
           method: "POST",
           headers: { ...(await authHeader()), "Content-Type": "application/json" },
           body: JSON.stringify({ email: draft.email.trim().toLowerCase() }),

@@ -138,7 +138,7 @@ export function ProductionScreen({
     setBusyId(row.id);
     setErr("");
     try {
-      const r = await fetch(`/api/admin/orders/${row.id}/fulfillment`, {
+      const r = await fetch(`/api/admin/orders/${row.id}/fulfillment/`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(await authHeader()) },
         body: JSON.stringify({ stage: next.key }),

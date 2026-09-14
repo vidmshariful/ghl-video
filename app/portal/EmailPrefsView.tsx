@@ -29,7 +29,7 @@ export function EmailPrefsView({
   const [err, setErr] = useState("");
 
   const load = useCallback(async () => {
-    const j = await authedFetch("/api/portal/email-prefs").catch(() => null);
+    const j = await authedFetch("/api/portal/email-prefs/").catch(() => null);
     if (j && !j.error) setData(j as unknown as Payload);
   }, [authedFetch]);
 
@@ -43,7 +43,7 @@ export function EmailPrefsView({
     setData({ ...data, prefs: next });
     setSaved(false);
     setErr("");
-    const j = (await authedFetch("/api/portal/email-prefs", {
+    const j = (await authedFetch("/api/portal/email-prefs/", {
       method: "PUT",
       body: JSON.stringify({ prefs: next }),
     }).catch(() => null)) as { error?: string } | null;

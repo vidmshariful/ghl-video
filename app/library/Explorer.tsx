@@ -126,7 +126,7 @@ export function LibraryExplorer({
   }, []);
 
   const react = useCallback((code: string, action: "love" | "unlove" | "play") => {
-    void fetch("/api/library/react", {
+    void fetch("/api/library/react/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ code, action }),
@@ -226,7 +226,7 @@ export function LibraryExplorer({
 
   const share = async (codes: string[]): Promise<string | null> => {
     try {
-      const r = await fetch("/api/library/lists", {
+      const r = await fetch("/api/library/lists/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ codes }),

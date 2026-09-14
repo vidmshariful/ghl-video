@@ -33,7 +33,7 @@ export function SharedListClient({ list }: { list: ResolvedList }) {
     setBusy(true);
     setErr("");
     try {
-      const r = await fetch(`/api/lists/${list.token}`, {
+      const r = await fetch(`/api/lists/${list.token}/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),

@@ -52,7 +52,7 @@ export function HealthScreen() {
   const load = useCallback(async () => {
     setErr("");
     try {
-      const r = await fetch("/api/admin/alarms", { headers: await authHeader() });
+      const r = await fetch("/api/admin/alarms/", { headers: await authHeader() });
       const j = await r.json();
       if (!r.ok) return setErr(j.error ?? "Could not load this.");
       setOpen(j.open as Alarm[]);
@@ -68,7 +68,7 @@ export function HealthScreen() {
 
   async function sendTest() {
     setBusy("test");
-    await fetch("/api/admin/alarms", {
+    await fetch("/api/admin/alarms/", {
       method: "POST",
       headers: await authHeader(),
     }).catch(() => null);
@@ -78,7 +78,7 @@ export function HealthScreen() {
 
   async function setResolvedState(a: Alarm, reopen: boolean) {
     setBusy(a.id);
-    await fetch("/api/admin/alarms", {
+    await fetch("/api/admin/alarms/", {
       method: "PATCH",
       headers: { "Content-Type": "application/json", ...(await authHeader()) },
       body: JSON.stringify({ id: a.id, reopen }),

@@ -47,7 +47,7 @@ export function QuoteModal({ seed, onClose, onSent }: { seed: QuoteSeed; onClose
     setErr("");
     try {
       const h = { ...(await authHeader()), "Content-Type": "application/json" };
-      const r = await fetch("/api/admin/quotes", {
+      const r = await fetch("/api/admin/quotes/", {
         method: "POST",
         headers: h,
         body: JSON.stringify({
@@ -70,7 +70,7 @@ export function QuoteModal({ seed, onClose, onSent }: { seed: QuoteSeed; onClose
         return;
       }
       if (send) {
-        const s = await fetch(`/api/admin/quotes/${j.quote.id}`, { method: "PATCH", headers: h, body: JSON.stringify({ action: "send" }) });
+        const s = await fetch(`/api/admin/quotes/${j.quote.id}/`, { method: "PATCH", headers: h, body: JSON.stringify({ action: "send" }) });
         const sj = (await s.json().catch(() => ({}))) as { error?: string };
         if (!s.ok) {
           setErr(sj.error ?? "Raised, but not sent.");

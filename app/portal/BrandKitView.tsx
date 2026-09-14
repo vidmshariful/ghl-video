@@ -54,7 +54,7 @@ export function BrandKitView({
   const [err, setErr] = useState("");
 
   useEffect(() => {
-    authedFetch("/api/portal/brand-kit")
+    authedFetch("/api/portal/brand-kit/")
       .then((j) => {
         const p = j as unknown as Payload;
         setData(p);
@@ -70,7 +70,7 @@ export function BrandKitView({
       const fd = new FormData();
       fd.set("kind", kind);
       fd.set("file", file);
-      const j = (await authedFetch("/api/portal/brand-kit/upload", {
+      const j = (await authedFetch("/api/portal/brand-kit/upload/", {
         method: "POST",
         body: fd,
       })) as unknown as Payload & { error?: string };
@@ -86,7 +86,7 @@ export function BrandKitView({
     setBusyFile(kind);
     setErr("");
     try {
-      const j = (await authedFetch("/api/portal/brand-kit/upload", {
+      const j = (await authedFetch("/api/portal/brand-kit/upload/", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ kind, path }),
@@ -104,7 +104,7 @@ export function BrandKitView({
     setErr("");
     setSaved(false);
     try {
-      const j = (await authedFetch("/api/portal/brand-kit", {
+      const j = (await authedFetch("/api/portal/brand-kit/", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),

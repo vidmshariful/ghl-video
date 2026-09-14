@@ -67,7 +67,7 @@ export function StyleGuideDoc({
   const [open, setOpen] = useState(false);
 
   const load = useCallback(async () => {
-    const j = (await authedFetch("/api/portal/style-guide-doc").catch(() => null)) as {
+    const j = (await authedFetch("/api/portal/style-guide-doc/").catch(() => null)) as {
       docs?: Doc[];
       notes?: Record<string, Note[]>;
     } | null;
@@ -229,7 +229,7 @@ function FullScreen({
     setBusy(true);
     setErr("");
     try {
-      const j = (await authedFetch("/api/portal/style-guide-doc", {
+      const j = (await authedFetch("/api/portal/style-guide-doc/", {
         method: "POST",
         body: JSON.stringify({
           docId: doc.id,

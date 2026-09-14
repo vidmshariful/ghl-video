@@ -124,7 +124,7 @@ export function CommsScreen() {
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch("/api/admin/comms", { headers: await authHeader() });
+      const r = await fetch("/api/admin/comms/", { headers: await authHeader() });
       const j = await r.json();
       if (!r.ok) return setErr(j.error ?? "Could not load.");
       setData(j as Data);
@@ -501,7 +501,7 @@ function EmailEditor({
     setErr("");
     setMsg("");
     try {
-      const r = await fetch("/api/admin/email/test", {
+      const r = await fetch("/api/admin/email/test/", {
         method: "POST",
         headers: { ...(await authHeader()), "content-type": "application/json" },
         body: JSON.stringify({ subject, body }),

@@ -22,7 +22,7 @@ export function StudioRequestForm() {
     if (topic.trim().length < 4 || state === "sending") return;
     setState("sending");
     try {
-      const res = await fetch("/api/studio/request", {
+      const res = await fetch("/api/studio/request/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ topic: topic.trim() }),

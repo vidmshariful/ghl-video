@@ -56,7 +56,7 @@ export function TeamScreen({
   const load = useCallback(async () => {
     setErr("");
     try {
-      const r = await fetch("/api/admin/team", { headers: await authHeader() });
+      const r = await fetch("/api/admin/team/", { headers: await authHeader() });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error ?? "Could not load the team.");
       setTeam(j.team ?? []);
@@ -76,7 +76,7 @@ export function TeamScreen({
     setErr("");
     setNotice("");
     try {
-      const r = await fetch("/api/admin/team", {
+      const r = await fetch("/api/admin/team/", {
         method: "DELETE",
         headers: { "Content-Type": "application/json", ...(await authHeader()) },
         body: JSON.stringify({ email: row.email }),
@@ -229,7 +229,7 @@ function TeamForm({
         role,
         features: role === "admin" ? null : [...features],
       };
-      const r = await fetch("/api/admin/team", {
+      const r = await fetch("/api/admin/team/", {
         method: isEdit ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json", ...(await authHeader()) },
         body: JSON.stringify(payload),

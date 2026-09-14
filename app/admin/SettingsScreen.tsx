@@ -149,7 +149,7 @@ function ProfileTab({ me, onMeChanged }: { me: Me; onMeChanged: () => void }) {
     setMsg("");
     setErr("");
     try {
-      const r = await fetch("/api/admin/me", {
+      const r = await fetch("/api/admin/me/", {
         method: "PATCH",
         headers: { "Content-Type": "application/json", ...(await authHeader()) },
         body: JSON.stringify({ name }),
@@ -173,7 +173,7 @@ function ProfileTab({ me, onMeChanged }: { me: Me; onMeChanged: () => void }) {
           name={me.name}
           email={me.email}
           avatarUrl={me.avatarUrl}
-          endpoint="/api/admin/me/avatar"
+          endpoint="/api/admin/me/avatar/"
           onChanged={() => onMeChanged()}
         />
         <form onSubmit={save} className="mt-6 grid max-w-md gap-4 border-t border-hair pt-6">
@@ -263,7 +263,7 @@ function IntegrationsTab() {
     let active = true;
     (async () => {
       try {
-        const r = await fetch("/api/admin/integrations", { headers: await authHeader() });
+        const r = await fetch("/api/admin/integrations/", { headers: await authHeader() });
         const j = await r.json();
         if (!active) return;
         if (!r.ok) setErr(j.error ?? "Could not load integration status.");
@@ -281,7 +281,7 @@ function IntegrationsTab() {
     setTestState("sending");
     setTestErr("");
     try {
-      const r = await fetch("/api/admin/integrations", {
+      const r = await fetch("/api/admin/integrations/", {
         method: "POST",
         headers: await authHeader(),
       });
@@ -411,7 +411,7 @@ function GoogleCard() {
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch("/api/admin/integrations/google", { headers: await authHeader() });
+      const r = await fetch("/api/admin/integrations/google/", { headers: await authHeader() });
       const j = await r.json();
       if (r.ok) {
         setConn(j.connection);
@@ -433,7 +433,7 @@ function GoogleCard() {
     setErr("");
     setNotice("");
     try {
-      const r = await fetch("/api/admin/integrations/google", {
+      const r = await fetch("/api/admin/integrations/google/", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(await authHeader()) },
         body: JSON.stringify({ key }),
@@ -456,7 +456,7 @@ function GoogleCard() {
     setBusy(true);
     setErr("");
     try {
-      const r = await fetch("/api/admin/integrations/google", {
+      const r = await fetch("/api/admin/integrations/google/", {
         method: "PATCH",
         headers: { "Content-Type": "application/json", ...(await authHeader()) },
         body: JSON.stringify(patch),
@@ -475,7 +475,7 @@ function GoogleCard() {
     if (!window.confirm("Disconnect Google? The search numbers stop updating until you connect again.")) return;
     setBusy(true);
     try {
-      await fetch("/api/admin/integrations/google", { method: "DELETE", headers: await authHeader() });
+      await fetch("/api/admin/integrations/google/", { method: "DELETE", headers: await authHeader() });
       setConn({ connected: false });
       setProperties([]);
     } finally {

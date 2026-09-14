@@ -167,7 +167,7 @@ export function TeamCard({
   blurb = "Give a VA or teammate their own sign-in to work in this portal. You choose what they can use; they get every update and notification for the areas you grant.",
   owner = null,
 }: {
-  /* e.g. "/api/portal/team" */
+  /* e.g. "/api/portal/team/" */
   endpoint: string;
   accountType: "customer" | "partner";
   /* the studio renders this same card on a client's admin record, where it

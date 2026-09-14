@@ -378,7 +378,7 @@ export function AdminClient({
   // Settings re-runs this after a profile change so the top bar updates.
   const loadMe = async () => {
     try {
-      const r = await fetch("/api/admin/me", { headers: await authHeader() });
+      const r = await fetch("/api/admin/me/", { headers: await authHeader() });
       const j = await r.json();
       if (r.ok) setMe(j);
     } catch {
@@ -406,7 +406,7 @@ export function AdminClient({
     if (!isAdmin) return;
     let active = true;
     const tick = async () => {
-      const j = await chatGet<{ unreadCount?: number }>("/api/admin/conversations");
+      const j = await chatGet<{ unreadCount?: number }>("/api/admin/conversations/");
       if (active) setMsgUnread(j.unreadCount ?? 0);
     };
     tick();
@@ -425,7 +425,7 @@ export function AdminClient({
     let active = true;
     const tick = async () => {
       try {
-        const r = await fetch("/api/admin/alarms", { headers: await authHeader() });
+        const r = await fetch("/api/admin/alarms/", { headers: await authHeader() });
         if (!r.ok) return;
         const j = (await r.json()) as { criticalCount?: number };
         if (active) setAlarmCount(j.criticalCount ?? 0);
@@ -560,7 +560,7 @@ export function AdminClient({
               <LifeBuoy size={16} />
             </TopIconButton>
             <NotificationsBell
-              endpoint="/api/admin/notifications"
+              endpoint="/api/admin/notifications/"
               fetcher={adminFetch}
               onOpenHref={(href) => {
                 /* "custom/<id>", "customers/<id>", "health"; older rows carry a

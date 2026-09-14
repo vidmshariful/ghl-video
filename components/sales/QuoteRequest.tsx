@@ -29,7 +29,7 @@ export function QuoteRequest({ formats }: { formats: readonly string[] }) {
     setStatus("sending");
     setError(null);
     try {
-      const r = await fetch("/api/quote", {
+      const r = await fetch("/api/quote/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

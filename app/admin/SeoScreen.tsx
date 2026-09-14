@@ -152,7 +152,7 @@ function HealthTab() {
 
   const load = useCallback(async () => {
     try {
-      const j = await api<{ latest: AuditRow | null }>("/api/admin/seo/audit");
+      const j = await api<{ latest: AuditRow | null }>("/api/admin/seo/audit/");
       setLatest(j.latest);
     } catch (e) {
       setErr((e as Error).message);
@@ -172,7 +172,7 @@ function HealthTab() {
     setRunning(true);
     setErr("");
     try {
-      const plan = await api<{ paths: string[] }>("/api/admin/seo/audit");
+      const plan = await api<{ paths: string[] }>("/api/admin/seo/audit/");
       const paths = plan.paths;
       const BATCH = 6;
       const pages: PageFacts[] = [];
@@ -180,7 +180,7 @@ function HealthTab() {
       setProgress({ done: 0, total: paths.length, step: "Reading pages" });
       for (let i = 0; i < paths.length; i += BATCH) {
         const slice = paths.slice(i, i + BATCH);
-        const j = await api<{ pages: PageFacts[] }>("/api/admin/seo/audit", {
+        const j = await api<{ pages: PageFacts[] }>("/api/admin/seo/audit/", {
           method: "POST",
           body: JSON.stringify({ mode: "crawl", paths: slice }),
         });
@@ -202,7 +202,7 @@ function HealthTab() {
       setProgress({ done: 0, total: targets.length, step: "Checking links" });
       for (let i = 0; i < targets.length; i += BATCH) {
         const slice = targets.slice(i, i + BATCH);
-        const j = await api<{ links: LinkStatus[] }>("/api/admin/seo/audit", {
+        const j = await api<{ links: LinkStatus[] }>("/api/admin/seo/audit/", {
           method: "POST",
           body: JSON.stringify({ mode: "links", paths: slice }),
         });
@@ -211,7 +211,7 @@ function HealthTab() {
       }
 
       setProgress({ done: 1, total: 1, step: "Writing the report" });
-      await api("/api/admin/seo/audit", {
+      await api("/api/admin/seo/audit/", {
         method: "POST",
         body: JSON.stringify({ mode: "finish", pages, links }),
       });
@@ -353,8 +353,8 @@ function PagesTab() {
   const load = useCallback(async () => {
     try {
       const [p, a] = await Promise.all([
-        api<{ pages: SeoPageRow[] }>("/api/admin/seo/pages"),
-        api<{ latest: AuditRow | null }>("/api/admin/seo/audit"),
+        api<{ pages: SeoPageRow[] }>("/api/admin/seo/pages/"),
+        api<{ latest: AuditRow | null }>("/api/admin/seo/audit/"),
       ]);
       const map: Record<string, SeoPageRow> = {};
       for (const r of p.pages) map[r.path] = r;
@@ -473,7 +473,7 @@ function PageEditor({
     setBusy(true);
     setErr("");
     try {
-      await api("/api/admin/seo/pages", {
+      await api("/api/admin/seo/pages/", {
         method: "PUT",
         body: JSON.stringify({
           path,
@@ -495,7 +495,7 @@ function PageEditor({
     setBusy(true);
     setErr("");
     try {
-      await api("/api/admin/seo/pages", { method: "DELETE", body: JSON.stringify({ path }) });
+      await api("/api/admin/seo/pages/", { method: "DELETE", body: JSON.stringify({ path }) });
       onSaved();
     } catch (e) {
       setErr((e as Error).message);
@@ -604,7 +604,7 @@ function RedirectsTab() {
 
   const load = useCallback(async () => {
     try {
-      const j = await api<{ redirects: RedirectRow[] }>("/api/admin/seo/redirects");
+      const j = await api<{ redirects: RedirectRow[] }>("/api/admin/seo/redirects/");
       setRows(j.redirects);
     } catch (e) {
       setErr((e as Error).message);
@@ -622,7 +622,7 @@ function RedirectsTab() {
     setErr("");
     if (!confirm) setWarning("");
     try {
-      const r = await fetch("/api/admin/seo/redirects", {
+      const r = await fetch("/api/admin/seo/redirects/", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(await authHeader()) },
         body: JSON.stringify({ source, destination, permanent, note, confirm }),
@@ -648,7 +648,7 @@ function RedirectsTab() {
 
   async function toggle(row: RedirectRow) {
     try {
-      await api("/api/admin/seo/redirects", {
+      await api("/api/admin/seo/redirects/", {
         method: "PATCH",
         body: JSON.stringify({ id: row.id, active: !row.active }),
       });
@@ -661,7 +661,7 @@ function RedirectsTab() {
   async function remove(row: RedirectRow) {
     if (!window.confirm(`Delete the rule for ${row.source}? That URL will start returning "not found" again.`)) return;
     try {
-      await api("/api/admin/seo/redirects", {
+      await api("/api/admin/seo/redirects/", {
         method: "DELETE",
         body: JSON.stringify({ id: row.id }),
       });
@@ -880,7 +880,7 @@ function SearchTab() {
     setData(null);
     setErr("");
     try {
-      setData(await api<SearchPayload>(`/api/admin/seo/search?days=${d}`));
+      setData(await api<SearchPayload>(`/api/admin/seo/search/?days=${d}`));
     } catch (e) {
       setErr((e as Error).message);
     }
@@ -1067,7 +1067,7 @@ function TrafficTab() {
     setData(null);
     setErr("");
     try {
-      setData(await api<TrafficPayload>(`/api/admin/seo/traffic?days=${d}`));
+      setData(await api<TrafficPayload>(`/api/admin/seo/traffic/?days=${d}`));
     } catch (e) {
       setErr((e as Error).message);
     }

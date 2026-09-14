@@ -87,7 +87,7 @@ export function BlogScreen() {
     const { error } = await supabase.from("blog_posts").delete().eq("id", p.id);
     if (error) setErr(error.message);
     else {
-      await fetch("/api/admin/blog/revalidate", {
+      await fetch("/api/admin/blog/revalidate/", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(await authHeader()) },
         body: JSON.stringify({ slug: p.slug }),
@@ -360,7 +360,7 @@ function PostEditor({
   async function uploadImage(file: File): Promise<string | null> {
     const fd = new FormData();
     fd.append("file", file);
-    const r = await fetch("/api/admin/blog/image", {
+    const r = await fetch("/api/admin/blog/image/", {
       method: "POST",
       headers: await authHeader(),
       body: fd,
@@ -447,7 +447,7 @@ function PostEditor({
     setId(res.data.id);
     setStatus(nextStatus);
     setPublishedAt(nextPublishedAt);
-    await fetch("/api/admin/blog/revalidate", {
+    await fetch("/api/admin/blog/revalidate/", {
       method: "POST",
       headers: { "Content-Type": "application/json", ...(await authHeader()) },
       body: JSON.stringify({ slug: slugify(slug) }),

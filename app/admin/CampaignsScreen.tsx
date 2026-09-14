@@ -102,7 +102,7 @@ export function CampaignsScreen() {
   const load = useCallback(async () => {
     setErr("");
     try {
-      const r = await fetch("/api/admin/campaigns", { headers: await authHeader() });
+      const r = await fetch("/api/admin/campaigns/", { headers: await authHeader() });
       const j = await r.json();
       if (!r.ok) return setErr(j.error ?? "Could not load the offers.");
       setRows(j.campaigns as Campaign[]);
@@ -120,7 +120,7 @@ export function CampaignsScreen() {
     setBusy(true);
     setErr("");
     try {
-      const r = await fetch("/api/admin/campaigns", {
+      const r = await fetch("/api/admin/campaigns/", {
         method: draft.id ? "PATCH" : "POST",
         headers: { ...(await authHeader()), "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -143,7 +143,7 @@ export function CampaignsScreen() {
   }
 
   async function toggle(c: Campaign) {
-    await fetch("/api/admin/campaigns", {
+    await fetch("/api/admin/campaigns/", {
       method: "PATCH",
       headers: { ...(await authHeader()), "Content-Type": "application/json" },
       body: JSON.stringify({ id: c.id, active: !c.active }),
@@ -161,7 +161,7 @@ export function CampaignsScreen() {
     setMailNote(null);
     setErr("");
     try {
-      const preview = await fetch("/api/admin/campaigns/send", {
+      const preview = await fetch("/api/admin/campaigns/send/", {
         method: "POST",
         headers: { ...(await authHeader()), "Content-Type": "application/json" },
         body: JSON.stringify({ id: c.id, dryRun: true }),
@@ -179,7 +179,7 @@ export function CampaignsScreen() {
           (preview.alreadySent ? ` ${preview.alreadySent} already got it and are skipped.` : ""),
       );
       if (!go) return;
-      const res = await fetch("/api/admin/campaigns/send", {
+      const res = await fetch("/api/admin/campaigns/send/", {
         method: "POST",
         headers: { ...(await authHeader()), "Content-Type": "application/json" },
         body: JSON.stringify({ id: c.id }),
@@ -198,7 +198,7 @@ export function CampaignsScreen() {
 
   async function remove(c: Campaign) {
     if (!confirm(`Delete "${c.title}"? This cannot be undone.`)) return;
-    await fetch(`/api/admin/campaigns?id=${encodeURIComponent(c.id)}`, {
+    await fetch(`/api/admin/campaigns/?id=${encodeURIComponent(c.id)}`, {
       method: "DELETE",
       headers: await authHeader(),
     });

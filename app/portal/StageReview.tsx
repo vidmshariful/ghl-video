@@ -82,7 +82,7 @@ export function StageReview({
 
   const load = useCallback(async () => {
     const j = (await authedFetch(
-      `/api/portal/projects/${projectId}/stage-review?stage=${stageKey}`,
+      `/api/portal/projects/${projectId}/stage-review/?stage=${stageKey}`,
     ).catch(() => null)) as Data | null;
     if (j && !("error" in j)) setD(j);
   }, [authedFetch, projectId, stageKey]);
@@ -132,7 +132,7 @@ export function StageReview({
     if (action === "comment" && !body.trim()) return;
     setBusy(true);
     setErr("");
-    const j = (await authedFetch(`/api/portal/projects/${projectId}/stage-review`, {
+    const j = (await authedFetch(`/api/portal/projects/${projectId}/stage-review/`, {
       method: "POST",
       body: JSON.stringify({
         stage: stageKey,
