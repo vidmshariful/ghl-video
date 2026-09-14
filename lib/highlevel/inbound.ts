@@ -13,6 +13,7 @@
  * forget what checkout collected.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { hlFetch } from "./client";
 
 type Row = Record<string, unknown>;
 
@@ -52,10 +53,31 @@ export function inboundContact(payload: Row): InboundContact {
 export type InboundResult = { outcome: string; customerId: string | null; changed: string[] };
 
 /**
- * Apply one inbound event: find the customer (by the link first, then by
- * email) and fill what changed. Returns what it did, for hl_inbound.
+ * Which side spoke last. A polled copy of a contact carries HighLevel's
+ * dateUpdated; our row carries updated_at. When ours is the newer one, the
+ * difference is a change of ours still on its way over, not an edit of
+ * theirs, and applying it would undo what a person just typed here. Pure.
  */
-export async function applyInbound(db: SupabaseClient, payload: Row, locationId: string | null): Promise<InboundResult> {
+export function theirsIsNewer(theirs: unknown, ours: unknown): boolean {
+  const t = typeof theirs === "string" ? Date.parse(theirs) : NaN;
+  const o = typeof ours === "string" ? Date.parse(ours) : NaN;
+  if (!Number.isFinite(t)) return true;
+  if (!Number.isFinite(o)) return true;
+  return t >= o;
+}
+
+/**
+ * Apply one inbound event: find the customer (by the link first, then by
+ * email) and fill what changed. Returns what it did, for hl_inbound. A
+ * webhook event is HighLevel speaking and always applies; a polled copy
+ * says when it changed, and only applies when that is after our last edit.
+ */
+export async function applyInbound(
+  db: SupabaseClient,
+  payload: Row,
+  locationId: string | null,
+  opts: { changedAt?: unknown } = {},
+): Promise<InboundResult> {
   const c = inboundContact(payload);
   let customer: Row | null = null;
 
@@ -77,6 +99,8 @@ export async function applyInbound(db: SupabaseClient, payload: Row, locationId:
     customer = data ?? null;
   }
   if (!customer) return { outcome: "no matching customer", customerId: null, changed: [] };
+  if (opts.changedAt !== undefined && !theirsIsNewer(opts.changedAt, customer.updated_at))
+    return { outcome: "our copy is newer; nothing applied", customerId: String(customer.id), changed: [] };
 
   const patch: Row = {};
   if (c.name && c.name !== customer.name) patch.name = c.name;
@@ -89,4 +113,66 @@ export async function applyInbound(db: SupabaseClient, payload: Row, locationId:
   const { error } = await db.from("customers").update(patch).eq("id", String(customer.id));
   if (error) return { outcome: `update failed: ${error.message}`, customerId: String(customer.id), changed: [] };
   return { outcome: `updated ${changed.join(", ")}`, customerId: String(customer.id), changed };
+}
+
+/**
+ * The same inbound, without a workflow: ask HighLevel which contacts
+ * changed in the last little while and apply each one. The minute cron
+ * asks with a five minute window, the nightly check with a day's, so a
+ * skipped minute loses nothing. Our own writes bump a contact too; they
+ * come back as "nothing to change" and cost one read. Only a change that
+ * landed is recorded in hl_inbound, so the table stays a log of events and
+ * not of polls. The webhook endpoint remains the faster door when a
+ * workflow points at it.
+ */
+export async function pullContactChanges(
+  db: SupabaseClient,
+  locationId: string,
+  windowMs: number,
+): Promise<{ seen: number; changed: number; outcomes: string[] }> {
+  const since = new Date(Date.now() - windowMs).toISOString();
+  const j = await hlFetch("/contacts/search", {
+    method: "POST",
+    body: JSON.stringify({
+      locationId,
+      pageLimit: 100,
+      filters: [{ field: "dateUpdated", operator: "range", value: { gte: since } }],
+      sort: [{ field: "dateUpdated", direction: "desc" }],
+    }),
+  });
+  const out = { seen: 0, changed: 0, outcomes: [] as string[] };
+  for (const listed of (j.contacts as Row[]) ?? []) {
+    out.seen += 1;
+    /* the search only says which contacts moved: its copy lags and can still
+       show one deleted a moment ago, so the truth is read by id */
+    let c: Row;
+    try {
+      const fresh = await hlFetch(`/contacts/${String(listed.id)}`, { method: "GET" });
+      c = (fresh.contact as Row) ?? fresh;
+    } catch {
+      continue;
+    }
+    const payload: Row = {
+      type: "ContactChanged",
+      contact_id: c.id,
+      email: c.email,
+      first_name: c.firstName,
+      last_name: c.lastName,
+      phone: c.phone,
+      company_name: c.companyName,
+      tags: c.tags,
+      dateUpdated: c.dateUpdated,
+    };
+    const r = await applyInbound(db, payload, locationId, { changedAt: c.dateUpdated });
+    if (!r.changed.length) continue;
+    out.changed += 1;
+    out.outcomes.push(`${String(c.email ?? c.id)}: ${r.outcome}`);
+    await db.from("hl_inbound").insert({
+      event: "contact.changed (polled)",
+      payload,
+      processed_at: new Date().toISOString(),
+      outcome: r.outcome,
+    });
+  }
+  return out;
 }

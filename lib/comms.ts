@@ -107,6 +107,13 @@ export const COMM_ACTIONS: CommAction[] = [
 
   /* ---- brief ---- */
   {
+    key: "brief_reminder", group: "brief", label: "Nudge: the brief has not arrived",
+    when: "The morning sweep finds an order paid three days ago with no brief. At most twice, three days apart, then it becomes a phone call.",
+    mode: "scheduled",
+    emails: [{ key: "intake_reminder", to: "client" }],
+    notifications: [],
+  },
+  {
     key: "brief_received", group: "brief", label: "Brief received",
     when: "The client submits their branding brief. Due dates are set at this moment, so the email can promise one.",
     mode: "automatic",
@@ -121,6 +128,13 @@ export const COMM_ACTIONS: CommAction[] = [
     mode: "automatic",
     emails: [{ key: "video_ready", to: "client" }],
     notifications: [{ kind: "video_ready", audience: "customer", to: "client" }],
+  },
+  {
+    key: "review_reminder", group: "premade", label: "Nudge: a video is waiting for their review",
+    when: "The morning sweep finds a video that has sat in Ready for three days. At most twice, three days apart. The same rule covers extra formats and editing plan work.",
+    mode: "scheduled",
+    emails: [{ key: "approval_reminder", to: "client" }],
+    notifications: [],
   },
   {
     key: "video_feedback", group: "premade", label: "The client leaves a note",
@@ -220,6 +234,13 @@ export const COMM_ACTIONS: CommAction[] = [
     notifications: [],
   },
 
+  {
+    key: "retainer_check_in", group: "custom", label: "The retainer's quarterly check-in",
+    when: "The morning sweep reaches the check-in date on a retainer partnership. One email, then the date moves a quarter on.",
+    mode: "scheduled",
+    emails: [{ key: "retainer_check_in", to: "client" }],
+    notifications: [],
+  },
   {
     key: "project_submitted", group: "custom", label: "A retainer client submits a project",
     when: "A client with direct submission turned on briefs a new custom video from their portal, with no quote in between.",

@@ -249,3 +249,20 @@ test("an inbound payload is read whatever casing the workflow used", () => {
   assert.equal(empty.contactId, "hl3");
   assert.equal(empty.name, null);
 });
+
+test("a due date behind us becomes today, because HighLevel refuses the past", async () => {
+  const { dueDay } = await import("../../lib/highlevel/money");
+  assert.equal(dueDay("2026-09-01", "2026-09-14"), "2026-09-14");
+  assert.equal(dueDay("2026-10-01", "2026-09-14"), "2026-10-01");
+  assert.equal(dueDay("2026-09-14", "2026-09-14"), "2026-09-14");
+  assert.equal(dueDay(null, "2026-09-14"), "2026-09-14");
+});
+
+test("a polled contact only applies when HighLevel spoke after we did", async () => {
+  const { theirsIsNewer } = await import("../../lib/highlevel/inbound");
+  assert.equal(theirsIsNewer("2026-09-14T12:00:00Z", "2026-09-14T11:59:00Z"), true);
+  assert.equal(theirsIsNewer("2026-09-14T11:58:00Z", "2026-09-14T11:59:00Z"), false);
+  assert.equal(theirsIsNewer("2026-09-14T11:59:00Z", "2026-09-14T11:59:00Z"), true, "a tie goes to HighLevel, the system of record");
+  assert.equal(theirsIsNewer(undefined, "2026-09-14T11:59:00Z"), true, "no timestamp from them: apply, as a webhook would");
+  assert.equal(theirsIsNewer("2026-09-14T11:58:00Z", null), true, "no timestamp of ours: nothing to protect");
+});

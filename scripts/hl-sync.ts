@@ -19,6 +19,7 @@ import { loadHlConfig } from "../lib/highlevel/config";
 import { pollOpenInvoices, pullInvoices, syncProductsToHighLevel } from "../lib/highlevel/money";
 import { mirrorMissing, pullRecentConversations } from "../lib/highlevel/conversations";
 import { refreshEmailStatuses } from "../lib/highlevel/email-log";
+import { pullContactChanges } from "../lib/highlevel/inbound";
 
 for (const line of readFileSync(process.env.GHLV_ENV === "prod" ? ".env.prod.local" : ".env.local", "utf8").split("\n")) {
   const m = line.match(/^([A-Z0-9_]+)=(.*)$/);
@@ -63,6 +64,14 @@ async function money(): Promise<void> {
   if (mail.checked) console.log(`  email: ${mail.checked} checked, ${mail.failed} failed, ${mail.delivered} delivered`);
 }
 
+/** HighLevel's edits first, so the drain never sends our copy back over them. */
+async function edits(): Promise<void> {
+  const cfg = await loadHlConfig(db, process.env.HIGHLEVEL_LOCATION_ID as string);
+  if (!cfg) return;
+  const e = await pullContactChanges(db, cfg.locationId, 5 * 60_000);
+  if (e.changed) console.log(`  contacts: ${e.changed} edited in HighLevel: ${e.outcomes.join(" | ")}`);
+}
+
 async function drainAll(): Promise<number> {
   let total = 0;
   for (;;) {
@@ -96,6 +105,7 @@ async function drainAll(): Promise<number> {
       console.log(`  products: ${r.seen} seen, ${r.made} made, ${r.repriced} repriced, ${r.unchanged} unchanged${r.errors.length ? `; errors: ${r.errors.join(" | ")}` : ""}`);
     }
   }
+  await edits();
   const n = await drainAll();
   await money();
   console.log(n === 0 ? "  nothing waiting" : `  ${n} processed`);
@@ -103,6 +113,7 @@ async function drainAll(): Promise<number> {
   console.log("\n  watching: every 15 seconds, Ctrl+C to stop\n");
   for (;;) {
     await new Promise((r) => setTimeout(r, 15000));
+    await edits();
     const m = await drainAll();
     await money();
     if (m) console.log(`  ${new Date().toLocaleTimeString()} ${m} processed`);

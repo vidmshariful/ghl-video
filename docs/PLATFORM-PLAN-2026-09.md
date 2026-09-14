@@ -271,17 +271,22 @@ teammate is not a CRM contact. The portal's Messages and the client's
 HighLevel thread are one conversation: portal messages go over as live
 chat, the studio's words from inside HighLevel come back marked with their
 channel. The contact carries "GHLV waiting on" (brief, review, approval)
-with the tag ghlv-waiting-on-client, and "GHLV check-in", so the three
-workflows can be built in the sub-account without our cron:
+with the tag ghlv-waiting-on-client, and "GHLV check-in", for the team to
+see and filter in the CRM.
 
-- Chase sweep: trigger Contact Changed, filter GHLV waiting on is "brief";
-  wait 3 days; if still "brief", send the brief reminder email; repeat once.
-- Review nudge: the same on "review", 2 days, the review nudge email.
-- Quarterly check-in: trigger on the GHLV check-in date field; send the
-  check-in email and book the call.
-
-Our own chase cron keeps running, through HighLevel email, until those
-workflows exist; then it is switched off. SMS waits for A2P.
+Decided 14 September 2026: the follow-ups are the platform's own, not
+HighLevel workflows. The morning sweep (/api/cron/chase) sends the brief
+reminder (an order paid three days without its brief), the review nudge
+(a video of any line three days in Ready) and the retainer's quarterly
+check-in (on the date the terms name, then the date moves a quarter on),
+each at most twice, three days apart, with the email log as the ledger.
+Why: HighLevel cannot create workflows through the API, so they could
+never be provisioned or walked through; our sweep is versioned, tested and
+runs the same on staging. The emails still leave through HighLevel's
+thread. Inbound contact edits are polled from HighLevel every minute (a
+five minute window; a day's window nightly), so no workflow is needed for
+those either; the webhook endpoint stays as the faster door if one is ever
+pointed at it. SMS waits for A2P.
 
 1. **The boundary.** Work stays in Supabase, the customer moves to HighLevel,
    with a live mirror of the work in HighLevel custom objects. Confirm.

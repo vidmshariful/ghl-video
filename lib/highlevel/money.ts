@@ -40,6 +40,11 @@ const q = (cfg: HlConfig) => `altId=${encodeURIComponent(cfg.locationId)}&altTyp
 export const dollars = (cents: number) => Math.round(cents) / 100;
 export const cents = (dollarsIn: unknown) => Math.round(Number(dollarsIn || 0) * 100);
 const day = (v: unknown) => (typeof v === "string" && v.length >= 10 ? v.slice(0, 10) : new Date().toISOString().slice(0, 10));
+/** HighLevel refuses a due date that has passed: a bill raised late is due today. */
+export const dueDay = (v: unknown, today = new Date().toISOString().slice(0, 10)) => {
+  const d = day(v);
+  return d < today ? today : d;
+};
 const text = (v: unknown, max: number) => (v === null || v === undefined ? "" : String(v).slice(0, max));
 
 /** Test-mode billing everywhere but production. */
@@ -92,7 +97,7 @@ export function invoicePayload(inv: Row, contact: Contact, cfg: HlConfig) {
     items,
     discount,
     issueDate: day(inv.created_at),
-    dueDate: day(inv.due_date ?? inv.created_at),
+    dueDate: dueDay(inv.due_date ?? inv.created_at),
     sentTo: { email: [contact.email] },
     liveMode: liveMode(),
     ...(typeof inv.notes === "string" && inv.notes.trim() ? { termsNotes: inv.notes.trim().slice(0, 4000) } : {}),
@@ -507,7 +512,8 @@ export async function syncOrderSale(
       items: saleItems(order, name),
       discount: { type: "percentage", value: 0 },
       issueDate: paidOn,
-      dueDate: paidOn,
+      /* the money is already in; HighLevel still refuses a due date behind us */
+      dueDate: dueDay(paidOn),
       sentTo: { email: [contact.email] },
       liveMode: liveMode(),
     }),

@@ -6,6 +6,7 @@ import { loadHlConfig } from "@/lib/highlevel/config";
 import { locationId } from "@/lib/highlevel/client";
 import { pullInvoices, syncProductsToHighLevel } from "@/lib/highlevel/money";
 import { raise } from "@/lib/alarm";
+import { pullContactChanges } from "@/lib/highlevel/inbound";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,6 +34,8 @@ export async function GET(req: Request) {
   const cfg = drift.provisioned ? await loadHlConfig(db, locationId()) : null;
   const products = cfg ? await syncProductsToHighLevel(db, cfg) : null;
   const pulled = cfg ? await pullInvoices(db, cfg, { pages: 3 }) : null;
+  /* a day's worth of contact edits, in case the minute cron missed any */
+  const contacts = cfg ? await pullContactChanges(db, cfg.locationId, 25 * 3600_000) : null;
   if (products?.errors.length) {
     await raise(db, {
       kind: "highlevel.products",
@@ -67,5 +70,6 @@ export async function GET(req: Request) {
     sent: sent ? { processed: sent.processed, failed: sent.failed } : null,
     products,
     invoices: pulled,
+    contacts,
   });
 }

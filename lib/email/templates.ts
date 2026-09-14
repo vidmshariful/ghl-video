@@ -68,6 +68,7 @@ export const TEMPLATE_VARIABLES: Record<string, string[]> = {
   admin_new_application: ["name", "email", "channel", "audience", "admin_url"],
   admin_dispute: ["customer_email", "product_name", "order_code", "amount", "reason", "admin_url"],
   intake_reminder: ["customer_name", "product_name", "order_code", "intake_url", "portal_url"],
+  retainer_check_in: ["customer_name", "partnership_name", "this_month", "count_line", "book_url", "portal_url"],
   video_ready: ["customer_name", "video_title", "portal_url"],
   video_reply: ["customer_name", "video_title", "message", "portal_url"],
   admin_video_feedback: ["headline", "customer_name", "video_title", "where", "message", "admin_url"],
@@ -157,7 +158,7 @@ ${btn("{{intake_url}}", "Complete your intake")}
     key: "intake_reminder",
     name: "Intake reminder",
     description:
-      "Sent by hand from a customer's record when their order is paid but stuck waiting on the brief. Not automatic, so a nudge is always a person's call.",
+      "Sent when an order is paid but stuck waiting on the brief: automatically after three days, at most twice, three days apart, and by hand from a customer's record whenever a person decides.",
     subject: "Your videos are waiting on one thing: {{product_name}}",
     body: `<h1 style="${H}">We are ready when you are.</h1>
 <p style="${P}">Hi {{customer_name}}, your order <strong style="${STRONG}">{{product_name}}</strong> ({{order_code}}) is paid and queued, and nothing can start until your branding arrives. It takes a couple of minutes: your logo, colours, and how your name is said.</p>
@@ -269,6 +270,17 @@ ${btn("{{portal_url}}", "Review it now")}
 <p style="${P}">Hi {{customer_name}}, the <strong style="${STRONG}">{{stage_label}}</strong> for <strong style="${STRONG}">{{video_title}}</strong> has been waiting on you for {{days_waiting}} days. Nothing moves until you have had your look, and a quick yes today keeps your delivery date honest.</p>
 ${btn("{{portal_url}}", "Review it now")}
 <p style="${SMALL}margin-top:22px;">Two minutes does it: approve it, or tell us what to change.</p>`,
+  },
+  {
+    key: "retainer_check_in",
+    name: "Retainer check-in",
+    description:
+      "Sent automatically on the check-in date of a retainer partnership, then the date moves a quarter on. The call is theirs to book.",
+    subject: "Time for our check-in, {{customer_name}}",
+    body: `<h1 style="${H}">A quarter in. Let us look at the next one.</h1>
+<p style="${P}">Hi {{customer_name}}, it is time for the check-in we agreed on <strong style="${STRONG}">{{partnership_name}}</strong>. {{this_month}} so far: {{count_line}} A short call covers what worked, what to change, and what is coming up on your side.</p>
+${btn("{{book_url}}", "Book the call")}
+<p style="${SMALL}margin-top:22px;">If a call is not needed, reply to this email and a few lines will do.</p>`,
   },
   {
     key: "project_digest",

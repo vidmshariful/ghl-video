@@ -71,14 +71,12 @@ async function contactById(id: string): Promise<Row> {
   return (j.contact as Row) ?? j;
 }
 
-/** Wait for the search index to show a contact made a moment ago. */
-async function waitForContact(email: string): Promise<Row | null> {
-  for (let i = 0; i < 12; i += 1) {
-    const c = await contactByEmail(email);
-    if (c) return c;
-    await new Promise((r) => setTimeout(r, 2500));
-  }
-  return null;
+/** Delete a contact if it is still there; the search index can name one already gone. */
+async function deleteContact(id: string): Promise<void> {
+  await fetch(`${HL}/contacts/${id}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${env.HIGHLEVEL_API_TOKEN}`, Version: "2021-07-28", Accept: "application/json" },
+  });
 }
 
 const fieldValue = (contact: Row, id: string) =>
@@ -124,10 +122,15 @@ test.describe("HighLevel, both ways", () => {
     customerId = String(made.id);
     expect(customerId).toMatch(/^[0-9a-f-]{36}$/);
 
-    /* start clean on the HighLevel side so this run proves creation */
-    const old = await contactByEmail(client.email);
-    if (old) await hl("DELETE", `/contacts/${String(old.id)}`);
+    /* start clean on the HighLevel side so this run proves creation: the
+       contact our link names, and any the search still lists for the email.
+       Our own row goes back to its known details too: an earlier run's
+       polled edit would otherwise travel into the fresh contact. */
     const d = db();
+    await d.from("customers").update({ name: client.name, company: client.company, phone: null }).eq("id", customerId);
+    const linked = await link("customer", customerId, "contact");
+    const old = await contactByEmail(client.email);
+    for (const id of new Set([linked, old ? String(old.id) : null].filter(Boolean) as string[])) await deleteContact(id);
     await d.from("hl_links").delete().eq("kind", "customer").eq("entity_id", customerId);
     const { data: theirs } = await d.from("projects").select("id").ilike("customer_email", client.email);
     const ids = (theirs ?? []).map((p) => String(p.id));
@@ -141,18 +144,19 @@ test.describe("HighLevel, both ways", () => {
     expect(out.provisioned).toBeTruthy();
     expect(out.failed, JSON.stringify(out.rows)).toBe(0);
 
-    const contact = await waitForContact(client.email);
-    expect(contact, "the contact should exist in the sandbox").toBeTruthy();
-    contactId = String(contact!.id);
-    expect(await link("customer", customerId, "contact")).toBe(contactId);
-    expect(contact!.firstName ?? contact!.first_name).toBe("QA");
-    expect(String(contact!.companyName ?? contact!.company_name ?? "")).toBe(client.company);
+    /* by the link the sync wrote and then by id: the search index lags a
+       write by seconds and can still list a contact deleted a moment ago */
+    contactId = String(await link("customer", customerId, "contact"));
+    expect(contactId, "the sync should have linked a contact").toMatch(/^[A-Za-z0-9]{20}$/);
+    const contact = await contactById(contactId);
+    expect(contact.firstName ?? contact.first_name).toBe("QA");
+    expect(String(contact.companyName ?? contact.company_name ?? "")).toBe(client.company);
 
-    const id = fieldValue(contact!, cfg.contactFields.customerId);
+    const id = fieldValue(contact, cfg.contactFields.customerId);
     expect(String(id?.value ?? id?.fieldValue ?? "")).toBe(customerId);
-    const url = fieldValue(contact!, cfg.contactFields.adminUrl);
+    const url = fieldValue(contact, cfg.contactFields.adminUrl);
     expect(String(url?.value ?? url?.fieldValue ?? "")).toContain(`/admin/customers/${customerId}/`);
-    const tags = (contact!.tags as string[]) ?? [];
+    const tags = (contact.tags as string[]) ?? [];
     expect(tags.some((t) => t === "ghlv-lead" || t === "ghlv-custom"), tags.join(",")).toBeTruthy();
   });
 
@@ -261,6 +265,31 @@ test.describe("HighLevel, both ways", () => {
     expect(out.failed, JSON.stringify(out.rows)).toBe(0);
     const contact = await contactById(contactId);
     expect(String(contact.phone ?? "").replace(/[^0-9]/g, "")).toBe(phone.replace(/[^0-9]/g, ""));
+  });
+
+  test("an edit made in HighLevel comes back on its own, with no workflow at all", async () => {
+    /* the studio changes the company on the contact inside HighLevel */
+    const company = `QA HighLevel Co ${stamp}`;
+    await hl("PUT", `/contacts/${contactId}`, { companyName: company });
+    /* the minute cron asks HighLevel what changed and applies it; HighLevel's
+       search index lags a write by some seconds, so the next minute may be the one */
+    let seen: string | null = null;
+    for (let i = 0; i < 6 && seen !== company; i += 1) {
+      if (i) await new Promise((r) => setTimeout(r, 8000));
+      const out = await api<{ contacts: { seen: number; changed: number; outcomes: string[] } | null }>("/api/cron/hl-sync/", { token });
+      expect(out.contacts, "the cron should poll contacts").toBeTruthy();
+      const { data: c } = await db().from("customers").select("company").eq("id", customerId).single();
+      seen = (c?.company as string | null) ?? null;
+    }
+    expect(seen).toBe(company);
+    const { data: inbound } = await db()
+      .from("hl_inbound")
+      .select("event, outcome")
+      .eq("event", "contact.changed (polled)")
+      .order("id", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    expect(String(inbound?.outcome)).toContain("company");
   });
 
   test("a wrong key is refused and nothing is written", async () => {

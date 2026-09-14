@@ -7,6 +7,7 @@ import { locationId } from "@/lib/highlevel/client";
 import { pollOpenInvoices, pullInvoices } from "@/lib/highlevel/money";
 import { mirrorMissing, pullRecentConversations } from "@/lib/highlevel/conversations";
 import { refreshEmailStatuses } from "@/lib/highlevel/email-log";
+import { pullContactChanges } from "@/lib/highlevel/inbound";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,6 +30,12 @@ export async function GET(req: Request) {
   const totals = { processed: 0, done: 0, unchanged: 0, skipped: 0, failed: 0 };
   const rows: unknown[] = [];
   let provisioned = true;
+  let contacts: unknown = null;
+
+  /* what changed in HighLevel first, so an edit made there in the last few
+     minutes lands on our row before the drain sends our copy back over it */
+  const cfgFirst = await loadHlConfig(db, locationId());
+  if (cfgFirst) contacts = await pullContactChanges(db, cfgFirst.locationId, 5 * 60_000);
   /* keep going while there is more and time allows; the row limit keeps one call short */
   for (;;) {
     const out = await drainOutbox(db, { limit: 40 });
@@ -57,5 +64,5 @@ export async function GET(req: Request) {
       email = await refreshEmailStatuses(db);
     }
   }
-  return NextResponse.json({ ok: true, provisioned, ...totals, rows, invoices, messages, email });
+  return NextResponse.json({ ok: true, provisioned, ...totals, rows, invoices, messages, email, contacts });
 }

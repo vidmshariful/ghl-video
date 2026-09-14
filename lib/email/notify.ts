@@ -1211,3 +1211,58 @@ export async function sendEditRequestedAlert(
     console.error("[email] admin_edit_requested failed:", e instanceof Error ? e.message : e);
   }
 }
+
+/**
+ * The brief reminder, sent by the morning sweep: an order paid three days
+ * ago and still without its branding. The log row carries the order so the
+ * sweep can count what was already sent, at most twice, three days apart.
+ */
+export async function sendBriefReminderEmail(db: SupabaseClient, orderId: string): Promise<boolean> {
+  const o = await orderFor(db, orderId);
+  if (!o) return false;
+  return sendTemplate(
+    db,
+    "intake_reminder",
+    o.email,
+    o.name,
+    {
+      customer_name: escapeHtml(o.name || "there"),
+      product_name: escapeHtml(o.productName),
+      order_code: escapeHtml(o.code),
+      amount: money(o.amountCents, o.currency),
+      intake_url: `${SITE_URL}/checkout/intake/${orderId}`,
+      portal_url: `${SITE_URL}/portal`,
+    },
+    { chase: true, orderId, station: "brief" },
+  );
+}
+
+/** The retainer's quarterly check-in, on the date the terms name. */
+export async function sendRetainerCheckInEmail(
+  db: SupabaseClient,
+  input: {
+    email: string;
+    name: string | null;
+    customerId: string;
+    checkInOn: string;
+    partnershipName: string;
+    thisMonth: string;
+    countLine: string;
+  },
+): Promise<boolean> {
+  return sendTemplate(
+    db,
+    "retainer_check_in",
+    input.email,
+    input.name,
+    {
+      customer_name: escapeHtml(input.name || "there"),
+      partnership_name: escapeHtml(input.partnershipName),
+      this_month: escapeHtml(input.thisMonth),
+      count_line: escapeHtml(input.countLine),
+      book_url: `${SITE_URL}/contact`,
+      portal_url: `${SITE_URL}/portal`,
+    },
+    { chase: true, customerId: input.customerId, checkInOn: input.checkInOn },
+  );
+}

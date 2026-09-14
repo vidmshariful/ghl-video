@@ -12,19 +12,30 @@ import {
 } from "@/lib/pipeline";
 import {
   sendApprovalReminderEmail,
+  sendBriefReminderEmail,
   sendProjectDigestEmail,
+  sendRetainerCheckInEmail,
 } from "@/lib/email/notify";
+import { checkInDue, checkInSent, nextCheckIn } from "@/lib/chase-rules";
+import { countLine, monthKey, monthLabel, monthSummary, parseRetainer, type RetainerJob } from "@/lib/retainer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+/* every reminder is two HighLevel calls now; a busy morning needs the room */
+export const maxDuration = 120;
 
 /*
  * The morning sweep for work stuck with clients (idea 98 on the board).
  *
- * Two jobs. Every day: any piece that has sat in a client's court for three
- * full days gets a reminder, at most twice, three days apart, then we stop
- * and it becomes a phone call. Mondays: every client with a custom project
- * in motion gets one digest of where their videos stand.
+ * Every day: any piece that has sat in a client's court for three full days
+ * gets a reminder, at most twice, three days apart, then we stop and it
+ * becomes a phone call. That covers a custom stage handed to them, a video
+ * of any line waiting for their review, and a paid order still without its
+ * brief. A retainer partnership gets its check-in on the date its terms
+ * name, and the date moves a quarter on. Mondays: every client with a
+ * custom project in motion gets one digest of where their videos stand.
+ * These are the platform's own follow-ups, not HighLevel workflows (owner
+ * decision, 14 September 2026); the emails still leave through HighLevel.
  *
  * The chase ledger is the email log itself: every reminder writes which
  * deliverable and station it was about into the log row's meta, so this
@@ -73,12 +84,21 @@ export async function GET(req: Request) {
   /* every reminder ever sent, once; the sweep slices it in memory */
   const { data: ledgerRows } = await db
     .from("email_log")
-    .select("meta, created_at")
-    .eq("template_key", "approval_reminder")
+    .select("template_key, meta, created_at")
+    .in("template_key", ["approval_reminder", "intake_reminder", "retainer_check_in"])
     .eq("status", "sent");
-  const ledger = (ledgerRows ?? []) as Row[];
+  const allLedger = (ledgerRows ?? []) as Row[];
+  const ledger = allLedger.filter((r) => r.template_key === "approval_reminder");
+  const briefLedger = allLedger.filter((r) => r.template_key === "intake_reminder");
+  const checkInLedger = allLedger.filter((r) => r.template_key === "retainer_check_in");
 
   const chased: string[] = [];
+  const briefs: string[] = [];
+  const checkIns: string[] = [];
+
+  /* studio-owned accounts are never chased */
+  const { data: internalRows } = await db.from("customers").select("email").eq("internal", true);
+  const internal = new Set(((internalRows ?? []) as Row[]).map((c) => String(c.email).toLowerCase()));
 
   /* ---- custom projects: any gated station in the client's court ---- */
   const { data: projects } = await db
@@ -184,6 +204,105 @@ export async function GET(req: Request) {
     if (sent) chased.push(`${String(r.title)} / review`);
   }
 
+  /* ---- premade videos sitting in review: bought, made, and not yet watched ---- */
+  const { data: orderReady } = await db
+    .from("order_deliverables")
+    .select("id, title, ready_at, order_id, parent_id")
+    .not("order_id", "is", null)
+    .eq("status", "ready");
+  const readyOrderIds = [...new Set(((orderReady ?? []) as Row[]).map((r) => String(r.order_id)))];
+  const { data: readyOrders } = readyOrderIds.length
+    ? await db.from("orders").select("id, customer_email, archived").in("id", readyOrderIds)
+    : { data: [] };
+  const orderById = new Map(((readyOrders ?? []) as Row[]).map((o) => [String(o.id), o]));
+  for (const r of (orderReady ?? []) as Row[]) {
+    const order = orderById.get(String(r.order_id));
+    if (!order || order.archived) continue;
+    const email = String(order.customer_email).toLowerCase();
+    if (internal.has(email)) continue;
+    const prior = chasesFrom(ledger, String(r.id), "review");
+    if (!needsChase((r.ready_at as string | null) ?? null, prior, now)) continue;
+    const sent = await sendApprovalReminderEmail(db, {
+      email,
+      name: nameOf(email),
+      videoTitle: String(r.title),
+      stageLabel: "Your review",
+      daysWaiting: daysWaiting(String(r.ready_at), now),
+      deliverableId: String(r.id),
+      station: "review",
+    });
+    if (sent) chased.push(`${String(r.title)} / review`);
+  }
+
+  /* ---- paid orders still without their brief: nothing can start ---- */
+  const { data: unbriefed } = await db
+    .from("orders")
+    .select("id, customer_email, paid_at, archived, product:products(metadata)")
+    .eq("status", "paid")
+    .eq("intake_completed", false);
+  for (const o of (unbriefed ?? []) as Row[]) {
+    if (o.archived) continue;
+    const meta = ((o.product as { metadata?: Row } | null)?.metadata ?? {}) as Row;
+    /* an invoice payment and a credit top-up have no brief to give */
+    if (meta.invoice || meta.demo || meta.kind === "editing_credits") continue;
+    const email = String(o.customer_email).toLowerCase();
+    if (internal.has(email)) continue;
+    const mine = briefLedger
+      .filter((r) => ((r.meta ?? {}) as Row).orderId === String(o.id))
+      .map((r) => String(r.created_at))
+      .sort();
+    const prior = { count: mine.length, lastAtIso: mine[mine.length - 1] ?? null };
+    if (!needsChase((o.paid_at as string | null) ?? null, prior, now)) continue;
+    const sent = await sendBriefReminderEmail(db, String(o.id));
+    if (sent) briefs.push(String(o.id));
+  }
+
+  /* ---- retainer partnerships: the check-in on the date the terms name ---- */
+  const today = now.slice(0, 10);
+  const { data: partners } = await db
+    .from("customers")
+    .select("id, email, name, retainer, internal")
+    .not("retainer", "is", null);
+  for (const c of (partners ?? []) as Row[]) {
+    const retainer = parseRetainer(c.retainer);
+    if (!retainer || c.internal || !checkInDue(retainer.checkInOn, today)) continue;
+    const checkInOn = String(retainer.checkInOn);
+    if (checkInSent(checkInLedger as { meta?: unknown }[], String(c.id), checkInOn)) continue;
+    const { data: jobs } = await db
+      .from("projects")
+      .select("id, title, status, retainer_month, retainer_kind, created_at")
+      .ilike("customer_email", String(c.email))
+      .not("retainer_kind", "is", null);
+    const month = monthKey(new Date(now));
+    const summary = monthSummary(
+      ((jobs ?? []) as Row[]).map((j) => ({
+        id: String(j.id),
+        title: String(j.title),
+        status: String(j.status),
+        retainerMonth: (j.retainer_month as string | null) ?? null,
+        retainerKind: (j.retainer_kind as RetainerJob["retainerKind"]) ?? null,
+        createdAt: String(j.created_at),
+      })),
+      month,
+    );
+    const sent = await sendRetainerCheckInEmail(db, {
+      email: String(c.email),
+      name: (c.name as string | null) ?? null,
+      customerId: String(c.id),
+      checkInOn,
+      partnershipName: retainer.name,
+      thisMonth: monthLabel(month),
+      countLine: countLine(summary, retainer),
+    });
+    if (!sent) continue;
+    checkIns.push(String(c.email).toLowerCase());
+    /* the next one, a quarter on; the record shows the new date */
+    await db
+      .from("customers")
+      .update({ retainer: { ...retainer, checkInOn: nextCheckIn(checkInOn) }, updated_at: now })
+      .eq("id", String(c.id));
+  }
+
   /* ---- Monday: one digest per client with a project in motion ---- */
   const digested: string[] = [];
   if (doDigest) {
@@ -226,5 +345,5 @@ export async function GET(req: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true, chased, digested, digestRan: doDigest });
+  return NextResponse.json({ ok: true, chased, briefs, checkIns, digested, digestRan: doDigest });
 }
