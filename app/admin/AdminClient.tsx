@@ -27,6 +27,7 @@ import {
   Newspaper,
   BadgeDollarSign,
   Clapperboard,
+  FileText,
   Globe,
   Handshake,
   HeartPulse,
@@ -36,9 +37,11 @@ import {
   Link2,
   MessageSquare,
   Package,
+  Repeat,
   Scissors,
   Search,
   Settings,
+  ShoppingCart,
   Sparkles,
   Megaphone,
   Ticket,
@@ -47,7 +50,6 @@ import {
 import { DashboardScreen } from "./DashboardScreen";
 import { EditingScreen } from "./EditingScreen";
 import { OrdersScreen } from "./OrdersScreen";
-import { MoneyScreen } from "./MoneyScreen";
 import { MessagesScreen } from "./MessagesScreen";
 import { SubscriptionsScreen } from "./SubscriptionsScreen";
 import { chatGet } from "@/components/chat/api";
@@ -80,7 +82,7 @@ const BlogScreen = dynamic(
   },
 );
 import { SeoScreen } from "./SeoScreen";
-import { MONEY_TABS, canAccess, type Role } from "./roles";
+import { canAccess, type Role } from "./roles";
 
 /*
  * The managing area: /admin. Supabase Auth login, a sidebar, and one
@@ -464,40 +466,53 @@ export function AdminClient({
      on top, then Sales (money), Production (the three service lines: Premade,
      Custom, Editing), Affiliate, Products & Packs (what we sell), and CMS
      (the website). Emails and the site code live inside Settings. */
-
-  /*
-   * Seven items and a Settings group (owner decision, 14 September 2026,
-   * from the admin blueprint): Dashboard, Clients, Premade, Custom,
-   * Editing, Money, Messages. Everything else keeps its screen and its URL
-   * and sits under Settings, closed until opened.
-   */
-  const groups: NavGroup[] = [
+  const groups: { title: string; items: { key: View; label: string; icon: React.ReactNode; badge?: number }[] }[] = [
     {
       title: "",
       items: [
         { key: "dashboard", label: "Dashboard", icon: <LayoutDashboard /> },
-        { key: "customers", label: "Clients", icon: <Users /> },
-        { key: "production", label: "Premade", icon: <Clapperboard /> },
-        { key: "custom", label: "Custom", icon: <Sparkles /> },
-        { key: "editing", label: "Editing", icon: <Scissors /> },
-        { key: "money", label: "Money", icon: <BadgeDollarSign /> },
         { key: "messages", label: "Messages", icon: <MessageSquare />, badge: msgUnread || undefined },
+        { key: "emails", label: "Emails & notifications", icon: <Mail /> },
+        { key: "journal", label: "Journal", icon: <BookOpen /> },
+        { key: "reference", label: "Reference", icon: <KeyRound /> },
+        { key: "health", label: "Health", icon: <HeartPulse />, badge: alarmCount || undefined },
       ],
     },
     {
-      title: "Settings",
-      defaultOpen: false,
+      title: "Sales",
       items: [
-        { key: "settings", label: "Account and team", icon: <Settings /> },
-        { key: "emails", label: "Emails & notifications", icon: <Mail /> },
-        { key: "health", label: "Health", icon: <HeartPulse />, badge: alarmCount || undefined },
-        { key: "journal", label: "Journal", icon: <BookOpen /> },
-        { key: "reference", label: "Reference", icon: <KeyRound /> },
+        { key: "sales", label: "Sales Dashboard", icon: <BadgeDollarSign /> },
+        { key: "orders", label: "Orders", icon: <ShoppingCart /> },
+        { key: "subscriptions", label: "Subscriptions", icon: <Repeat /> },
+        { key: "invoices", label: "Invoices", icon: <FileText /> },
         { key: "coupons", label: "Coupons", icon: <Ticket /> },
         { key: "campaigns", label: "Offers", icon: <Megaphone /> },
         { key: "links", label: "Links", icon: <Link2 /> },
-        { key: "partners", label: "Partners", icon: <Handshake /> },
-        { key: "catalog", label: "Products", icon: <Package /> },
+        { key: "customers", label: "Customers", icon: <Users /> },
+      ],
+    },
+    {
+      /* The three service lines, named after what we sell rather than after
+         how the code is arranged. Premade is the order board, Custom is
+         bespoke work, Editing is the monthly plans. */
+      title: "Production",
+      items: [
+        { key: "production", label: "Premade", icon: <Clapperboard /> },
+        { key: "custom", label: "Custom", icon: <Sparkles /> },
+        { key: "editing", label: "Editing", icon: <Scissors /> },
+      ],
+    },
+    {
+      title: "Affiliate",
+      items: [{ key: "partners", label: "Partners", icon: <Handshake /> }],
+    },
+    {
+      title: "Products & Packs",
+      items: [{ key: "catalog", label: "Products", icon: <Package /> }],
+    },
+    {
+      title: "CMS",
+      items: [
         { key: "pages", label: "Pages", icon: <Globe /> },
         { key: "blog", label: "Blog", icon: <Newspaper /> },
         { key: "seo", label: "SEO", icon: <Search /> },
@@ -512,7 +527,7 @@ export function AdminClient({
     .map((g) => ({
       ...g,
       items: g.items.filter((it) =>
-        me ? canAccess(it.key as View, me.role, me.features) : it.key === "dashboard",
+        me ? canAccess(it.key, me.role, me.features) : it.key === "dashboard",
       ),
     }))
     .filter((g) => g.items.length > 0);
@@ -582,6 +597,7 @@ export function AdminClient({
           active={view}
           onSelect={(k) => go(k as View)}
           storageKey="ghlv-admin-nav"
+          bottom={[{ key: "settings", label: "Settings", icon: <Settings /> }]}
         />
 
         {/* content: keyed on the view so each screen fades up as it opens */}
@@ -589,11 +605,6 @@ export function AdminClient({
           <div key={view} className="portal-view">
           {view === "dashboard" ? (
             <DashboardScreen onNavigate={go} />
-          ) : view === "money" ? (
-            <MoneyScreen
-              allowed={MONEY_TABS.filter((t) => (me ? canAccess(t, me.role, me.features) : false)) as ("sales" | "orders" | "invoices" | "subscriptions")[]}
-              onNavigate={go}
-            />
           ) : view === "orders" ? (
             <OrdersScreen onNavigate={go} />
           ) : view === "messages" ? (

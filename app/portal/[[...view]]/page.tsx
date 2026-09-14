@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { PortalClient } from "../PortalClient";
-import { resolveSection } from "../sections";
+import { PORTAL_SECTIONS, type PortalSection } from "../sections";
 
 export const metadata: Metadata = {
   title: "Portal",
@@ -8,22 +8,31 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-/* Every portal section is a real URL (/portal/work/custom/, /portal/billing/,
- * /portal/settings/, ...), and a thing opens at its own path so a teammate
- * can be sent straight to it: /portal/work/custom/<id>/ is a project,
- * /portal/billing/<id>/ an order, /portal/library/<code>/ an item. The old
- * names (/portal/projects/, /portal/orders/, /portal/videos/) still open the
- * right screen. Unknown segments land on Home. */
-export default async function PortalViewPage({ params }: { params: Promise<{ view?: string[] }> }) {
+/* Every portal section is a real URL (/portal/orders/, /portal/settings/,
+ * ...), and an order opens at /portal/orders/<id>/ so a teammate can be
+ * sent straight to a project. Unknown segments land on the dashboard. */
+export default async function PortalViewPage({
+  params,
+}: {
+  params: Promise<{ view?: string[] }>;
+}) {
   const { view } = await params;
-  const r = resolveSection(view ?? []);
+  const seg = view?.[0] ?? "dashboard";
+  const initialView = (PORTAL_SECTIONS as readonly string[]).includes(seg)
+    ? (seg as PortalSection)
+    : "dashboard";
+  const initialOrderId = initialView === "orders" && view?.[1] ? view[1] : null;
+  /* /portal/library/<code>/ opens that video or pack directly, so one can be
+   * sent to a cofounder as a plain link */
+  const initialItemCode = initialView === "library" && view?.[1] ? view[1] : null;
+  /* /portal/projects/<id>/ opens that project's page directly */
+  const initialProjectId = initialView === "projects" && view?.[1] ? view[1] : null;
   return (
     <PortalClient
-      initialView={r.section}
-      initialLine={r.line}
-      initialOrderId={r.section === "billing" ? r.id : null}
-      initialItemCode={r.section === "library" ? r.id : null}
-      initialProjectId={r.section === "work" && r.line === "custom" ? r.id : null}
+      initialView={initialView}
+      initialOrderId={initialOrderId}
+      initialItemCode={initialItemCode}
+      initialProjectId={initialProjectId}
     />
   );
 }

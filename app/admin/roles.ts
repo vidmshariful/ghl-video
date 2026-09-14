@@ -101,14 +101,8 @@ export function canAccess(
   features: string[] | null | undefined,
 ): boolean {
   if (view === "dashboard" || view === "settings" || view === "help") return true;
-  const granted = effectiveFeatures(role, features);
-  /* Money is the four money screens on one page: open to anyone who may see any of them */
-  if (view === "money") return MONEY_TABS.some((v) => granted.includes(v));
-  return granted.includes(view);
+  return effectiveFeatures(role, features).includes(view);
 }
-
-/** The screens the Money view holds as tabs, in its order. */
-export const MONEY_TABS: View[] = ["sales", "orders", "invoices", "subscriptions"];
 
 export function isRole(v: unknown): v is Role {
   return typeof v === "string" && (ROLES as string[]).includes(v);
