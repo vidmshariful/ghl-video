@@ -28,7 +28,15 @@ const require = createRequire(import.meta.url);
 const { createClient } = require("@supabase/supabase-js");
 
 const env = {};
-const envPath = new URL(`../${process.env.GHLV_ENV === "prod" ? ".env.prod.local" : ".env.local"}`, import.meta.url);
+/* The journal is the owner's record, so it lives on PRODUCTION: this script
+   reads .env.prod.local when it exists, and .env.local only when told
+   (GHLV_ENV=staging) or when no production file is on this machine. Entries
+   written to staging vanish on the next refresh (audit, 15 September 2026). */
+const prodPath = new URL("../.env.prod.local", import.meta.url);
+const envPath =
+  process.env.GHLV_ENV === "staging" || !existsSync(prodPath)
+    ? new URL("../.env.local", import.meta.url)
+    : prodPath;
 if (existsSync(envPath)) {
   for (const line of readFileSync(envPath, "utf8").split("\n")) {
     const t = line.trim();

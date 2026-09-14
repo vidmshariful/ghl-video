@@ -365,7 +365,7 @@ async function association(def) {
       "  1. Settings > Business Profile > turn on \"Allow duplicate opportunity\", so each project gets its own deal card (until then a client's open card carries their latest project).",
     );
   console.log(
-    "  2. Automation > a workflow on \"Contact Changed\" with a Webhook action to POST https://<site>/api/webhooks/highlevel?key=<HIGHLEVEL_WEBHOOK_SECRET>, so edits made in HighLevel come back.",
+    "  2. Automation > a workflow on \"Contact Changed\" with a Webhook action to POST https://<site>/api/webhooks/highlevel/?key=<HIGHLEVEL_WEBHOOK_SECRET>, so edits made in HighLevel come back.",
   );
   console.log("\nQuote leads pipeline ids, if the website should file leads here:");
   console.log(`  HIGHLEVEL_LEAD_PIPELINE_ID=${config.pipelines.leads.id}`);

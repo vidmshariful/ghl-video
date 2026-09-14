@@ -286,6 +286,8 @@ build: the build log, the decision register, and Shariful's idea inbox. It
 exists because he iterates fast and chat context compacts; the journal is
 what survives. Claude maintains it via `scripts/journal.mjs`:
 
+- The script writes to PRODUCTION by default (the owner's Journal); pass
+  `GHLV_ENV=staging` only to look at the staging copy.
 - **Session start:** run `node scripts/journal.mjs ideas` and address any
   open ideas before or alongside the day's work (discuss, plan, or build;
   move them with `set-status <seq> planned|done|dropped`).
