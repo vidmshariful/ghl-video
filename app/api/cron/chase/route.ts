@@ -17,9 +17,9 @@ import {
   sendRetainerCheckInEmail,
   sendReviewRequestEmail,
 } from "@/lib/email/notify";
-import { reviewDue } from "@/lib/chase-rules";
-import { checkInDue, checkInSent, nextCheckIn } from "@/lib/chase-rules";
+import { checkInDue, checkInSent, nextCheckIn, reviewDue, withinWindow } from "@/lib/chase-rules";
 import { countLine, monthKey, monthLabel, monthSummary, parseRetainer, type RetainerJob } from "@/lib/retainer";
+import { likeLiteral } from "@/lib/pg-pattern";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -82,13 +82,17 @@ export async function GET(req: Request) {
   const now = new Date().toISOString();
   const url = new URL(req.url);
   const doDigest = url.searchParams.get("digest") === "1" || new Date().getUTCDay() === 1;
+  /* ?dry=1 lists what a run would send and sends nothing: the rehearsal
+     before the first real morning (15 September 2026) */
+  const dry = url.searchParams.get("dry") === "1";
 
-  /* every reminder ever sent, once; the sweep slices it in memory */
+  /* every reminder ever sent, once; the sweep slices it in memory. A failed
+     row counts too: an address that bounced is not chased again tomorrow. */
   const { data: ledgerRows } = await db
     .from("email_log")
     .select("template_key, meta, created_at")
     .in("template_key", ["approval_reminder", "intake_reminder", "retainer_check_in", "review_request"])
-    .eq("status", "sent");
+    .in("status", ["sent", "failed"]);
   const allLedger = (ledgerRows ?? []) as Row[];
   const ledger = allLedger.filter((r) => r.template_key === "approval_reminder");
   const briefLedger = allLedger.filter((r) => r.template_key === "intake_reminder");
@@ -122,13 +126,17 @@ export async function GET(req: Request) {
     )?.name as string | null) ?? null);
 
   for (const p of (projects ?? []) as Row[]) {
+    if (internal.has(String(p.customer_email).toLowerCase())) continue;
     const line = normalizePipeline(p.pipeline);
     for (const k of STATION_ORDER) {
       const st = line[k];
       if (st.state !== "with_client" || !st.gate || st.provided) continue;
+      /* the sweep starts from where it is switched on: nothing handed over
+         before its window is chased by mail; that is a phone call */
+      if (!withinWindow(st.at ?? null, now)) continue;
       const prior = chasesFrom(ledger, String(p.id), k);
       if (!needsChase(st.at ?? null, prior, now)) continue;
-      const sent = await sendApprovalReminderEmail(db, {
+      const sent = dry || await sendApprovalReminderEmail(db, {
         email: String(p.customer_email),
         name: nameOf(String(p.customer_email)),
         videoTitle: String(p.title),
@@ -150,10 +158,12 @@ export async function GET(req: Request) {
   for (const f of (readyFormats ?? []) as Row[]) {
     const project = ((projects ?? []) as Row[]).find((p) => String(p.id) === String(f.project_id));
     if (!project) continue;
+    if (internal.has(String(project.customer_email).toLowerCase())) continue;
+    if (!withinWindow((f.ready_at as string | null) ?? null, now)) continue;
     const prior = chasesFrom(ledger, String(f.id), "review");
     if (!needsChase((f.ready_at as string | null) ?? null, prior, now)) continue;
     const email = String(project.customer_email);
-    const sent = await sendApprovalReminderEmail(db, {
+    const sent = dry || await sendApprovalReminderEmail(db, {
       email,
       name: nameOf(email),
       videoTitle: String(f.title),
@@ -193,10 +203,12 @@ export async function GET(req: Request) {
   for (const r of (editingReady ?? []) as Row[]) {
     const sub = subByCycle.get(String(r.cycle_id));
     if (!sub) continue;
+    if (internal.has(String(sub.customer_email).toLowerCase())) continue;
+    if (!withinWindow((r.ready_at as string | null) ?? null, now)) continue;
     const prior = chasesFrom(ledger, String(r.id), "review");
     if (!needsChase((r.ready_at as string | null) ?? null, prior, now)) continue;
     const email = String(sub.customer_email);
-    const sent = await sendApprovalReminderEmail(db, {
+    const sent = dry || await sendApprovalReminderEmail(db, {
       email,
       name: nameOf(email),
       videoTitle: String(r.title),
@@ -224,9 +236,10 @@ export async function GET(req: Request) {
     if (!order || order.archived) continue;
     const email = String(order.customer_email).toLowerCase();
     if (internal.has(email)) continue;
+    if (!withinWindow((r.ready_at as string | null) ?? null, now)) continue;
     const prior = chasesFrom(ledger, String(r.id), "review");
     if (!needsChase((r.ready_at as string | null) ?? null, prior, now)) continue;
-    const sent = await sendApprovalReminderEmail(db, {
+    const sent = dry || await sendApprovalReminderEmail(db, {
       email,
       name: nameOf(email),
       videoTitle: String(r.title),
@@ -239,11 +252,15 @@ export async function GET(req: Request) {
   }
 
   /* ---- paid orders still without their brief: nothing can start ---- */
+  /* only an order that is still waiting to start: one already in production,
+     in review or delivered was briefed some other way, and a reminder that
+     "nothing can start" would be wrong (audit, 15 September 2026) */
   const { data: unbriefed } = await db
     .from("orders")
     .select("id, customer_email, paid_at, archived, product:products(metadata)")
     .eq("status", "paid")
-    .eq("intake_completed", false);
+    .eq("intake_completed", false)
+    .in("fulfillment_stage", ["paid", "intake"]);
   for (const o of (unbriefed ?? []) as Row[]) {
     if (o.archived) continue;
     const meta = ((o.product as { metadata?: Row } | null)?.metadata ?? {}) as Row;
@@ -256,8 +273,9 @@ export async function GET(req: Request) {
       .map((r) => String(r.created_at))
       .sort();
     const prior = { count: mine.length, lastAtIso: mine[mine.length - 1] ?? null };
+    if (!withinWindow((o.paid_at as string | null) ?? null, now)) continue;
     if (!needsChase((o.paid_at as string | null) ?? null, prior, now)) continue;
-    const sent = await sendBriefReminderEmail(db, String(o.id));
+    const sent = dry || await sendBriefReminderEmail(db, String(o.id));
     if (sent) briefs.push(String(o.id));
   }
 
@@ -271,11 +289,12 @@ export async function GET(req: Request) {
     const retainer = parseRetainer(c.retainer);
     if (!retainer || c.internal || !checkInDue(retainer.checkInOn, today)) continue;
     const checkInOn = String(retainer.checkInOn);
+    if (!withinWindow(`${checkInOn}T00:00:00.000Z`, now)) continue;
     if (checkInSent(checkInLedger as { meta?: unknown }[], String(c.id), checkInOn)) continue;
     const { data: jobs } = await db
       .from("projects")
       .select("id, title, status, retainer_month, retainer_kind, created_at")
-      .ilike("customer_email", String(c.email))
+      .ilike("customer_email", likeLiteral(String(c.email)))
       .not("retainer_kind", "is", null);
     const month = monthKey(new Date(now));
     const summary = monthSummary(
@@ -289,7 +308,7 @@ export async function GET(req: Request) {
       })),
       month,
     );
-    const sent = await sendRetainerCheckInEmail(db, {
+    const sent = dry || await sendRetainerCheckInEmail(db, {
       email: String(c.email),
       name: (c.name as string | null) ?? null,
       customerId: String(c.id),
@@ -300,6 +319,7 @@ export async function GET(req: Request) {
     });
     if (!sent) continue;
     checkIns.push(String(c.email).toLowerCase());
+    if (dry) continue;
     /* the next one, a quarter on; the record shows the new date */
     await db
       .from("customers")
@@ -341,8 +361,9 @@ export async function GET(req: Request) {
         .filter((r) => ((r.meta ?? {}) as Row).customerId === String(c.id))
         .map((r) => String(r.created_at))
         .sort();
+      if (!withinWindow(firstDone.get(email) ?? null, now)) continue;
       if (!reviewDue(firstDone.get(email) ?? null, mine[mine.length - 1] ?? null, now)) continue;
-      const sent = await sendReviewRequestEmail(db, { email, name: (c.name as string | null) ?? null, customerId: String(c.id) });
+      const sent = dry || await sendReviewRequestEmail(db, { email, name: (c.name as string | null) ?? null, customerId: String(c.id) });
       if (sent) reviews.push(email);
     }
   }
@@ -361,7 +382,7 @@ export async function GET(req: Request) {
 
     for (const p of (projects ?? []) as Row[]) {
       const email = String(p.customer_email).toLowerCase();
-      if (already.has(email)) continue;
+      if (already.has(email) || internal.has(email)) continue;
       already.add(email);
 
       const theirs = ((projects ?? []) as Row[]).filter(
@@ -380,7 +401,7 @@ export async function GET(req: Request) {
           return `<p style="margin:0 0 8px;"><strong style="color:#eef0f6;">${esc(String(x.title))}</strong><br/>${esc(word)}</p>`;
         })
         .join("");
-      const ok = await sendProjectDigestEmail(db, {
+      const ok = dry || await sendProjectDigestEmail(db, {
         email: String(p.customer_email),
         name: nameOf(email),
         linesHtml: lines,
@@ -389,5 +410,5 @@ export async function GET(req: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true, chased, briefs, checkIns, reviews, digested, digestRan: doDigest });
+  return NextResponse.json({ ok: true, dry, chased, briefs, checkIns, reviews, digested, digestRan: doDigest });
 }

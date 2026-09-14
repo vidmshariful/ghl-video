@@ -52,3 +52,20 @@ export function reviewDue(firstDoneIso: string | null, lastAskedIso: string | nu
   if (lastAskedIso && now - Date.parse(lastAskedIso) < REVIEW_AGAIN_AFTER_DAYS * DAY_MS) return false;
   return true;
 }
+
+/** How far back the sweep looks. Anything that became due before this is a phone call, not a mail. */
+export const CHASE_WINDOW_DAYS = 14;
+
+/**
+ * Did this become due recently enough for the sweep to act on it? The sweep
+ * started for real on 16 September 2026 with months of history behind it;
+ * without a window its first morning would have chased every old thing at
+ * once (audit, 15 September 2026).
+ */
+export function withinWindow(atIso: string | null | undefined, nowIso: string, days = CHASE_WINDOW_DAYS): boolean {
+  if (!atIso) return false;
+  const at = Date.parse(atIso);
+  const now = Date.parse(nowIso);
+  if (!Number.isFinite(at) || !Number.isFinite(now)) return false;
+  return now - at <= days * DAY_MS;
+}
