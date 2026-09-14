@@ -195,6 +195,20 @@ export async function applyInvoiceState(db: Db, rowId: string, hl: Row): Promise
 }
 
 /**
+ * Why an invoice is not for HighLevel at all. Pure.
+ *
+ * The demo account's invoices are props for the demo portal, and a bill for
+ * nothing has no line HighLevel will accept ("items should not be empty",
+ * found at go-live on 15 September 2026 when the first fill tried to send
+ * DEMO-INV-01). Neither is money.
+ */
+export function invoiceSkipReason(inv: Row, customer: Row): string | null {
+  if (customer.internal) return "the studio's own demo account is never billed";
+  if (!(Number(inv.total_cents) > 0)) return "nothing to bill: the total is zero";
+  return null;
+}
+
+/**
  * One of our invoices, kept in step with HighLevel: made there when it is
  * new, sent when we mark it sent, updated when we edit it, voided when we
  * void it, and its paid state read back every time.
@@ -216,6 +230,8 @@ export async function syncInvoice(
 
   const { data: customer } = await db.from("customers").select("*").ilike("email", email).maybeSingle();
   if (!customer) return { status: "skipped", note: `no customer row for ${email}` };
+  const why = invoiceSkipReason(inv, customer);
+  if (why) return { status: "skipped", note: why };
 
   const contactId = await deps.contactIdFor(customer);
   const contact = contactOf(customer, contactId);

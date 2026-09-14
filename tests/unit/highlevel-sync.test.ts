@@ -1,4 +1,5 @@
 import { test } from "node:test";
+import { invoiceSkipReason } from "../../lib/highlevel/money";
 import assert from "node:assert/strict";
 import {
   arrangementOf,
@@ -271,4 +272,12 @@ test("a polled contact only applies when HighLevel spoke after we did", async ()
   assert.equal(theirsIsNewer("2026-09-14T11:59:00Z", "2026-09-14T11:59:00Z"), true, "a tie goes to HighLevel, the system of record");
   assert.equal(theirsIsNewer(undefined, "2026-09-14T11:59:00Z"), true, "no timestamp from them: apply, as a webhook would");
   assert.equal(theirsIsNewer("2026-09-14T11:58:00Z", null), true, "no timestamp of ours: nothing to protect");
+});
+
+
+test("a demo account's invoice and a zero-total invoice never go to HighLevel", () => {
+  assert.equal(invoiceSkipReason({ total_cents: 0 }, { internal: true }), "the studio's own demo account is never billed");
+  assert.equal(invoiceSkipReason({ total_cents: 0 }, { internal: false }), "nothing to bill: the total is zero");
+  assert.equal(invoiceSkipReason({ total_cents: null }, { internal: false }), "nothing to bill: the total is zero");
+  assert.equal(invoiceSkipReason({ total_cents: 44100 }, { internal: false }), null);
 });
