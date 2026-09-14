@@ -41,10 +41,17 @@ const q = (cfg: HlConfig) => `altId=${encodeURIComponent(cfg.locationId)}&altTyp
 export const dollars = (cents: number) => Math.round(cents) / 100;
 export const cents = (dollarsIn: unknown) => Math.round(Number(dollarsIn || 0) * 100);
 const day = (v: unknown) => (typeof v === "string" && v.length >= 10 ? v.slice(0, 10) : new Date().toISOString().slice(0, 10));
-/** HighLevel refuses a due date that has passed: a bill raised late is due today. */
+/**
+ * HighLevel refuses a due date that has passed, judged on the sub-account's
+ * own clock, which can be a day ahead of UTC (the sandbox is on Dhaka time:
+ * "today" in UTC was already yesterday there at 21:00, and a bill raised in
+ * that hour was refused). A bill raised late is therefore due tomorrow, in
+ * UTC terms, which is never behind any clock on earth.
+ */
 export const dueDay = (v: unknown, today = new Date().toISOString().slice(0, 10)) => {
   const d = day(v);
-  return d < today ? today : d;
+  const floor = new Date(Date.parse(`${today}T00:00:00.000Z`) + 86_400_000).toISOString().slice(0, 10);
+  return d < floor ? floor : d;
 };
 const text = (v: unknown, max: number) => (v === null || v === undefined ? "" : String(v).slice(0, max));
 

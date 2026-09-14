@@ -26,6 +26,7 @@ const db = () =>
 
 let token = "";
 let orderId = "";
+let originalStage = "paid";
 let videoId = "";
 let partnerId = "";
 let logBefore = 0;
@@ -57,7 +58,15 @@ test.describe("the morning sweep, our own follow-ups", () => {
     const shelf = ((orders ?? []) as Row[]).filter((o) => !((o.product as { metadata?: Row } | null)?.metadata?.invoice));
     test.skip(shelf.length < 2, "needs two paid premade test orders: run the premade walkthrough twice first");
     orderId = String(shelf[0].id);
-    await d.from("orders").update({ intake_completed: false, paid_at: daysAgo(4), archived: false }).eq("id", orderId);
+    /* an order still waiting to start: the sweep only reminds about a brief
+       on an order in its first two stages (a delivered one was briefed some
+       other way), so the fixture puts it back at "paid" and restores after */
+    const { data: before } = await d.from("orders").select("fulfillment_stage").eq("id", orderId).single();
+    originalStage = String(before?.fulfillment_stage ?? "paid");
+    await d
+      .from("orders")
+      .update({ intake_completed: false, paid_at: daysAgo(4), archived: false, fulfillment_stage: "paid" })
+      .eq("id", orderId);
 
     /* a video on a different order, sitting in Ready for four days */
     const { data: vids } = await d
@@ -158,7 +167,7 @@ test.describe("the morning sweep, our own follow-ups", () => {
 
   test("the fixtures are put back", async () => {
     const d = db();
-    await d.from("orders").update({ intake_completed: true }).eq("id", orderId);
+    await d.from("orders").update({ intake_completed: true, fulfillment_stage: originalStage }).eq("id", orderId);
     await d.from("order_deliverables").update({ status: "approved" }).eq("id", videoId);
     await api(`/api/admin/customers/${partnerId}/`, { method: "PATCH", token, body: { retainer: null } });
   });

@@ -259,10 +259,14 @@ test("an inbound payload is read whatever casing the workflow used", () => {
 
 test("a due date behind us becomes today, because HighLevel refuses the past", async () => {
   const { dueDay } = await import("../../lib/highlevel/money");
-  assert.equal(dueDay("2026-09-01", "2026-09-14"), "2026-09-14");
+  /* a bill raised late is due tomorrow: HighLevel judges "past" on the
+     sub-account's clock, which can be a day ahead of UTC */
+  assert.equal(dueDay("2026-09-01", "2026-09-14"), "2026-09-15");
   assert.equal(dueDay("2026-10-01", "2026-09-14"), "2026-10-01");
-  assert.equal(dueDay("2026-09-14", "2026-09-14"), "2026-09-14");
-  assert.equal(dueDay(null, "2026-09-14"), "2026-09-14");
+  assert.equal(dueDay("2026-09-14", "2026-09-14"), "2026-09-15");
+  assert.equal(dueDay("2026-09-15", "2026-09-14"), "2026-09-15");
+  assert.equal(dueDay(null, "2026-09-14"), "2026-09-15");
+  assert.equal(dueDay("2026-12-31", "2026-12-31"), "2027-01-01");
 });
 
 test("a polled contact only applies when HighLevel spoke after we did", async () => {

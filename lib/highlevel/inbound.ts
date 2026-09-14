@@ -154,8 +154,15 @@ export async function pullContactChanges(
     listedAll.push(...batch);
     if (batch.length < PAGE) break;
   }
+  /* only contacts that are ours are worth a read: a sub-account holds
+     thousands of other people, and a change to any of them has nowhere to
+     land here. Matched by the contact ids the sync linked, so the list is
+     one small query however many pages came back. */
+  const { data: links } = await db.from("hl_links").select("hl_id").eq("kind", "customer").eq("hl_kind", "contact");
+  const ours = new Set(((links ?? []) as { hl_id: string }[]).map((l) => l.hl_id));
   const out = { seen: 0, changed: 0, outcomes: [] as string[] };
   for (const listed of listedAll) {
+    if (!ours.has(String(listed.id))) continue;
     out.seen += 1;
     /* the search only says which contacts moved: its copy lags and can still
        show one deleted a moment ago, so the truth is read by id */
