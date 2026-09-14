@@ -151,7 +151,7 @@ export function NotificationsBell({
   fetcher,
   onOpenHref,
 }: {
-  /* e.g. "/api/admin/notifications" */
+  /* e.g. "/api/admin/notifications/" */
   endpoint: string;
   /* the portal's authed fetch (adds the session bearer) */
   fetcher: Fetcher;
@@ -445,6 +445,84 @@ export type NavGroup = {
   defaultOpen?: boolean;
 };
 
+/*
+ * One row of the rail.
+ *
+ * Module scope on purpose. This used to be declared inside PortalSidebar,
+ * which made it a new component type on every render of the rail, so every
+ * badge poll that changed a count unmounted and remounted every nav button,
+ * and the one holding keyboard focus lost it. The rail's state arrives as
+ * props instead.
+ */
+function SidebarItem({
+  it,
+  active,
+  onSelect,
+  onNavigated,
+}: {
+  it: NavItem;
+  active: string;
+  onSelect: (key: string) => void;
+  onNavigated?: () => void;
+}) {
+  return it.disabled ? (
+    <span className="group/locked relative block">
+      <span
+        aria-disabled="true"
+        className="flex w-full cursor-not-allowed items-center gap-2.5 rounded-[8px] px-3 py-2 text-left text-body-sm text-chrome-dim opacity-55"
+      >
+        <span className="grid h-5 w-5 shrink-0 place-items-center [&>svg]:h-[16px] [&>svg]:w-[16px]">
+          {it.icon}
+        </span>
+        <span className="min-w-0 flex-1 truncate">{it.label}</span>
+      </span>
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 hidden -translate-y-1/2 whitespace-nowrap rounded-[6px] border border-chrome-line bg-chrome px-2.5 py-1.5 font-mono text-label text-chrome-text shadow-lg group-hover/locked:block"
+      >
+        {it.disabledTip ?? "This is switched off for your account."}
+      </span>
+    </span>
+  ) : (
+    <button
+      type="button"
+      onClick={() => {
+        onSelect(it.key);
+        onNavigated?.();
+      }}
+      /*
+       * Three states that have to read apart at a glance. They used to be
+       * three shades of the same grey: the active row was chrome-2 on the
+       * chrome rail, about a tenth of a step of lightness, and hover was
+       * that same colour at 70%, so where you are and where the pointer is
+       * looked alike. Active is gold now, which is what the settings tabs
+       * already do for the same job, and hover stays neutral so it cannot
+       * be mistaken for it. The bar is an inset shadow rather than a border
+       * so the label does not shift two pixels when you navigate.
+       */
+      className={`tap group flex w-full items-center gap-2.5 rounded-[8px] px-3 py-2 text-left text-body-sm transition-colors ${
+        active === it.key
+          ? "bg-gold/15 font-semibold text-gold shadow-[inset_2px_0_0_var(--gold)]"
+          : "text-chrome-muted hover:bg-chrome-2 hover:text-chrome-text"
+      }`}
+    >
+      <span
+        className={`grid h-5 w-5 shrink-0 place-items-center [&>svg]:h-[16px] [&>svg]:w-[16px] ${
+          active === it.key ? "text-gold" : "text-chrome-dim group-hover:text-chrome-text"
+        }`}
+      >
+        {it.icon}
+      </span>
+      <span className="min-w-0 flex-1 truncate">{it.label}</span>
+      {it.badge ? (
+        <span className="rounded-full bg-gold px-1.5 py-0.5 font-mono text-label font-bold leading-none text-canvas">
+          {it.badge}
+        </span>
+      ) : null}
+    </button>
+  );
+}
+
 export function PortalSidebar({
   groups,
   active,
@@ -546,63 +624,8 @@ export function PortalSidebar({
     });
   }
 
-  const Item = ({ it, onNavigated }: { it: NavItem; onNavigated?: () => void }) =>
-    it.disabled ? (
-      <span className="group/locked relative block">
-        <span
-          aria-disabled="true"
-          className="flex w-full cursor-not-allowed items-center gap-2.5 rounded-[8px] px-3 py-2 text-left text-body-sm text-chrome-dim opacity-55"
-        >
-          <span className="grid h-5 w-5 shrink-0 place-items-center [&>svg]:h-[16px] [&>svg]:w-[16px]">
-            {it.icon}
-          </span>
-          <span className="min-w-0 flex-1 truncate">{it.label}</span>
-        </span>
-        <span
-          role="tooltip"
-          className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 hidden -translate-y-1/2 whitespace-nowrap rounded-[6px] border border-chrome-line bg-chrome px-2.5 py-1.5 font-mono text-label text-chrome-text shadow-lg group-hover/locked:block"
-        >
-          {it.disabledTip ?? "This is switched off for your account."}
-        </span>
-      </span>
-    ) : (
-    <button
-      type="button"
-      onClick={() => {
-        onSelect(it.key);
-        onNavigated?.();
-      }}
-      /*
-       * Three states that have to read apart at a glance. They used to be
-       * three shades of the same grey: the active row was chrome-2 on the
-       * chrome rail, about a tenth of a step of lightness, and hover was
-       * that same colour at 70%, so where you are and where the pointer is
-       * looked alike. Active is gold now, which is what the settings tabs
-       * already do for the same job, and hover stays neutral so it cannot
-       * be mistaken for it. The bar is an inset shadow rather than a border
-       * so the label does not shift two pixels when you navigate.
-       */
-      className={`tap group flex w-full items-center gap-2.5 rounded-[8px] px-3 py-2 text-left text-body-sm transition-colors ${
-        active === it.key
-          ? "bg-gold/15 font-semibold text-gold shadow-[inset_2px_0_0_var(--gold)]"
-          : "text-chrome-muted hover:bg-chrome-2 hover:text-chrome-text"
-      }`}
-    >
-      <span
-        className={`grid h-5 w-5 shrink-0 place-items-center [&>svg]:h-[16px] [&>svg]:w-[16px] ${
-          active === it.key ? "text-gold" : "text-chrome-dim group-hover:text-chrome-text"
-        }`}
-      >
-        {it.icon}
-      </span>
-      <span className="min-w-0 flex-1 truncate">{it.label}</span>
-      {it.badge ? (
-        <span className="rounded-full bg-gold px-1.5 py-0.5 font-mono text-label font-bold leading-none text-canvas">
-          {it.badge}
-        </span>
-      ) : null}
-    </button>
-    );
+  /* the props every rail item needs from here */
+  const item = { active, onSelect };
 
   return (
     /* outer nav stretches to the column floor so the rail's background never
@@ -661,7 +684,7 @@ export function PortalSidebar({
                 <ul className="flex flex-col gap-0.5">
                   {g.items.map((it) => (
                     <li key={it.key}>
-                      <Item it={it} onNavigated={() => setSheet(false)} />
+                      <SidebarItem it={it} {...item} onNavigated={() => setSheet(false)} />
                     </li>
                   ))}
                 </ul>
@@ -671,7 +694,7 @@ export function PortalSidebar({
               <ul className="flex flex-col gap-0.5 border-t border-chrome-line pt-3">
                 {bottom.map((it) => (
                   <li key={it.key}>
-                    <Item it={it} onNavigated={() => setSheet(false)} />
+                    <SidebarItem it={it} {...item} onNavigated={() => setSheet(false)} />
                   </li>
                 ))}
               </ul>
@@ -713,7 +736,7 @@ export function PortalSidebar({
                   <ul className="flex flex-col gap-0.5 pt-0.5">
                     {g.items.map((it) => (
                       <li key={it.key}>
-                        <Item it={it} />
+                        <SidebarItem it={it} {...item} />
                       </li>
                     ))}
                   </ul>
@@ -724,7 +747,7 @@ export function PortalSidebar({
             <ul key="top" className="flex flex-col gap-0.5">
               {g.items.map((it) => (
                 <li key={it.key}>
-                  <Item it={it} />
+                  <SidebarItem it={it} {...item} />
                 </li>
               ))}
             </ul>
@@ -737,7 +760,7 @@ export function PortalSidebar({
         <ul className="hidden shrink-0 flex-col gap-0.5 border-t border-chrome-line pt-3 md:mt-3 md:flex">
           {bottom.map((it) => (
             <li key={it.key}>
-              <Item it={it} />
+              <SidebarItem it={it} {...item} />
             </li>
           ))}
         </ul>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Clapperboard, ShoppingCart, ThumbsUp } from "lucide-react";
 import { Button, Card, CardGrid, EmptyState, PageHeader } from "@/components/portal/ui";
+import { money } from "@/lib/money-format";
 
 /*
  * The upcoming shelf: what the studio is making next, and a way to say
@@ -28,13 +29,6 @@ type Upcoming = {
   voted: boolean;
   preorderCents: number | null;
 };
-
-const money = (cents: number) =>
-  (cents / 100).toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-  });
 
 function UpcomingCard({
   item,

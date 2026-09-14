@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyAdmin } from "@/lib/checkout/admin-auth";
+import { adminRole, verifyAdmin } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { invoiceDisplayNumber, invoiceOpen, invoiceSettled } from "@/lib/invoice-state";
 import { isOpen } from "@/lib/projects";
@@ -27,9 +27,13 @@ type Row = Record<string, unknown>;
 export async function GET(req: Request) {
   const admin = await verifyAdmin(req);
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  /* company revenue is for admins and managers; a sales rep's menu never
+     offers this screen, and the API has to say the same */
+  if ((await adminRole(admin.email)) === "sales_rep")
+    return NextResponse.json({ error: "Sales figures are for admins and managers." }, { status: 403 });
 
   const db = supabaseAdmin();
-  const [{ data: orders }, { data: subs }, { data: invoices }, { data: projects }] =
+  const [{ data: orders }, { data: subs }, { data: invoices }, { data: projects }, { data: internalRows }] =
     await Promise.all([
       db
         .from("orders")
@@ -40,7 +44,9 @@ export async function GET(req: Request) {
         .from("subscriptions")
         .select("customer_email, amount_cents, status, created_at, current_period_end, plan_name, product:products(name, sku)"),
       db.from("invoices").select("number, hl_number, total_cents, status, product_sku, product_id, parent_order_id, paid_at, hl_status, kind, customer_email, line_items, amount_paid_cents"),
-      db.from("projects").select("id, status, quoted_cents, agreed_cents"),
+      db.from("projects").select("id, status, quoted_cents, agreed_cents, customer_email"),
+      /* the studio's own accounts (the demo client), which are not revenue */
+      db.from("customers").select("email").eq("internal", true),
     ]);
 
   /* every recurring charge that actually succeeded */
@@ -49,8 +55,20 @@ export async function GET(req: Request) {
     .select("amount_cents, paid_at, customer_email, plan_name")
     .order("paid_at", { ascending: false });
 
+  /* Every figure below leaves the studio's own accounts out, the way the
+     customer list and the sweep already do. Filtered at the source, so
+     nothing further down has to remember. */
+  const internal = new Set(((internalRows ?? []) as Row[]).map((c) => String(c.email).toLowerCase()));
+  const external = (rows: unknown[] | null) =>
+    ((rows ?? []) as Row[]).filter((r) => !internal.has(String(r.customer_email ?? "").toLowerCase()));
+  const orderRows = external(orders);
+  const invoiceRows = external(invoices);
+  const subRows = external(subs);
+  const recurringRows = external(recurring);
+  const projectRows = external(projects);
+
   const invoiceByProduct = new Map<string, InvoiceLink>(
-    ((invoices ?? []) as Row[])
+    invoiceRows
       .filter((i) => i.product_id)
       .map((i) => [
         String(i.product_id),
@@ -63,7 +81,7 @@ export async function GET(req: Request) {
   /* one-time sales, each labelled and dated by payment */
   /* which invoice a product belongs to, so a sale can name the one it settled */
   const invoiceNumberByProduct = new Map(
-    ((invoices ?? []) as Row[])
+    invoiceRows
       /* both halves must actually exist: String(undefined) is the string
        * "undefined", which reads as a real invoice number all the way to
        * the screen */
@@ -71,7 +89,7 @@ export async function GET(req: Request) {
       .map((i) => [String(i.product_id), i.number as string]),
   );
 
-  const orderSales = ((orders ?? []) as Row[])
+  const orderSales = orderRows
     .filter((o) => String(o.status) === "paid")
     .map((o) => {
       const productId = (o.product_id as string | null) ?? null;
@@ -96,7 +114,7 @@ export async function GET(req: Request) {
 
   /* invoices paid in HighLevel: money with no order behind it. A legacy
      invoice paid through checkout has an order above and is not repeated. */
-  const invoiceSales = ((invoices ?? []) as Row[])
+  const invoiceSales = invoiceRows
     .filter((i) => !i.product_id && invoiceSettled(i))
     .map((i) => {
       const first = Array.isArray(i.line_items) ? (i.line_items[0] as { description?: string } | undefined) : undefined;
@@ -114,7 +132,7 @@ export async function GET(req: Request) {
     });
   const sales = [...orderSales, ...invoiceSales];
 
-  const refundedCents = ((orders ?? []) as Row[])
+  const refundedCents = orderRows
     .filter((o) => String(o.status) === "refunded")
     .reduce((s, o) => s + Number(o.amount_cents), 0);
 
@@ -122,13 +140,13 @@ export async function GET(req: Request) {
   const BILLING = new Set(["active", "trialing", "past_due"]);
   /* what recurring has actually brought in, counted from real charges rather
    * than estimated from elapsed months */
-  const subscriptionCents = ((recurring ?? []) as Row[]).reduce(
+  const subscriptionCents = recurringRows.reduce(
     (a, x) => a + Number(x.amount_cents),
     0,
   );
   let mrrCents = 0;
   const planRows: { name: string; mrrCents: number; live: number }[] = [];
-  for (const s of (subs ?? []) as Row[]) {
+  for (const s of subRows) {
     const amount = s.amount_cents == null ? 0 : Number(s.amount_cents);
     if (BILLING.has(String(s.status))) {
       mrrCents += amount;
@@ -144,13 +162,13 @@ export async function GET(req: Request) {
     }
   }
 
-  const outstandingCents = ((invoices ?? []) as Row[])
+  const outstandingCents = invoiceRows
     .filter((i) => invoiceOpen(i))
     .reduce((s, i) => s + Number(i.total_cents), 0);
 
   /* work agreed and not yet paid for: the pipeline. isOpen speaks both the
      old and the new status vocabulary, so this survives the rename. */
-  const pipelineCents = ((projects ?? []) as Row[])
+  const pipelineCents = projectRows
     .filter((p) => isOpen(String(p.status)))
     .reduce(
       (s, p) => s + Number(p.agreed_cents ?? p.quoted_cents ?? 0),
@@ -163,7 +181,7 @@ export async function GET(req: Request) {
    * One row per payment that actually happened, so a plan billing every month
    * appears every month instead of only on the day it started.
    */
-  const subscriptionSales = ((recurring ?? []) as Row[]).map((x) => ({
+  const subscriptionSales = recurringRows.map((x) => ({
     kind: "subscription" as const,
     amountCents: Number(x.amount_cents),
     at: String(x.paid_at),
@@ -222,7 +240,7 @@ export async function GET(req: Request) {
       addon: sales.filter((s) => s.kind === "addon").length,
       custom: sales.filter((s) => s.kind === "custom").length,
       liveSubscriptions: planRows.reduce((a, p) => a + p.live, 0),
-      openProjects: ((projects ?? []) as Row[]).filter((p) => isOpen(String(p.status))).length,
+      openProjects: projectRows.filter((p) => isOpen(String(p.status))).length,
     },
     plans: planRows.sort((a, b) => b.mrrCents - a.mrrCents),
     months,

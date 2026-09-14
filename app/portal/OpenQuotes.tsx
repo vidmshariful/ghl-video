@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { Button, Card } from "@/components/portal/ui";
 import { chatGet, chatPostJson } from "@/components/chat/api";
+import { formatDayOnly } from "@/lib/day-only";
+import { money } from "@/lib/money-format";
 
 /*
  * A quote waiting on the client, at the top of their screen: what it is,
@@ -23,9 +25,6 @@ type Quote = {
   acceptedBy: string | null;
 };
 
-const money = (cents: number) => (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0 });
-const day = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-
 export function OpenQuotes() {
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [canAnswer, setCanAnswer] = useState(false);
@@ -34,7 +33,7 @@ export function OpenQuotes() {
   const [err, setErr] = useState("");
 
   const load = () =>
-    chatGet<{ quotes?: Quote[]; canAnswer?: boolean }>("/api/portal/quotes")
+    chatGet<{ quotes?: Quote[]; canAnswer?: boolean }>("/api/portal/quotes/")
       .then((j) => {
         setQuotes(j.quotes ?? []);
         setCanAnswer(Boolean(j.canAnswer));
@@ -52,7 +51,7 @@ export function OpenQuotes() {
     setErr("");
     try {
       const j = await chatPostJson<{ error?: string }>(
-        "/api/portal/quotes",
+        "/api/portal/quotes/",
         action === "accept" ? { id: q.id, action, name } : { id: q.id, action },
       );
       if (j.error) setErr(String(j.error));
@@ -82,7 +81,7 @@ export function OpenQuotes() {
                   {q.scope && <p className="mt-2 whitespace-pre-wrap text-body-sm text-chrome-muted">{q.scope}</p>}
                   <p className="mt-1.5 font-mono text-label uppercase text-chrome-muted">
                     {q.number}
-                    {q.validUntil ? ` / good until ${day(q.validUntil)}` : ""}
+                    {q.validUntil ? ` / good until ${formatDayOnly(q.validUntil, { year: "numeric" })}` : ""}
                   </p>
                 </div>
                 <span className="font-mono text-price font-bold tabular-nums text-chrome-text">{money(q.totalCents)}</span>

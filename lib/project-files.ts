@@ -275,7 +275,8 @@ async function notifyEditingFile(
         kind: "editing_file",
         title: `We added a file to ${vars.title}`,
         body: `${vars.file_name} is with your request.`,
-        href: "editing",
+        /* a PORTAL_SECTIONS key: the editing plan lives under "subscriptions" */
+        href: "subscriptions",
         feature: "subscriptions",
         vars,
       });

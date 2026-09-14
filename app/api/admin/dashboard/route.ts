@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyAdmin } from "@/lib/checkout/admin-auth";
+import { adminRole, verifyAdmin } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { invoiceOpen, invoiceSettled } from "@/lib/invoice-state";
 import { STUDIO_LABEL, isOpen, normalizeProjectStatus } from "@/lib/projects";
@@ -18,7 +18,14 @@ export const dynamic = "force-dynamic";
  * five other screens and had to be hunted for.
  *
  * The shape is deliberately three layers: what needs a person today, what
- * the money is doing, and what the work is doing.
+ * the money is doing, and what the work is doing. The money layer is left
+ * out for a Sales Rep: their menu never offers the sales screen, and the
+ * dashboard must not hand them company revenue by another door.
+ *
+ * The 30-day figure follows the sales screen's definition (app/api/admin/
+ * sales): a one-time sale is dated by when it was PAID, and the recurring
+ * charges in subscription_payments count too. The two screens used to
+ * answer "this month" differently, which is how they came to disagree.
  */
 
 type Row = Record<string, unknown>;
@@ -28,6 +35,7 @@ const cents = (v: unknown) => Number(v ?? 0);
 export async function GET(req: Request) {
   const admin = await verifyAdmin(req);
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  const showMoney = (await adminRole(admin.email)) !== "sales_rep";
 
   const db = supabaseAdmin();
   const now = Date.now();
@@ -48,6 +56,7 @@ export async function GET(req: Request) {
     emailFails,
     conversations,
     feedback,
+    recurring,
   ] = await Promise.all([
     /*
      * Every order, but only the columns the arithmetic needs, and no joins.
@@ -64,7 +73,7 @@ export async function GET(req: Request) {
      */
     db
       .from("orders")
-      .select("amount_cents, status, created_at, intake_completed, product:products(sku, metadata)")
+      .select("customer_email, amount_cents, status, created_at, paid_at, intake_completed, product:products(sku, metadata)")
       .order("created_at", { ascending: false }),
     /* the six the dashboard actually lists, with the names it shows */
     db
@@ -74,14 +83,18 @@ export async function GET(req: Request) {
       )
       .order("created_at", { ascending: false })
       .limit(6),
-    db.from("subscriptions").select("status, amount_cents, plan_name"),
-    db.from("invoices").select("id, number, total_cents, status, product_sku, product_id, due_date, paid_at, hl_status, amount_paid_cents"),
+    db.from("subscriptions").select("customer_email, status, amount_cents, plan_name"),
+    db.from("invoices").select("id, number, customer_email, total_cents, status, product_sku, product_id, due_date, paid_at, hl_status, amount_paid_cents"),
     db.from("projects").select("id, title, status, due_at, pipeline, customer_email, agreed_cents, quoted_cents"),
+    /* with whoever owns each video (an order, a custom project, or an
+       editing month), so the studio's own account can be left out below */
     db
       .from("order_deliverables")
-      .select("id, title, status, due_at, ready_at, project_id, cycle_id, order_id")
+      .select(
+        "id, title, status, due_at, ready_at, project_id, cycle_id, order_id, order:orders(customer_email), project:projects(customer_email), cycle:subscription_cycles(subscription:subscriptions(customer_email))",
+      )
       .neq("status", "approved"),
-    db.from("customers").select("id, created_at"),
+    db.from("customers").select("id, email, created_at, internal"),
     db.from("project_requests").select("id, status"),
     db.from("alarms").select("id").is("resolved_at", null),
     db
@@ -96,14 +109,41 @@ export async function GET(req: Request) {
       .neq("verdict", "skipped")
       .order("created_at", { ascending: false })
       .limit(5),
+    /* every recurring charge that actually succeeded */
+    db.from("subscription_payments").select("amount_cents, paid_at, customer_email"),
   ]);
 
-  const orderRows = (orders.data ?? []) as Row[];
+  /*
+   * The studio's own accounts (the demo client) are not customers. They are
+   * out of every money figure and every studio count, the way the customer
+   * list and the sweep already leave them out. Filtered at the source, so
+   * nothing below has to remember.
+   */
+  const allCustomers = (customers.data ?? []) as Row[];
+  const internal = new Set(
+    allCustomers.filter((c) => c.internal).map((c) => String(c.email).toLowerCase()),
+  );
+  const isInternal = (email: unknown) => internal.has(String(email ?? "").toLowerCase());
+  const external = (rows: Row[] | null) => ((rows ?? []) as Row[]).filter((r) => !isInternal(r.customer_email));
+  /* a video belongs to an order, a custom project, or an editing month */
+  const deliverableEmail = (d: Row) => {
+    const order = d.order as { customer_email?: string } | null;
+    const project = d.project as { customer_email?: string } | null;
+    const cycle = d.cycle as { subscription?: { customer_email?: string } | null } | null;
+    return order?.customer_email ?? project?.customer_email ?? cycle?.subscription?.customer_email ?? "";
+  };
+
+  const orderRows = external(orders.data as Row[] | null);
   const paid = orderRows.filter((o) => String(o.status) === "paid");
-  const projectRows = (projects.data ?? []) as Row[];
+  /* dated by payment, like the sales screen: an order raised in March and
+     paid in April is April's revenue */
+  const paidOn = (o: Row) => String(o.paid_at ?? o.created_at);
+  const projectRows = external(projects.data as Row[] | null);
   const openProjects = projectRows.filter((p) => isOpen(normalizeProjectStatus(String(p.status))));
-  const delivRows = (deliverables.data ?? []) as Row[];
-  const invoiceRows = (invoices.data ?? []) as Row[];
+  const delivRows = ((deliverables.data ?? []) as Row[]).filter((d) => !isInternal(deliverableEmail(d)));
+  const invoiceRows = external(invoices.data as Row[] | null);
+  const subRows = external(subs.data as Row[] | null);
+  const recurringRows = external(recurring.data as Row[] | null);
 
   /* ---- money ---- */
   /* invoices paid in HighLevel have no order behind them, so they are added
@@ -111,14 +151,17 @@ export async function GET(req: Request) {
      and is already in `paid` */
   const hlPaid = invoiceRows.filter((i) => !i.product_id && invoiceSettled(i));
   const hlPaidCents = (i: Row) => cents(i.amount_paid_cents || i.total_cents);
+  const recurringCents = (rows: Row[]) => rows.reduce((s, x) => s + cents(x.amount_cents), 0);
   const allTimeCents =
-    paid.reduce((s, o) => s + cents(o.amount_cents), 0) + hlPaid.reduce((s, i) => s + hlPaidCents(i), 0);
+    paid.reduce((s, o) => s + cents(o.amount_cents), 0) +
+    hlPaid.reduce((s, i) => s + hlPaidCents(i), 0) +
+    recurringCents(recurringRows);
   const monthCents =
-    paid.filter((o) => String(o.created_at) >= monthAgo).reduce((s, o) => s + cents(o.amount_cents), 0) +
-    hlPaid.filter((i) => String(i.paid_at) >= monthAgo).reduce((s, i) => s + hlPaidCents(i), 0);
+    paid.filter((o) => paidOn(o) >= monthAgo).reduce((s, o) => s + cents(o.amount_cents), 0) +
+    hlPaid.filter((i) => String(i.paid_at) >= monthAgo).reduce((s, i) => s + hlPaidCents(i), 0) +
+    recurringCents(recurringRows.filter((x) => String(x.paid_at) >= monthAgo));
 
   const BILLING = new Set(["active", "trialing", "past_due"]);
-  const subRows = (subs.data ?? []) as Row[];
   const mrrCents = subRows
     .filter((s) => BILLING.has(String(s.status)))
     .reduce((s, x) => s + cents(x.amount_cents), 0);
@@ -142,12 +185,16 @@ export async function GET(req: Request) {
     });
   }
   for (const o of paid) {
-    const slot = days.find((d) => d.key === new Date(String(o.created_at)).toDateString());
+    const slot = days.find((d) => d.key === new Date(paidOn(o)).toDateString());
     if (slot) slot.cents += cents(o.amount_cents);
   }
   for (const i of hlPaid) {
     const slot = days.find((d) => d.key === new Date(String(i.paid_at)).toDateString());
     if (slot) slot.cents += hlPaidCents(i);
+  }
+  for (const x of recurringRows) {
+    const slot = days.find((d) => d.key === new Date(String(x.paid_at)).toDateString());
+    if (slot) slot.cents += cents(x.amount_cents);
   }
 
   /* ---- what needs a person today ---- */
@@ -203,7 +250,7 @@ export async function GET(req: Request) {
     .sort((a, b) => a.at.localeCompare(b.at))
     .slice(0, 8);
 
-  const custRows = (customers.data ?? []) as Row[];
+  const custRows = allCustomers.filter((c) => !c.internal);
 
   return NextResponse.json({
     needs: {
@@ -217,15 +264,20 @@ export async function GET(req: Request) {
       lateProjects: lateProjects.length,
       lateVideos: lateVideos.length,
     },
-    money: {
-      allTimeCents,
-      monthCents,
-      mrrCents,
-      owedCents,
-      pipelineCents,
-      openInvoices: openInvoices.length,
-      liveSubscriptions: subRows.filter((s) => BILLING.has(String(s.status))).length,
-    },
+    ...(showMoney
+      ? {
+          money: {
+            allTimeCents,
+            monthCents,
+            mrrCents,
+            owedCents,
+            pipelineCents,
+            openInvoices: openInvoices.length,
+            liveSubscriptions: subRows.filter((s) => BILLING.has(String(s.status))).length,
+          },
+          days,
+        }
+      : {}),
     work: {
       inProduction: delivRows.filter((d) => String(d.status) === "in_production").length,
       revisions: delivRows.filter((d) => String(d.status) === "revisions").length,
@@ -238,7 +290,6 @@ export async function GET(req: Request) {
       customers: custRows.length,
       newThisMonth: custRows.filter((c) => String(c.created_at) >= monthAgo).length,
     },
-    days,
     paidOrders: paid.length,
     recentOrders: ((recent.data ?? []) as Row[]).map((o) => ({
       id: String(o.id),

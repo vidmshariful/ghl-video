@@ -300,7 +300,7 @@ function OfferSlot({ offer }: { offer: Offer }) {
   const go = () => {
     /* counted, but never waited on: a counter must not stand between somebody
      * and the thing they just clicked */
-    void fetch("/api/portal/campaign", {
+    void fetch("/api/portal/campaign/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: offer.id }),
@@ -433,11 +433,14 @@ export function DashboardView({
     review: number;
     planName: string;
   } | null>(null);
-  const hasCustom = (has ? has("projects") : true) && can("projects");
+  /* "orders" is the grant that covers orders and projects (lib/team-features);
+     there is no "projects" grant, so checking one hid the line from every
+     teammate with an explicit grant list */
+  const hasCustom = (has ? has("projects") : true) && can("orders");
   const hasEditing = (has ? has("subscriptions") : false) && can("subscriptions");
   useEffect(() => {
     if (!hasCustom) return;
-    authedFetch("/api/portal/projects")
+    authedFetch("/api/portal/projects/")
       .then((j) => {
         setPartnership((j.partnership as Partnership | null | undefined) ?? null);
         const list = (j.projects as { open: boolean; pipeline?: { ball?: string | null } }[] | undefined) ?? [];
@@ -454,7 +457,7 @@ export function DashboardView({
   }, [hasCustom, authedFetch]);
   useEffect(() => {
     if (!hasEditing) return;
-    authedFetch("/api/portal/plan")
+    authedFetch("/api/portal/plan/")
       .then((j) => {
         const plan = j.plan as
           | { planName: string; credits: { spent: number; allowed: number }; videos: { status: string }[] }
@@ -484,21 +487,21 @@ export function DashboardView({
       setBrandReady(true);
       return;
     }
-    authedFetch("/api/portal/orders")
+    authedFetch("/api/portal/orders/")
       .then((j) => setOrders((j.orders as OrderSummary[]) ?? []))
       .catch(() => setOrders([]));
-    authedFetch("/api/portal/videos")
+    authedFetch("/api/portal/videos/")
       .then((j) => setGroups((j.groups as Group[]) ?? []))
       .catch(() => setGroups([]));
-    authedFetch("/api/portal/brand-kit")
+    authedFetch("/api/portal/brand-kit/")
       .then((j) => setBrandReady(Boolean((j.completeness as { ready?: boolean } | null)?.ready)))
       /* on failure assume it is fine: nagging over a network blip is worse
        * than missing one prompt */
       .catch(() => setBrandReady(true));
-    authedFetch("/api/portal/campaign")
+    authedFetch("/api/portal/campaign/")
       .then((j) => setOffer((j.campaign as Offer | null) ?? null))
       .catch(() => setOffer(null));
-    authedFetch("/api/portal/feedback")
+    authedFetch("/api/portal/feedback/")
       .then((j) => setFeedbackAsk((j.ask as FeedbackAskData | null) ?? null))
       .catch(() => setFeedbackAsk(null));
   }, [canOrders, authedFetch]);

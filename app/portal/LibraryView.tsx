@@ -22,6 +22,7 @@ import {
 import { LibraryCard, PreviewLightbox } from "@/components/library/cards";
 import { PickTray } from "@/components/library/tray";
 import type { BrowseVideo, Version } from "@/components/library/catalog";
+import { money } from "@/lib/money-format";
 
 /*
  * The library: everything we sell, inside the portal.
@@ -92,13 +93,6 @@ function toBrowse(i: Item): BrowseVideo {
     checkoutSku: null,
   };
 }
-
-const money = (cents: number) =>
-  (cents / 100).toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-  });
 
 /** prefers-reduced-motion, live. Motion off means posters, not autoplay. */
 function useReducedMotion() {
@@ -550,7 +544,7 @@ export function LibraryView({
 
   const share = async (codes: string[]): Promise<string | null> => {
     try {
-      const j = (await authedFetch("/api/portal/lists", {
+      const j = (await authedFetch("/api/portal/lists/", {
         method: "POST",
         body: JSON.stringify({ codes }),
       })) as { href?: string };

@@ -28,6 +28,7 @@ import {
 import { VideoReviewModal } from "./VideoReviewModal";
 import { StyleGuideView } from "./StyleGuideView";
 import { DownloadAll } from "@/components/portal/DownloadAll";
+import { money } from "@/lib/money-format";
 import { Attachments } from "@/components/portal/Attachments";
 import { CLIENT_PHASES, defaultAspectFor, needsClient, phaseFor, stageFor } from "@/lib/editing-sop";
 
@@ -130,13 +131,6 @@ type Plan = {
     videos: Video[];
   }[];
 };
-
-const money = (cents: number) =>
-  (cents / 100).toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-  });
 
 const day = (iso: string | null) =>
   iso
@@ -303,7 +297,7 @@ export function EditingView({
   const [err, setErr] = useState("");
 
   const load = useCallback(async () => {
-    const j = await authedFetch("/api/portal/plan").catch(() => null);
+    const j = await authedFetch("/api/portal/plan/").catch(() => null);
     setPlan((j?.plan as Plan | null) ?? null);
     setLoaded(true);
   }, [authedFetch]);
@@ -344,7 +338,7 @@ export function EditingView({
     setBusy(true);
     setErr("");
     try {
-      const j = (await authedFetch("/api/portal/plan", {
+      const j = (await authedFetch("/api/portal/plan/", {
         method: "POST",
         body: JSON.stringify({
           ...draft,
@@ -367,7 +361,7 @@ export function EditingView({
         for (const file of pending) {
           const fd = new FormData();
           fd.append("file", file);
-          const r = (await authedFetch(`/api/portal/editing/${j.id}/files`, {
+          const r = (await authedFetch(`/api/portal/editing/${j.id}/files/`, {
             method: "POST",
             body: fd,
           }).catch(() => null)) as { ok?: boolean; error?: string } | null;
@@ -409,7 +403,7 @@ export function EditingView({
   async function saveRequest(v: Video, patch: Record<string, string>): Promise<string | null> {
     setBusy(true);
     try {
-      const j = (await authedFetch("/api/portal/plan", {
+      const j = (await authedFetch("/api/portal/plan/", {
         method: "POST",
         body: JSON.stringify({ edit: v.id, ...patch }),
       }).catch(() => null)) as { ok?: boolean; error?: string } | null;
@@ -434,7 +428,7 @@ export function EditingView({
       /* the server refuses once an editor has started. Throwing that answer
          away left the client staring at a card that did not disappear, with
          nothing on screen saying why. */
-      const j = (await authedFetch("/api/portal/plan", {
+      const j = (await authedFetch("/api/portal/plan/", {
         method: "POST",
         body: JSON.stringify({ cancel: v.id }),
       })) as { ok?: boolean; error?: string };
@@ -1833,7 +1827,7 @@ function RequestDetail({
               the small things that go IN the video and were arriving by
               email: a logo, a headshot, three product screenshots. */}
           <Attachments
-            endpoint={`/api/portal/editing/${v.id}/files`}
+            endpoint={`/api/portal/editing/${v.id}/files/`}
             title="Resources for this video"
             description="Logos, images, fonts, anything you want used in the cut. Up to 10 MB each."
             empty="Nothing yet. Add your logo or any image you want in the video."

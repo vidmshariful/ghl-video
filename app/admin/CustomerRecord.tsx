@@ -6,6 +6,7 @@ import { Button, Card, Chip, Field, Input, Modal, Select, Table, Tabs, Td, Th } 
 import { monthLabel, RETAINER_KIND_LABEL, type MonthSummary, type Retainer, type RetainerKind } from "@/lib/retainer";
 import { portalVisibility, type PortalVisibility, type ServiceLines } from "@/lib/portal-visibility";
 import { STUDIO_LABEL } from "@/lib/projects";
+import { formatDayOnly } from "@/lib/day-only";
 import { authHeader, money, when } from "./client";
 import { TeamCard } from "@/components/portal/team";
 import { HIDEABLE_SECTIONS } from "./customer-sections";
@@ -247,7 +248,7 @@ export function CustomerRecord({
   const load = useCallback(async () => {
     setErr("");
     try {
-      const r = await fetch(`/api/admin/customers/${id}`, { headers: await authHeader() });
+      const r = await fetch(`/api/admin/customers/${id}/`, { headers: await authHeader() });
       const j = await r.json();
       if (!r.ok) return setErr(j.error ?? "Could not load this client.");
       setData(j as Record_);
@@ -270,7 +271,7 @@ export function CustomerRecord({
     let live = true;
     const pull = async () => {
       try {
-        const r = await fetch(`/api/admin/customers/${id}/activity`, { headers: await authHeader() });
+        const r = await fetch(`/api/admin/customers/${id}/activity/`, { headers: await authHeader() });
         const j = await r.json();
         if (live && r.ok) setActivity(j);
       } catch {
@@ -287,7 +288,7 @@ export function CustomerRecord({
 
   const refreshEmails = useCallback(async (email: string) => {
     try {
-      const r = await fetch(`/api/admin/email-log?q=${encodeURIComponent(email)}`, {
+      const r = await fetch(`/api/admin/email-log/?q=${encodeURIComponent(email)}`, {
         headers: await authHeader(),
       });
       const j = await r.json();
@@ -308,7 +309,7 @@ export function CustomerRecord({
     setNote("");
     setErr("");
     try {
-      const r = await fetch(`/api/admin/customers/${id}/welcome-email`, {
+      const r = await fetch(`/api/admin/customers/${id}/welcome-email/`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(await authHeader()) },
         body: JSON.stringify({ email }),
@@ -334,7 +335,7 @@ export function CustomerRecord({
     setNote("");
     setErr("");
     try {
-      const r = await fetch(`/api/admin/orders/${orderId}/resend-email`, {
+      const r = await fetch(`/api/admin/orders/${orderId}/resend-email/`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(await authHeader()) },
         body: JSON.stringify({ kind }),
@@ -373,7 +374,7 @@ export function CustomerRecord({
       setErr("");
     }
     try {
-      const r = await fetch(`/api/admin/customers/${id}`, {
+      const r = await fetch(`/api/admin/customers/${id}/`, {
         method: "PATCH",
         headers: { ...(await authHeader()), "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -418,7 +419,7 @@ export function CustomerRecord({
     setContact(null);
     setErr("");
     try {
-      const r = await fetch(`/api/admin/customers/${id}/contacts`, {
+      const r = await fetch(`/api/admin/customers/${id}/contacts/`, {
         method: "POST",
         headers: { ...(await authHeader()), "Content-Type": "application/json" },
         body: JSON.stringify(draft),
@@ -1086,7 +1087,7 @@ export function CustomerRecord({
                  which is what every other screen will read */
               onSave={(terms) => patch({ retainer: terms })}
               onSendAgreement={async () => {
-                const r = await fetch(`/api/admin/customers/${id}/agreement`, { method: "POST", headers: await authHeader() });
+                const r = await fetch(`/api/admin/customers/${id}/agreement/`, { method: "POST", headers: await authHeader() });
                 const j = (await r.json().catch(() => ({}))) as { ok?: boolean; error?: string };
                 return j.ok ? null : (j.error ?? "Not sent.");
               }}
@@ -1248,7 +1249,7 @@ export function CustomerRecord({
                           </Chip>
                         </Td>
                         <Td align="right">{money(i.totalCents)}</Td>
-                        <Td align="right">{i.dueDate ? when(i.dueDate) : "-"}</Td>
+                        <Td align="right">{i.dueDate ? formatDayOnly(i.dueDate) : "-"}</Td>
                         <Td align="right">{when(i.createdAt)}</Td>
                       </tr>
                     ))}
@@ -1345,7 +1346,7 @@ export function CustomerRecord({
             </Card>
 
             <TeamCard
-              endpoint={`/api/admin/customers/${data.customer.id}/team`}
+              endpoint={`/api/admin/customers/${data.customer.id}/team/`}
               accountType="customer"
               heading="Portal access"
               blurb="Who can sign in to this client's portal. The primary account holder is always in; anyone below is a teammate they added, or one you added for them. Each gets their own login and the updates for the areas they are granted."

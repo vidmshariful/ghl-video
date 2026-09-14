@@ -41,7 +41,9 @@ type Dash = {
     lateProjects: number;
     lateVideos: number;
   };
-  money: {
+  /* absent for a Sales Rep: the API leaves company revenue out for that
+     role, and the screen simply has no money layer then */
+  money?: {
     allTimeCents: number;
     monthCents: number;
     mrrCents: number;
@@ -59,7 +61,7 @@ type Dash = {
     dueSoon: { kind: "project" | "video"; id: string; title: string; who: string; at: string }[];
   };
   people: { customers: number; newThisMonth: number };
-  days: { key: string; label: string; cents: number }[];
+  days?: { key: string; label: string; cents: number }[];
   paidOrders: number;
   recentOrders: {
     id: string;
@@ -97,7 +99,7 @@ export function DashboardScreen({ onNavigate }: { onNavigate: (v: View) => void 
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch("/api/admin/dashboard", { headers: await authHeader() });
+      const r = await fetch("/api/admin/dashboard/", { headers: await authHeader() });
       const j = await r.json();
       if (!r.ok) return setErr(j.error ?? "Could not load the dashboard.");
       setD(j as Dash);
@@ -124,45 +126,49 @@ export function DashboardScreen({ onNavigate }: { onNavigate: (v: View) => void 
     { label: "alarms nobody has cleared", n: d.needs.alarms, to: "health", tone: "bad" },
   ] as { label: string; n: number; to: View; tone: "warn" | "bad" }[]).filter((x) => x.n > 0);
 
-  const stats = [
-    {
-      label: "Revenue, all time",
-      value: money(d.money.allTimeCents),
-      icon: <BadgeDollarSign />,
-      chip: "bg-gold/10 text-gold",
-      tone: "text-gold",
-      to: "sales" as View,
-    },
-    {
-      label: "Recurring, per month",
-      value: money(d.money.mrrCents),
-      icon: <Repeat />,
-      chip: "bg-green/10 text-green",
-      tone: "text-green",
-      sub: `${d.money.liveSubscriptions} plan${d.money.liveSubscriptions === 1 ? "" : "s"} live`,
-      to: "subscriptions" as View,
-    },
-    {
-      label: "Invoiced, unpaid",
-      value: money(d.money.owedCents),
-      icon: <ShoppingCart />,
-      chip: "bg-blue/10 text-blue",
-      tone: d.money.owedCents ? "text-error" : "text-ink",
-      sub: `${d.money.openInvoices} open`,
-      to: "invoices" as View,
-    },
-    {
-      label: "Agreed, not yet paid",
-      value: money(d.money.pipelineCents),
-      icon: <Clock3 />,
-      chip: "bg-blue/10 text-blue",
-      tone: "text-ink",
-      sub: `${d.work.openProjects} custom job${d.work.openProjects === 1 ? "" : "s"}`,
-      to: "custom" as View,
-    },
-  ];
+  const m = d.money;
+  const days = d.days ?? [];
+  const stats = m
+    ? [
+        {
+          label: "Revenue, all time",
+          value: money(m.allTimeCents),
+          icon: <BadgeDollarSign />,
+          chip: "bg-gold/10 text-gold",
+          tone: "text-gold",
+          to: "sales" as View,
+        },
+        {
+          label: "Recurring, per month",
+          value: money(m.mrrCents),
+          icon: <Repeat />,
+          chip: "bg-green/10 text-green",
+          tone: "text-green",
+          sub: `${m.liveSubscriptions} plan${m.liveSubscriptions === 1 ? "" : "s"} live`,
+          to: "subscriptions" as View,
+        },
+        {
+          label: "Invoiced, unpaid",
+          value: money(m.owedCents),
+          icon: <ShoppingCart />,
+          chip: "bg-blue/10 text-blue",
+          tone: m.owedCents ? "text-error" : "text-ink",
+          sub: `${m.openInvoices} open`,
+          to: "invoices" as View,
+        },
+        {
+          label: "Agreed, not yet paid",
+          value: money(m.pipelineCents),
+          icon: <Clock3 />,
+          chip: "bg-blue/10 text-blue",
+          tone: "text-ink",
+          sub: `${d.work.openProjects} custom job${d.work.openProjects === 1 ? "" : "s"}`,
+          to: "custom" as View,
+        },
+      ]
+    : [];
 
-  const max = Math.max(1, ...d.days.map((x) => x.cents));
+  const max = Math.max(1, ...days.map((x) => x.cents));
 
   return (
     <div className="w-full">
@@ -202,60 +208,64 @@ export function DashboardScreen({ onNavigate }: { onNavigate: (v: View) => void 
       )}
 
       {/* ---- 2. the money ---- */}
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {stats.map((s) => (
-          <button
-            key={s.label}
-            type="button"
-            onClick={() => onNavigate(s.to)}
-            className="tap rounded-[12px] border border-hair bg-surface p-5 text-left transition-colors hover:border-gold/40"
-          >
-            <span className="flex items-center gap-2.5">
-              <span
-                className={`grid h-8 w-8 place-items-center rounded-[8px] ${s.chip} [&>svg]:h-[16px] [&>svg]:w-[16px]`}
-              >
-                {s.icon}
+      {stats.length > 0 && (
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {stats.map((s) => (
+            <button
+              key={s.label}
+              type="button"
+              onClick={() => onNavigate(s.to)}
+              className="tap rounded-[12px] border border-hair bg-surface p-5 text-left transition-colors hover:border-gold/40"
+            >
+              <span className="flex items-center gap-2.5">
+                <span
+                  className={`grid h-8 w-8 place-items-center rounded-[8px] ${s.chip} [&>svg]:h-[16px] [&>svg]:w-[16px]`}
+                >
+                  {s.icon}
+                </span>
+                <span className="font-mono text-label uppercase text-dim">{s.label}</span>
               </span>
-              <span className="font-mono text-label uppercase text-dim">{s.label}</span>
-            </span>
-            <span className={`mt-3 block font-display text-h2 tabular-nums ${s.tone}`}>
-              {s.value}
-            </span>
-            {s.sub && <span className="mt-1 block text-body-sm text-muted">{s.sub}</span>}
-          </button>
-        ))}
-      </div>
+              <span className={`mt-3 block font-display text-h2 tabular-nums ${s.tone}`}>
+                {s.value}
+              </span>
+              {s.sub && <span className="mt-1 block text-body-sm text-muted">{s.sub}</span>}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* ---- 3. thirty days ---- */}
-      <div className="mt-3 rounded-[12px] border border-hair bg-surface p-5 md:p-6">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="font-display text-h4 font-semibold text-ink">Last 30 days</h2>
-          <p className="text-body-sm text-muted">
-            <span className="font-semibold text-ink">{money(d.money.monthCents)}</span> across{" "}
-            <span className="font-semibold text-ink">{d.paidOrders}</span> paid order
-            {d.paidOrders === 1 ? "" : "s"} all time
-          </p>
-        </div>
-        {d.money.monthCents === 0 ? (
-          <p className="mt-4 text-body-sm text-dim">
-            No paid orders in the last 30 days yet. New sales draw themselves here.
-          </p>
-        ) : (
-          <div className="mt-5 flex h-28 items-end gap-[3px]" aria-hidden="true">
-            {d.days.map((x) => (
-              <div
-                key={x.key}
-                title={`${x.label}: ${money(x.cents)}`}
-                className="flex-1 rounded-t-[3px] bg-gold/80"
-                style={{
-                  height: `${Math.max(2, (x.cents / max) * 100)}%`,
-                  opacity: x.cents ? 1 : 0.15,
-                }}
-              />
-            ))}
+      {m && d.days && (
+        <div className="mt-3 rounded-[12px] border border-hair bg-surface p-5 md:p-6">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="font-display text-h4 font-semibold text-ink">Last 30 days</h2>
+            <p className="text-body-sm text-muted">
+              <span className="font-semibold text-ink">{money(m.monthCents)}</span> across{" "}
+              <span className="font-semibold text-ink">{d.paidOrders}</span> paid order
+              {d.paidOrders === 1 ? "" : "s"} all time
+            </p>
           </div>
-        )}
-      </div>
+          {m.monthCents === 0 ? (
+            <p className="mt-4 text-body-sm text-dim">
+              No paid orders in the last 30 days yet. New sales draw themselves here.
+            </p>
+          ) : (
+            <div className="mt-5 flex h-28 items-end gap-[3px]" aria-hidden="true">
+              {days.map((x) => (
+                <div
+                  key={x.key}
+                  title={`${x.label}: ${money(x.cents)}`}
+                  className="flex-1 rounded-t-[3px] bg-gold/80"
+                  style={{
+                    height: `${Math.max(2, (x.cents / max) * 100)}%`,
+                    opacity: x.cents ? 1 : 0.15,
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ---- 4. what the studio is making ---- */}
       <div className="mt-3 grid gap-3 lg:grid-cols-2">

@@ -65,7 +65,7 @@ function CopyField({ url }: { url: string }) {
         readOnly
         value={url}
         onFocus={(e) => e.currentTarget.select()}
-        className="w-full min-w-0 rounded-[8px] border border-hair bg-canvas px-3 py-2 font-mono text-body-sm text-muted focus:outline-none"
+        className="w-full min-w-0 rounded-[8px] border border-hair bg-canvas px-3 py-2 font-mono text-body-sm text-muted focus:border-gold focus:outline-none"
       />
       <button
         type="button"
@@ -123,7 +123,7 @@ export function InvoicesScreen() {
   const [err, setErr] = useState("");
 
   const load = useCallback(async () => {
-    const r = await fetch("/api/admin/invoices", { headers: await authHeader(), cache: "no-store" });
+    const r = await fetch("/api/admin/invoices/", { headers: await authHeader(), cache: "no-store" });
     const j = await r.json();
     setInvoices((j.invoices as Invoice[]) ?? []);
     const { data } = await supabase
@@ -152,8 +152,8 @@ export function InvoicesScreen() {
       try {
         const h = await authHeader();
         const [c, p] = await Promise.all([
-          fetch("/api/admin/customers", { headers: h }).then((x) => x.json()),
-          fetch("/api/admin/projects", { headers: h }).then((x) => x.json()),
+          fetch("/api/admin/customers/", { headers: h }).then((x) => x.json()),
+          fetch("/api/admin/projects/", { headers: h }).then((x) => x.json()),
         ]);
         setCustomers((c.customers as Customer[]) ?? []);
         setProjects(
@@ -267,7 +267,7 @@ export function InvoicesScreen() {
       }))
       .filter((r) => r.description && r.unitCents > 0);
     const res = await fetch(
-      editing ? `/api/admin/invoices/${editing.id}` : "/api/admin/invoices",
+      editing ? `/api/admin/invoices/${editing.id}/` : "/api/admin/invoices/",
       {
       method: editing ? "PATCH" : "POST",
       headers: { ...(await authHeader()), "Content-Type": "application/json" },
@@ -304,7 +304,7 @@ export function InvoicesScreen() {
     if (action === "void" && !window.confirm("Void this invoice? Its pay link will stop working.")) {
       return;
     }
-    await fetch(`/api/admin/invoices/${id}`, {
+    await fetch(`/api/admin/invoices/${id}/`, {
       method: "PATCH",
       headers: { ...(await authHeader()), "Content-Type": "application/json" },
       body: JSON.stringify({ action }),

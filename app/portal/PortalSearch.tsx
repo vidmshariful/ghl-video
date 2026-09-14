@@ -86,7 +86,7 @@ export function PortalSearch({
         return;
       }
       setBusy(true);
-      const j = await authedFetch(`/api/portal/search?q=${encodeURIComponent(term)}`).catch(
+      const j = await authedFetch(`/api/portal/search/?q=${encodeURIComponent(term)}`).catch(
         () => null,
       );
       setHits((j?.hits as Hit[]) ?? []);
@@ -132,7 +132,7 @@ export function PortalSearch({
             className="absolute inset-0 bg-canvas/80"
           />
           <div className="portal-sheet absolute inset-x-0 top-0 mx-auto mt-[8vh] w-[min(38rem,calc(100%-2rem))] overflow-hidden rounded-[12px] border border-chrome-line bg-chrome shadow-2xl">
-            <div className="flex items-center gap-2.5 border-b border-chrome-line px-4 py-3">
+            <div className="flex items-center gap-2.5 border-b border-chrome-line px-4 py-3 focus-within:border-gold">
               <Search size={16} className="shrink-0 text-chrome-dim" aria-hidden="true" />
               <input
                 ref={input}

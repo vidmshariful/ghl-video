@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button, Input, Textarea } from "@/components/portal/ui";
+import { formatDayOnly } from "@/lib/day-only";
 import { supabase } from "./client";
 import { AdminModal } from "./Modal";
 
@@ -76,15 +77,8 @@ const IDEA_STATUS_STYLE: Record<string, string> = {
   dropped: "border-hair text-dim",
 };
 
-const day = (iso: string | null) =>
-  iso
-    ? new Date(iso.length === 10 ? `${iso}T12:00:00` : iso).toLocaleDateString("en-US", {
-        weekday: "short",
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      })
-    : "";
+/* decided_on is a date column: read it in the reader's own day, never as UTC midnight */
+const day = (iso: string | null) => formatDayOnly(iso, { weekday: "short", year: "numeric" });
 
 function EntryForm({
   kind,
@@ -176,6 +170,132 @@ function EntryForm({
   );
 }
 
+/*
+ * How much you want it, and why.
+ *
+ * Both halves matter and the note is the more useful one: "yes but only for
+ * agencies" changes what gets built far more than four stars does. The
+ * stars exist so a list of thirty ideas ranks itself at a glance, and the
+ * CLI reads both at the start of every session, which is the only reason
+ * any of this is worth having.
+ *
+ * Module scope on purpose. This used to be declared inside JournalScreen,
+ * which made it a new component type on every render, so React threw the
+ * note box away and mounted a fresh one on every keystroke: the caret
+ * jumped and typing broke. The state stays in the screen and arrives here
+ * as props.
+ */
+function Reaction({
+  e,
+  open,
+  draft,
+  onRate,
+  onOpen,
+  onDraft,
+  onSave,
+  onClose,
+}: {
+  e: Entry;
+  /* this card's note box is the open one */
+  open: boolean;
+  draft: string;
+  onRate: (e: Entry, n: number) => void;
+  onOpen: () => void;
+  onDraft: (text: string) => void;
+  onSave: (text: string) => Promise<void>;
+  onClose: () => void;
+}) {
+  return (
+    <div className="mt-4 border-t border-hair pt-3">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-label uppercase tracking-[0.1em] text-dim">
+            Worth doing
+          </span>
+          <div className="flex items-center gap-0.5">
+            {[1, 2, 3, 4, 5].map((n) => {
+              const on = (e.rating ?? 0) >= n;
+              return (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => onRate(e, n)}
+                  aria-label={
+                    e.rating === n ? `Clear the rating on #${e.seq}` : `Rate #${e.seq} ${n} out of 5`
+                  }
+                  aria-pressed={on}
+                  className={`tap rounded-[4px] px-0.5 text-body leading-none transition-colors ${
+                    on ? "text-gold" : "text-hair hover:text-dim"
+                  }`}
+                >
+                  {on ? "★" : "☆"}
+                </button>
+              );
+            })}
+          </div>
+          {e.rating != null && (
+            <span className="font-mono text-label text-dim">{e.rating}/5</span>
+          )}
+        </div>
+
+        {!open && (
+          <button
+            type="button"
+            onClick={onOpen}
+            className="tap font-mono text-label uppercase tracking-[0.1em] text-dim transition-colors hover:text-gold"
+          >
+            {e.feedback ? "Edit your note" : "Add a note"}
+          </button>
+        )}
+      </div>
+
+      {e.feedback && !open && (
+        <p className="mt-2.5 whitespace-pre-wrap rounded-[8px] border border-gold/30 bg-gold/5 px-3.5 py-2.5 text-body-sm leading-relaxed text-ink">
+          {e.feedback}
+        </p>
+      )}
+
+      {open && (
+        <div className="mt-2.5">
+          <textarea
+            autoFocus
+            rows={3}
+            value={draft}
+            onChange={(ev) => onDraft(ev.target.value)}
+            placeholder="What you think. Claude reads this before building anything."
+            className="tap w-full rounded-[8px] border border-hair bg-canvas px-3 py-2 text-body-sm text-ink placeholder:text-dim"
+          />
+          <div className="mt-2 flex gap-2">
+            <Button
+              variant="secondary"
+              onClick={async () => {
+                await onSave(draft);
+                onClose();
+              }} className="border-gold/60 text-gold"
+            >
+              Save note
+            </Button>
+            <Button variant="secondary" onClick={onClose}>
+              Cancel
+            </Button>
+            {e.feedback && (
+              <Button
+                variant="secondary"
+                onClick={async () => {
+                  await onSave("");
+                  onClose();
+                }} className="text-error hover:border-error/60"
+              >
+                Remove
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function JournalScreen({ meEmail }: { meEmail: string }) {
   const [tab, setTab] = useState<Tab>("log");
   const [rows, setRows] = useState<Entry[]>([]);
@@ -253,110 +373,20 @@ export function JournalScreen({ meEmail }: { meEmail: string }) {
     else load();
   }
 
-  /*
-   * How much you want it, and why.
-   *
-   * Both halves matter and the note is the more useful one: "yes but only for
-   * agencies" changes what gets built far more than four stars does. The
-   * stars exist so a list of thirty ideas ranks itself at a glance, and the
-   * CLI reads both at the start of every session, which is the only reason
-   * any of this is worth having.
-   */
-  function Reaction({ e }: { e: Entry }) {
-    const open = noteFor === e.id;
-    return (
-      <div className="mt-4 border-t border-hair pt-3">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-label uppercase tracking-[0.1em] text-dim">
-              Worth doing
-            </span>
-            <div className="flex items-center gap-0.5">
-              {[1, 2, 3, 4, 5].map((n) => {
-                const on = (e.rating ?? 0) >= n;
-                return (
-                  <button
-                    key={n}
-                    type="button"
-                    onClick={() => rate(e, n)}
-                    aria-label={
-                      e.rating === n ? `Clear the rating on #${e.seq}` : `Rate #${e.seq} ${n} out of 5`
-                    }
-                    aria-pressed={on}
-                    className={`tap rounded-[4px] px-0.5 text-body leading-none transition-colors ${
-                      on ? "text-gold" : "text-hair hover:text-dim"
-                    }`}
-                  >
-                    {on ? "★" : "☆"}
-                  </button>
-                );
-              })}
-            </div>
-            {e.rating != null && (
-              <span className="font-mono text-label text-dim">{e.rating}/5</span>
-            )}
-          </div>
-
-          {!open && (
-            <button
-              type="button"
-              onClick={() => {
-                setNoteFor(e.id);
-                setNoteDraft(e.feedback ?? "");
-              }}
-              className="tap font-mono text-label uppercase tracking-[0.1em] text-dim transition-colors hover:text-gold"
-            >
-              {e.feedback ? "Edit your note" : "Add a note"}
-            </button>
-          )}
-        </div>
-
-        {e.feedback && !open && (
-          <p className="mt-2.5 whitespace-pre-wrap rounded-[8px] border border-gold/30 bg-gold/5 px-3.5 py-2.5 text-body-sm leading-relaxed text-ink">
-            {e.feedback}
-          </p>
-        )}
-
-        {open && (
-          <div className="mt-2.5">
-            <textarea
-              autoFocus
-              rows={3}
-              value={noteDraft}
-              onChange={(ev) => setNoteDraft(ev.target.value)}
-              placeholder="What you think. Claude reads this before building anything."
-              className="tap w-full rounded-[8px] border border-hair bg-canvas px-3 py-2 text-body-sm text-ink placeholder:text-dim"
-            />
-            <div className="mt-2 flex gap-2">
-              <Button
-                variant="secondary"
-                onClick={async () => {
-                  await saveFeedback(e, noteDraft);
-                  setNoteFor(null);
-                }} className="border-gold/60 text-gold"
-              >
-                Save note
-              </Button>
-              <Button variant="secondary" onClick={() => setNoteFor(null)}>
-                Cancel
-              </Button>
-              {e.feedback && (
-                <Button
-                  variant="secondary"
-                  onClick={async () => {
-                    await saveFeedback(e, "");
-                    setNoteFor(null);
-                  }} className="text-error hover:border-error/60"
-                >
-                  Remove
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  }
+  /* what the hoisted Reaction needs from this screen's state */
+  const reactionFor = (e: Entry) => ({
+    e,
+    open: noteFor === e.id,
+    draft: noteDraft,
+    onRate: rate,
+    onOpen: () => {
+      setNoteFor(e.id);
+      setNoteDraft(e.feedback ?? "");
+    },
+    onDraft: setNoteDraft,
+    onSave: (text: string) => saveFeedback(e, text),
+    onClose: () => setNoteFor(null),
+  });
 
   if (!loaded) return <p className="text-body text-muted">Loading the journal...</p>;
 
@@ -525,7 +555,7 @@ export function JournalScreen({ meEmail }: { meEmail: string }) {
                   Mark superseded
                 </Button>
               </div>
-              <Reaction e={e} />
+              <Reaction {...reactionFor(e)} />
             </div>
           ))}
           {supersededDecisions.length > 0 && (
@@ -605,7 +635,7 @@ export function JournalScreen({ meEmail }: { meEmail: string }) {
                   Drop
                 </Button>
               </div>
-              <Reaction e={e} />
+              <Reaction {...reactionFor(e)} />
             </div>
           ))}
           {queueClosed.length > 0 && (

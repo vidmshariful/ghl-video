@@ -7,15 +7,9 @@ import { supabaseBrowser } from "@/lib/supabase-browser";
  */
 export const supabase = supabaseBrowser;
 
-export const money = (cents: number, cur = "usd") =>
-  (cents / 100).toLocaleString("en-US", {
-    style: "currency",
-    currency: cur.toUpperCase(),
-    // whole dollars stay clean ($495); fractional amounts keep BOTH cents
-    // digits so $1,396.50 never renders as the typo-looking $1,396.5
-    minimumFractionDigits: cents % 100 === 0 ? 0 : 2,
-    maximumFractionDigits: 2,
-  });
+/* one formatter for admin and portal alike, so $1,396.50 never renders as
+   the typo-looking $1,396.5 on either */
+export { money } from "@/lib/money-format";
 
 export const when = (iso: string) =>
   new Date(iso).toLocaleString("en-US", {

@@ -73,6 +73,8 @@ export function MessagesScreen({
   onOpenCustomer?: (id: string) => void;
 }) {
   const [threads, setThreads] = useState<Thread[] | null>(null);
+  /* the last poll failed: the list stays as it was, and the line says so */
+  const [loadErr, setLoadErr] = useState("");
   const [selId, setSelId] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [onlyUnread, setOnlyUnread] = useState(false);
@@ -85,8 +87,16 @@ export function MessagesScreen({
   const [noteBusy, setNoteBusy] = useState(false);
 
   const load = useCallback(async () => {
-    const j = await chatGet<{ threads?: Thread[] }>("/api/admin/conversations");
-    setThreads(j.threads ?? []);
+    try {
+      const j = await chatGet<{ threads?: Thread[]; error?: string }>("/api/admin/conversations/");
+      if (!j.threads) throw new Error(j.error || "no threads in the answer");
+      setThreads(j.threads);
+      setLoadErr("");
+    } catch {
+      /* a network blip on a 15-second poll must not blank the inbox or
+         strand it on "Loading..."; the next poll gets another go */
+      setLoadErr("Could not refresh the messages. Trying again shortly.");
+    }
   }, []);
 
   useEffect(() => {
@@ -106,14 +116,14 @@ export function MessagesScreen({
     let live = true;
     (async () => {
       if (selected.customerId) {
-        const r = await fetch(`/api/admin/customers/${selected.customerId}`, {
+        const r = await fetch(`/api/admin/customers/${selected.customerId}/`, {
           headers: await authHeader(),
         });
         const j = await r.json();
         if (live && r.ok) setRecord(j as RecordLite);
       }
       const r2 = await fetch(
-        `/api/admin/email-log?q=${encodeURIComponent(selected.customerEmail)}`,
+        `/api/admin/email-log/?q=${encodeURIComponent(selected.customerEmail)}`,
         { headers: await authHeader() },
       );
       const j2 = await r2.json();
@@ -129,13 +139,13 @@ export function MessagesScreen({
     if (!selected?.customerId || !noteDraft.trim()) return;
     setNoteBusy(true);
     try {
-      await fetch(`/api/admin/customers/${selected.customerId}`, {
+      await fetch(`/api/admin/customers/${selected.customerId}/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", ...(await authHeader()) },
         body: JSON.stringify({ note: noteDraft }),
       });
       setNoteDraft("");
-      const r = await fetch(`/api/admin/customers/${selected.customerId}`, {
+      const r = await fetch(`/api/admin/customers/${selected.customerId}/`, {
         headers: await authHeader(),
       });
       const j = await r.json();
@@ -199,8 +209,11 @@ export function MessagesScreen({
             </div>
           </div>
 
+          {loadErr && (
+            <p className="border-b border-hair px-3.5 py-2 text-body-sm text-error">{loadErr}</p>
+          )}
           {threads === null ? (
-            <p className="p-5 text-body-sm text-muted">Loading...</p>
+            !loadErr && <p className="p-5 text-body-sm text-muted">Loading...</p>
           ) : shown.length === 0 ? (
             <p className="p-5 text-body-sm text-dim">
               {term || onlyUnread ? "Nothing matches." : "No messages yet."}
@@ -286,7 +299,7 @@ export function MessagesScreen({
               <div className="mt-3 min-h-0 flex-1">
                 <ChatThread
                   key={selected.id}
-                  base={`/api/admin/conversations/${selected.id}`}
+                  base={`/api/admin/conversations/${selected.id}/`}
                   selfRole="studio"
                   onActivity={load}
                   emptyLine="No messages yet. Say hello to your client."

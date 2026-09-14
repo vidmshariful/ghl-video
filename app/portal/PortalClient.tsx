@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabaseBrowser as supabase } from "@/lib/supabase-browser";
+import { formatDayOnly } from "@/lib/day-only";
+import { money } from "@/lib/money-format";
 import {
   NotificationsBell,
   PortalSidebar,
@@ -89,8 +91,6 @@ const PAYMENT_TONE: Record<string, "neutral" | "good" | "warn" | "bad" | "info">
   refunded: "neutral",
 };
 
-const money = (cents: number, cur = "usd") =>
-  (cents / 100).toLocaleString("en-US", { style: "currency", currency: cur.toUpperCase(), minimumFractionDigits: 0 });
 const day = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
 const ACT_FOR_KEY = "ghlv-portal-act-for";
@@ -113,7 +113,7 @@ async function tellPortal(kind: "signed_in" | "signed_out" | "ping") {
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
     if (!token) return;
-    await fetch("/api/portal/activity", {
+    await fetch("/api/portal/activity/", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -629,7 +629,7 @@ function OrderDetailView({
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    authedFetch(`/api/portal/orders/${id}`).then((j) => {
+    authedFetch(`/api/portal/orders/${id}/`).then((j) => {
       if (j.order) {
         setOrder(j.order);
         setUpdates(j.updates ?? []);
@@ -883,7 +883,7 @@ function OpenInvoices() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
 
   useEffect(() => {
-    authedFetch("/api/portal/invoices")
+    authedFetch("/api/portal/invoices/")
       .then((j) => setInvoices((j.invoices as Invoice[]) ?? []))
       .catch(() => setInvoices([]));
   }, []);
@@ -972,7 +972,7 @@ function OpenInvoices() {
                   )}
                   <p className="mt-1.5 font-mono text-label uppercase text-chrome-muted">
                     {i.number ?? "invoice"}
-                    {i.dueDate ? ` / due ${day(i.dueDate)}` : ""}
+                    {i.dueDate ? ` / due ${formatDayOnly(i.dueDate, { year: "numeric" })}` : ""}
                   </p>
                   {i.overdue && (
                     <p className="mt-1 text-body-sm text-error">This one is past its date.</p>
@@ -1030,7 +1030,7 @@ function OrdersList({ onOpen }: { onOpen: (id: string) => void }) {
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    authedFetch("/api/portal/orders")
+    authedFetch("/api/portal/orders/")
       .then((j) => {
         if (j.error) setFailed(true);
         else setOrders(j.orders ?? []);
@@ -1142,7 +1142,7 @@ function SubscriptionsView({ canBilling = true }: { canBilling?: boolean }) {
   const [err, setErr] = useState("");
 
   useEffect(() => {
-    authedFetch("/api/portal/subscriptions").then((j) => {
+    authedFetch("/api/portal/subscriptions/").then((j) => {
       setSubs(j.subscriptions ?? []);
       setLoaded(true);
     });
@@ -1152,7 +1152,7 @@ function SubscriptionsView({ canBilling = true }: { canBilling?: boolean }) {
     setBusy(true);
     setErr("");
     const { data } = await supabase.auth.getSession();
-    const r = await fetch("/api/portal/billing-portal", {
+    const r = await fetch("/api/portal/billing-portal/", {
       method: "POST",
       headers: data.session ? { Authorization: `Bearer ${data.session.access_token}` } : {},
     });
@@ -1165,7 +1165,7 @@ function SubscriptionsView({ canBilling = true }: { canBilling?: boolean }) {
   }
 
   async function refresh() {
-    const j = await authedFetch("/api/portal/subscriptions");
+    const j = await authedFetch("/api/portal/subscriptions/");
     setSubs(j.subscriptions ?? []);
   }
 
@@ -1173,7 +1173,7 @@ function SubscriptionsView({ canBilling = true }: { canBilling?: boolean }) {
     setBusy(true);
     setErr("");
     const { data } = await supabase.auth.getSession();
-    const r = await fetch(`/api/portal/subscriptions/${id}/cancel`, {
+    const r = await fetch(`/api/portal/subscriptions/${id}/cancel/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -1294,7 +1294,7 @@ function SettingsView({
     setErr("");
     // the parent holds all fields, so a save from either tab sends the
     // full set and never wipes the other tab's values
-    const j = await authedFetch("/api/portal/me", {
+    const j = await authedFetch("/api/portal/me/", {
       method: "PATCH",
       body: JSON.stringify(isOwner ? { name, company, phone } : { name }),
     });
@@ -1370,7 +1370,7 @@ function SettingsView({
               name={profile.name}
               email={profile.email}
               avatarUrl={profile.avatarUrl}
-              endpoint="/api/portal/me/avatar"
+              endpoint="/api/portal/me/avatar/"
               onChanged={() => onSaved()}
             />
             <form onSubmit={save} className="mt-6 grid gap-4 border-t border-hair pt-6">
@@ -1569,7 +1569,7 @@ function Portal({
     } catch {
       /* no window search, nothing to enter */
     }
-    let j = await authedFetch("/api/portal/me").catch(() => null);
+    let j = await authedFetch("/api/portal/me/").catch(() => null);
     if ((!j || j.error) && getActFor()) {
       /* the saved account would not load: forget it rather than RECORD a
          choice of "my own account". setActFor(null) writes "self", which
@@ -1577,7 +1577,7 @@ function Portal({
          that is how a teammate ends up staring at an empty portal of their
          own with no idea another one exists. */
       clearActFor(ACT_FOR_KEY);
-      j = await authedFetch("/api/portal/me").catch(() => null);
+      j = await authedFetch("/api/portal/me/").catch(() => null);
     }
     if (j?.email) {
       const p = j as MyProfile;
@@ -1587,7 +1587,7 @@ function Portal({
         p.memberships.length === 1
       ) {
         setActFor(ACT_FOR_KEY, p.memberships[0].ownerEmail);
-        const acted = await authedFetch("/api/portal/me").catch(() => null);
+        const acted = await authedFetch("/api/portal/me/").catch(() => null);
         if (acted?.email) {
           readOnlyView = Boolean((acted as MyProfile).viewingAsAdmin);
           setProfile(acted as MyProfile);
@@ -1617,7 +1617,7 @@ function Portal({
     const leftBrand = prevSectionRef.current === "brand" && section !== "brand";
     prevSectionRef.current = section;
     if (!profile || !can("orders") || (!first && !leftBrand)) return;
-    authedFetch("/api/portal/brand-kit")
+    authedFetch("/api/portal/brand-kit/")
       .then((j) => {
         const c = (j as { completeness?: { ready?: boolean } }).completeness;
         setBrandIncomplete(c ? !c.ready : false);
@@ -1631,7 +1631,7 @@ function Portal({
     if (!profile || !can("messages")) return;
     let active = true;
     const tick = async () => {
-      const j = await chatGet<{ unreadCount?: number }>("/api/portal/conversations");
+      const j = await chatGet<{ unreadCount?: number }>("/api/portal/conversations/");
       if (active) setMsgUnread(j.unreadCount ?? 0);
     };
     tick();
@@ -1928,7 +1928,7 @@ function Portal({
               <LifeBuoy size={16} />
             </TopIconButton>
             <NotificationsBell
-              endpoint="/api/portal/notifications"
+              endpoint="/api/portal/notifications/"
               fetcher={authedFetch}
               onOpenHref={openHref}
             />
