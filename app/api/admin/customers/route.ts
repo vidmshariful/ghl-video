@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyAdmin } from "@/lib/checkout/admin-auth";
+import { verifyAdminFor } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { lifetimeValue, serviceTags, type MoneySource } from "@/lib/customer-record";
 import { invoiceOpen, invoiceSettled } from "@/lib/invoice-state";
@@ -22,7 +22,7 @@ export const runtime = "nodejs";
 type Row = Record<string, unknown>;
 
 export async function GET(req: Request) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "customers");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const db = supabaseAdmin();
@@ -197,7 +197,7 @@ export async function GET(req: Request) {
  * money moves, and their contacts with them.
  */
 export async function POST(req: Request) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "customers");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;

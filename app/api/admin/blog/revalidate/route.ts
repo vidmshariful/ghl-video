@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { verifyAdmin } from "@/lib/checkout/admin-auth";
+import { verifyAdminFor } from "@/lib/checkout/admin-auth";
 
 export const runtime = "nodejs";
 
 /* Refresh the public blog pages after a save or publish, so edits show up
  * immediately instead of waiting out the pages' revalidate window. */
 export async function POST(req: Request) {
-  const auth = await verifyAdmin(req);
+  const auth = await verifyAdminFor(req, "blog");
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = (await req.json().catch(() => ({}))) as { slug?: string };

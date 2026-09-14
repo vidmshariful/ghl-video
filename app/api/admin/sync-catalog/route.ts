@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyAdmin } from "@/lib/checkout/admin-auth";
+import { verifyAdminFor } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { syncProductsFromCatalogTable } from "@/lib/checkout/sync-catalog";
 
@@ -12,7 +12,7 @@ export const runtime = "nodejs";
  * every edit, and available as a manual "Publish to checkout" button.
  */
 export async function POST(req: Request) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "catalog");
   if (!admin) {
     return NextResponse.json({ error: "Not authorized." }, { status: 401 });
   }

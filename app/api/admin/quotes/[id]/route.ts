@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyAdmin } from "@/lib/checkout/admin-auth";
+import { verifyAdminFor } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { parseQuoteInput } from "@/lib/quotes";
 import { publicQuote } from "@/lib/quote-flow";
@@ -18,7 +18,7 @@ type Row = Record<string, unknown>;
 const money = (cents: number) => `$${Math.round(cents / 100).toLocaleString("en-US")}`;
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "custom");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   const { id } = await params;
   if (!UUID_RE.test(id)) return NextResponse.json({ error: "Not found." }, { status: 404 });

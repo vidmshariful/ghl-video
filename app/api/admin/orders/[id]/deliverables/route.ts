@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyAdmin } from "@/lib/checkout/admin-auth";
+import { verifyAdminFor } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { createDeliverablesForOrder, listDeliverables } from "@/lib/deliverables";
 import { deriveStage } from "@/lib/order-stage";
@@ -19,7 +19,7 @@ type Status = (typeof STATUSES)[number];
  * an order settled before deliverables existed without anyone running a script.
  */
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, ["orders", "production"]);
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const { id } = await params;
@@ -34,7 +34,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 }
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, ["orders", "production"]);
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const { id } = await params;

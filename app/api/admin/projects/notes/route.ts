@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyAdmin } from "@/lib/checkout/admin-auth";
+import { verifyAdminFor } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { ensureMainCarrier } from "@/lib/project-station";
 import { addComment, listComments, resolveComment, stamp } from "@/lib/review";
@@ -78,7 +78,7 @@ async function mainOf(db: ReturnType<typeof supabaseAdmin>, projectId: string) {
 }
 
 export async function GET(req: Request) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "custom");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const projectId = new URL(req.url).searchParams.get("projectId") ?? "";
@@ -207,7 +207,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "custom");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;

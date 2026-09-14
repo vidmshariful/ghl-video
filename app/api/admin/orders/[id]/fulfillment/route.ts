@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyAdmin } from "@/lib/checkout/admin-auth";
+import { verifyAdminFor } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { sendOrderUpdateEmail } from "@/lib/email/order-update";
 
@@ -15,7 +15,7 @@ export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, ["orders", "production"]);
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const { id } = await params;

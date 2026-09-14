@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyAdmin } from "@/lib/checkout/admin-auth";
+import { verifyAdminFor } from "@/lib/checkout/admin-auth";
 import { sendEmail } from "@/lib/email/send";
 import { SITE_URL, renderTemplate, wrapEmail } from "@/lib/email/templates";
 
@@ -19,7 +19,7 @@ const SAMPLE: Record<string, string> = {
 /* Send the current editor subject/body (rendered with sample data) to the
  * signed-in admin, so they can preview a template in a real inbox. */
 export async function POST(req: Request) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "emails");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const body = (await req.json().catch(() => ({}))) as { subject?: string; body?: string };

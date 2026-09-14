@@ -1,6 +1,7 @@
 import "server-only";
 import { getSessionEmail } from "@/lib/account/session";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
+import { canAccessAny, normalizeRole } from "@/lib/admin-roles";
 
 /*
  * Gate for the admin API routes. Now that customers can also log in via
@@ -30,4 +31,30 @@ export async function adminRole(email: string): Promise<string | null> {
     (r) => (r.email ?? "").toLowerCase() === email.toLowerCase(),
   );
   return (row?.role as string | undefined) ?? null;
+}
+
+/*
+ * The gate for a route that serves one screen: the caller must be an admin
+ * AND their role and grants must include the view that screen is, by the
+ * same rule the shell uses to draw the menu (lib/admin-roles.ts). A route
+ * that several boards share names all of them; any one is enough. Answers
+ * null for a stranger and for an admin whose role does not include the
+ * view, so every caller's existing "no admin, 401" branch holds; the
+ * refusal is logged with the reason so a locked-out teammate can be
+ * diagnosed from the logs.
+ */
+export async function verifyAdminFor(req: Request, view: string | string[]): Promise<{ email: string } | null> {
+  const email = await getSessionEmail(req);
+  if (!email) return null;
+  const { data } = await supabaseAdmin().from("admins").select("email, role, features");
+  const row = (data ?? []).find((r) => (r.email ?? "").toLowerCase() === email.toLowerCase());
+  if (!row) return null;
+  const views = Array.isArray(view) ? view : [view];
+  const role = normalizeRole(row.role);
+  const features = Array.isArray(row.features) ? (row.features as string[]) : null;
+  if (!canAccessAny(views, role, features)) {
+    console.warn(`[admin] ${email} (${role}) refused: the role does not include ${views.join(" or ")}`);
+    return null;
+  }
+  return { email };
 }

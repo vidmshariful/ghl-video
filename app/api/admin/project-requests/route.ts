@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyAdmin } from "@/lib/checkout/admin-auth";
+import { verifyAdminFor } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { REQUEST_STATUSES, type RequestStatus } from "@/lib/projects";
 
@@ -19,7 +19,7 @@ type Row = Record<string, unknown>;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function GET(req: Request) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "custom");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const { data } = await supabaseAdmin()
@@ -45,7 +45,7 @@ export async function GET(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "custom");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;

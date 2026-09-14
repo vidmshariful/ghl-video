@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyAdmin } from "@/lib/checkout/admin-auth";
+import { verifyAdminFor } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import {
   BUCKET,
@@ -53,7 +53,7 @@ export const runtime = "nodejs";
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function GET(req: Request) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "editing");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const email = new URL(req.url).searchParams.get("email") ?? "";
@@ -94,7 +94,7 @@ export async function GET(req: Request) {
  * client is never quietly swapped underneath their notes.
  */
 export async function POST(req: Request) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "editing");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const form = await req.formData().catch(() => null);
@@ -211,7 +211,7 @@ export async function POST(req: Request) {
  * Answer a note, or mark one dealt with.
  */
 export async function PATCH(req: Request) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "editing");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;

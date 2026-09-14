@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyAdmin } from "@/lib/checkout/admin-auth";
+import { verifyAdminFor } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { ensureAuthAccount } from "@/lib/checkout/account";
 
@@ -14,7 +14,7 @@ export const runtime = "nodejs";
  * step needs the service role, which is why it is an API route.
  */
 export async function POST(req: Request) {
-  const auth = await verifyAdmin(req);
+  const auth = await verifyAdminFor(req, "partners");
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   let body: Record<string, unknown>;

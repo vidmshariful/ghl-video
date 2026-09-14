@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyAdmin } from "@/lib/checkout/admin-auth";
+import { verifyAdminFor } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import {
   addMember,
@@ -30,7 +30,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 /** The admin, and the client they are acting for. */
 async function gate(req: Request, id: string) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "customers");
   if (!admin) return { fail: NextResponse.json({ error: "Unauthorized." }, { status: 401 }) };
   if (!UUID_RE.test(id)) return { fail: NextResponse.json({ error: "Not found." }, { status: 404 }) };
 

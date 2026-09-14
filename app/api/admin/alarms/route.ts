@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyAdmin } from "@/lib/checkout/admin-auth";
+import { verifyAdminFor } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { humanKind } from "@/lib/alarm";
 
@@ -33,7 +33,7 @@ const shape = (r: Row) => ({
 });
 
 export async function GET(req: Request) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "health");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const db = supabaseAdmin();
@@ -78,7 +78,7 @@ export async function GET(req: Request) {
  * thing proves the test works, which is not the question being asked.
  */
 export async function POST(req: Request) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "health");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const db = supabaseAdmin();
@@ -98,7 +98,7 @@ export async function POST(req: Request) {
 
 /** Mark one handled. It re-opens by itself if the same thing happens again. */
 export async function PATCH(req: Request) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "health");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyAdmin } from "@/lib/checkout/admin-auth";
+import { verifyAdminFor } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { addMember } from "@/lib/account-team";
 import { ensureAuthAccount } from "@/lib/checkout/account";
@@ -27,7 +27,7 @@ export const runtime = "nodejs";
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "customers");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const { id } = await params;

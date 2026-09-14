@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyAdmin } from "@/lib/checkout/admin-auth";
+import { verifyAdminFor } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 
 export const runtime = "nodejs";
@@ -16,7 +16,7 @@ type Row = Record<string, unknown>;
 const STATUSES = ["sent", "failed", "skipped", "held"] as const;
 
 export async function GET(req: Request) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "emails");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const url = new URL(req.url);

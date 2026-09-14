@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { passToken } from "@/lib/gate-token";
-import { verifyAdmin } from "@/lib/checkout/admin-auth";
+import { verifyAdminFor } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { checkLinks, crawlPages } from "@/lib/seo-crawl";
 import { computeFindings, type LinkStatus, type PageFacts } from "@/lib/seo-audit";
@@ -55,7 +55,7 @@ async function sitemapPaths(origin: string): Promise<string[]> {
 }
 
 export async function GET(req: Request) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "seo");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const db = supabaseAdmin();
@@ -77,7 +77,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "seo");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const body = (await req.json().catch(() => ({}))) as {

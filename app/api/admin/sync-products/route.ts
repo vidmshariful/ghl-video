@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyAdmin } from "@/lib/checkout/admin-auth";
+import { verifyAdminFor } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { syncProductsFromCatalog } from "@/lib/checkout/sync-products";
 
@@ -12,7 +12,7 @@ export const runtime = "nodejs";
  * The active switch and hand-created rows are never touched.
  */
 export async function POST(req: Request) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "catalog");
   if (!admin) {
     return NextResponse.json({ error: "Not authorized." }, { status: 401 });
   }

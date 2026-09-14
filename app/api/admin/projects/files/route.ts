@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyAdmin } from "@/lib/checkout/admin-auth";
+import { verifyAdminFor } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { addFile, listFiles, removeFile, type FileOwner } from "@/lib/project-files";
 import { likeLiteral } from "@/lib/pg-pattern";
@@ -33,7 +33,7 @@ async function nameOf(db: ReturnType<typeof supabaseAdmin>, email: string): Prom
 }
 
 export async function GET(req: Request) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "custom");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const url = new URL(req.url);
@@ -44,7 +44,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "custom");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   let form: FormData;
@@ -71,7 +71,7 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "custom");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const url = new URL(req.url);

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyAdmin } from "@/lib/checkout/admin-auth";
+import { verifyAdminFor } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { parseInvoiceInput, type InvoiceLineItem } from "@/lib/invoices";
 import { ensureAccount } from "@/lib/accounts";
@@ -85,7 +85,7 @@ function shape(inv: InvoiceRow) {
 }
 
 export async function GET(req: Request) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "invoices");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   const db = supabaseAdmin();
   const { data } = await db.from("invoices").select("*").order("created_at", { ascending: false });
@@ -94,7 +94,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "invoices");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyAdmin } from "@/lib/checkout/admin-auth";
+import { verifyAdminFor } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { ONLINE_MS, collapseVisits } from "@/lib/portal-activity";
 
@@ -14,7 +14,7 @@ export const runtime = "nodejs";
  */
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "customers");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const db = supabaseAdmin();

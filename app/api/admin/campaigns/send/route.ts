@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyAdmin } from "@/lib/checkout/admin-auth";
+import { verifyAdminFor } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { campaignHref, matchesAudience, rowToCampaign, viewerFor } from "@/lib/campaigns";
 import { sendEmail } from "@/lib/email/send";
@@ -53,7 +53,7 @@ function offerEmailHtml(opts: {
 }
 
 export async function POST(req: Request) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "campaigns");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const b = (await req.json().catch(() => ({}))) as { id?: string; dryRun?: boolean };

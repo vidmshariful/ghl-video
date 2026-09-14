@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyAdmin } from "@/lib/checkout/admin-auth";
+import { verifyAdminFor } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 
 export const runtime = "nodejs";
@@ -17,7 +17,7 @@ const TYPES: Record<string, string> = {
  * Admin-gated; the bucket has no client policies, so this route is the only
  * write path. Returns the public URL the editor embeds. */
 export async function POST(req: Request) {
-  const auth = await verifyAdmin(req);
+  const auth = await verifyAdminFor(req, "blog");
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const form = await req.formData().catch(() => null);

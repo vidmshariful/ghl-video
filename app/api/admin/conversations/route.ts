@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyAdmin } from "@/lib/checkout/admin-auth";
+import { verifyAdminFor } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { hasUnread, threadTitle, type ConversationRow, type OrderJoin } from "@/lib/chat";
 
@@ -10,7 +10,7 @@ type CustomerJoin = { name: string | null; company: string | null } | null;
 /* Every chat thread that has activity, newest first, with unread (from the
  * studio's side) flagged. Powers the admin inbox and its nav badge. */
 export async function GET(req: Request) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "messages");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const { data } = await supabaseAdmin()

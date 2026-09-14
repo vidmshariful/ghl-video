@@ -6,9 +6,22 @@ import type { View } from "./nav";
  * items for one person (stored as a features override on their admins row).
  * Admin always has full access and is the only role that manages the team.
  */
-export type Role = "admin" | "manager" | "sales_rep";
+export type { Role } from "@/lib/admin-roles";
+import type { Role } from "@/lib/admin-roles";
+import {
+  ALL_TOGGLEABLE,
+  ROLES as ROLE_KEYS,
+  ROLE_DEFAULTS,
+  TOGGLEABLE_VIEW_ROWS,
+  canAccessView,
+  effectiveViews,
+  isRole as isRoleKey,
+} from "@/lib/admin-roles";
 
-export const ROLES: Role[] = ["admin", "manager", "sales_rep"];
+/* The rule itself lives in lib/admin-roles.ts, shared with the admin API
+ * (lib/checkout/admin-auth.ts), so the menu and the routes can never
+ * disagree. This file keeps the labels and the View typing the shell uses. */
+export const ROLES: Role[] = ROLE_KEYS;
 
 export const ROLE_LABELS: Record<Role, string> = {
   admin: "Admin",
@@ -22,9 +35,6 @@ export const ROLE_BLURB: Record<Role, string> = {
   sales_rep: "Sales tools: orders, clients, invoices, and buy links.",
 };
 
-/* The menu items that can be granted or removed per user. 'dashboard',
- * 'settings', and 'help' are always visible; inside Settings, the Team and
- * Integrations tabs are admin-only and never a per-user toggle. */
 /*
  * The order the grant checkboxes are grouped in, mirroring the sidebar.
  *
@@ -43,67 +53,24 @@ export const VIEW_GROUPS = [
   "Settings",
 ] as const;
 
-export const TOGGLEABLE_VIEWS: { key: View; label: string; group: string }[] = [
-  { key: "messages", label: "Messages", group: "Daily" },
-  { key: "sales", label: "Sales Dashboard", group: "Sales" },
-  { key: "orders", label: "Orders", group: "Sales" },
-  { key: "invoices", label: "Invoices", group: "Sales" },
-  { key: "subscriptions", label: "Subscriptions", group: "Sales" },
-  { key: "links", label: "Links", group: "Sales" },
-  { key: "coupons", label: "Coupons", group: "Sales" },
-  { key: "campaigns", label: "Offers", group: "Sales" },
-  { key: "customers", label: "Customers", group: "Sales" },
-  { key: "production", label: "Premade", group: "Production" },
-  { key: "custom", label: "Custom", group: "Production" },
-  { key: "editing", label: "Editing", group: "Production" },
-  { key: "partners", label: "Partners", group: "Affiliate" },
-  { key: "catalog", label: "Products, packs and bundles", group: "Products & Packs" },
-  { key: "journal", label: "Journal", group: "CMS" },
-  { key: "reference", label: "Reference", group: "CMS" },
-  { key: "pages", label: "Pages", group: "CMS" },
-  { key: "blog", label: "Blog", group: "CMS" },
-  { key: "seo", label: "SEO", group: "CMS" },
-  { key: "studio", label: "Studio Insights", group: "CMS" },
-  { key: "emails", label: "Emails and notifications", group: "Daily" },
-  { key: "code", label: "Site code (in Settings)", group: "Settings" },
-  /* Toggleable rather than always-on: it reports payments that did not become
-   * orders and orders that did not reach the studio, which is the owner's and
-   * the manager's problem. A sales rep seeing it would be alarmed by something
-   * they cannot act on, so the sales_rep default below leaves it out. */
-  { key: "health", label: "Health", group: "Daily" },
-];
-
-const ALL_TOGGLEABLE = TOGGLEABLE_VIEWS.map((v) => v.key);
+export const TOGGLEABLE_VIEWS = TOGGLEABLE_VIEW_ROWS as { key: View; label: string; group: string }[];
 
 /* Default menu set for a role when a user has no explicit override. */
-export const ROLE_DEFAULT_FEATURES: Record<Role, View[]> = {
-  admin: ALL_TOGGLEABLE,
-  manager: ALL_TOGGLEABLE.filter((k) => k !== "code"),
-  sales_rep: ["orders", "invoices", "links", "messages", "customers"],
-};
+export const ROLE_DEFAULT_FEATURES = ROLE_DEFAULTS as Record<Role, View[]>;
 
-/* A user's effective granted menu items (excludes the always-on views). A null
- * features value means "use the role default"; an array is an explicit
- * override the admin has set. */
-export function effectiveFeatures(
-  role: Role,
-  features: string[] | null | undefined,
-): View[] {
-  if (role === "admin") return ALL_TOGGLEABLE;
-  if (features == null) return ROLE_DEFAULT_FEATURES[role];
-  return features.filter((f): f is View => (ALL_TOGGLEABLE as string[]).includes(f));
+/* A user's effective granted menu items (excludes the always-on views). */
+export function effectiveFeatures(role: Role, features: string[] | null | undefined): View[] {
+  return effectiveViews(role, features) as View[];
 }
 
 /* Whether a user with this role + features may open a given view. */
-export function canAccess(
-  view: View,
-  role: Role,
-  features: string[] | null | undefined,
-): boolean {
-  if (view === "dashboard" || view === "settings" || view === "help") return true;
-  return effectiveFeatures(role, features).includes(view);
+export function canAccess(view: View, role: Role, features: string[] | null | undefined): boolean {
+  return canAccessView(view, role, features);
 }
 
 export function isRole(v: unknown): v is Role {
-  return typeof v === "string" && (ROLES as string[]).includes(v);
+  return isRoleKey(v);
 }
+
+/* kept for callers that read the plain list */
+export const TOGGLEABLE_KEYS: View[] = ALL_TOGGLEABLE as View[];

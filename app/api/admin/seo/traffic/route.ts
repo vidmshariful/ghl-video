@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyAdmin } from "@/lib/checkout/admin-auth";
+import { verifyAdminFor } from "@/lib/checkout/admin-auth";
 import { googleConnection } from "@/lib/google/auth";
 import { gaSummary } from "@/lib/google/analytics";
 
@@ -9,7 +9,7 @@ export const runtime = "nodejs";
  * the one before it. Like the Search route, it returns a plain state rather
  * than an error so the screen can show the next step instead of a red box. */
 export async function GET(req: Request) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "seo");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const connection = await googleConnection();

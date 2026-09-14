@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyAdmin } from "@/lib/checkout/admin-auth";
+import { verifyAdminFor } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 
 export const runtime = "nodejs";
@@ -22,7 +22,7 @@ const str = (v: unknown, max: number) =>
   typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null;
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "customers");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   const { id } = await params;
   if (!UUID_RE.test(id)) return NextResponse.json({ error: "Not found." }, { status: 404 });
@@ -62,7 +62,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 }
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "customers");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   const { id } = await params;
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
@@ -107,7 +107,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 }
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "customers");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   const { id } = await params;
   const contactId = new URL(req.url).searchParams.get("contactId") ?? "";

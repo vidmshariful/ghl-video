@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyAdmin } from "@/lib/checkout/admin-auth";
+import { verifyAdminFor } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { parseQuoteInput } from "@/lib/quotes";
 import { publicQuote } from "@/lib/quote-flow";
@@ -25,7 +25,7 @@ function shape(q: Row) {
 }
 
 export async function GET(req: Request) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "custom");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   const db = supabaseAdmin();
   const { data } = await db.from("quotes").select("*").order("created_at", { ascending: false }).limit(500);
@@ -33,7 +33,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "custom");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const parsed = parseQuoteInput(body);

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyAdmin } from "@/lib/checkout/admin-auth";
+import { verifyAdminFor } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { lifetimeValue, serviceTags, type MoneySource } from "@/lib/customer-record";
 import { completeness, getBrandKit } from "@/lib/brand-kit";
@@ -41,7 +41,7 @@ type Row = Record<string, unknown>;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "customers");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   const { id } = await params;
   if (!UUID_RE.test(id)) return NextResponse.json({ error: "Not found." }, { status: 404 });
@@ -467,7 +467,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
 /** Tags, hidden sections and notes: the three things admin edits here. */
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "customers");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   const { id } = await params;
   if (!UUID_RE.test(id)) return NextResponse.json({ error: "Not found." }, { status: 404 });

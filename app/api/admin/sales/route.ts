@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { adminRole, verifyAdmin } from "@/lib/checkout/admin-auth";
+import { adminRole, verifyAdminFor } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { invoiceDisplayNumber, invoiceOpen, invoiceSettled } from "@/lib/invoice-state";
 import { isOpen } from "@/lib/projects";
@@ -25,7 +25,7 @@ export const runtime = "nodejs";
 type Row = Record<string, unknown>;
 
 export async function GET(req: Request) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "sales");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   /* company revenue is for admins and managers; a sales rep's menu never
      offers this screen, and the API has to say the same */

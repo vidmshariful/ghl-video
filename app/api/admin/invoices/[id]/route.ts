@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyAdmin } from "@/lib/checkout/admin-auth";
+import { verifyAdminFor } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { parseInvoiceInput } from "@/lib/invoices";
 import { nudgeInvoice } from "@/lib/highlevel/nudge";
@@ -14,7 +14,7 @@ export const runtime = "nodejs";
  * product switched off so the checkout link stops working.
  */
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "invoices");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   const { id } = await params;
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;

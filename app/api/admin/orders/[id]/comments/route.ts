@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyAdmin } from "@/lib/checkout/admin-auth";
+import { verifyAdminFor } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { addComment, listComments, resolveComment, stamp } from "@/lib/review";
 import { listVersions, removeVersion } from "@/lib/versions";
@@ -27,7 +27,7 @@ async function ownedVideo(orderId: string, deliverableId: string) {
 }
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, ["orders", "production"]);
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const { id } = await params;
@@ -64,7 +64,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, ["orders", "production"]);
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const { id } = await params;

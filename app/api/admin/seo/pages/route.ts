@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { revalidatePath, revalidateTag } from "next/cache";
-import { verifyAdmin } from "@/lib/checkout/admin-auth";
+import { verifyAdminFor } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { normalizePath } from "@/lib/seo";
 
@@ -34,7 +34,7 @@ function refresh(path: string) {
 }
 
 export async function GET(req: Request) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "seo");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const { data, error } = await supabaseAdmin().from("seo_pages").select("*");
@@ -43,7 +43,7 @@ export async function GET(req: Request) {
 }
 
 export async function PUT(req: Request) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "seo");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
@@ -89,7 +89,7 @@ export async function PUT(req: Request) {
 /* Remove the override so the page falls back to the title and description it
  * ships with in code. */
 export async function DELETE(req: Request) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "seo");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const body = (await req.json().catch(() => ({}))) as { path?: string };

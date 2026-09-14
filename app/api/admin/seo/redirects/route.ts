@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyAdmin } from "@/lib/checkout/admin-auth";
+import { verifyAdminFor } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { isProtectedPath, normalizeSource } from "@/lib/redirects";
 import { sitePages } from "@/lib/pages-list";
@@ -43,7 +43,7 @@ function validate(source: string, destination: string): string | null {
 }
 
 export async function GET(req: Request) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "seo");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const { data, error } = await supabaseAdmin()
@@ -55,7 +55,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "seo");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const body = (await req.json().catch(() => ({}))) as Body;
@@ -125,7 +125,7 @@ export async function POST(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "seo");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const body = (await req.json().catch(() => ({}))) as Body;
@@ -156,7 +156,7 @@ export async function PATCH(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, "seo");
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const body = (await req.json().catch(() => ({}))) as Body;

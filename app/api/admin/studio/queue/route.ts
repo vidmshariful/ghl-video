@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyAdmin } from "@/lib/checkout/admin-auth";
+import { verifyAdminFor } from "@/lib/checkout/admin-auth";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { describeDue } from "@/lib/delivery-dates";
 
@@ -36,7 +36,7 @@ const days = (iso: string | null) =>
   iso ? Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000) : null;
 
 export async function GET(req: Request) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyAdminFor(req, ["production", "custom", "editing"]);
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const db = supabaseAdmin();
