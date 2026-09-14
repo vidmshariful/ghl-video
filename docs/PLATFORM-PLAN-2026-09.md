@@ -220,10 +220,35 @@ Done when: every screen uses the shared components and the blueprint look,
 and the walkthrough suite still passes.
 
 ### Phase 7. Go live (2 days)
-One release: migrations, data migration for invoices, webhook and workflow
-configuration on the live sub-account, keys in Vercel, DNS unchanged. A
-rollback plan written before the push. The first week after, invariants and
-reconciliation run daily and every alarm is read.
+One release: migrations, data migration for invoices, keys in Vercel, DNS
+unchanged. A rollback plan written before the push. The first week after,
+invariants and reconciliation run daily and every alarm is read.
+
+What the owner sets, once, before the push (as of 14 September 2026; no
+HighLevel workflow is needed anywhere):
+
+- In the LIVE sub-account: a Private Integration token with the scopes the
+  sandbox one has plus locations.write; Payments connected to Stripe in
+  live mode; Settings > Business Profile > "Allow duplicate opportunity"
+  on (else a client's open deal card carries only their latest project);
+  Settings > Email Services > the ghlvideo.com sending domain verified, so
+  client mail leaves as hi@ghlvideo.com rather than HighLevel's shared
+  sender.
+- In Vercel: HIGHLEVEL_API_TOKEN, HIGHLEVEL_LOCATION_ID (the live
+  location), HIGHLEVEL_USER_ID (the teammate invoices go out as),
+  HIGHLEVEL_SEND_ACTION=email, HIGHLEVEL_LIVE_MODE=true, HIGHLEVEL_EMAIL=on,
+  HIGHLEVEL_EMAIL_FROM="GHL Video <hi@ghlvideo.com>",
+  HIGHLEVEL_WEBHOOK_SECRET (any long random string; the endpoint is
+  optional), HIGHLEVEL_SYNC_ALLOW unset (everyone syncs), CRON_SECRET set,
+  BREVO_API_KEY kept for team alerts.
+- After the deploy, in order: GHLV_ENV=prod npm run migrate; npm run
+  hl:provision against production; npm run hl:sync -- --all --products
+  (the first fill: every client, project, video and the catalogue);
+  npm run hl:migrate-invoices -- --email (history across, open invoices
+  re-sent with HighLevel's pay link); then watch the Health screen for a
+  day. The webhook and the two legacy env pairs (HIGHLEVEL_PIPELINE_ID /
+  STAGE_ID, HIGHLEVEL_LEAD_PIPELINE_ID / STAGE_ID) stay as they are; the
+  provisioning prints the new lead pipeline ids to point the quote form at.
 
 Total: about 34 working days, roughly seven weeks with review time.
 
