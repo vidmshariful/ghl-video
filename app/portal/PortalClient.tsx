@@ -861,6 +861,7 @@ type Invoice = {
   lineItems: { label: string; amountCents: number; quantity: number; unitCents: number }[];
   projects: string[];
   totalCents: number;
+  owedCents?: number;
   currency: string;
   notes: string | null;
   dueDate: string | null;
@@ -895,7 +896,7 @@ function OpenInvoices() {
   const paid = invoices.filter((i) => i.settled).sort((a, b) => (b.paidAt ?? "").localeCompare(a.paidAt ?? ""));
   if (owing.length === 0 && paid.length === 0) return null;
 
-  const total = owing.reduce((sum, i) => sum + i.totalCents, 0);
+  const total = owing.reduce((sum, i) => sum + (i.owedCents ?? i.totalCents), 0);
 
   return (
     <div className="mb-3 grid gap-3">
@@ -919,7 +920,7 @@ function OpenInvoices() {
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
                   <span className="font-mono text-body-sm font-bold tabular-nums text-ink">
-                    {money(i.totalCents, i.currency)}
+                    {money(i.owedCents ?? i.totalCents, i.currency)}
                   </span>
                   <span className="rounded-full border border-green/40 px-2.5 py-0.5 font-mono text-label uppercase text-green">
                     Paid

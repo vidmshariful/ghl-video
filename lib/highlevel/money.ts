@@ -595,6 +595,15 @@ export function saleItems(order: Row, productName: string): { name: string; curr
       ...bumpLines.map((b) => ({ name: b.name, currency: "USD", amount: dollars(b.amountCents), qty: 1 })),
     ];
   }
+  /* an order rebuilt from its payment carries the customization as one
+     number, never itemised: show it as one line rather than fold it in */
+  const bumpCents = Number(meta.bump_cents ?? 0);
+  if (!bumpLines.length && bumpCents > 0 && bumpCents < total) {
+    return [
+      { name: text(productName, 150), currency: "USD", amount: dollars(total - bumpCents), qty: 1 },
+      { name: "Customization", currency: "USD", amount: dollars(bumpCents), qty: 1 },
+    ];
+  }
   return [{ name: text(productName, 150), currency: "USD", amount: dollars(total), qty: 1 }];
 }
 

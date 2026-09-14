@@ -167,7 +167,7 @@ export async function GET(req: Request) {
     .reduce((s, x) => s + cents(x.amount_cents), 0);
 
   const openInvoices = invoiceRows.filter((i) => invoiceOpen(i));
-  const owedCents = openInvoices.reduce((s, i) => s + cents(i.total_cents), 0);
+  const owedCents = openInvoices.reduce((s, i) => s + Math.max(0, cents(i.total_cents) - cents(i.amount_paid_cents)), 0);
   /* agreed custom work with no money in yet */
   const pipelineCents = openProjects.reduce(
     (s, p) => s + cents(p.agreed_cents ?? p.quoted_cents),

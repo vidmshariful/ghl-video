@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { contextCan, resolvePortalContext } from "@/lib/account-team";
-import { invoiceDisplayNumber, invoicePayUrl, invoiceSettled, invoiceVoided } from "@/lib/invoice-state";
+import { invoiceDisplayNumber, invoicePayUrl, invoiceSettled, invoiceVoided, invoiceOwedCents } from "@/lib/invoice-state";
 import { likeLiteral } from "@/lib/pg-pattern";
 
 export const runtime = "nodejs";
@@ -123,6 +123,7 @@ export async function GET(req: Request) {
           .map((pid) => projectTitles.get(pid))
           .filter((t): t is string => Boolean(t)),
         totalCents: Number(r.total_cents ?? 0),
+        owedCents: invoiceOwedCents(r as Parameters<typeof invoiceOwedCents>[0]),
         currency: String(r.currency ?? "usd"),
         notes: (r.notes as string | null) ?? null,
         dueDate: due,

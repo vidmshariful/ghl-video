@@ -317,6 +317,10 @@ async function recoverOrphanPaidIntent(
         sku: product.sku,
         base_cents: product.price_cents,
         recovered: true,
+        /* the customization paid for rides on the intent as one number;
+           the itemised bumps were only ever on the order row that never
+           landed, so this is what the studio and the sale record can see */
+        ...(Number(pi.metadata?.bump_cents) > 0 ? { bump_cents: Number(pi.metadata.bump_cents) } : {}),
         ...(typeof pi.metadata?.coupon_code === "string" && pi.metadata.coupon_code
           ? {
               coupon: {

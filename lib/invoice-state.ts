@@ -55,3 +55,16 @@ export function invoiceStatusWord(row: InvoiceStateRow): "open" | "paid" | "void
   if (invoiceVoided(row)) return "void";
   return "open";
 }
+
+/**
+ * What is still owed on an invoice: the total less what HighLevel says has
+ * been paid so far. A partial payment used to leave the whole total on
+ * the dashboard's "invoiced, unpaid" and on the client's Billing screen
+ * (audit, 15 September 2026). Zero once paid or void.
+ */
+export function invoiceOwedCents(row: InvoiceStateRow & { total_cents?: unknown; amount_paid_cents?: unknown }): number {
+  if (!invoiceOpen(row)) return 0;
+  const total = Number(row.total_cents ?? 0);
+  const paid = Number(row.amount_paid_cents ?? 0);
+  return Math.max(0, total - (Number.isFinite(paid) ? paid : 0));
+}
