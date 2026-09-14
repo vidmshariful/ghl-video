@@ -109,7 +109,7 @@ Nine walkthroughs (51 steps) sign in as the studio and as the clients and use
 the screens: buy and pay in Stripe test mode, brief, produce, review,
 approve, deliver; open a client and a project, raise and pay an invoice, run
 the production line; ask for an edit, check footage, QC, review, approve,
-batch shorts, cancel; and every HighLevel step below. They take about 26
+batch shorts, cancel; and every HighLevel step below. They take about 20
 minutes and need the dev server and the sandbox:
 
 ```bash
@@ -339,9 +339,8 @@ UI) pass on today's tree. The nine walkthroughs and what each proves:
 | chase | 4 | the sweep sends the three follow-ups once and not twice |
 | quotes | 6 | a lead card, a quote sent, accepted on our page, declined in the portal, the agreement, a partner contact |
 
-The last full run on the code before phase 6 was green. A fresh run on
-today's reverted tree was started as this doc was written; its verdict is in
-the journal.
+A full run on today's reverted tree passed on 14 September: 51 of 51 steps
+in 20 minutes, no retries.
 
 ---
 
@@ -373,7 +372,7 @@ the journal.
 | `npm run dev` | the site on http://localhost:3200 against staging |
 | `npm run staging:logins` | fresh QA admin, demo client and owner passwords |
 | `npm run staging:refresh` | recopy production's tables into staging |
-| `npm run test:walk` | the nine walkthroughs, about 26 minutes |
+| `npm run test:walk` | the nine walkthroughs, about 20 minutes |
 | `npm test` | the unit tests |
 | `npm run check:live` | drift, deliverables, composition, demo account, invariants |
 | `npm run check:invariants` | the nightly facts, by hand |
