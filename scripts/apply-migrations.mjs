@@ -23,7 +23,12 @@ import pg from "pg";
 
 // dev convenience: load .env.local if present; production sets real env vars.
 const dotenv = {};
-const envPath = new URL(`../${process.env.GHLV_ENV === "prod" ? ".env.prod.local" : ".env.local"}`, import.meta.url);
+/* GHLV_ENV_FILE names another env file outright, for a database that is
+   neither staging nor the current production: the new project during a move */
+const envPath = new URL(
+  `../${process.env.GHLV_ENV_FILE ?? (process.env.GHLV_ENV === "prod" ? ".env.prod.local" : ".env.local")}`,
+  import.meta.url,
+);
 if (existsSync(envPath)) {
   for (const line of readFileSync(envPath, "utf8").split("\n")) {
     const t = line.trim();

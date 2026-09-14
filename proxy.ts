@@ -75,6 +75,10 @@ const REGION_PAGE = page(
   "This site isn't available in your region.",
   'If you believe this is a mistake, contact <a href="mailto:hi@ghlvideo.com">hi@ghlvideo.com</a>.',
 );
+const MAINTENANCE_PAGE = page(
+  "We are moving to a faster home.",
+  'The site and the client portal are closed for a short while as we move. Back within the hour. Need us now? Write to <a href="mailto:hi@ghlvideo.com">hi@ghlvideo.com</a>.',
+);
 const VPN_PAGE = page(
   "Please turn off your VPN or proxy.",
   'This site can\'t be accessed over a VPN or proxy. Disable it and reload. Still stuck? Contact <a href="mailto:hi@ghlvideo.com">hi@ghlvideo.com</a>.',
@@ -203,6 +207,21 @@ function isCrawler(ua: string | null): boolean {
 }
 
 export async function proxy(req: NextRequest) {
+  /*
+   * The maintenance switch. MAINTENANCE=on in Vercel answers every request,
+   * pages and APIs alike, with one page and a 503, so a move of the database
+   * happens with nobody writing to it. Payment webhooks and crons are held
+   * too, on purpose: Stripe retries a 503 for days, so an order placed during
+   * the move settles on the new database instead of landing on the old one.
+   * Redeploy with the variable removed to open the doors again.
+   */
+  if (process.env.MAINTENANCE === "on") {
+    return new NextResponse(MAINTENANCE_PAGE, {
+      status: 503,
+      headers: { ...HTML_HEADERS, "retry-after": "900" },
+    });
+  }
+
   /*
    * Payment webhooks skip every gate below, and nothing else does.
    *
