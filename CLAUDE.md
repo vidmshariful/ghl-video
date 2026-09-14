@@ -95,7 +95,7 @@ The Stripe webhook endpoint must subscribe to: `payment_intent.succeeded`,
 Schema lives in `supabase/migrations/*.sql` (ordered, idempotent).
 `npm run migrate` applies pending files and records them in
 `schema_migrations` (`--dry-run` to preview; needs `SUPABASE_DB_URL`).
-There are **61 tables**, and the migrations are the only complete list. The
+There are **70 tables**, and the migrations are the only complete list. The
 ones most work touches: products, customers, orders, order_events (audit log),
 stripe_events (webhook idempotency), admins, order_bumps, order_updates,
 order_deliverables, subscriptions, projects, subscription_cycles,
@@ -104,9 +104,10 @@ notifications, notification_templates, seo_pages, redirects, blog_posts,
 blog_categories, catalog, partners, journal, plus the private `intake`
 storage bucket. Money is integer cents everywhere.
 
-RLS is on for all 61 tables and default-deny. Verified September 2026: the
+RLS is on for all 70 tables and default-deny. Verified September 2026: the
 only anon-readable tables are the public marketing ones (catalog, blog,
-seo_pages, redirects). Do not add anon policies to money tables.
+seo_pages, redirects, site_links, site_settings, studio_slots,
+studio_updates). Do not add anon policies to money tables.
 
 `order_deliverables` is one row per VIDEO owed on an order, created at
 settlement by `lib/deliverables.ts` (a video expands to one row, a pack to its
@@ -256,7 +257,9 @@ canvas); these are the live values in `app/globals.css`:
 /partners  /partners/apply                          (affiliate portal, noindex)
 /api/checkout/*  /api/webhooks/stripe  /api/portal/*  /api/admin/*
 /api/orders/[id]  /api/intake/[orderId]  /api/quote  /api/partners/*
-/api/cron/chase  /api/cron/price-drift               (needs CRON_SECRET)
+/api/cron/chase/  /api/cron/price-drift/  /api/cron/invariants/
+/api/cron/hl-sync/  /api/cron/hl-reconcile/           (CRON_SECRET; paths end with /)
+/api/webhooks/highlevel/  /q/[token]  /invoice/[token]  /api/quotes/*
 ```
 
 Note `/blog/` is a real CMS with published posts, not a stub. Its index page

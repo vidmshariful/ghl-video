@@ -107,7 +107,11 @@ export async function planDeliverables(db: DB, sku: string): Promise<Deliverable
       .select("metadata")
       .eq("sku", sku)
       .maybeSingle();
-    if ((productRow?.metadata as { invoice?: unknown } | null)?.invoice) return [];
+    const md = (productRow?.metadata as { invoice?: unknown; kind?: unknown } | null) ?? null;
+    if (md?.invoice) return [];
+    /* a credit top-up is money on a plan, not a video; expanded, it sat in
+       the client's list as a phantom video (audit, 15 September 2026) */
+    if (md?.kind === "editing_credits") return [];
     const { data: invoice } = await db
       .from("invoices")
       .select("id")

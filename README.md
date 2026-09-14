@@ -29,7 +29,7 @@ Deploys to **Vercel** using the auto-detected Next.js preset — **do not set a 
 
 ### Required production env vars (set in Vercel → Production)
 
-Server-only: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, `HIGHLEVEL_API_TOKEN`, `HIGHLEVEL_LOCATION_ID`, `HIGHLEVEL_PIPELINE_ID`, `HIGHLEVEL_STAGE_ID`, and recommended `HIGHLEVEL_LEAD_PIPELINE_ID` + `HIGHLEVEL_LEAD_STAGE_ID` (quote leads; unset falls back to hardcoded defaults with a log warning). Optional: `HIGHLEVEL_API_VERSION`.
+Server-only: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, `HIGHLEVEL_API_TOKEN`, `HIGHLEVEL_LOCATION_ID`, `HIGHLEVEL_PIPELINE_ID`, `HIGHLEVEL_STAGE_ID`, `CRON_SECRET` (every scheduled job), `BREVO_API_KEY` (team alerts), `HIGHLEVEL_USER_ID`, `HIGHLEVEL_SEND_ACTION`, `HIGHLEVEL_LIVE_MODE`, `HIGHLEVEL_EMAIL`, `HIGHLEVEL_EMAIL_FROM`, `HIGHLEVEL_WEBHOOK_SECRET`, `AFFIXO_API_KEY`. Optional: `HIGHLEVEL_LEAD_PIPELINE_ID` + `HIGHLEVEL_LEAD_STAGE_ID` (quote leads; unset, the provisioned "GHL Video: Leads" pipeline is used), `HIGHLEVEL_API_VERSION`. See `.env.example` for every key.
 Client (`NEXT_PUBLIC_`): `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `NEXT_PUBLIC_SUPABASE_URL` (also read server-side — omitting it lets the marketing build pass but breaks checkout at runtime), and recommended `NEXT_PUBLIC_SITE_URL`.
 
 Use **live** Stripe keys from the site's own Stripe account, and register the production webhook at `https://www.ghlvideo.com/api/webhooks/stripe/` subscribed to: `payment_intent.succeeded`, `payment_intent.payment_failed`, `charge.refunded`, `charge.dispute.created`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`.

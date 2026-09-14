@@ -63,6 +63,8 @@ export async function POST(req: Request) {
       await handleChargeRefunded(db, event.data.object as Stripe.Charge);
     } else if (event.type === "charge.dispute.created") {
       await handleDisputeCreated(db, event.data.object as Stripe.Dispute);
+    } else if (event.type === "charge.dispute.closed") {
+      await handleDisputeClosed(db, event.data.object as Stripe.Dispute);
     } else if (
       event.type === "customer.subscription.created" ||
       event.type === "customer.subscription.updated"
@@ -390,6 +392,55 @@ async function handleChargeRefunded(
   }
 }
 
+/*
+ * A dispute closing is the end of the money: lost, the order is refunded in
+ * every sense and reads so everywhere (the dashboard, HighLevel's copy);
+ * won, the disputed mark comes off. Neither was recorded before (audit, 15
+ * September 2026), so a lost dispute stayed paid for good.
+ */
+async function handleDisputeClosed(
+  db: ReturnType<typeof supabaseAdmin>,
+  dispute: Stripe.Dispute,
+) {
+  const piId = typeof dispute.payment_intent === "string" ? dispute.payment_intent : dispute.payment_intent?.id;
+  if (!piId) return;
+  const { data: order } = await db.from("orders").select("id, status, metadata").eq("stripe_payment_intent_id", piId).maybeSingle();
+  if (!order) return;
+  const meta = (order.metadata as Record<string, unknown> | null) ?? {};
+  if (dispute.status === "lost") {
+    const { data: flipped } = await db
+      .from("orders")
+      .update({ status: "refunded", metadata: { ...meta, disputed: false, dispute_lost: true } })
+      .eq("id", order.id)
+      .eq("status", "paid")
+      .select("id")
+      .maybeSingle();
+    if (flipped) {
+      await db.from("order_events").insert({
+        order_id: order.id,
+        event_type: "dispute_lost",
+        payload: { dispute_id: dispute.id, amount_cents: dispute.amount, reason: dispute.reason },
+      });
+      await raise(db, {
+        kind: ALARM_KINDS.WEBHOOK_FAILED,
+        severity: "warn",
+        fingerprint: `dispute_lost:${order.id}`,
+        message: `A dispute was lost on order ${order.id}: ${dispute.amount / 100} ${dispute.currency}. The order now reads refunded.`,
+        context: { orderId: order.id, disputeId: dispute.id },
+      });
+    }
+    return;
+  }
+  if (dispute.status === "won" || dispute.status === "warning_closed") {
+    await db.from("orders").update({ metadata: { ...meta, disputed: false } }).eq("id", order.id);
+    await db.from("order_events").insert({
+      order_id: order.id,
+      event_type: "dispute_won",
+      payload: { dispute_id: dispute.id, status: dispute.status },
+    });
+  }
+}
+
 async function handleDisputeCreated(
   db: ReturnType<typeof supabaseAdmin>,
   dispute: Stripe.Dispute,
@@ -474,18 +525,30 @@ async function handleSubscription(
     if (!row) return;
   }
 
+  /*
+   * Stripe does not promise event order: a late "updated" (active) arriving
+   * after "deleted" resurrected a cancelled plan, with its MRR counted and
+   * its credits still opening (audit, 15 September 2026). So the status
+   * written is the live subscription's, read now, not the event's copy.
+   */
+  let current: Stripe.Subscription = sub;
+  try {
+    current = await stripe().subscriptions.retrieve(sub.id);
+  } catch (e) {
+    console.error(`[webhook] could not read subscription ${sub.id} live, using the event's copy:`, e instanceof Error ? e.message : e);
+  }
   // current_period_end lives on the subscription in older API versions and
   // on each subscription item in the current one.
-  const item = sub.items?.data?.[0] as unknown as { current_period_end?: number } | undefined;
+  const item = current.items?.data?.[0] as unknown as { current_period_end?: number } | undefined;
   const periodEnd =
-    (sub as unknown as { current_period_end?: number }).current_period_end ??
+    (current as unknown as { current_period_end?: number }).current_period_end ??
     item?.current_period_end;
   await db
     .from("subscriptions")
     .update({
-      status: sub.status,
+      status: current.status,
       current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
-      cancel_at_period_end: sub.cancel_at_period_end,
+      cancel_at_period_end: current.cancel_at_period_end,
     })
     .eq("id", row.id);
 
@@ -493,7 +556,7 @@ async function handleSubscription(
   // thrown). Claimed atomically: created + updated events can arrive nearly
   // simultaneously on activation, and both would pass a plain read check.
   // A failed sync writes metadata without the claim key, releasing it.
-  if (sub.status === "active" && !row.metadata?.hl_synced) {
+  if (current.status === "active" && !row.metadata?.hl_synced) {
     const { data: claimed } = await db
       .from("subscriptions")
       .update({

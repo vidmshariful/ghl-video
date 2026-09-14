@@ -142,19 +142,30 @@ export async function syncOrderToHighLevel(input: {
   return { contactId, opportunityId };
 }
 
-// Website quote leads land in "0. Setter Pipeline" / "New Lead" by default;
-// override either in Vercel to reconfigure without a code change. The
-// fallback is loud in the logs so a missing prod var is noticed, not silent.
-const LEAD_PIPELINE_ID = () => {
-  const v = process.env.HIGHLEVEL_LEAD_PIPELINE_ID;
-  if (!v) console.warn("[highlevel] HIGHLEVEL_LEAD_PIPELINE_ID unset; using default setter pipeline");
-  return v || "xPCPS2JiczcBOhQrZdXF";
-};
-const LEAD_STAGE_ID = () => {
-  const v = process.env.HIGHLEVEL_LEAD_STAGE_ID;
-  if (!v) console.warn("[highlevel] HIGHLEVEL_LEAD_STAGE_ID unset; using default New Lead stage");
-  return v || "88340841-cbe0-49fa-8e66-cb5a4a00880c";
-};
+/*
+ * Where a website lead's deal card goes. The env pair wins when set; else
+ * the "GHL Video: Leads" pipeline the provisioning made in this
+ * sub-account (hl_config); only with neither does the old hard-coded setter
+ * pipeline stand in, loudly (audit, 15 September 2026: the hard-coded ids
+ * belong to the sandbox era and silently missed the provisioned pipeline).
+ */
+async function leadTarget(): Promise<{ pipelineId: string; pipelineStageId: string }> {
+  const envPipeline = process.env.HIGHLEVEL_LEAD_PIPELINE_ID;
+  const envStage = process.env.HIGHLEVEL_LEAD_STAGE_ID;
+  if (envPipeline && envStage) return { pipelineId: envPipeline, pipelineStageId: envStage };
+  try {
+    const { loadHlConfig } = await import("@/lib/highlevel/config");
+    const { supabaseAdmin } = await import("@/lib/checkout/supabase-admin");
+    const cfg = await loadHlConfig(supabaseAdmin(), locationId());
+    if (cfg?.pipelines?.leads?.id && cfg.pipelines.leads.stages?.new) {
+      return { pipelineId: cfg.pipelines.leads.id, pipelineStageId: cfg.pipelines.leads.stages.new };
+    }
+  } catch (e) {
+    console.error("[highlevel] could not read the provisioned leads pipeline:", e instanceof Error ? e.message : e);
+  }
+  console.warn("[highlevel] no lead pipeline configured; using the legacy setter pipeline");
+  return { pipelineId: "xPCPS2JiczcBOhQrZdXF", pipelineStageId: "88340841-cbe0-49fa-8e66-cb5a4a00880c" };
+}
 
 /**
  * Sync a pre-sale website lead (quote request) into HighLevel: upsert the
@@ -179,12 +190,12 @@ export async function syncLeadToHighLevel(input: {
   });
   await addTags(contactId, input.tags);
   if (input.note) await addNote(contactId, input.note);
+  const target = await leadTarget();
   const opportunityId = await createOpportunityIn({
     contactId,
     name: input.opportunityName,
     monetaryValue: 0,
-    pipelineId: LEAD_PIPELINE_ID(),
-    pipelineStageId: LEAD_STAGE_ID(),
+    ...target,
   });
   return { contactId, opportunityId };
 }

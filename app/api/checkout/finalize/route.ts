@@ -166,11 +166,54 @@ export async function POST(req: Request) {
   // intent re-stamped; the intent can never be confirmed against a stale total.
   const { data: existing } = await db
     .from("orders")
-    .select("id, status, amount_cents")
+    .select("id, status, amount_cents, metadata")
     .eq("stripe_payment_intent_id", paymentIntentId)
     .maybeSingle();
   if (existing) {
     if (existing.status === "pending" || existing.status === "failed") {
+      /*
+       * A retry may only reshape an order whose payment has not begun.
+       * Anyone holding the intent id (it is in the page) could otherwise
+       * call this between confirmation and the webhook, add bumps or a
+       * capped code, and have the paid emails and videos follow the
+       * rewritten order while only the mismatch was flagged (audit, 15
+       * September 2026). So: the live intent must still be waiting for a
+       * payment method or confirmation; Stripe is restamped first, and a
+       * refusal there refuses the retry; a code added on a retry reserves
+       * its slot like a new order does.
+       */
+      const live = await stripe().paymentIntents.retrieve(paymentIntentId);
+      const waiting = ["requires_payment_method", "requires_confirmation", "requires_action"].includes(live.status);
+      if (!waiting) {
+        return NextResponse.json(
+          { error: "This payment is already in progress. Refresh the page to see where it stands.", orderId: existing.id },
+          { status: 409 },
+        );
+      }
+      const priorCode = ((existing.metadata as { coupon?: { code?: string } } | null)?.coupon?.code ?? "").toLowerCase();
+      if (couponMeta && couponMeta.code.toLowerCase() !== priorCode) {
+        const { data: reserved, error: reserveErr } = await db.rpc("reserve_coupon_redemption", { p_code: couponMeta.code });
+        if (reserveErr) console.error(`[finalize] coupon reserve failed for ${couponMeta.code}: ${reserveErr.message}`);
+        else if (reserved === false) return NextResponse.json({ error: "That code has been fully redeemed." }, { status: 400 });
+      }
+      try {
+        await stripe().paymentIntents.update(paymentIntentId, {
+          amount: amountCents,
+          receipt_email: email,
+          metadata: {
+            sku: product.sku,
+            customer_email: email,
+            bump_cents: String(bumpsCents),
+            // empty string deletes the key on a retry that dropped the code
+            coupon_code: couponMeta?.code ?? "",
+            discount_cents: couponMeta ? String(discountCents) : "",
+            ...(ref ? { ref } : {}),
+          },
+        });
+      } catch (e) {
+        console.error(`[finalize] could not restamp ${paymentIntentId}: ${e instanceof Error ? e.message : e}`);
+        return NextResponse.json({ error: "Could not update the payment. Refresh the page and try again." }, { status: 409 });
+      }
       await db
         .from("orders")
         .update({
@@ -186,24 +229,6 @@ export async function POST(req: Request) {
         })
         .eq("id", existing.id)
         .in("status", ["pending", "failed"]);
-      try {
-        await stripe().paymentIntents.update(paymentIntentId, {
-          amount: amountCents,
-          receipt_email: email,
-          metadata: {
-            sku: product.sku,
-            customer_email: email,
-            bump_cents: String(bumpsCents),
-            // empty string deletes the key on a retry that dropped the code
-            coupon_code: couponMeta?.code ?? "",
-            discount_cents: couponMeta ? String(discountCents) : "",
-            ...(ref ? { ref } : {}),
-          },
-        });
-      } catch {
-        // The intent may have reached a terminal state in the meantime; the
-        // settle-time amount check catches any real divergence.
-      }
       if (existing.amount_cents !== amountCents) {
         await db.from("order_events").insert({
           order_id: existing.id,
