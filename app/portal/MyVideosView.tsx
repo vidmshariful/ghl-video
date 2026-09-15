@@ -63,7 +63,7 @@ type Group = {
 };
 
 /** a video plus where it came from, which is what a flat list needs */
-type Owned = Video & { packName: string | null; packId: string | null };
+type Owned = Video & { packName: string | null; packId: string | null; orderId?: string };
 
 /* Which of the shared chip tones each video state wears. Mapped rather than
  * styled here, so a change to what "warn" looks like moves this screen too
@@ -99,11 +99,14 @@ const day = (iso: string) =>
 export function MyVideosView({
   authedFetch,
   onMessageStudio,
+  onOpenOrder,
   focusVideoId,
   onFocused,
 }: {
   authedFetch: (path: string, init?: RequestInit) => Promise<unknown>;
   onMessageStudio?: () => void;
+  /* a video with nothing to watch yet links to the order it belongs to */
+  onOpenOrder?: (orderId: string) => void;
   /* a video to open on arrival, sent by the dashboard's Watch it */
   focusVideoId?: string | null;
   onFocused?: () => void;
@@ -157,6 +160,7 @@ export function MyVideosView({
         ...v,
         packName: g.kind === "pack" ? g.productName : null,
         packId: g.kind === "pack" ? g.orderId : null,
+        orderId: g.orderId,
       })),
     )
     .sort((a, b) => SORT[a.status] - SORT[b.status]);
@@ -204,8 +208,8 @@ export function MyVideosView({
           >
             <p className="text-body-sm text-chrome-muted">
               {REVISIONS_INCLUDED === 1
-                ? "One round of changes is included on every video."
-                : `${REVISIONS_INCLUDED} rounds of changes are included on every video.`}{" "}
+                ? "One round of changes is included on your order: gather your notes on every video, then request changes in one go."
+                : `${REVISIONS_INCLUDED} rounds of changes are included on your order.`}{" "}
               Nothing is delivered until you say so.
             </p>
           </Card>
@@ -262,7 +266,7 @@ export function MyVideosView({
           ) : (
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {shown.map((v) => (
-                <VideoCard key={v.id} video={v} onPlay={setPlaying} showPack />
+                <VideoCard key={v.id} video={v} onPlay={setPlaying} onOpenOrder={onOpenOrder} showPack />
               ))}
             </div>
           )}
@@ -295,8 +299,9 @@ export function MyVideosView({
               .map((v) => (
                 <VideoCard
                   key={v.id}
-                  video={{ ...v, packName: pack.productName, packId: pack.orderId }}
+                  video={{ ...v, packName: pack.productName, packId: pack.orderId, orderId: pack.orderId }}
                   onPlay={setPlaying}
+                  onOpenOrder={onOpenOrder}
                 />
               ))}
           </div>
@@ -372,10 +377,12 @@ function PackCard({ pack, onOpen }: { pack: Group; onOpen: () => void }) {
 function VideoCard({
   video: v,
   onPlay,
+  onOpenOrder,
   showPack = false,
 }: {
   video: Owned;
   onPlay: (v: Owned) => void;
+  onOpenOrder?: (orderId: string) => void;
   showPack?: boolean;
 }) {
   return (
@@ -451,7 +458,7 @@ function VideoCard({
           </p>
         )}
 
-        {v.videoUrl && (
+        {v.videoUrl ? (
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <button
               type="button"
@@ -462,7 +469,19 @@ function VideoCard({
             </button>
             <DownloadButton videoId={v.id} variant="link" />
           </div>
-        )}
+        ) : v.orderId && onOpenOrder ? (
+          /* nothing to watch yet: the order page is where its brief, its
+             producer and its updates live, so a waiting card goes there */
+          <div className="mt-3">
+            <button
+              type="button"
+              onClick={() => onOpenOrder(v.orderId as string)}
+              className="tap rounded-[8px] border border-hair px-3 py-1.5 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-ink"
+            >
+              See the order
+            </button>
+          </div>
+        ) : null}
       </div>
     </article>
   );

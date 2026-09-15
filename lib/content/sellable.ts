@@ -97,7 +97,12 @@ const oneTimeSellables: SellableProduct[] = [
     priceCents: (p.price ?? 0) * 100,
     type: "one_time",
     kind: "pack",
-    metadata: { kind: "pack", code: codeFor(p.slug), video_count: p.count ?? null },
+    metadata: {
+      kind: "pack",
+      code: codeFor(p.slug),
+      video_count: p.count ?? null,
+      ...(p.deliveryDays ? { delivery_days: p.deliveryDays } : {}),
+    },
   })),
   /* the Complete Video Stack */
   {

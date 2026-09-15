@@ -56,7 +56,6 @@ export function VideoReview({
   status,
   canRequestChanges,
   revisionsIncluded,
-  revisionsUsed,
   unlimitedRevisions = false,
   onChanged,
   onMessageStudio,
@@ -292,7 +291,7 @@ export function VideoReview({
           body={
             unlimitedRevisions
               ? "Put every note in first and we will do them in one pass, which is faster for you than three rounds."
-              : `This uses your ${revisionsIncluded === 1 ? "one included revision round" : `${revisionsIncluded} included revision rounds`}, so make sure every note is in first.`
+              : `This uses ${revisionsIncluded === 1 ? "the one revision round included on your order" : `the ${revisionsIncluded} revision rounds included on your order`}, so make sure every note is in first.`
           }
           confirmLabel="Yes, send them"
           onConfirm={() => {
@@ -375,8 +374,8 @@ export function VideoReview({
             : unlimitedRevisions
               ? "Revisions are unlimited on your plan. Add all of your notes first and we will do them in one pass."
               : canRequestChanges
-                ? `${revisionsIncluded} round of revisions is included. Please add all of your notes first, then request changes in one go. Further rounds may be charged.`
-                : `You have used your ${revisionsUsed} included revision round. Send us a message about anything else and we will sort it out with you.`}
+                ? `${revisionsIncluded} round of revisions is included on your order. Please add all of your notes first, then request changes in one go. Further rounds may be charged.`
+                : `The revision round included on your order has been used on this video. Send us a message about anything else and we will sort it out with you.`}
         </p>
       </div>
 

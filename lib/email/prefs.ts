@@ -45,6 +45,7 @@ export const CATEGORY_FOR: Record<string, EmailCategory> = {
   review_request: "offers",
   project_digest: "progress",
   video_ready: "progress",
+  videos_ready_batch: "progress",
   video_reply: "progress",
   order_delivered: "progress",
   /* the studio's own words on an order, and the brief landing: progress on

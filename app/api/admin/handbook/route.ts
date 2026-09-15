@@ -76,7 +76,7 @@ async function facts(id: FactId) {
       rows: [
         [
           "Rounds included",
-          `${REVISIONS_INCLUDED} per video. The client is told this under the buttons before they use it, and asking a second time is refused with a line pointing them to us.`,
+          `${REVISIONS_INCLUDED} per order, spent only by the client's own "Request changes": each video accepts that one request, so a pack client sends every note in one pass, and a status move from our side never counts. The client is told this under the buttons before they use it, and asking a second time is refused with a line pointing them to us.`,
         ],
         [
           "After they approve",

@@ -68,6 +68,11 @@ export type PremadePack = {
   count: number | null;
   price: number | null;
   anchorPrice?: number | null;
+  /* days from the brief to delivery for the whole pack. Without it a pack
+     inherited the single video promise of seven days and showed as late
+     from day eight on every real order (owner's decision, 16 September
+     2026: fourteen). */
+  deliveryDays?: number;
   categories: PackCategory[];
 };
 
@@ -82,6 +87,7 @@ export const premadePacks: PremadePack[] = [
     count: 9,
     price: 1995,
     anchorPrice: 3495,
+    deliveryDays: 14,
     categories: [
       {
         name: "Master Explainer",

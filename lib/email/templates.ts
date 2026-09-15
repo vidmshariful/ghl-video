@@ -75,6 +75,7 @@ export const TEMPLATE_VARIABLES: Record<string, string[]> = {
   agreement_ready: ["customer_name", "partnership_name", "fee_line", "portal_url"],
   review_request: ["customer_name", "review_url", "portal_url"],
   video_ready: ["customer_name", "video_title", "portal_url"],
+  videos_ready_batch: ["customer_name", "count", "video_list", "portal_url"],
   video_reply: ["customer_name", "video_title", "message", "portal_url"],
   admin_video_feedback: ["headline", "customer_name", "video_title", "where", "message", "admin_url"],
   brief_received: ["customer_name", "product_name", "order_code", "due_line", "due_date", "portal_url"],
@@ -411,7 +412,19 @@ ${btn("{{portal_url}}", "Open the portal")}
     body: `<h1 style="${H}">Your video is ready.</h1>
 <p style="${P}">Hi {{customer_name}}, <strong style="${STRONG}">{{video_title}}</strong> is ready for you to watch.</p>
 ${btn("{{portal_url}}", "Watch and review it")}
-<p style="${SMALL}margin-top:22px;">You can leave notes at the exact second you mean, then approve it or ask for changes. One round of revisions is included, so please add all your notes before requesting changes.</p>`,
+<p style="${SMALL}margin-top:22px;">You can leave notes at the exact second you mean, then approve it or ask for changes. One round of revisions is included on your order, so please add all your notes before requesting changes.</p>`,
+  },
+  {
+    key: "videos_ready_batch",
+    name: "Several videos are ready to review",
+    description:
+      "Sent instead of one email per video when the studio marks several of a client's videos ready in one go, such as a pack. Lists them all.",
+    subject: "Ready to review: {{count}} videos",
+    body: `<h1 style="${H}">Your videos are ready.</h1>
+<p style="${P}">Hi {{customer_name}}, <strong style="${STRONG}">{{count}} videos</strong> are ready for you to watch.</p>
+{{video_list}}
+${btn("{{portal_url}}", "Watch and review them")}
+<p style="${SMALL}margin-top:22px;">Leave notes at the exact second you mean, then approve each one or ask for changes. One round of revisions is included on your order, so please add every note before you request changes.</p>`,
   },
   {
     key: "video_reply",

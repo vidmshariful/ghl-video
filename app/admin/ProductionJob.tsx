@@ -130,30 +130,30 @@ export function ProductionJob({ id, onBack }: { id: string; onBack: () => void }
 
   /* Starting a nine video pack was nine dropdowns. The common moves are
      "we are on all of these now" and "all of these are back with the client",
-     so they get one press. Sequential on purpose: each save re-derives the
-     order stage, and firing nine at once races that. */
+     so they get one press. One call on purpose: the server derives the order
+     stage once, and a pack going to Ready is one email to the client listing
+     every video, not nine in the same minute. */
   async function setAll(status: string) {
     const targets = videos.filter((v) => v.status !== status);
     if (!targets.length) return;
     if (
       !confirm(
-        `Set ${targets.length} ${targets.length === 1 ? "video" : "videos"} to ${STATUS_LABEL[status as DeliverableStatus]}?`,
+        `Set ${targets.length} ${targets.length === 1 ? "video" : "videos"} to ${STATUS_LABEL[status as DeliverableStatus]}?${
+          status === "ready" && targets.length > 1 ? " The client gets one email listing them." : ""
+        }`,
       )
     )
       return;
     setBusy("job");
     setErr("");
-    for (const v of targets) {
-      const r = await fetch(`/api/admin/orders/${id}/deliverables/`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", ...(await authHeader()) },
-        body: JSON.stringify({ deliverableId: v.id, status }),
-      }).catch(() => null);
-      if (r && !r.ok) {
-        const j = await r.json().catch(() => ({}));
-        setErr(j.error ?? "Could not update them all.");
-        break;
-      }
+    const r = await fetch(`/api/admin/orders/${id}/deliverables/`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...(await authHeader()) },
+      body: JSON.stringify({ deliverableIds: targets.map((v) => v.id), status }),
+    }).catch(() => null);
+    if (!r || !r.ok) {
+      const j = r ? await r.json().catch(() => ({})) : {};
+      setErr(j.error ?? "Could not update them all.");
     }
     setBusy(null);
     await load();

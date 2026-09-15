@@ -239,7 +239,7 @@ export async function clientVerdict(
     if (!unlimited && (d.revision_round as number) >= REVISIONS_INCLUDED) {
       return {
         ok: false,
-        error: "Your included revision round has been used. Message us about anything else and we will sort it out.",
+        error: "The revision round included on this order has been used. Message us about anything else and we will sort it out.",
       };
     }
   }

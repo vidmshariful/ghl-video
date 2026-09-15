@@ -27,6 +27,7 @@ const db = () =>
 let token = "";
 let orderId = "";
 let originalStage = "paid";
+let originalMetadata: Record<string, unknown> = {};
 let videoId = "";
 let partnerId = "";
 let logBefore = 0;
@@ -61,11 +62,17 @@ test.describe("the morning sweep, our own follow-ups", () => {
     /* an order still waiting to start: the sweep only reminds about a brief
        on an order in its first two stages (a delivered one was briefed some
        other way), so the fixture puts it back at "paid" and restores after */
-    const { data: before } = await d.from("orders").select("fulfillment_stage").eq("id", orderId).single();
+    const { data: before } = await d.from("orders").select("fulfillment_stage, metadata").eq("id", orderId).single();
     originalStage = String(before?.fulfillment_stage ?? "paid");
+    /* the flag follows the record since migration 0102: an order whose
+       metadata still carries a submitted brief cannot be "unbriefed" by the
+       flag alone, so the brief is lifted out for the test and put back after */
+    originalMetadata = (before?.metadata as Record<string, unknown> | null) ?? {};
+    const { intake: _lifted, ...withoutBrief } = originalMetadata;
+    void _lifted;
     await d
       .from("orders")
-      .update({ intake_completed: false, paid_at: daysAgo(4), archived: false, fulfillment_stage: "paid" })
+      .update({ metadata: withoutBrief, intake_completed: false, paid_at: daysAgo(4), archived: false, fulfillment_stage: "paid" })
       .eq("id", orderId);
 
     /* a video on a different order, sitting in Ready for four days */
@@ -167,7 +174,10 @@ test.describe("the morning sweep, our own follow-ups", () => {
 
   test("the fixtures are put back", async () => {
     const d = db();
-    await d.from("orders").update({ intake_completed: true, fulfillment_stage: originalStage }).eq("id", orderId);
+    await d
+      .from("orders")
+      .update({ metadata: originalMetadata, intake_completed: true, fulfillment_stage: originalStage })
+      .eq("id", orderId);
     await d.from("order_deliverables").update({ status: "approved" }).eq("id", videoId);
     await api(`/api/admin/customers/${partnerId}/`, { method: "PATCH", token, body: { retainer: null } });
   });

@@ -64,23 +64,16 @@ import {
 import { MessagesView } from "./MessagesView";
 import { MyVideosView } from "./MyVideosView";
 import { STATUS_LABEL, type DeliverableStatus } from "@/lib/deliverable-status";
+import { ORDER_PIPS, orderProgress } from "@/lib/order-progress";
+import { site } from "@/lib/site";
 import { chatGet } from "@/components/chat/api";
 
 /*
  * The customer portal at /portal. Magic-link login (passwordless), then the
  * customer's own orders with a delivery + status tracker, their producer, and
  * their invoice number. All data comes from /api/portal/* server routes,
- * which scope every read to the signed-in email. Invoices and Subscriptions
- * are placeholders for now.
+ * which scope every read to the signed-in email.
  */
-const STAGES = [
-  { key: "paid", label: "Paid" },
-  { key: "intake", label: "Intake" },
-  { key: "production", label: "In production" },
-  { key: "review", label: "Review" },
-  { key: "delivered", label: "Delivered" },
-] as const;
-
 /* Payment states, mapped onto the shared chip tones rather than painted
  * here. One order should never wear two different greens depending on which
  * screen it is being looked at from. */
@@ -593,16 +586,20 @@ type OrderVideo = {
   videoUrl: string | null;
 };
 
-function ProgressTracker({ stage }: { stage: string }) {
-  const current = Math.max(0, STAGES.findIndex((s) => s.key === stage));
+function ProgressTracker({ stage, briefIn }: { stage: string; briefIn: boolean }) {
+  /* the second pip is the brief itself, done when it is in, rather than a
+     stored "intake" stage nobody ever set: the tracker used to jump from Paid
+     straight to In production on every real order */
+  const { done, current } = orderProgress(stage, briefIn);
   return (
     <ol className="grid grid-cols-5 gap-2">
-      {STAGES.map((s, i) => {
-        const done = i <= current;
+      {ORDER_PIPS.map((s) => {
+        const isDone = done.includes(s.key);
+        const isCurrent = s.key === current && !isDone;
         return (
           <li key={s.key} className="grid gap-2 text-center">
-            <span className={`h-1.5 rounded-full ${done ? "bg-gold" : "bg-hair"}`} />
-            <span className={`font-mono text-label uppercase ${i === current ? "text-gold" : done ? "text-muted" : "text-dim"}`}>
+            <span className={`h-1.5 rounded-full ${isDone ? "bg-gold" : "bg-hair"}`} />
+            <span className={`font-mono text-label uppercase ${isCurrent ? "text-gold" : isDone ? "text-muted" : "text-dim"}`}>
               {s.label}
             </span>
           </li>
@@ -616,11 +613,14 @@ function OrderDetailView({
   id,
   onBack,
   onMessageStudio,
+  onOpenVideos,
   canMessage = true,
 }: {
   id: string;
   onBack: () => void;
   onMessageStudio: (orderId: string) => void;
+  /* the Pre-made list, where the videos themselves are watched and downloaded */
+  onOpenVideos?: () => void;
   canMessage?: boolean;
 }) {
   const [order, setOrder] = useState<OrderDetail | null>(null);
@@ -686,7 +686,7 @@ function OrderDetailView({
       {order.status !== "refunded" && order.kind !== "invoice" && (
         <div className="rounded-[12px] border border-hair bg-surface p-6 md:p-8">
           <p className="mb-5 font-mono text-label uppercase text-muted">Progress</p>
-          <ProgressTracker stage={order.stage} />
+          <ProgressTracker stage={order.stage} briefIn={Boolean(order.intakeCompleted)} />
         </div>
       )}
 
@@ -725,28 +725,49 @@ function OrderDetailView({
         </div>
       )}
 
-      {/* delivery */}
-      <div className="rounded-[12px] border border-hair bg-surface p-6 md:p-8">
-        <p className="font-mono text-label uppercase text-muted">Delivery</p>
-        {order.deliveryUrl ? (
-          <>
-            <p className="mt-3 text-body text-muted">Your videos are ready on PlayBook.</p>
-            <a
-              href={order.deliveryUrl}
-              target="_blank"
-              rel="noopener"
-              className="tap mt-5 inline-flex items-center gap-2 rounded-[8px] bg-brand-gradient px-8 py-3.5 text-body font-semibold text-canvas transition-all hover:brightness-110"
-            >
-              Access your files
-              <span aria-hidden="true">&rarr;</span>
-            </a>
-          </>
-        ) : (
-          <p className="mt-3 text-body text-muted">
-            Your finished files will appear here the moment they are delivered.
-          </p>
-        )}
-      </div>
+      {/* delivery. The videos themselves are watched, reviewed and downloaded
+          under Pre-made; this card says so instead of promising files that
+          would "appear here", which they never did (Premade review, 16
+          September 2026). The PlayBook folder link is kept for the orders
+          that still have one. */}
+      {order.status !== "refunded" && (
+        <div className="rounded-[12px] border border-hair bg-surface p-6 md:p-8">
+          <p className="font-mono text-label uppercase text-muted">Delivery</p>
+          {order.deliveryUrl ? (
+            <>
+              <p className="mt-3 text-body text-muted">Your files are on PlayBook.</p>
+              <a
+                href={order.deliveryUrl}
+                target="_blank"
+                rel="noopener"
+                className="tap mt-5 inline-flex items-center gap-2 rounded-[8px] bg-brand-gradient px-8 py-3.5 text-body font-semibold text-canvas transition-all hover:brightness-110"
+              >
+                Access your files
+                <span aria-hidden="true">&rarr;</span>
+              </a>
+            </>
+          ) : (
+            <>
+              <p className="mt-3 text-body text-muted">
+                {videos.length > 0 && videos.every((v) => v.status === "approved")
+                  ? "Every video on this order is approved. Watch and download them under Pre-made whenever you need them."
+                  : videos.some((v) => v.status === "ready" || v.status === "revisions")
+                    ? "Videos are waiting for you under Pre-made. Each one stays there to download once you approve it."
+                    : "Each video appears under Pre-made the moment it is ready to watch, and stays there to download once you approve it."}
+              </p>
+              {onOpenVideos ? (
+                <button
+                  type="button"
+                  onClick={onOpenVideos}
+                  className="tap mt-5 inline-flex items-center gap-2 rounded-[8px] border border-hair px-6 py-3 font-mono text-label uppercase text-ink transition-colors hover:border-gold/60 hover:text-gold"
+                >
+                  Open Pre-made
+                </button>
+              ) : null}
+            </>
+          )}
+        </div>
+      )}
 
       {/* producer */}
       <div className="rounded-[12px] border border-hair bg-surface p-6 md:p-8">
@@ -773,9 +794,11 @@ function OrderDetailView({
           <a href="mailto:hi@ghlvideo.com" className="tap inline-flex items-center gap-2 rounded-[8px] border border-hair bg-surface px-4 py-2 text-body-sm text-ink transition-colors hover:border-gold/60 hover:text-gold">
             Email
           </a>
-          <a href="https://wa.me/" target="_blank" rel="noopener" className="tap inline-flex items-center gap-2 rounded-[8px] border border-hair bg-surface px-4 py-2 text-body-sm text-ink transition-colors hover:border-gold/60 hover:text-gold">
-            WhatsApp
-          </a>
+          {site.whatsapp ? (
+            <a href={`https://wa.me/${site.whatsapp}`} target="_blank" rel="noopener" className="tap inline-flex items-center gap-2 rounded-[8px] border border-hair bg-surface px-4 py-2 text-body-sm text-ink transition-colors hover:border-gold/60 hover:text-gold">
+              WhatsApp
+            </a>
+          ) : null}
           <a href="/contact/" className="tap inline-flex items-center gap-2 rounded-[8px] border border-hair bg-surface px-4 py-2 text-body-sm text-ink transition-colors hover:border-gold/60 hover:text-gold">
             Book a call
           </a>
@@ -1107,7 +1130,7 @@ function OrdersList({ onOpen }: { onOpen: (id: string) => void }) {
                     <Chip tone="good">Delivered</Chip>
                   ) : (
                     <Chip tone="info">
-                      {STAGES.find((s) => s.key === o.stage)?.label ?? o.stage}
+                      {o.stage === "intake" ? "Paid" : (ORDER_PIPS.find((s) => s.key === o.stage)?.label ?? o.stage)}
                     </Chip>
                   )}
                 </Td>
@@ -2031,6 +2054,7 @@ function Portal({
                   pushUrl("orders");
                 }}
                 onMessageStudio={messageStudio}
+                onOpenVideos={() => go("videos")}
                 canMessage={can("messages")}
               />
             ) : (
@@ -2064,6 +2088,7 @@ function Portal({
                   focusVideoId={focusVideo}
                   onFocused={() => setFocusVideo(null)}
                   onMessageStudio={can("messages") ? () => go("messages") : undefined}
+                  onOpenOrder={can("orders") ? (orderId) => openOrderById(orderId) : undefined}
                 />
               </div>
             </div>

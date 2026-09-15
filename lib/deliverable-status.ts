@@ -43,6 +43,11 @@ export function isWatchable(status: DeliverableStatus): boolean {
  * One, by owner's decision. The client is told this before they ask, so they
  * gather all their notes first instead of sending three separate requests and
  * being surprised later. Anything beyond it is a conversation, not a button.
+ *
+ * Counted the way the client experiences it: one round on the ORDER, spent
+ * only by their own "Request changes". Each video accepts that one request,
+ * so a pack client sends their notes on every video in one pass; a studio
+ * move into Revisions never spends it (owner's decision, 16 September 2026).
  */
 export const REVISIONS_INCLUDED = 1;
 

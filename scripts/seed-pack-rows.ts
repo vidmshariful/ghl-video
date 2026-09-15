@@ -34,7 +34,11 @@ const db = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_
 /* what the offer says, keyed by sku */
 const extras = new Map<string, { tagline?: string; anchor?: number; days?: number }>();
 for (const p of premadePacks) {
-  extras.set(skuFor(p.slug), { tagline: p.tagline, anchor: (p.anchorPrice ?? 0) * 100 || undefined });
+  extras.set(skuFor(p.slug), {
+    tagline: p.tagline,
+    anchor: (p.anchorPrice ?? 0) * 100 || undefined,
+    days: p.deliveryDays,
+  });
 }
 extras.set(skuFor(videoStack.sku), {
   tagline: videoStack.tagline,

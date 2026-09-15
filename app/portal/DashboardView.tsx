@@ -911,9 +911,18 @@ export function DashboardView({
                       {v.groupName ? ` / ${v.groupName}` : ""}
                     </p>
                   </div>
-                  <Chip tone={v.due?.tone === "late" ? "bad" : v.due?.tone === "today" ? "warn" : "info"}>
-                    {v.due?.text}
-                  </Chip>
+                  <div className="flex items-center gap-2">
+                    <Chip tone={v.due?.tone === "late" ? "bad" : v.due?.tone === "today" ? "warn" : "info"}>
+                      {v.due?.text}
+                    </Chip>
+                    <Button
+                      variant={v.canReview ? "brand" : "secondary"}
+                      size="sm"
+                      onClick={() => onOpenVideo(v.line, v.id)}
+                    >
+                      {v.canReview ? "Watch it" : "Follow it"}
+                    </Button>
+                  </div>
                 </li>
               ))}
             </ul>

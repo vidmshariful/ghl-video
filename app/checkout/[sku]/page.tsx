@@ -78,7 +78,7 @@ export default async function CheckoutPage({
           "AI-first, white-label scripts written for HighLevel SaaS",
           "Professional voiceover included",
           meta.delivery_days
-            ? `Delivered in about ${meta.delivery_days} business days`
+            ? `Delivered in about ${meta.delivery_days} days from your brief`
             : "Fast delivery",
           "Full commercial rights",
         ]
@@ -89,7 +89,7 @@ export default async function CheckoutPage({
           "AI-first, white-label script written for HighLevel SaaS",
           "Professional voiceover included",
           meta.delivery_days
-            ? `Delivered in about ${meta.delivery_days} business days`
+            ? `Delivered in about ${meta.delivery_days} days from your brief`
             : `Delivered in ${deliveryWindow}`,
           "Full commercial rights",
         ];

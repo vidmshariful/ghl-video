@@ -939,6 +939,59 @@ export async function sendVideoReadyEmail(
   }
 }
 
+/**
+ * The same news for several videos at once: one email that lists them,
+ * instead of one per video. A nine video pack set to Ready in one press used
+ * to send nine emails in the same minute (Premade review, 16 September 2026).
+ * The bell is one as well.
+ */
+export async function sendVideosReadyBatchEmail(
+  db: SupabaseClient,
+  deliverableIds: string[],
+): Promise<void> {
+  try {
+    const ids = [...new Set(deliverableIds)];
+    if (ids.length === 1) return sendVideoReadyEmail(db, ids[0]);
+    if (!ids.length) return;
+    const to = await recipientFor(db, ids[0]);
+    if (!to) return;
+    const { data: rows } = await db
+      .from("order_deliverables")
+      .select("id, title, position")
+      .in("id", ids)
+      .order("position", { ascending: true });
+    const titles = (rows ?? []).map((r) => String(r.title ?? "your video"));
+    const list = titles
+      .map((t) => `<li style="margin:0 0 6px;"><strong style="color:#eef0f6;">${escapeHtml(t)}</strong></li>`)
+      .join("");
+    await sendTemplateToTeam(
+      db,
+      "videos_ready_batch",
+      { email: to.email, name: to.name },
+      {
+        customer_name: escapeHtml(to.name),
+        count: String(titles.length),
+        video_list: `<ul style="margin:0 0 22px;padding-left:20px;font-size:15px;line-height:1.6;color:#9096a8;">${list}</ul>`,
+        portal_url: to.url,
+      },
+      "orders",
+      { items: ids.map((deliverableId) => ({ deliverableId })) },
+    );
+    await pushNotification(db, {
+      audience: "customer",
+      email: to.email,
+      kind: "video_ready",
+      title: `Ready to review: ${titles.length} videos`,
+      body: "Watch them, then approve each one or ask for changes.",
+      href: portalSectionFor(to.url),
+      feature: "orders",
+      vars: { video_title: `${titles.length} videos` },
+    });
+  } catch (e) {
+    console.error("[email] videos_ready_batch failed:", e instanceof Error ? e.message : e);
+  }
+}
+
 /* which portal screen a recipient's url points at, as the bell's link */
 function portalSectionFor(url: string): string {
   if (url.includes("/portal/subscriptions")) return "subscriptions";

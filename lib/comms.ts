@@ -124,9 +124,9 @@ export const COMM_ACTIONS: CommAction[] = [
   /* ---- pre-made ---- */
   {
     key: "video_ready", group: "premade", label: "A video is ready to review",
-    when: "The studio moves a video into Ready.",
+    when: "The studio moves a video into Ready. Several at once, such as a pack, is one email listing them all.",
     mode: "automatic",
-    emails: [{ key: "video_ready", to: "client" }],
+    emails: [{ key: "video_ready", to: "client" }, { key: "videos_ready_batch", to: "client" }],
     notifications: [{ kind: "video_ready", audience: "customer", to: "client" }],
   },
   {

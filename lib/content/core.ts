@@ -15,6 +15,10 @@ export const site = {
      the structured data, so it must match where visitors actually land. */
   url: "https://www.ghlvideo.com",
   email: "hi@ghlvideo.com",
+  /* the studio's WhatsApp number in international form with no plus or
+     spaces (for example 14155552671). Empty means the portal shows no
+     WhatsApp button: the old one linked to wa.me with no number behind it. */
+  whatsapp: "",
   tagline: "Video built for HighLevel SaaS. Fast, custom, done.",
   description: `The video studio built only for the HighLevel ecosystem. White-label premade videos, custom production, and video editing service. ${clients}+ clients served, rated ${rating} on Google.`,
 };
