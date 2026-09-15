@@ -48,6 +48,8 @@ const ORDER_ONLY: Record<string, string> = {
     "addressed by order by design; the video-addressed twin lives at admin/deliverables/[id]/comments",
   "app/api/admin/orders/[id]/deliverables/route.ts":
     "the premade job screen, which is an order",
+  "app/api/admin/orders/[id]/job/route.ts":
+    "the premade job page itself; custom projects and editing plans have their own pages",
   "app/api/portal/orders/[id]/route.ts": "one order, as the client sees it",
   "app/api/portal/library/route.ts":
     "builds the set of catalogue codes a client already owns; bespoke work has no catalogue code",

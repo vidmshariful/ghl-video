@@ -36,6 +36,8 @@ export type ReviewComment = {
   resolved_at: string | null;
   resolved_by: string | null;
   created_at: string;
+  /* the client marked it as applying to every video on the order */
+  order_wide: boolean;
 };
 
 /** mm:ss for a moment in a video, the way a client would say it */
@@ -122,6 +124,10 @@ export type NewComment = {
   stage?: string | null;
   /** set when this note answers another note */
   parentId?: string | null;
+  /** the client says this applies to every video on the order (a wrong
+      logo, say): stored once, on the video it was written on, and listed
+      above the videos on the job page so it is one fix marked done once */
+  orderWide?: boolean;
 };
 
 /**
@@ -168,6 +174,7 @@ export async function addComment(
       revision_round: d.revision_round as number,
       version,
       parent_id: c.parentId ?? null,
+      order_wide: Boolean(c.orderWide) && !c.parentId,
     })
     .select()
     .single();
@@ -392,4 +399,45 @@ export async function resyncOrderStage(db: DB, orderId: string): Promise<void> {
     })
     .eq("id", orderId)
     .neq("fulfillment_stage", "delivered");
+}
+
+/**
+ * Approving a video for a client who has gone quiet.
+ *
+ * The same closing moves as the client's own approval (the status, the open
+ * notes, the order's stage and its completion), recorded as done on their
+ * behalf. Called by the morning sweep once the reminders are spent and a
+ * week has passed (owner's decision, 16 September 2026), and nowhere else.
+ */
+export async function approveOnBehalf(
+  db: DB,
+  deliverableId: string,
+  by: string,
+): Promise<{ ok: boolean; orderId: string | null; title: string }> {
+  const { data: d } = await db
+    .from("order_deliverables")
+    .select("id, order_id, status, title")
+    .eq("id", deliverableId)
+    .maybeSingle();
+  if (!d || d.status !== "ready") return { ok: false, orderId: (d?.order_id as string | null) ?? null, title: String(d?.title ?? "") };
+  const now = new Date().toISOString();
+  await db
+    .from("order_deliverables")
+    .update({ status: "approved", approved_at: now, updated_at: now })
+    .eq("id", d.id);
+  await db
+    .from("deliverable_comments")
+    .update({ resolved_at: now, resolved_by: by })
+    .eq("deliverable_id", d.id)
+    .is("resolved_at", null);
+  if (d.order_id) {
+    await db.from("order_events").insert({
+      order_id: d.order_id,
+      event_type: "approved_on_behalf",
+      payload: { deliverable_id: d.id, by },
+    });
+    await resyncOrderStage(db, d.order_id as string);
+    await completeIfAllApproved(db, d.order_id as string);
+  }
+  return { ok: true, orderId: (d.order_id as string | null) ?? null, title: String(d.title ?? "") };
 }

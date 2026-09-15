@@ -250,11 +250,16 @@ our board.
   update on the order and a bell to the producer; screenshots shown one by
   one, each removable, new ones added to what is kept. Live when the owner
   says so.
-- **Third, the job page (two to three days):** the brand block with its
-  tick, batch link paste and "Send N videos", notes with replies and
-  "applies to all", the date the producer can move, the producer picked
-  from the team, approve on their behalf after the second nudge and a
-  week.
+- **Third, the job page (two to three days), built 16 September and proven
+  on staging:** the brand first, with "Enter it for them" and the producer's
+  "Brand confirmed" tick; links pasted one per line and "Send N videos to
+  the client" as one email, and no video goes to the client without a link;
+  a note the client marks as applying to every video, listed once above
+  the videos with reply and mark done; "Promised by", a date the producer
+  moves with one line the client reads; the producer read from the team,
+  never a default name; a quiet client's video approved on their behalf by
+  the morning sweep after two reminders and a week, with the client told
+  why. Live when the owner says so.
 - **Fourth, the board and the queue (two days):** derived columns, no
   arrows, the "No brief" bucket, nudge and approve-for-them on the queue.
 

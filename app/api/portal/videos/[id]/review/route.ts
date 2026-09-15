@@ -165,6 +165,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       body: text,
       atSeconds: at,
       parentId: typeof body.parentId === "string" ? body.parentId : null,
+      /* only a video that hangs off an order has other videos to apply to */
+      orderWide: body.orderWide === true && Boolean(g.deliverable.order_id),
     });
     if (!res) return NextResponse.json({ error: "Could not post that." }, { status: 400 });
 

@@ -43,6 +43,39 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   const { id } = await params;
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+
+  /* Links for several videos at once, pasted one per line on the job page.
+     Each is a new cut on its video; nothing else about the videos changes. */
+  if (body.links && typeof body.links === "object" && !Array.isArray(body.links)) {
+    const entries = Object.entries(body.links as Record<string, unknown>)
+      .map(([k, v]) => [k, typeof v === "string" ? v.trim() : ""] as [string, string])
+      .filter(([, v]) => v);
+    if (!entries.length) return NextResponse.json({ error: "No links to save." }, { status: 400 });
+    const bad = entries.find(([, v]) => !/^https?:\/\//i.test(v));
+    if (bad) return NextResponse.json({ error: `A link must start with http:// or https:// (${bad[1].slice(0, 40)})` }, { status: 400 });
+    const db = supabaseAdmin();
+    const { data: rows } = await db
+      .from("order_deliverables")
+      .select("id, video_url")
+      .eq("order_id", id)
+      .in("id", entries.map(([k]) => k));
+    if (!rows || rows.length !== entries.length) return NextResponse.json({ error: "Video not found." }, { status: 404 });
+    const { addVersion } = await import("@/lib/versions");
+    const now = new Date().toISOString();
+    let saved = 0;
+    for (const [vid, url] of entries) {
+      const { error } = await db.from("order_deliverables").update({ video_url: url, updated_at: now }).eq("id", vid);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      const v = await addVersion(db, vid, url, admin.email, null);
+      if (v) {
+        await db.from("order_events").insert({ order_id: id, event_type: "video_version_added", payload: { deliverable_id: vid, version: v.version, by: admin.email } });
+      }
+      await db.from("order_events").insert({ order_id: id, event_type: "deliverable_updated", payload: { deliverable_id: vid, by: admin.email, video_url: url } });
+      saved++;
+    }
+    return NextResponse.json({ deliverables: await listDeliverables(db, id), stage: null, updated: saved });
+  }
+
   const batch = Array.isArray(body.deliverableIds);
   const ids: string[] = batch
     ? [...new Set((body.deliverableIds as unknown[]).filter((x): x is string => typeof x === "string" && x.length > 0))]
@@ -99,6 +132,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const patch: Record<string, unknown> = { updated_at: now };
 
     if (next) {
+      /* Nothing goes to the client without a link: "ready" with no cut
+         behind it emailed them about a video they could not watch. */
+      if (next === "ready" && !(videoUrl ?? current.video_url)) {
+        return NextResponse.json(
+          { error: "A video needs its link before it goes to the client." },
+          { status: 400 },
+        );
+      }
       patch.status = next;
       // Stamp the moments worth knowing later. Only on the way in, so
       // re-saving a ready video keeps its first ready date.

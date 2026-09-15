@@ -25,7 +25,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const { data: order } = await db
     .from("orders")
     .select(
-      "id, customer_email, invoice_number, fulfillment_stage, stage_changed_at, stage_is_derived, assigned_admin_email, assigned_manager, intake_completed, delivery_url, created_at, paid_at, status, customers(name), products(name, sku, metadata)",
+      "id, customer_email, invoice_number, fulfillment_stage, stage_changed_at, stage_is_derived, assigned_admin_email, assigned_manager, intake_completed, metadata, delivery_url, created_at, paid_at, status, customers(name), products(name, sku, metadata)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -85,6 +85,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       orderStatus: order.status,
       createdAt: order.created_at,
       paidAt: order.paid_at,
+      /* the producer's own tick that the brand is checked before building:
+         the step done by email on every real pack (16 September 2026) */
+      brandConfirmed: ((order.metadata as Record<string, unknown> | null)?.brand_confirmed as { at: string; by: string } | null) ?? null,
+      /* the date the client is promised, from the videos still open */
+      dueOn: promisedDay(videos),
     },
     videos,
     updates: (updates ?? []).map((u) => ({ body: u.body, createdAt: u.created_at })),
@@ -96,9 +101,16 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   });
 }
 
-/* Job-level edits: who owns it, and the stage when a person overrides the
- * calculated one. Delivering is NOT here; that goes through the fulfillment
- * route, which owns the exactly-once delivery email. */
+/** the day the open videos are promised for, YYYY-MM-DD, or null */
+function promisedDay(videos: { status: string; due_at: string | null }[]): string | null {
+  const open = videos.filter((v) => v.status !== "approved" && v.due_at).map((v) => String(v.due_at)).sort();
+  return open.length ? open[open.length - 1].slice(0, 10) : null;
+}
+
+/* Job-level edits: who owns it, the stage when a person overrides the
+ * calculated one, the brand tick, and the promised date. Delivering is NOT
+ * here; that goes through the fulfillment route, which owns the exactly-once
+ * delivery email. */
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const admin = await verifyAdminFor(req, ["orders", "production"]);
   if (!admin) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
@@ -112,6 +124,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const email = typeof body.assignedEmail === "string" ? body.assignedEmail.trim() : "";
     if (!email) {
       patch.assigned_admin_email = null;
+      /* nobody owns it: the client's page falls back to the studio's own
+         name rather than the last person's */
+      patch.assigned_manager = null;
     } else {
       const { data: ok } = await db.from("admins").select("email, name").eq("email", email).maybeSingle();
       if (!ok) return NextResponse.json({ error: "That person is not on the team." }, { status: 400 });
@@ -137,17 +152,54 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     patch.stage_set_by = admin.email;
   }
 
-  if (!Object.keys(patch).length) {
+  if (typeof body.brandConfirmed === "boolean") {
+    const { data: cur } = await db.from("orders").select("metadata").eq("id", id).maybeSingle();
+    const meta = ((cur?.metadata as Record<string, unknown> | null) ?? {});
+    patch.metadata = {
+      ...meta,
+      brand_confirmed: body.brandConfirmed ? { at: new Date().toISOString(), by: admin.email } : null,
+    };
+  }
+
+  /* The date the studio promises, moved by the producer with one line the
+     client reads: the old date came from the brief or not at all, and a slip
+     showed in red on the client's screen with no way to re-promise. */
+  let dueLine: string | null = null;
+  if (typeof body.dueOn === "string") {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(body.dueOn) || Number.isNaN(Date.parse(`${body.dueOn}T00:00:00Z`))) {
+      return NextResponse.json({ error: "The promised date should be a day, like 2026-10-03." }, { status: 400 });
+    }
+    const dueAt = `${body.dueOn}T23:59:59.000Z`;
+    const { error: dueErr } = await db
+      .from("order_deliverables")
+      .update({ due_at: dueAt })
+      .eq("order_id", id)
+      .neq("status", "approved");
+    if (dueErr) return NextResponse.json({ error: dueErr.message }, { status: 500 });
+    const pretty = new Date(`${body.dueOn}T12:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "long" });
+    const note = typeof body.dueNote === "string" ? body.dueNote.trim().slice(0, 600) : "";
+    dueLine = `Your videos are now promised for ${pretty}.${note ? ` ${note}` : ""}`;
+  }
+
+  if (!Object.keys(patch).length && !dueLine) {
     return NextResponse.json({ error: "Nothing to change." }, { status: 400 });
   }
 
-  const { error } = await db.from("orders").update(patch).eq("id", id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (Object.keys(patch).length) {
+    const { error } = await db.from("orders").update(patch).eq("id", id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  if (dueLine) {
+    await db.from("order_updates").insert({ order_id: id, body: dueLine });
+    const { sendOrderUpdateEmail } = await import("@/lib/email/order-update");
+    await sendOrderUpdateEmail(db, id, dueLine).catch(() => false);
+  }
 
   await db.from("order_events").insert({
     order_id: id,
     event_type: "job_updated",
-    payload: { by: admin.email, ...patch },
+    payload: { by: admin.email, ...patch, ...(typeof body.dueOn === "string" ? { due_on: body.dueOn } : {}) },
   });
 
   return NextResponse.json({ ok: true });

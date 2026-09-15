@@ -35,10 +35,36 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const deliverableId = url.searchParams.get("video") ?? "";
   const db = supabaseAdmin();
 
-  // no video given: the open-note counts for the whole job, for the badges
+  // no video given: the open-note counts for the whole job, for the badges,
+  // and the notes the client marked as applying to every video, which the
+  // job page lists once above the videos
   if (!deliverableId) {
     const { openCommentCounts } = await import("@/lib/review");
-    return NextResponse.json({ open: await openCommentCounts(db, id) });
+    const { data: wide } = await db
+      .from("deliverable_comments")
+      .select("*, video:order_deliverables(title)")
+      .eq("order_id", id)
+      .eq("order_wide", true)
+      .is("parent_id", null)
+      .order("created_at");
+    return NextResponse.json({
+      open: await openCommentCounts(db, id),
+      orderWide: ((wide ?? []) as (Record<string, unknown> & { video?: { title?: string } | { title?: string }[] | null })[]).map((c) => {
+        const v = Array.isArray(c.video) ? c.video[0] : c.video;
+        return {
+          id: c.id,
+          deliverableId: c.deliverable_id,
+          videoTitle: v?.title ?? "",
+          side: c.author_side,
+          name: (c.author_name as string | null) ?? (c.author_side === "studio" ? "GHL Video" : (c.author_email as string)),
+          body: c.body,
+          atSeconds: c.at_seconds,
+          stamp: stamp(c.at_seconds as number | null),
+          resolved: Boolean(c.resolved_at),
+          createdAt: c.created_at,
+        };
+      }),
+    });
   }
 
   const { video } = await ownedVideo(id, deliverableId);
@@ -57,6 +83,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       version: c.version,
       parentId: c.parent_id,
       resolved: Boolean(c.resolved_at),
+      orderWide: Boolean(c.order_wide),
       createdAt: c.created_at,
     })),
     versions: await listVersions(db, deliverableId),

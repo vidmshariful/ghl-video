@@ -60,10 +60,14 @@ export function VideoReview({
   onChanged,
   onMessageStudio,
   authedFetch,
+  inPack = false,
 }: {
   videoId: string;
   title: string;
   videoUrl: string;
+  /* the video came in a pack, so a note can be marked as applying to all
+     of them: a wrong logo is one note and one fix, not nine of each */
+  inPack?: boolean;
   status: string;
   canRequestChanges: boolean;
   revisionsIncluded: number;
@@ -79,6 +83,7 @@ export function VideoReview({
   const [comments, setComments] = useState<Comment[] | null>(null);
   const [text, setText] = useState("");
   const [pin, setPin] = useState(true);
+  const [everyVideo, setEveryVideo] = useState(false);
   const [at, setAt] = useState(0);
   const [duration, setDuration] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -133,6 +138,7 @@ export function VideoReview({
               body: message,
               atSeconds: opts?.parentId ? null : pin ? at : null,
               parentId: opts?.parentId ?? null,
+              orderWide: !opts?.parentId && inPack && everyVideo,
             }
           : { action },
       ),
@@ -417,6 +423,17 @@ export function VideoReview({
                 />
                 Pin this to {mmss(at)}
               </label>
+              {inPack ? (
+                <label className="flex items-center gap-2 text-body-sm text-muted">
+                  <input
+                    type="checkbox"
+                    checked={everyVideo}
+                    onChange={(e) => setEveryVideo(e.target.checked)}
+                    className="h-4 w-4 accent-[var(--gold)]"
+                  />
+                  This applies to every video in the pack
+                </label>
+              ) : null}
               <button
                 type="button"
                 disabled={busy || !text.trim()}

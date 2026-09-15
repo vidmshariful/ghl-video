@@ -5,6 +5,26 @@ import { contextCan, resolvePortalContext } from "@/lib/account-team";
 
 export const runtime = "nodejs";
 
+/*
+ * Who the client sees as their producer: the teammate who owns the job, by
+ * their name on the team; the older free-text name where an order still
+ * carries one; otherwise the studio itself. A hardcoded default name used to
+ * be stamped on every new order (Premade review, 16 September 2026).
+ */
+async function producerName(
+  db: ReturnType<typeof supabaseAdmin>,
+  orderId: string,
+  legacy: string | null,
+): Promise<string> {
+  const { data: o } = await db.from("orders").select("assigned_admin_email").eq("id", orderId).maybeSingle();
+  const email = (o?.assigned_admin_email as string | null) ?? null;
+  if (email) {
+    const { data: a } = await db.from("admins").select("name").ilike("email", email).maybeSingle();
+    if (a?.name) return String(a.name);
+  }
+  return legacy?.trim() || "The GHL Video studio";
+}
+
 /* One order's detail for the portal. The ownership check (order email must
  * equal the acting account's owner email) is the gate; a mismatch returns
  * 404 so the route never confirms another customer's order even exists. */
@@ -67,7 +87,7 @@ export async function GET(
       currency: o.currency,
       status: o.status,
       stage: o.fulfillment_stage,
-      manager: o.assigned_manager,
+      manager: await producerName(db, id, o.assigned_manager as string | null),
       // never surface a delivery link on a refunded order
       deliveryUrl: o.status === "refunded" ? null : o.delivery_url,
       invoiceNumber: o.invoice_number,

@@ -144,6 +144,13 @@ export const COMM_ACTIONS: CommAction[] = [
     notifications: [],
   },
   {
+    key: "approved_on_behalf", group: "premade", label: "A quiet client's video is approved for them",
+    when: "The morning sweep finds a premade video still in Ready after both reminders were sent and a further week passed with no reply. It is approved on the client's behalf, the order closes when that was the last one, and the client is told why and how to reopen it.",
+    mode: "scheduled",
+    emails: [{ key: "order_update", to: "client" }],
+    notifications: [{ kind: "order_update", audience: "customer", to: "client" }],
+  },
+  {
     key: "video_feedback", group: "premade", label: "The client leaves a note",
     when: "A client comments on a video in the review popup, or answers the dashboard feedback ask.",
     mode: "automatic",

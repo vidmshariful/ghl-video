@@ -59,9 +59,25 @@ type Job = {
   orderStatus: string;
   createdAt: string;
   paidAt: string | null;
+  /* the producer's tick that the brand was checked before building */
+  brandConfirmed: { at: string; by: string } | null;
+  /* the day the open videos are promised for */
+  dueOn: string | null;
 };
 type Mate = { email: string; name: string; role: string };
 type Update = { body: string; createdAt: string };
+/* a client note marked as applying to every video on the order */
+type WideNote = {
+  id: string;
+  deliverableId: string;
+  videoTitle: string;
+  side: "client" | "studio";
+  name: string;
+  body: string;
+  stamp: string | null;
+  resolved: boolean;
+  createdAt: string;
+};
 
 const box = "rounded-[12px] border border-hair bg-surface p-5 md:p-6";
 
@@ -76,7 +92,12 @@ export function ProductionJob({ id, onBack }: { id: string; onBack: () => void }
   const [loaded, setLoaded] = useState(false);
   const [note, setNote] = useState("");
   const [openNotes, setOpenNotes] = useState<Record<string, number>>({});
+  const [wideNotes, setWideNotes] = useState<WideNote[]>([]);
+  const [wideReply, setWideReply] = useState<{ id: string; text: string } | null>(null);
   const [thread, setThread] = useState<string | null>(null);
+  const [pasted, setPasted] = useState("");
+  const [dueOn, setDueOn] = useState("");
+  const [dueNote, setDueNote] = useState("");
 
   const load = useCallback(async () => {
     setErr("");
@@ -98,6 +119,8 @@ export function ProductionJob({ id, onBack }: { id: string; onBack: () => void }
           .then((r) => r.json())
           .catch(() => null);
         setOpenNotes((c?.open as Record<string, number>) ?? {});
+        setWideNotes((c?.orderWide as WideNote[]) ?? []);
+        setDueOn(((j.job as Job).dueOn as string | null) ?? "");
       }
     } catch {
       setErr("Could not load this job.");
@@ -155,6 +178,63 @@ export function ProductionJob({ id, onBack }: { id: string; onBack: () => void }
       const j = r ? await r.json().catch(() => ({})) : {};
       setErr(j.error ?? "Could not update them all.");
     }
+    setBusy(null);
+    await load();
+  }
+
+  /* links pasted one per line, in the order the videos are listed; a blank
+     line skips that video. One call, one new cut per link. */
+  async function saveLinks() {
+    const lines = pasted.split("\n").map((l) => l.trim());
+    const links: Record<string, string> = {};
+    videos.forEach((v, i) => {
+      if (lines[i]) links[v.id] = lines[i];
+    });
+    if (!Object.keys(links).length) return setErr("Paste at least one link, one per line, in the order of the videos.");
+    setBusy("job");
+    setErr("");
+    const r = await fetch(`/api/admin/orders/${id}/deliverables/`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...(await authHeader()) },
+      body: JSON.stringify({ links }),
+    }).catch(() => null);
+    const j = r ? await r.json().catch(() => ({})) : {};
+    if (!r || !r.ok) setErr(j.error ?? "Could not save the links.");
+    else setPasted("");
+    setBusy(null);
+    await load();
+  }
+
+  /* every video that has a link and is not with the client yet goes to them
+     in one press, and they get one email listing them */
+  const sendable = videos.filter((v) => v.video_url && v.status !== "ready" && v.status !== "approved");
+  async function sendToClient() {
+    if (!sendable.length) return;
+    if (!confirm(`Send ${sendable.length} ${sendable.length === 1 ? "video" : "videos"} to the client? They get one email listing ${sendable.length === 1 ? "it" : "them"}.`)) return;
+    setBusy("job");
+    setErr("");
+    const r = await fetch(`/api/admin/orders/${id}/deliverables/`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...(await authHeader()) },
+      body: JSON.stringify({ deliverableIds: sendable.map((v) => v.id), status: "ready" }),
+    }).catch(() => null);
+    const j = r ? await r.json().catch(() => ({})) : {};
+    if (!r || !r.ok) setErr(j.error ?? "Could not send them.");
+    setBusy(null);
+    await load();
+  }
+
+  async function wideAction(n: WideNote, patch: Record<string, unknown>) {
+    setBusy("job");
+    setErr("");
+    const r = await fetch(`/api/admin/orders/${id}/comments/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(await authHeader()) },
+      body: JSON.stringify({ deliverableId: n.deliverableId, ...patch }),
+    }).catch(() => null);
+    const j = r ? await r.json().catch(() => ({})) : {};
+    if (!r || !r.ok) setErr(j.error ?? "Could not save.");
+    else setWideReply(null);
     setBusy(null);
     await load();
   }
@@ -237,6 +317,31 @@ export function ProductionJob({ id, onBack }: { id: string; onBack: () => void }
 
       {err && <p className="text-body-sm text-error">{err}</p>}
 
+      {/* the brand, first: the instructions for this work and the producer's
+          own tick that it was checked before building. The studio confirmed
+          the brand by email on every real pack; now it is the first thing on
+          the page. */}
+      <div className={box}>
+        <BrandingBrief orderId={job.id} />
+        <label className="mt-4 flex items-start gap-3 border-t border-hair pt-4">
+          <input
+            type="checkbox"
+            checked={Boolean(job.brandConfirmed)}
+            disabled={busy === "job"}
+            onChange={(e) => saveJob({ brandConfirmed: e.target.checked })}
+            className="mt-0.5 h-4 w-4 accent-[var(--gold)]"
+          />
+          <span className="grid gap-0.5">
+            <span className="text-body-sm font-semibold text-ink">Brand confirmed</span>
+            <span className="text-body-sm text-dim">
+              {job.brandConfirmed
+                ? `Checked by ${team.find((m) => m.email === job.brandConfirmed?.by)?.name ?? job.brandConfirmed.by} on ${when(job.brandConfirmed.at)}.`
+                : "Tick once the logo, colours, name and website above are the ones to build with. Nothing starts before this."}
+            </span>
+          </span>
+        </label>
+      </div>
+
       {/* the job controls */}
       <div className={box}>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -281,6 +386,42 @@ export function ProductionJob({ id, onBack }: { id: string; onBack: () => void }
               : "Set by hand. It will recalculate the next time a video changes."}
         </p>
 
+        {/* the date the client is promised, the producer's to move: it came
+            from the brief or not at all, and a slip showed in red on the
+            client's screen with no way to re-promise */}
+        {!delivered && (
+          <div className="mt-4 grid gap-2 border-t border-hair pt-4 sm:grid-cols-[minmax(0,180px)_1fr_auto] sm:items-end">
+            <label className="grid gap-1.5">
+              <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Promised by</span>
+              <Input type="date" value={dueOn} disabled={busy === "job"} onChange={(e) => setDueOn(e.target.value)} />
+            </label>
+            <label className="grid gap-1.5">
+              <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">One line the client reads</span>
+              <Input
+                value={dueNote}
+                disabled={busy === "job"}
+                onChange={(e) => setDueNote(e.target.value)}
+                placeholder="Two of the screens you sent needed redoing."
+              />
+            </label>
+            <Button
+              variant="secondary"
+              disabled={busy === "job" || !dueOn || dueOn === (job.dueOn ?? "")}
+              onClick={async () => {
+                await saveJob({ dueOn, dueNote });
+                setDueNote("");
+              }}
+            >
+              Save date
+            </Button>
+            <p className="text-body-sm text-dim sm:col-span-3">
+              {job.dueOn
+                ? `Promised for ${new Date(`${job.dueOn}T12:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "long" })}. Moving it posts an update the client gets by email.`
+                : "No date yet. It is set from the brief, or here."}
+            </p>
+          </div>
+        )}
+
         {stale && !delivered && (
           <button
             type="button"
@@ -313,6 +454,71 @@ export function ProductionJob({ id, onBack }: { id: string; onBack: () => void }
         </div>
       </div>
 
+      {/* what the client said applies to every video: one note, one fix,
+          marked done once (a wrong logo was eighteen notes on nine videos) */}
+      {wideNotes.length > 0 && (
+        <div className={box}>
+          <p className="font-mono text-label uppercase text-gold">Applies to every video</p>
+          <ul className="mt-3 grid gap-2">
+            {wideNotes.map((n) => (
+              <li
+                key={n.id}
+                className={`rounded-[8px] border p-3 ${n.side === "client" ? "border-gold/30 bg-gold/5" : "border-hair bg-surface"} ${n.resolved ? "opacity-60" : ""}`}
+              >
+                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                  <span className="text-body-sm font-semibold text-ink">{n.name}</span>
+                  <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">
+                    written on {n.videoTitle}
+                    {n.stamp ? ` at ${n.stamp}` : ""}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={busy === "job"}
+                    onClick={() => wideAction(n, { resolveId: n.id, resolved: !n.resolved })}
+                    className="tap ml-auto font-mono text-label uppercase text-dim transition-colors hover:text-green disabled:opacity-40"
+                  >
+                    {n.resolved ? "Reopen" : "Mark done"}
+                  </button>
+                </div>
+                <p className="mt-1.5 whitespace-pre-wrap text-body-sm text-muted">{n.body}</p>
+                <p className="mt-1 font-mono text-label uppercase tracking-[0.08em] text-muted">{when(n.createdAt)}</p>
+                {wideReply?.id === n.id ? (
+                  <div className="mt-2 grid gap-2">
+                    <Textarea
+                      rows={2}
+                      autoFocus
+                      value={wideReply.text}
+                      onChange={(e) => setWideReply({ id: n.id, text: e.target.value })}
+                      placeholder="Answer this note. It lands on the video it was written on."
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        variant="secondary"
+                        disabled={busy === "job" || !wideReply.text.trim()}
+                        onClick={() => wideAction(n, { body: wideReply.text, parentId: n.id })}
+                      >
+                        Send
+                      </Button>
+                      <button type="button" onClick={() => setWideReply(null)} className="tap font-mono text-label uppercase text-dim transition-colors hover:text-muted">
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setWideReply({ id: n.id, text: "" })}
+                    className="tap mt-2 font-mono text-label uppercase tracking-[0.08em] text-muted transition-colors hover:text-gold"
+                  >
+                    Reply to this note
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* the videos */}
       <div className={box}>
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
@@ -329,16 +535,40 @@ export function ProductionJob({ id, onBack }: { id: string; onBack: () => void }
         {videos.length > 1 && (
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Set all to</span>
-            {(["in_production", "ready"] as DeliverableStatus[]).map((st) => (
-              <Button
-                key={st}
-                variant="secondary"
-                disabled={busy === "job" || videos.every((v) => v.status === st)}
-                onClick={() => setAll(st)} className="disabled:opacity-30"
-              >
-                {STATUS_LABEL[st]}
+            <Button
+              variant="secondary"
+              disabled={busy === "job" || videos.every((v) => v.status === "in_production")}
+              onClick={() => setAll("in_production")} className="disabled:opacity-30"
+            >
+              {STATUS_LABEL.in_production}
+            </Button>
+            <Button
+              variant="brand"
+              disabled={busy === "job" || !sendable.length}
+              onClick={sendToClient} className="disabled:opacity-30"
+            >
+              {sendable.length ? `Send ${sendable.length} ${sendable.length === 1 ? "video" : "videos"} to the client` : "Nothing to send yet"}
+            </Button>
+          </div>
+        )}
+
+        {/* the links, pasted in one go rather than nine fields and nine saves */}
+        {videos.length > 1 && !delivered && (
+          <div className="mt-4 grid gap-2 rounded-[8px] border border-hair bg-canvas/40 p-3">
+            <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Paste the links</span>
+            <Textarea
+              rows={Math.min(videos.length, 6)}
+              value={pasted}
+              onChange={(e) => setPasted(e.target.value)}
+              placeholder={videos.map((v, i) => `${String(i + 1).padStart(2, "0")} link for ${v.title}`).slice(0, 3).join("\n") + (videos.length > 3 ? "\n..." : "")}
+              className="font-mono text-body-sm"
+            />
+            <div className="flex flex-wrap items-center gap-3">
+              <Button variant="secondary" disabled={busy === "job" || !pasted.trim()} onClick={saveLinks}>
+                Save links
               </Button>
-            ))}
+              <span className="text-body-sm text-dim">One per line, in the order below. A blank line skips that video. Each link is a new cut.</span>
+            </div>
           </div>
         )}
 
@@ -450,11 +680,6 @@ export function ProductionJob({ id, onBack }: { id: string; onBack: () => void }
         )}
       </div>
 
-      {/* the brief: the instructions for this work */}
-      <div className={box}>
-        <BrandingBrief orderId={job.id} />
-      </div>
-
       {/* the client-facing timeline */}
       <div className={box}>
         <p className="font-mono text-label uppercase text-gold">Client updates</p>
@@ -509,6 +734,7 @@ type Note = {
   version: number | null;
   parentId: string | null;
   resolved: boolean;
+  orderWide?: boolean;
   createdAt: string;
 };
 type Cut = { id: string; version: number; video_url: string; created_at: string };
@@ -667,6 +893,11 @@ function StudioThread({
                   >
                     {c.stamp}
                   </button>
+                )}
+                {c.orderWide && (
+                  <span className="rounded-full border border-gold/40 px-2 py-0.5 font-mono text-label uppercase text-gold">
+                    Every video
+                  </span>
                 )}
                 {c.side === "client" && (
                   <button

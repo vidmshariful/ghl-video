@@ -586,6 +586,7 @@ function VideoPopup({
               onChanged={onChanged}
               onMessageStudio={onMessageStudio}
               authedFetch={authedFetch}
+              inPack={Boolean(v.packId)}
             />
           ) : (
             <div>

@@ -27,7 +27,9 @@ export async function POST(
     patch.fulfillment_stage = body.stage;
     patch.stage_changed_at = new Date().toISOString();
   }
-  if (typeof body.manager === "string") patch.assigned_manager = body.manager.trim() || "Tanvir Prince";
+  /* a blank clears it; the client's screen then reads the owner's name from
+     the team, or the studio's own name when nobody has claimed the job yet */
+  if (typeof body.manager === "string") patch.assigned_manager = body.manager.trim() || null;
   if (typeof body.deliveryUrl === "string") {
     // Rendered to the customer as an href, so only allow http(s) (blocks
     // javascript:/data: and typos).

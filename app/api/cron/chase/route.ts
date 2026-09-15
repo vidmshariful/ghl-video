@@ -19,6 +19,7 @@ import {
   sendReviewRequestEmail,
 } from "@/lib/email/notify";
 import { checkInDue, checkInSent, nextCheckInAfter, priorChases, reviewDue, withinWindow } from "@/lib/chase-rules";
+import { approvedOnBehalfLine, quietForApproval } from "@/lib/quiet-client";
 import { countLine, monthKey, monthLabel, monthSummary, parseRetainer, type RetainerJob } from "@/lib/retainer";
 import { likeLiteral } from "@/lib/pg-pattern";
 
@@ -273,6 +274,44 @@ export async function GET(req: Request) {
     });
   }
 
+  /* ---- quiet clients: both reminders sent, a week of silence, approved for them ---- */
+  /* owner's decision, 16 September 2026. Only premade videos in Ready whose
+     order is not archived and not the studio's own, whose two reminders are
+     spent and the last one is a week old. One update and one email per
+     order, naming what was approved and how to reopen it. */
+  const approvedOnBehalf: string[] = [];
+  const quietByOrder = new Map<string, { id: string; title: string }[]>();
+  for (const r of orderReady) {
+    const order = orderById.get(String(r.order_id));
+    if (!order || order.archived) continue;
+    if (internal.has(String(order.customer_email).toLowerCase())) continue;
+    if (r.parent_id) continue;
+    const prior = priorChases(ledger as { meta?: unknown; created_at?: unknown }[], String(r.id), "review");
+    if (!quietForApproval(prior, now)) continue;
+    const list = quietByOrder.get(String(r.order_id)) ?? [];
+    list.push({ id: String(r.id), title: String(r.title) });
+    quietByOrder.set(String(r.order_id), list);
+  }
+  if (!dry) {
+    const { approveOnBehalf } = await import("@/lib/review");
+    const { sendOrderUpdateEmail } = await import("@/lib/email/order-update");
+    for (const [orderId, items] of quietByOrder) {
+      const done: string[] = [];
+      for (const v of items) {
+        const res = await approveOnBehalf(db, v.id, "studio, after two reminders and a week of silence").catch(() => null);
+        if (res?.ok) done.push(v.title);
+      }
+      if (!done.length) continue;
+      const line = approvedOnBehalfLine(done);
+      await db.from("order_updates").insert({ order_id: orderId, body: line });
+      await sendOrderUpdateEmail(db, orderId, line).catch(() => false);
+      approvedOnBehalf.push(...done);
+      await pause(SEND_PAUSE_MS);
+    }
+  } else {
+    for (const items of quietByOrder.values()) approvedOnBehalf.push(...items.map((i) => i.title));
+  }
+
   /* ---- the names: every address the nudges and the digest greet ---- */
   /* this knew only the clients with a project, so a premade or an editing
      client was nudged as "there" (audit, 15 September 2026). The brief
@@ -465,5 +504,5 @@ export async function GET(req: Request) {
   }
 
   const nudged = Object.fromEntries([...nudges].map(([email, items]) => [email, items.length]));
-  return NextResponse.json({ ok: true, dry, chased, nudged, briefs, checkIns, reviews, digested, digestRan: doDigest });
+  return NextResponse.json({ ok: true, dry, chased, nudged, briefs, checkIns, reviews, digested, digestRan: doDigest, approvedOnBehalf });
 }
