@@ -212,6 +212,7 @@ test.describe("quotes, the agreement, leads and partners", () => {
   });
 
   test("the retainer agreement is accepted in the portal, and the contact shows it", async () => {
+    test.slow(); /* a drain and four HighLevel reads: 54s on a clean run, three times the room */
     /* runnable on its own, so a retry or a filtered run does not depend on the first step */
     if (!token) token = await tokenFor(admin);
     if (!cfg) cfg = ((await db().from("hl_config").select("config").eq("location_id", LOC).single()).data!.config) as typeof cfg;

@@ -189,6 +189,7 @@ test.describe("money, in HighLevel", () => {
   });
 
   test("retainer terms become a monthly schedule in HighLevel, and go when they go", async () => {
+    test.slow(); /* two drains against HighLevel: 57s on a slow evening, three times the room */
     await api(`/api/admin/customers/${customerId}/`, {
       method: "PATCH",
       token,
