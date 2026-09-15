@@ -716,7 +716,7 @@ type Note = {
 };
 type Cut = { id: string; version: number; video_url: string; created_at: string };
 
-function StudioThread({
+export function StudioThread({
   orderId,
   deliverableId,
   videoUrl,

@@ -4,7 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase, money, when } from "./client";
 import { authHeader } from "./client";
 import { ProductionJob } from "./ProductionJob";
+import { ProductionJobV2 } from "./ProductionJobV2";
 import { StudioQueue } from "./StudioQueue";
+import { StudioQueueV2 } from "./StudioQueueV2";
 import type { View } from "./nav";
 import { BOARD_COLUMNS, boardColumn, type BoardColumn } from "@/lib/premade-board";
 
@@ -69,6 +71,26 @@ export function ProductionScreen({
   const [err, setErr] = useState("");
   const [openJob, setOpenJob] = useState<string | null>(null);
   const [view, setView] = useState<"queue" | "board">("queue");
+  /* the layout mock proposed after the Premade review: the same data and
+     the same routes in the new shape, one switch away and remembered per
+     browser, so the owner can use both and pick */
+  const [v2, setV2] = useState(false);
+  useEffect(() => {
+    try {
+      setV2(localStorage.getItem("ghlv.premade.v2") === "on");
+    } catch {
+      /* no storage, no memory of the switch */
+    }
+  }, []);
+  const flipLayout = () => {
+    const next = !v2;
+    setV2(next);
+    try {
+      localStorage.setItem("ghlv.premade.v2", next ? "on" : "off");
+    } catch {
+      /* fine */
+    }
+  };
   const [q, setQ] = useState("");
   const [mine, setMine] = useState(false);
   const [me, setMe] = useState("");
@@ -180,15 +202,11 @@ export function ProductionScreen({
   // the brief, every video, and the client timeline, and phase 6 adds feedback
   // threads on top of that.
   if (openJob) {
-    return (
-      <ProductionJob
-        id={openJob}
-        onBack={() => {
-          setOpenJob(null);
-          load();
-        }}
-      />
-    );
+    const back = () => {
+      setOpenJob(null);
+      load();
+    };
+    return v2 ? <ProductionJobV2 id={openJob} onBack={back} /> : <ProductionJob id={openJob} onBack={back} />;
   }
 
   return (
@@ -203,6 +221,14 @@ export function ProductionScreen({
             Custom and Editing have boards of their own.
           </p>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={flipLayout}
+          className={`tap rounded-[8px] border px-4 py-2 font-mono text-label uppercase transition-colors ${v2 ? "border-gold text-gold" : "border-hair text-muted hover:border-gold/60 hover:text-gold"}`}
+        >
+          {v2 ? "New layout: on" : "Try the new layout"}
+        </button>
         <button
           type="button"
           onClick={() => onNavigate("orders")}
@@ -210,6 +236,7 @@ export function ProductionScreen({
         >
           Full order records
         </button>
+        </div>
       </div>
 
       <div className="mt-6 flex gap-1 border-b border-hair">
@@ -238,12 +265,11 @@ export function ProductionScreen({
         <div className="mt-6">
           {/* this is the premade board, so its queue is premade work; a
               custom note belongs on the Custom board, not here as well */}
-          <StudioQueue
-            kind="purchase"
-            onOpenJob={setOpenJob}
-            onOpenProject={onOpenProject}
-            onOpenEditing={onOpenEditing}
-          />
+          {v2 ? (
+            <StudioQueueV2 kind="purchase" onOpenJob={setOpenJob} onOpenProject={onOpenProject} onOpenEditing={onOpenEditing} />
+          ) : (
+            <StudioQueue kind="purchase" onOpenJob={setOpenJob} onOpenProject={onOpenProject} onOpenEditing={onOpenEditing} />
+          )}
         </div>
       ) : (
         <>
