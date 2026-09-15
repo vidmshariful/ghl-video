@@ -286,7 +286,6 @@ export function ProductionJob({ id, onBack }: { id: string; onBack: () => void }
 
   const ready = videos.filter((v) => v.status === "ready" || v.status === "approved").length;
   const delivered = job.stage === "delivered";
-  const stale = job.stageShouldBe && job.stageShouldBe !== job.stage;
 
   return (
     <div className="grid gap-6">
@@ -361,29 +360,18 @@ export function ProductionJob({ id, onBack }: { id: string; onBack: () => void }
             </Select>
           </label>
 
-          <label className="grid gap-1.5">
-            <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Stage</span>
-            <Select
-              value={delivered ? "delivered" : job.stage}
-              disabled={busy === "job" || delivered}
-              onChange={(e) => saveJob({ stage: e.target.value })}
-            >
-              {["paid", "intake", "production", "review"].map((s) => (
-                <option key={s} value={s}>
-                  {STAGE_LABEL[s]}
-                </option>
-              ))}
-              {delivered && <option value="delivered">Delivered</option>}
-            </Select>
-          </label>
+          <div className="grid gap-1.5">
+            <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Where it is</span>
+            <p className="rounded-[8px] border border-hair bg-canvas px-3 py-2 text-body-sm text-ink">
+              {STAGE_LABEL[job.stage] ?? job.stage}
+            </p>
+          </div>
         </div>
 
         <p className="mt-2 text-body-sm text-dim">
           {delivered
             ? "This job is delivered. It no longer moves on its own."
-            : job.stageIsDerived
-              ? "Calculated from the videos below. Setting it by hand holds until a video changes."
-              : "Set by hand. It will recalculate the next time a video changes."}
+            : "Read from the videos below. Nothing sets it by hand: move the videos and it follows."}
         </p>
 
         {/* the date the client is promised, the producer's to move: it came
@@ -420,17 +408,6 @@ export function ProductionJob({ id, onBack }: { id: string; onBack: () => void }
                 : "No date yet. It is set from the brief, or here."}
             </p>
           </div>
-        )}
-
-        {stale && !delivered && (
-          <button
-            type="button"
-            disabled={busy === "job"}
-            onClick={() => saveJob({ stage: job.stageShouldBe })}
-            className="mt-3 tap rounded-[8px] border border-gold/50 px-3.5 py-2 font-mono text-label uppercase text-gold transition-colors hover:bg-gold hover:text-canvas"
-          >
-            The videos say {STAGE_LABEL[job.stageShouldBe!]}. Move it.
-          </button>
         )}
 
         {/* No deliver button any more. An order finishes when the client has

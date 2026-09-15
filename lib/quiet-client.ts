@@ -32,3 +32,9 @@ export function approvedOnBehalfLine(titles: string[]): string {
   const list = titles.length === 1 ? titles[0] : `${titles.length} videos (${titles.join(", ")})`;
   return `After two reminders and a week without a reply, we approved ${list} on your behalf so your order can close. If you still want changes, reply to this email or message us from your portal and we will reopen it.`;
 }
+
+/** The same, when a producer pressed "Approve for them" on the board or the queue. */
+export function approvedForThemLine(titles: string[]): string {
+  const list = titles.length === 1 ? titles[0] : `${titles.length} videos (${titles.join(", ")})`;
+  return `We approved ${list} on your behalf so your order can close. If you still want changes, reply to this email or message us from your portal and we will reopen it.`;
+}

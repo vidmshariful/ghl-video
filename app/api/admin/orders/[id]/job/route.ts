@@ -60,6 +60,20 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     intakeCompleted: Boolean(order.intake_completed),
     statuses: videos.map((v) => v.status),
   };
+  /* The stage is a reading of the videos and nothing sets it by hand any
+     more (Premade review, 16 September 2026): a stored stage that drifted
+     from the videos, from the days of the arrows and the dropdown, is put
+     right the moment the job is opened. */
+  const should = deriveStage(stageInput);
+  if (should && should !== order.fulfillment_stage) {
+    await db
+      .from("orders")
+      .update({ fulfillment_stage: should, stage_changed_at: new Date().toISOString(), stage_is_derived: true, stage_set_by: null })
+      .eq("id", id)
+      .neq("fulfillment_stage", "delivered");
+    order.fulfillment_stage = should;
+    order.stage_is_derived = true;
+  }
 
   return NextResponse.json({
     job: {

@@ -31,6 +31,30 @@ export const runtime = "nodejs";
 
 type Row = Record<string, unknown>;
 type Kind = "purchase" | "project" | "plan";
+type Bucket = "answer" | "revisions" | "brief" | "start" | "waiting";
+type QueueItem = {
+  bucket: Bucket;
+  kind: Kind;
+  videoId: string;
+  orderId: string | null;
+  projectId: string | null;
+  editingSlug: string | null;
+  title: string;
+  status: string;
+  revisionRound: number;
+  hasLink: boolean;
+  openNotes: number;
+  latestNote: string | null;
+  latestNoteId: string | null;
+  waitingDays: number | null;
+  due: ReturnType<typeof describeDue> | null;
+  sinceDays: number | null;
+  customer: string;
+  invoice: string | null;
+  product: string;
+  ownerEmail: string | null;
+  ownerName: string | null;
+};
 
 const days = (iso: string | null) =>
   iso ? Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000) : null;
@@ -52,7 +76,7 @@ export async function GET(req: Request) {
     db
       .from("orders")
       .select(
-        "id, invoice_number, customer_email, intake_completed, intake_completed_at, assigned_admin_email, assigned_manager, customers(name), products(name, metadata)",
+        "id, invoice_number, customer_email, intake_completed, intake_completed_at, paid_at, created_at, fulfillment_stage, assigned_admin_email, assigned_manager, customers(name), products(name, metadata)",
       )
       .eq("status", "paid")
       .neq("archived", true),
@@ -133,19 +157,19 @@ export async function GET(req: Request) {
   const answered = new Set(
     ((notes ?? []) as Row[]).filter((n) => n.parent_id).map((n) => String(n.parent_id)),
   );
-  const openByVideo = new Map<string, { body: string; at: string }[]>();
+  const openByVideo = new Map<string, { id: string; body: string; at: string }[]>();
   for (const n of (notes ?? []) as Row[]) {
     if (n.parent_id || n.author_side !== "client" || n.resolved_at) continue;
     if (answered.has(String(n.id))) continue;
     const k = String(n.deliverable_id);
     openByVideo.set(k, [
       ...(openByVideo.get(k) ?? []),
-      { body: String(n.body), at: String(n.created_at) },
+      { id: String(n.id), body: String(n.body), at: String(n.created_at) },
     ]);
   }
 
-  const items = videos
-    .map((v) => {
+  const items: QueueItem[] = videos
+    .map((v): QueueItem | null => {
       const open = openByVideo.get(String(v.id)) ?? [];
       const status = String(v.status);
 
@@ -198,7 +222,7 @@ export async function GET(req: Request) {
         return null;
       }
 
-      let bucket: "answer" | "revisions" | "start" | "waiting" | null = null;
+      let bucket: Bucket | null = null;
       if (open.length) bucket = "answer";
       else if (status === "revisions") bucket = "revisions";
       else if (status === "queued" && startable) bucket = "start";
@@ -218,6 +242,8 @@ export async function GET(req: Request) {
         hasLink: Boolean(v.video_url),
         openNotes: open.length,
         latestNote: open[open.length - 1]?.body?.slice(0, 120) ?? null,
+        /* the note itself, so the queue row can answer it in place */
+        latestNoteId: open[open.length - 1]?.id ?? null,
         waitingDays: bucket === "waiting" ? days((v.ready_at as string | null) ?? null) : null,
         /* What the client was promised. Worded server-side so the board and
          * the client's own screen can never say different things about the
@@ -235,7 +261,43 @@ export async function GET(req: Request) {
         ownerName,
       };
     })
-    .filter((x): x is NonNullable<typeof x> => x !== null);
+    .filter((x): x is QueueItem => x !== null);
+
+  /* Paid orders still without a brief, one row per order. These videos were
+     invisible to the queue: nothing was "startable", so the studio could not
+     see that three of four pack clients had never sent a brief (Premade
+     review, 16 September 2026). Oldest first, with a nudge and a way to
+     enter what came by email. */
+  if (wantKind("purchase")) {
+    for (const o of orders) {
+      if (o.intake_completed) continue;
+      const stage = String(o.fulfillment_stage ?? "paid");
+      if (stage === "delivered") continue;
+      items.push({
+        bucket: "brief" as const,
+        kind: "purchase" as const,
+        videoId: `order:${String(o.id)}`,
+        orderId: String(o.id),
+        projectId: null,
+        editingSlug: null,
+        title: (o.products as { name?: string } | null)?.name ?? "Order",
+        status: "queued",
+        revisionRound: 0,
+        hasLink: false,
+        openNotes: 0,
+        latestNote: null,
+        latestNoteId: null,
+        waitingDays: null,
+        due: null,
+        sinceDays: days(((o.paid_at as string | null) ?? (o.created_at as string | null)) ?? null),
+        customer: (o.customers as { name?: string } | null)?.name ?? String(o.customer_email),
+        invoice: (o.invoice_number as string | null) ?? null,
+        product: (o.products as { name?: string } | null)?.name ?? "Order",
+        ownerEmail: (o.assigned_admin_email as string | null) ?? null,
+        ownerName: (o.assigned_manager as string | null) ?? null,
+      });
+    }
+  }
 
   const owners = [
     ...new Map(

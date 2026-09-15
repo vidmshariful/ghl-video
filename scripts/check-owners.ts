@@ -50,6 +50,8 @@ const ORDER_ONLY: Record<string, string> = {
     "the premade job screen, which is an order",
   "app/api/admin/orders/[id]/job/route.ts":
     "the premade job page itself; custom projects and editing plans have their own pages",
+  "app/api/admin/orders/[id]/chase/route.ts":
+    "nudges and approvals on a premade order from its board and queue; custom and editing chase from their own screens",
   "app/api/portal/orders/[id]/route.ts": "one order, as the client sees it",
   "app/api/portal/library/route.ts":
     "builds the set of catalogue codes a client already owns; bespoke work has no catalogue code",

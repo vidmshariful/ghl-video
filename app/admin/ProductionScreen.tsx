@@ -6,14 +6,16 @@ import { authHeader } from "./client";
 import { ProductionJob } from "./ProductionJob";
 import { StudioQueue } from "./StudioQueue";
 import type { View } from "./nav";
+import { BOARD_COLUMNS, boardColumn, type BoardColumn } from "@/lib/premade-board";
 
 /*
- * The production pipeline: every paid order that still needs work, grouped
- * by fulfillment stage, so the producer runs the day from one screen. Move
- * a card forward or back, jump to the full order in Orders, or open the
- * client's chat. Moving a card to Delivered fires the real delivery email
- * and bell (the fulfillment route's exactly-once flip), so that move means
- * "the client has their files".
+ * The production pipeline: every paid order that still needs work, in
+ * columns read from the work itself (the brief, the videos, delivered), so
+ * the producer runs the day from one screen. Nothing on a card moves it by
+ * hand any more: the arrows and the stage dropdown wrote one record from two
+ * places (Premade review, 16 September 2026). A card in "Waiting on brief"
+ * can be nudged or have its emailed brief entered; one in "With the client"
+ * can be nudged or approved for them.
  */
 
 type Row = {
@@ -30,14 +32,6 @@ type Row = {
   customers: { id: string; name: string | null } | null;
   products: { name: string; sku: string; metadata: Record<string, unknown> | null } | null;
 };
-
-const STAGES = [
-  { key: "paid", label: "Paid" },
-  { key: "intake", label: "Intake" },
-  { key: "production", label: "In production" },
-  { key: "review", label: "Review" },
-  { key: "delivered", label: "Delivered" },
-] as const;
 
 /* what was bought, said plainly (mirrors the email label) */
 function label(p: Row["products"]): string {
@@ -124,31 +118,41 @@ export function ProductionScreen({
     supabase.auth.getUser().then(({ data }) => setMe(data.user?.email ?? ""));
   }, [load]);
 
-  async function move(row: Row, dir: 1 | -1) {
-    const idx = STAGES.findIndex((s) => s.key === row.fulfillment_stage);
-    const next = STAGES[idx + dir];
-    if (!next) return;
+  /* one line of feedback under the card that was acted on */
+  const [flash, setFlash] = useState<{ id: string; text: string; bad?: boolean } | null>(null);
+
+  /* a nudge or an approval from the card, through the same route the queue
+     uses, counting against the same two reminders the sweep may send */
+  async function act(row: Row, action: "nudge-brief" | "nudge-review" | "approve") {
     if (
-      next.key === "delivered" &&
-      !confirm(
-        `Deliver ${label(row.products)} to ${row.customers?.name ?? row.customer_email}? This sends the delivery email.`,
-      )
+      action === "approve" &&
+      !confirm(`Approve every video with the client on ${label(row.products)} for ${row.customers?.name ?? row.customer_email}? They are told, and can ask to reopen it.`)
     )
       return;
     setBusyId(row.id);
-    setErr("");
+    setFlash(null);
     try {
-      const r = await fetch(`/api/admin/orders/${row.id}/fulfillment/`, {
+      const r = await fetch(`/api/admin/orders/${row.id}/chase/`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(await authHeader()) },
-        body: JSON.stringify({ stage: next.key }),
+        body: JSON.stringify({ action }),
       });
-      if (!r.ok) {
-        const j = await r.json().catch(() => ({}));
-        setErr(j.error ?? "Could not move the order.");
-      } else await load();
+      const j = (await r.json().catch(() => ({}))) as Record<string, unknown>;
+      if (!r.ok) setFlash({ id: row.id, text: String(j.error ?? "Could not do that."), bad: true });
+      else {
+        setFlash({
+          id: row.id,
+          text:
+            action === "nudge-brief"
+              ? `Reminder sent, ${j.sent} of ${j.of}.`
+              : action === "nudge-review"
+                ? `Reminder sent for ${(j.nudged as string[] | undefined)?.join(", ") ?? "the videos with them"}.`
+                : `Approved for them: ${(j.approved as string[] | undefined)?.join(", ") ?? ""}.`,
+        });
+        await load();
+      }
     } catch {
-      setErr("Could not move the order.");
+      setFlash({ id: row.id, text: "Could not do that.", bad: true });
     }
     setBusyId(null);
   }
@@ -169,7 +173,8 @@ export function ProductionScreen({
       .filter(Boolean)
       .some((v) => String(v).toLowerCase().includes(term));
   });
-  const byStage = (key: string) => visible.filter((r) => r.fulfillment_stage === key);
+  const byColumn = (key: BoardColumn) =>
+    visible.filter((r) => boardColumn(r.fulfillment_stage, r.intake_completed) === key);
 
   // A job takes over the screen rather than opening in a drawer: it carries
   // the brief, every video, and the client timeline, and phase 6 adds feedback
@@ -193,9 +198,9 @@ export function ProductionScreen({
           <h1 className="font-display text-h3 text-ink">Premade</h1>
           <p className="mt-0.5 max-w-[var(--measure-body)] text-body-sm text-muted">
             Every paid order that needs work. Open a job to set each video and
-            post updates. Stages follow the videos on their own; delivering is
-            the one step somebody presses. Custom and Editing have boards of
-            their own.
+            post updates. The columns follow the work on their own, and an
+            order finishes itself when the client approves the last video.
+            Custom and Editing have boards of their own.
           </p>
         </div>
         <button
@@ -271,8 +276,8 @@ export function ProductionScreen({
         <p className="mt-8 text-body text-muted">Loading the board...</p>
       ) : (
         <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-          {STAGES.map((s) => {
-            const items = byStage(s.key);
+          {BOARD_COLUMNS.map((s) => {
+            const items = byColumn(s.key);
             return (
               <div key={s.key} className="min-w-0">
                 <div className="flex items-center justify-between rounded-t-[12px] border border-hair bg-surface px-4 py-2.5">
@@ -281,7 +286,7 @@ export function ProductionScreen({
                   </span>
                   <span
                     className={`rounded-full px-2 py-0.5 font-mono text-label font-bold leading-none ${
-                      items.length > 0 && s.key !== "delivered"
+                      items.length > 0 && s.key !== "done"
                         ? "bg-gold text-canvas"
                         : "bg-hair/60 text-muted"
                     }`}
@@ -321,21 +326,12 @@ export function ProductionScreen({
                         </p>
                         <p className="mt-1 font-mono text-label uppercase text-dim">
                           {money(r.amount_cents, r.currency)} / {when(r.created_at)}
-                          {s.key !== "delivered" && daysIn(r.stage_changed_at) >= 3
-                            ? ` / ${daysIn(r.stage_changed_at)}d in stage`
-                            : ""}
+                          {s.key === "brief"
+                            ? ` / ${daysIn(r.created_at)}d without a brief`
+                            : s.key !== "done" && daysIn(r.stage_changed_at) >= 3
+                              ? ` / ${daysIn(r.stage_changed_at)}d here`
+                              : ""}
                         </p>
-                        {s.key === "intake" ? (
-                          <p
-                            className={`mt-1.5 inline-flex rounded-full border px-2 py-0.5 font-mono text-label uppercase ${
-                              r.intake_completed
-                                ? "border-green/40 text-green"
-                                : "border-gold/40 text-gold"
-                            }`}
-                          >
-                            {r.intake_completed ? "Brief in" : "Waiting on brief"}
-                          </p>
-                        ) : null}
                         {videos[r.id]?.total ? (
                           <button
                             type="button"
@@ -355,33 +351,48 @@ export function ProductionScreen({
                                 : `${videos[r.id].done}/${videos[r.id].total} sent`}
                           </button>
                         ) : null}
-                        <div className="mt-2.5 flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            disabled={busyId === r.id || s.key === "paid"}
-                            onClick={() => move(r, -1)}
-                            aria-label="Move back a stage"
-                            className="tap rounded-[8px] border border-hair px-2 py-1 font-mono text-label text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-40"
-                          >
-                            &#8592;
-                          </button>
-                          <button
-                            type="button"
-                            disabled={busyId === r.id || s.key === "delivered"}
-                            onClick={() => move(r, 1)}
-                            aria-label="Move forward a stage"
-                            className="tap rounded-[8px] border border-hair px-2 py-1 font-mono text-label text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-40"
-                          >
-                            &#8594;
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onNavigate("messages")}
-                            className="tap ml-auto rounded-[8px] border border-hair px-2.5 py-1 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold"
-                          >
-                            Chat
-                          </button>
-                        </div>
+                        {s.key === "brief" ? (
+                          <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                            <button
+                              type="button"
+                              disabled={busyId === r.id}
+                              onClick={() => act(r, "nudge-brief")}
+                              className="tap rounded-[8px] border border-hair px-2.5 py-1 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-40"
+                            >
+                              Nudge
+                            </button>
+                            <a
+                              href={`/checkout/intake/${r.id}/?by=studio`}
+                              target="_blank"
+                              rel="noopener"
+                              className="tap rounded-[8px] border border-gold/50 px-2.5 py-1 font-mono text-label uppercase text-gold transition-colors hover:bg-gold hover:text-canvas"
+                            >
+                              Enter it for them
+                            </a>
+                          </div>
+                        ) : s.key === "client" ? (
+                          <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                            <button
+                              type="button"
+                              disabled={busyId === r.id}
+                              onClick={() => act(r, "nudge-review")}
+                              className="tap rounded-[8px] border border-hair px-2.5 py-1 font-mono text-label uppercase text-muted transition-colors hover:border-gold/60 hover:text-gold disabled:opacity-40"
+                            >
+                              Nudge
+                            </button>
+                            <button
+                              type="button"
+                              disabled={busyId === r.id}
+                              onClick={() => act(r, "approve")}
+                              className="tap rounded-[8px] border border-hair px-2.5 py-1 font-mono text-label uppercase text-muted transition-colors hover:border-green/60 hover:text-green disabled:opacity-40"
+                            >
+                              Approve for them
+                            </button>
+                          </div>
+                        ) : null}
+                        {flash?.id === r.id && (
+                          <p className={`mt-2 text-body-sm ${flash.bad ? "text-error" : "text-green"}`}>{flash.text}</p>
+                        )}
                       </div>
                     ))
                   )}

@@ -114,17 +114,17 @@ export const HANDBOOK: HandbookPage[] = [
           },
           {
             title: "Ready to start",
-            body: "Paid, brief in, nothing built. Use Set all to on a pack rather than changing nine dropdowns.",
+            body: "Paid, brief in, nothing built. On a pack, paste the links one per line and press Send N videos rather than working nine dropdowns.",
           },
           {
             title: "With the client",
-            body: "Sent and waiting on them. Not our work, but the oldest ones are worth chasing. If they never come back you can approve it yourself to close the order.",
+            body: "Sent and waiting on them. The oldest five show first. Nudge sends the same reminder the morning sweep would, counted against the same two; Approve for them closes the video the way the client would, tells them, and lets them ask to reopen it. After both reminders and a week of silence the sweep does that on its own.",
           },
         ],
       },
       {
         kind: "text",
-        body: "The board is the second tab if you want the columns view. It has a search over client, invoice and product, and an only-my-jobs filter.",
+        body: "The board is the second tab if you want the columns view: Waiting on brief, Ready to start, Building, With the client, Done, read from the work itself, nothing moved by hand. It has a search over client, invoice and product, an only-my-jobs filter, and the same nudge, enter and approve actions on the cards. No brief yet is its own bucket on the list: nudge them, or enter what they sent by email.",
       },
     ],
   },

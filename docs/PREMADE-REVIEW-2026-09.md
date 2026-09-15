@@ -260,8 +260,15 @@ our board.
   never a default name; a quiet client's video approved on their behalf by
   the morning sweep after two reminders and a week, with the client told
   why. Live when the owner says so.
-- **Fourth, the board and the queue (two days):** derived columns, no
-  arrows, the "No brief" bucket, nudge and approve-for-them on the queue.
+- **Fourth, the board and the queue (two days), built 16 September and
+  proven on staging:** the board's columns read from the work (Waiting on
+  brief, Ready to start, Building, With the client, Done) and the arrows
+  are gone, the job page no longer offers the stage by hand; the queue
+  gains a "No brief yet" bucket with a nudge and "Enter it for them", a
+  reply box and "Mark done" on "Answer the client" rows, and "Nudge" and
+  "Approve for them" on the oldest "With the client" rows, the rest folded
+  away; a nudge by hand counts against the same two the sweep may send.
+  Live when the owner says so.
 
 Each step goes to staging first and is walked through, then live when the
 owner says so.
