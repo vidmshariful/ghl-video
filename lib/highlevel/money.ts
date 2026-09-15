@@ -419,7 +419,7 @@ export async function pollOpenInvoices(
   db: Db,
   cfg: HlConfig,
   opts: { limit?: number; until?: number } = {},
-): Promise<{ checked: number; paid: number; changed: number; outOfTime: boolean }> {
+): Promise<{ checked: number; paid: number; changed: number; failed: number; failure: string | null; outOfTime: boolean }> {
   const { data } = await db
     .from("invoices")
     .select("id, hl_invoice_id, hl_status, amount_paid_cents")
@@ -428,13 +428,23 @@ export async function pollOpenInvoices(
     .or("hl_status.is.null,hl_status.not.in.(void,voided,refunded)")
     .order("updated_at", { ascending: true })
     .limit(opts.limit ?? 50);
-  const out = { checked: 0, paid: 0, changed: 0, outOfTime: false };
+  const out = { checked: 0, paid: 0, changed: 0, failed: 0, failure: null as string | null, outOfTime: false };
   for (const r of (data ?? []) as Row[]) {
     if (opts.until && Date.now() > opts.until) {
       out.outOfTime = true;
       break;
     }
-    const hl = await fetchInvoice(cfg, String(r.hl_invoice_id));
+    /* One invoice HighLevel cannot answer for right now is left for the
+       next minute; it used to end the whole run and raise a crash alarm
+       (four times, 14 and 15 September 2026). */
+    let hl: Row | null;
+    try {
+      hl = await fetchInvoice(cfg, String(r.hl_invoice_id));
+    } catch (e) {
+      out.failed += 1;
+      out.failure = out.failure ?? (e instanceof Error ? e.message : String(e));
+      continue;
+    }
     out.checked += 1;
     if (!hl) continue;
     const status = String(hl.status ?? "");

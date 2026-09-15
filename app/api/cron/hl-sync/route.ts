@@ -109,20 +109,51 @@ async function run(db: ReturnType<typeof supabaseAdmin>, started: number) {
       skippedPhases.push(phase);
       return false;
     };
-    if (room("invoices")) {
+    /* A phase that throws is that phase's news, not the run's: the phases
+       after it still get their turn, the response names it, and the alarm
+       fires only when the same phase keeps failing (a single HighLevel
+       hiccup used to be reported as a crash of the whole sync). */
+    const phase = async (name: string, fn: () => Promise<unknown>): Promise<unknown> => {
+      if (!room(name)) return null;
+      try {
+        return await fn();
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        await raise(db, {
+          kind: "highlevel.phase_failed",
+          fingerprint: `highlevel:phase:${name}`,
+          notifyAfter: 3,
+          message: `The minute HighLevel sync could not finish its ${name} phase: ${message}`,
+          context: { route: "hl-sync", phase: name, error: message },
+        });
+        return { error: message };
+      }
+    };
+    invoices = await phase("invoices", async () => {
       const polled = await pollOpenInvoices(db, cfg, { until });
+      /* every invoice unanswered in one minute is HighLevel being down, and
+         worth a word after a few minutes of it; one unanswered is not */
+      if (polled.failed && polled.failed >= polled.checked + polled.failed && polled.failure) {
+        await raise(db, {
+          kind: "highlevel.phase_failed",
+          fingerprint: "highlevel:phase:invoices",
+          notifyAfter: 3,
+          message: `HighLevel answered for none of the ${polled.failed} open invoices this minute: ${polled.failure}`,
+          context: { route: "hl-sync", phase: "invoices", failed: polled.failed, error: polled.failure },
+        });
+      }
       const pulled = await pullInvoices(db, cfg, { pages: 1 });
-      invoices = { ...polled, imported: pulled.imported, seen: pulled.seen, foreign: pulled.foreign, skipped: pulled.skipped };
-    }
+      return { ...polled, imported: pulled.imported, seen: pulled.seen, foreign: pulled.foreign, skipped: pulled.skipped };
+    });
     /* the conversation, both ways: the studio's words from inside HighLevel
        onto the portal threads, and any portal message a hiccup left behind */
-    if (room("conversations")) {
+    messages = await phase("conversations", async () => {
       const pulledMessages = await pullRecentConversations(db, cfg, { until });
       const mirrored = await mirrorMissing(db);
-      messages = { ...pulledMessages, mirrored };
-    }
+      return { ...pulledMessages, mirrored };
+    });
     /* what became of the emails HighLevel queued */
-    if (room("email statuses")) email = await refreshEmailStatuses(db);
+    email = await phase("email statuses", () => refreshEmailStatuses(db));
   }
   return {
     ok: true,
