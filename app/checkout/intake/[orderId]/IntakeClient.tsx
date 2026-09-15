@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { VOICE_ACCENTS } from "@/lib/brief-fields";
 import Link from "next/link";
 import {
   bundlePickPools,
@@ -23,6 +24,11 @@ type Existing = {
   notes: string;
   logoUrl: string | null;
   screenshotUrls: string[];
+  screenshots?: { path: string; url: string | null }[];
+  website?: string;
+  voiceAccent?: string;
+  niche?: string;
+  enteredBy?: "client" | "studio";
   videoSelections?: BundleSelections | null;
 };
 /* What we already hold for this account, sent only when this order has no
@@ -35,6 +41,9 @@ type Prefill = {
   notes: string;
   logoOnFile: boolean;
   logoUrl: string | null;
+  website?: string;
+  voiceAccent?: string;
+  niche?: string;
 };
 type Loaded = {
   productName: string | null;
@@ -70,6 +79,15 @@ export function IntakeClient({ orderId }: { orderId: string }) {
   const [accentColor, setAccentColor] = useState("#00CC00");
   const [brandPronunciation, setBrandPronunciation] = useState("");
   const [notes, setNotes] = useState("");
+  const [website, setWebsite] = useState("");
+  const [voiceAccent, setVoiceAccent] = useState("");
+  const [niche, setNiche] = useState("");
+  /* the screenshots on file that are still wanted; dropping one here removes
+     it when the brief is sent, and new files are added to what is left */
+  const [keepShots, setKeepShots] = useState<string[]>([]);
+  /* a producer typing in a brief the client sent by email: same form, the
+     copy says who is doing what, and the route labels the brief as ours */
+  const [studio, setStudio] = useState(false);
   const [selections, setSelections] = useState<BundleSelections>(emptySel);
   const logoRef = useRef<HTMLInputElement>(null);
   const shotsRef = useRef<HTMLInputElement>(null);
@@ -106,6 +124,10 @@ export function IntakeClient({ orderId }: { orderId: string }) {
           if (j.intake.accentColor) setAccentColor(j.intake.accentColor);
           setBrandPronunciation(j.intake.brandPronunciation || "");
           setNotes(j.intake.notes || "");
+          setWebsite(j.intake.website || "");
+          setVoiceAccent(j.intake.voiceAccent || "");
+          setNiche(j.intake.niche || "");
+          setKeepShots((j.intake.screenshots ?? []).map((sh) => sh.path));
           if (j.intake.videoSelections) {
             const s = j.intake.videoSelections;
             setSelections({
@@ -123,7 +145,11 @@ export function IntakeClient({ orderId }: { orderId: string }) {
           if (j.prefill.accentColor) setAccentColor(j.prefill.accentColor);
           setBrandPronunciation(j.prefill.brandPronunciation || "");
           setNotes(j.prefill.notes || "");
+          setWebsite(j.prefill.website || "");
+          setVoiceAccent(j.prefill.voiceAccent || "");
+          setNiche(j.prefill.niche || "");
         }
+        setStudio(new URLSearchParams(window.location.search).get("by") === "studio");
         setPhase("ready");
       } catch {
         if (active) setPhase("notfound");
@@ -156,6 +182,11 @@ export function IntakeClient({ orderId }: { orderId: string }) {
       fd.set("accentColor", accentColor);
       fd.set("brandPronunciation", brandPronunciation.trim());
       fd.set("notes", notes.trim());
+      fd.set("website", website.trim());
+      fd.set("voiceAccent", voiceAccent);
+      fd.set("niche", niche.trim());
+      fd.set("keepScreenshots", JSON.stringify(keepShots));
+      if (studio) fd.set("enteredBy", "studio");
       if (needsPick) fd.set("videoSelections", JSON.stringify(selections));
       const logo = logoRef.current?.files?.[0];
       if (logo) fd.set("logo", logo);
@@ -198,10 +229,11 @@ export function IntakeClient({ orderId }: { orderId: string }) {
             <path d="M5 13l4 4 10-11" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </span>
-        <h1 className="mt-6 font-display text-h2 text-ink">Brief received.</h1>
+        <h1 className="mt-6 font-display text-h2 text-ink">{studio ? "Brief saved for them." : "Brief received."}</h1>
         <p className="mx-auto mt-3 max-w-[46ch] text-body leading-relaxed text-muted">
-          Thank you. Production starts from here, and your delivery clock is now
-          running. We will email you the moment the first cut is ready.
+          {studio
+            ? "It counts as received: the clock is running, the client has been told to check it on their order, and they can update it there."
+            : "Thank you. Production starts from here, and your delivery clock is now running. We will email you the moment the first cut is ready."}
         </p>
         <div className="mt-8">
           <Link
@@ -226,14 +258,18 @@ export function IntakeClient({ orderId }: { orderId: string }) {
           {data?.productCode ? `${data.productCode} / ` : ""}Branding brief
         </p>
         <h1 className="mt-3 font-display text-h2 text-ink">
-          {alreadyDone
-            ? "Update your branding brief."
-            : prefilled
-              ? "Same brand as last time?"
-              : "Now let us brand it."}
+          {studio
+            ? "Entering the brief for this order."
+            : alreadyDone
+              ? "Update your branding brief."
+              : prefilled
+                ? "Same brand as last time?"
+                : "Now let us brand it."}
         </h1>
         <p className="mx-auto mt-3 max-w-[52ch] text-body leading-relaxed text-muted">
-          {prefilled
+          {studio
+            ? "From what the client sent by email. Saving it counts as their brief: the clock starts, they are told to check it on their order, and they can update it there."
+            : prefilled
             ? "We already have your brand, so this is filled in. Check it over, change anything that is different for this video, and send it."
             : "This is what turns your order into your videos: your logo, colors, dashboard screens, and how your brand name is said. It takes about three minutes, and the delivery clock starts once it is in."}
         </p>
@@ -348,6 +384,41 @@ export function IntakeClient({ orderId }: { orderId: string }) {
         </label>
 
         <div className="grid gap-6 sm:grid-cols-2">
+          <label>
+            <span className={labelCls}>Your website</span>
+            <input
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+              className={inputCls}
+              placeholder="yoursaas.com"
+              inputMode="url"
+              autoComplete="url"
+            />
+            <p className="mt-1.5 text-body-sm text-dim">
+              The site the videos are for, so we brand the right one.
+            </p>
+          </label>
+          <label>
+            <span className={labelCls}>Voiceover accent</span>
+            <select
+              value={voiceAccent}
+              onChange={(e) => setVoiceAccent(e.target.value)}
+              className={inputCls}
+            >
+              <option value="">Pick one</option>
+              {VOICE_ACCENTS.map((a) => (
+                <option key={a} value={a}>
+                  {a}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1.5 text-body-sm text-dim">
+              How your brand name and the script are read.
+            </p>
+          </label>
+        </div>
+
+        <div className="grid gap-6 sm:grid-cols-2">
           <div>
             <span className={labelCls}>Primary brand color</span>
             <div className="flex items-center gap-3">
@@ -423,13 +494,42 @@ export function IntakeClient({ orderId }: { orderId: string }) {
 
         <div>
           <span className={labelCls}>Dashboard / platform screenshots</span>
-          {data?.intake?.screenshotUrls?.length ? (
-            <p className="mb-2 text-body-sm text-muted">
-              {data.intake.screenshotUrls.length} on file. Choosing new files replaces them.
-            </p>
+          {data?.intake?.screenshots?.length ? (
+            <div className="mb-3">
+              <p className="mb-2 text-body-sm text-muted">
+                {keepShots.length} on file. Add more below, or remove any you no longer want.
+              </p>
+              <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                {data.intake.screenshots
+                  .filter((sh) => keepShots.includes(sh.path))
+                  .map((sh, i) => (
+                    <li key={sh.path} className="relative overflow-hidden rounded-[4px] border border-hair bg-canvas">
+                      {sh.url ? (
+                        <a href={sh.url} target="_blank" rel="noopener" className="block">
+                          {/* a signed, expiring link to a private file, not an asset */}
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={sh.url} alt={`Screenshot ${i + 1}`} className="aspect-video w-full object-cover" />
+                        </a>
+                      ) : (
+                        <span className="block aspect-video w-full" />
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setKeepShots((k) => k.filter((p) => p !== sh.path))}
+                        className="absolute right-1 top-1 rounded-[3px] border border-hair bg-canvas/90 px-1.5 py-0.5 font-mono text-label uppercase text-muted hover:border-error hover:text-error"
+                        aria-label={`Remove screenshot ${i + 1}`}
+                      >
+                        Remove
+                      </button>
+                    </li>
+                  ))}
+              </ul>
+            </div>
           ) : null}
           <input ref={shotsRef} type="file" multiple accept="image/png,image/jpeg,image/webp" className={fileCls} />
-          <p className="mt-1.5 text-body-sm text-dim">Up to 8 images. The screens you want featured in the video.</p>
+          <p className="mt-1.5 text-body-sm text-dim">
+            Up to 8 images in total. The screens you want featured in the video.
+          </p>
         </div>
 
         <label>
@@ -443,6 +543,20 @@ export function IntakeClient({ orderId }: { orderId: string }) {
           />
         </label>
 
+        <label>
+          <span className={labelCls}>Your niche</span>
+          <input
+            value={niche}
+            onChange={(e) => setNiche(e.target.value)}
+            className={inputCls}
+            placeholder="Dental clinics, gyms, roofers"
+          />
+          <p className="mt-1.5 text-body-sm text-dim">
+            Who you sell to. If you added niche customization, say what to swap
+            so the video fits them, not just your colours.
+          </p>
+        </label>
+
         {error ? (
           <p role="alert" className="text-body-sm text-error">
             {error}
@@ -454,7 +568,13 @@ export function IntakeClient({ orderId }: { orderId: string }) {
           disabled={submitting}
           className="group inline-flex w-full items-center justify-center gap-2.5 rounded-[3px] bg-brand-gradient px-8 py-[15px] text-body font-semibold text-canvas shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_28px_rgba(var(--green-rgb),0.25)] transition-all duration-200 hover:brightness-[1.07] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70"
         >
-          {submitting ? "Sending..." : alreadyDone ? "Update my brief" : "Submit my brief and start production"}
+          {submitting
+            ? "Sending..."
+            : studio
+              ? "Save the brief for them"
+              : alreadyDone
+                ? "Update my brief"
+                : "Submit my brief and start production"}
           {!submitting ? (
             <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-0.5">
               &rarr;

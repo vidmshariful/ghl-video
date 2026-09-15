@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 import { validateBundleSelections, type BundleSelections } from "@/lib/bundles";
 import { isInvoiceProduct } from "@/lib/order-kind";
+import { cleanAccent, normalizeWebsite, NICHE_MAX } from "@/lib/brief-fields";
 
 export const runtime = "nodejs";
 
@@ -30,6 +31,14 @@ type Intake = {
   screenshotPaths: string[];
   // bundle video picks (Essential/Growth); null for single videos and Ultimate
   videoSelections?: BundleSelections | null;
+  /* the three the studio used to ask for by email (16 September 2026) */
+  website?: string;
+  voiceAccent?: string;
+  niche?: string;
+  /* "studio" when a producer typed in a brief the client sent by email */
+  enteredBy?: "client" | "studio";
+  /* stamped when a Brand Kit edit reached this brief after it was sent */
+  kitUpdatedAt?: string;
 };
 
 type DB = ReturnType<typeof supabaseAdmin>;
@@ -92,11 +101,15 @@ export async function GET(
 
   let logoUrl: string | null = null;
   let screenshotUrls: string[] = [];
+  /* each screenshot with its own path, so the form can keep or drop them one
+     by one instead of replacing the whole set */
+  let screenshots: { path: string; url: string | null }[] = [];
   if (intake) {
     logoUrl = await signOne(db, intake.logoPath);
-    screenshotUrls = (
-      await Promise.all(intake.screenshotPaths.map((p) => signOne(db, p)))
-    ).filter((u): u is string => !!u);
+    screenshots = await Promise.all(
+      intake.screenshotPaths.map(async (p) => ({ path: p, url: await signOne(db, p) })),
+    );
+    screenshotUrls = screenshots.map((s) => s.url).filter((u): u is string => !!u);
   }
 
   /* Only when this order has no brief of its own. An order already briefed
@@ -116,6 +129,9 @@ export async function GET(
         primaryColor: kit.primaryColor ?? "",
         accentColor: kit.accentColor ?? "",
         notes: kit.notes ?? "",
+        website: kit.website ?? "",
+        voiceAccent: kit.voiceAccent ?? "",
+        niche: kit.niche ?? "",
         logoOnFile: Boolean(kit.logoPath),
         logoUrl: await signOne(db, kit.logoPath ?? null),
       };
@@ -129,7 +145,7 @@ export async function GET(
     // the required counts and options from the shared sales catalog)
     bundleSku: product?.sku ?? null,
     intakeCompleted: !!order.intake_completed,
-    intake: intake ? { ...intake, logoUrl, screenshotUrls } : null,
+    intake: intake ? { ...intake, logoUrl, screenshotUrls, screenshots } : null,
     prefill,
   });
 }
@@ -177,10 +193,24 @@ export async function POST(
   const accentColor = str("accentColor", 32);
   const brandPronunciation = str("brandPronunciation", 200);
   const notes = str("notes", 4000);
+  const websiteRaw = str("website", 200);
+  const website = normalizeWebsite(websiteRaw);
+  const voiceAccent = cleanAccent(form.get("voiceAccent"));
+  const niche = str("niche", NICHE_MAX);
+  /* a producer typing in what the client sent by email. The marker only
+     changes who is told and how the brief is labelled, so it needs no more
+     trust than the order id the page already runs on. */
+  const enteredBy: "client" | "studio" = String(form.get("enteredBy") ?? "") === "studio" ? "studio" : "client";
 
   if (!brandName) {
     return NextResponse.json(
       { error: "Please tell us your brand or platform name." },
+      { status: 400 },
+    );
+  }
+  if (websiteRaw && !website) {
+    return NextResponse.json(
+      { error: "That website address does not look right. Something like yoursaas.com works." },
       { status: 400 },
     );
   }
@@ -215,19 +245,36 @@ export async function POST(
     const kit = await loadKit(db, (order.customer_id as string | null) ?? null);
     logoPath = kit?.logoPath ?? kit?.logoDarkPath ?? kit?.logoLightPath ?? null;
   }
-  let screenshotPaths = prev?.screenshotPaths ?? [];
+  /* Screenshots are kept one by one: the form sends the paths it still
+     wants (keepScreenshots), new files are added to those, and only what was
+     left out goes. A new selection used to replace the whole set, with no
+     way to see or drop a single one. Without the field, everything on file
+     is kept. */
+  const prevShots = prev?.screenshotPaths ?? [];
+  let kept = prevShots;
+  const keepRaw = form.get("keepScreenshots");
+  if (typeof keepRaw === "string" && keepRaw.trim()) {
+    try {
+      const wanted = JSON.parse(keepRaw);
+      if (Array.isArray(wanted)) kept = prevShots.filter((p) => wanted.includes(p));
+    } catch {
+      /* an unreadable list keeps everything rather than dropping anything */
+    }
+  }
+  let screenshotPaths = kept;
   try {
     const logo = form.get("logo");
     if (logo instanceof File && logo.size > 0) logoPath = await uploadFile(logo, "logo");
 
+    const room = Math.max(0, MAX_SHOTS - kept.length);
     const shots = form
       .getAll("screenshots")
       .filter((f): f is File => f instanceof File && f.size > 0)
-      .slice(0, MAX_SHOTS);
+      .slice(0, room);
     if (shots.length) {
       const uploaded: string[] = [];
       for (const f of shots) uploaded.push(await uploadFile(f, "shot"));
-      screenshotPaths = uploaded;
+      screenshotPaths = [...kept, ...uploaded];
     }
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 400 });
@@ -268,6 +315,10 @@ export async function POST(
     logoPath,
     screenshotPaths,
     videoSelections,
+    website,
+    voiceAccent,
+    niche,
+    enteredBy,
   };
 
   const { error } = await db
@@ -284,10 +335,23 @@ export async function POST(
     return NextResponse.json({ error: "Could not save your brief." }, { status: 500 });
   }
 
-  await db.from("order_updates").insert({
-    order_id: orderId,
-    body: "Branding brief submitted by the client.",
-  });
+  /* The update on the order says who sent it. When the studio typed it in
+     from an email, the client is told so they can check it, through the
+     update's own email and bell; the "brief received" mail below is theirs
+     to get only when they sent it themselves. */
+  const updateBody =
+    enteredBy === "studio"
+      ? "Branding brief entered by the studio from what you sent us. Check it on your order and update anything that is off."
+      : "Branding brief submitted by the client.";
+  await db.from("order_updates").insert({ order_id: orderId, body: updateBody });
+  if (enteredBy === "studio") {
+    try {
+      const { sendOrderUpdateEmail } = await import("@/lib/email/order-update");
+      await sendOrderUpdateEmail(db, orderId, updateBody);
+    } catch (e) {
+      console.error(`[intake] studio-entered brief not announced for order ${orderId}:`, e);
+    }
+  }
 
   // A bundle is sold as "three videos of your choosing", so its deliverable
   // rows are created empty at payment and named here. Fail-soft: the brief is
@@ -339,6 +403,9 @@ export async function POST(
         accentColor,
         pronunciation: brandPronunciation,
         notes,
+        website,
+        voiceAccent,
+        niche,
         logoPath,
         screenshotPaths,
       });
@@ -369,7 +436,7 @@ export async function POST(
    * re-promise a date. Fail-soft, after the due dates exist so the email can
    * name one.
    */
-  if (!order.intake_completed_at) {
+  if (!order.intake_completed_at && enteredBy !== "studio") {
     try {
       const { sendBriefReceivedEmail } = await import("@/lib/email/notify");
       await sendBriefReceivedEmail(db, orderId);

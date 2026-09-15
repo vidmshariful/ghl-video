@@ -63,7 +63,7 @@ export const HANDBOOK: HandbookPage[] = [
           },
           {
             title: "They send the brief",
-            body: "Logo, colours, how the brand name is said, screens. On a bundle this is also where they choose which videos they want, and those choices fill the empty slots by themselves.",
+            body: "Logo, colours, how the brand name is said, their website, the voiceover accent, the niche when they bought niche customisation, screens. On a bundle this is also where they choose which videos they want, and those choices fill the empty slots by themselves. If it came by email instead, open Enter it for them on the job page and type it in: that counts as received, the clock starts, and the client sees it on their order.",
           },
           {
             title: "We build",

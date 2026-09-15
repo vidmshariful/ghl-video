@@ -1,16 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { VOICE_ACCENTS } from "@/lib/brief-fields";
 import { CheckCircle2, FileText, Trash2, Upload } from "lucide-react";
-import {
-  Button,
-  Card,
-  Field,
-  Input,
-  PageHeader,
-  Progress,
-  Textarea,
-} from "@/components/portal/ui";
+import { Button, Card, Field, Input, PageHeader, Progress, Textarea, Select } from "@/components/portal/ui";
 import type { BrandKit, Completeness, GuidelineFile } from "@/lib/brand-kit";
 
 /*
@@ -51,6 +44,8 @@ export function BrandKitView({
   const [busy, setBusy] = useState(false);
   const [busyFile, setBusyFile] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  /* how many orders still being worked took the last save */
+  const [updatedOrders, setUpdatedOrders] = useState(0);
   const [err, setErr] = useState("");
 
   useEffect(() => {
@@ -108,10 +103,11 @@ export function BrandKitView({
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
-      })) as unknown as Payload & { error?: string };
+      })) as unknown as Payload & { error?: string; openOrdersUpdated?: number };
       if (j.error) setErr(j.error);
       else {
         setData((d) => (d ? { ...d, kit: j.kit, completeness: j.completeness } : d));
+        setUpdatedOrders(j.openOrdersUpdated ?? 0);
         setSaved(true);
       }
     } catch {
@@ -137,7 +133,13 @@ export function BrandKitView({
         actions={
           canEdit ? (
             <Button variant="brand" disabled={busy} onClick={save}>
-              {busy ? "Saving..." : saved ? "Saved" : "Save changes"}
+              {busy
+                ? "Saving..."
+                : saved
+                  ? updatedOrders
+                    ? `Saved, ${updatedOrders} open ${updatedOrders === 1 ? "order" : "orders"} updated`
+                    : "Saved"
+                  : "Save changes"}
             </Button>
           ) : undefined
         }
@@ -226,6 +228,36 @@ export function BrandKitView({
                 placeholder="SPEED-mo-bee"
               />
             </Field>
+
+            <Field label="Your website" hint="The site the videos are for. We check it against your brand.">
+              <Input
+                value={form.website ?? ""}
+                onChange={set("website")}
+                disabled={!canEdit}
+                placeholder="yoursaas.com"
+              />
+            </Field>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Voiceover accent" hint="How your brand name and scripts are read.">
+                <Select value={form.voiceAccent ?? ""} onChange={set("voiceAccent")} disabled={!canEdit}>
+                  <option value="">Pick one</option>
+                  {VOICE_ACCENTS.map((a) => (
+                    <option key={a} value={a}>
+                      {a}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="Your niche" hint="Who you sell to. Used when niche customisation is on an order.">
+                <Input
+                  value={form.niche ?? ""}
+                  onChange={set("niche")}
+                  disabled={!canEdit}
+                  placeholder="Dental clinics, gyms, roofers"
+                />
+              </Field>
+            </div>
 
             <Field
               label="Anything else we should know"
@@ -360,10 +392,10 @@ export function BrandKitView({
       </div>
 
       <p className="mt-6 max-w-[var(--measure-body)] text-body-sm text-dim">
-        Changes here apply to future orders. Anything already in production
-        keeps the brand it started with, so a video half finished does not
-        change colour halfway through. Tell your producer if you need
-        something in progress updated.
+        Changes here reach every order of yours still being worked, and your
+        producer is told what changed. A video already approved keeps the
+        brand it was approved with. If a change should wait for the next
+        order, tell your producer.
       </p>
     </div>
   );

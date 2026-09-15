@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { contextCan, resolvePortalContext } from "@/lib/account-team";
-import { brandKitPayload, getBrandKit, type GuidelineFile } from "@/lib/brand-kit";
+import { brandKitPayload, getBrandKit, propagateKitToOpenOrders, type GuidelineFile } from "@/lib/brand-kit";
 
 export const runtime = "nodejs";
 
@@ -110,6 +110,13 @@ export async function POST(req: Request) {
       .upsert({ customer_id: customerId, [COLUMN[kind]]: path }, { onConflict: "customer_id" });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     if (oldPath) await db.storage.from("intake").remove([oldPath]).catch(() => null);
+    /* the brief on every order still being worked now points at this logo:
+       the one real revision case was a studio working from an old logo while
+       the client had a new one in the kit (16 September 2026) */
+    const openOrdersUpdated = await propagateKitToOpenOrders(db, customerId, {
+      [kind === "logo_dark" ? "logoDarkPath" : "logoLightPath"]: path,
+    }).catch(() => 0);
+    return NextResponse.json({ openOrdersUpdated, ...(await brandKitPayload(db, customerId)) });
   }
 
   return NextResponse.json(await brandKitPayload(db, customerId));

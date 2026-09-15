@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/checkout/supabase-admin";
 import { contextCan, resolvePortalContext } from "@/lib/account-team";
-import { brandKitPayload, saveBrandKit } from "@/lib/brand-kit";
+import { brandKitPayload, propagateKitToOpenOrders, saveBrandKit } from "@/lib/brand-kit";
+import { cleanAccent, normalizeWebsite, NICHE_MAX } from "@/lib/brief-fields";
 
 export const runtime = "nodejs";
 
@@ -57,14 +58,30 @@ export async function PUT(req: Request) {
   const str = (v: unknown, max: number) =>
     typeof v === "string" ? v.trim().slice(0, max) : undefined;
 
-  const { error } = await saveBrandKit(db, customerId, {
+  const websiteRaw = str(b.website, 200);
+  const website = websiteRaw === undefined ? undefined : normalizeWebsite(websiteRaw);
+  if (websiteRaw && !website) {
+    return NextResponse.json(
+      { error: "That website address does not look right. Something like yoursaas.com works." },
+      { status: 400 },
+    );
+  }
+  const patch = {
     brandName: str(b.brandName, 160),
     primaryColor: str(b.primaryColor, 32),
     accentColor: str(b.accentColor, 32),
     pronunciation: str(b.pronunciation, 200),
     notes: str(b.notes, 4000),
-  });
+    website,
+    voiceAccent: b.voiceAccent === undefined ? undefined : cleanAccent(b.voiceAccent),
+    niche: str(b.niche, NICHE_MAX),
+  };
+  const { error } = await saveBrandKit(db, customerId, patch);
   if (error) return NextResponse.json({ error }, { status: 500 });
 
-  return NextResponse.json({ ok: true, ...(await brandKitPayload(db, customerId)) });
+  /* the orders still being worked take the change, and the client is told
+     how many did, so a fixed logo or colour never goes quietly unseen */
+  const openOrdersUpdated = await propagateKitToOpenOrders(db, customerId, patch).catch(() => 0);
+
+  return NextResponse.json({ ok: true, openOrdersUpdated, ...(await brandKitPayload(db, customerId)) });
 }

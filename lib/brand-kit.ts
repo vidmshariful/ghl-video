@@ -18,6 +18,10 @@ export type BrandKit = {
   accentColor: string | null;
   pronunciation: string | null;
   notes: string | null;
+  /* the three the studio used to ask for by email (16 September 2026) */
+  website: string | null;
+  voiceAccent: string | null;
+  niche: string | null;
   /* the original single slot. Existing clients' logos live here and the
      intake brief falls back to it; new uploads use the two named slots. */
   logoPath: string | null;
@@ -35,6 +39,9 @@ export const EMPTY_BRAND_KIT: BrandKit = {
   accentColor: null,
   pronunciation: null,
   notes: null,
+  website: null,
+  voiceAccent: null,
+  niche: null,
   logoPath: null,
   logoDarkPath: null,
   logoLightPath: null,
@@ -139,6 +146,9 @@ const fromRow = (r: Row | null): BrandKit | null =>
         accentColor: (r.accent_color as string | null) ?? null,
         pronunciation: (r.pronunciation as string | null) ?? null,
         notes: (r.notes as string | null) ?? null,
+        website: (r.website as string | null) ?? null,
+        voiceAccent: (r.voice_accent as string | null) ?? null,
+        niche: (r.niche as string | null) ?? null,
         logoPath: (r.logo_path as string | null) ?? null,
         logoDarkPath: (r.logo_dark_path as string | null) ?? null,
         logoLightPath: (r.logo_light_path as string | null) ?? null,
@@ -177,6 +187,9 @@ export async function saveBrandKit(
   put("accent_color", patch.accentColor);
   put("pronunciation", patch.pronunciation);
   put("notes", patch.notes);
+  put("website", patch.website);
+  put("voice_accent", patch.voiceAccent);
+  put("niche", patch.niche);
   put("logo_path", patch.logoPath);
   put("logo_dark_path", patch.logoDarkPath);
   put("logo_light_path", patch.logoLightPath);
@@ -215,4 +228,105 @@ export async function brandKitPayload(db: DB, customerId: string | null) {
       (kit?.guidelineFiles ?? []).map(async (g) => ({ ...g, url: await sign(g.path) })),
     ),
   };
+}
+
+/* ---------------------------------------------------------------- */
+/* the kit reaching the orders still being worked                     */
+/* ---------------------------------------------------------------- */
+
+/* what the studio reads on the order, keyed the way the brief stores it */
+const BRIEF_KEY: Partial<Record<keyof BrandKit, string>> = {
+  brandName: "brandName",
+  primaryColor: "primaryColor",
+  accentColor: "accentColor",
+  pronunciation: "brandPronunciation",
+  notes: "notes",
+  website: "website",
+  voiceAccent: "voiceAccent",
+  niche: "niche",
+  logoPath: "logoPath",
+  logoDarkPath: "logoPath",
+  logoLightPath: "logoPath",
+};
+
+const BRIEF_LABEL: Record<string, string> = {
+  brandName: "brand name",
+  primaryColor: "main colour",
+  accentColor: "second colour",
+  brandPronunciation: "pronunciation",
+  notes: "notes",
+  website: "website",
+  voiceAccent: "voiceover accent",
+  niche: "niche",
+  logoPath: "logo",
+};
+
+/**
+ * A Brand Kit edit reaching every order still being worked.
+ *
+ * The studio reads the brief ON the order, and a client who fixed their logo
+ * in the Brand Kit while a pack was in production had changed nothing the
+ * studio would see: the one real revision case on the platform was exactly
+ * that (Premade review, 16 September 2026). So the fields that changed are
+ * copied onto the brief of each paid, undelivered order that has one, with
+ * an update on the order saying what changed, and the producer is told.
+ * Returns how many orders took the change.
+ */
+export async function propagateKitToOpenOrders(
+  db: DB,
+  customerId: string,
+  patch: Partial<BrandKit>,
+): Promise<number> {
+  const fields: Record<string, string> = {};
+  for (const [k, briefKey] of Object.entries(BRIEF_KEY) as [keyof BrandKit, string][]) {
+    const v = patch[k];
+    if (typeof v === "string" && v.trim()) fields[briefKey] = v.trim();
+  }
+  if (!Object.keys(fields).length) return 0;
+
+  const { data: orders } = await db
+    .from("orders")
+    .select("id, metadata, product:products(name)")
+    .eq("customer_id", customerId)
+    .eq("status", "paid")
+    .neq("fulfillment_stage", "delivered")
+    .not("metadata->intake", "is", null);
+
+  let touched = 0;
+  for (const o of orders ?? []) {
+    const meta = (o.metadata ?? {}) as Record<string, unknown>;
+    const intake = (meta.intake ?? null) as Record<string, unknown> | null;
+    if (!intake?.submittedAt) continue;
+    const changed = Object.entries(fields).filter(([k, v]) => intake[k] !== v);
+    if (!changed.length) continue;
+
+    const now = new Date().toISOString();
+    const { error } = await db
+      .from("orders")
+      .update({ metadata: { ...meta, intake: { ...intake, ...Object.fromEntries(changed), kitUpdatedAt: now } } })
+      .eq("id", o.id as string);
+    if (error) continue;
+
+    const what = [...new Set(changed.map(([k]) => BRIEF_LABEL[k] ?? k))].join(", ");
+    await db.from("order_updates").insert({
+      order_id: o.id as string,
+      body: `Brand kit updated by the client: ${what}. The brief on this order now carries it.`,
+    });
+    try {
+      const { pushOrderOwnerNotification } = await import("@/lib/notifications");
+      const product = o.product as { name?: string } | { name?: string }[] | null;
+      const name = Array.isArray(product) ? product[0]?.name : product?.name;
+      await pushOrderOwnerNotification(db, o.id as string, {
+        kind: "brief_updated",
+        title: `Brand changed on ${name ?? "an order"}`,
+        body: `${what}. The brief on the order now carries it.`,
+        href: `production/${o.id}`,
+        vars: { product_name: name ?? "an order", what },
+      });
+    } catch (e) {
+      console.error("[brand-kit] producer not told of a kit change:", e instanceof Error ? e.message : e);
+    }
+    touched++;
+  }
+  return touched;
 }

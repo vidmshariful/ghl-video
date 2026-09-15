@@ -242,9 +242,14 @@ our board.
   client side; one "ready" email per batch; the round counted per order and
   never spent by a studio move; the pack's 14 day promise. Live when the
   owner says so.
-- **Second, the brief (one to two days):** website, accent and niche
-  fields; enter it for them; Brand Kit edits reaching open orders;
-  screenshots viewable one by one.
+- **Second, the brief (one to two days), built 16 September and proven on
+  staging:** website, voiceover accent and niche on the brief, the Brand Kit
+  and the studio's view; "Enter it for them" on the job page, which counts as
+  received, starts the clock and tells the client to check it; Brand Kit
+  edits and a new logo reaching every order still being worked, with an
+  update on the order and a bell to the producer; screenshots shown one by
+  one, each removable, new ones added to what is kept. Live when the owner
+  says so.
 - **Third, the job page (two to three days):** the brand block with its
   tick, batch link paste and "Send N videos", notes with replies and
   "applies to all", the date the producer can move, the producer picked

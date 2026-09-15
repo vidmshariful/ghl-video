@@ -19,6 +19,11 @@ export type Brief = {
   notes: string;
   logoUrl: string | null;
   screenshotUrls: string[];
+  website?: string;
+  voiceAccent?: string;
+  niche?: string;
+  enteredBy?: "client" | "studio";
+  kitUpdatedAt?: string;
   videoSelections?: {
     master?: string[];
     demo?: string[];
@@ -52,16 +57,55 @@ export function BrandingBrief({ orderId }: { orderId: string }) {
       {brief === "loading" ? (
         <p className="mt-2 text-body-sm text-muted">Loading...</p>
       ) : !brief ? (
-        <p className="mt-2 text-body-sm text-dim">
-          Not submitted yet. Client link:{" "}
-          <span className="break-all font-mono text-muted">/checkout/intake/{orderId}</span>
-        </p>
+        <div className="mt-2 grid gap-2">
+          <p className="text-body-sm text-dim">
+            Not submitted yet. Client link:{" "}
+            <span className="break-all font-mono text-muted">/checkout/intake/{orderId}</span>
+          </p>
+          {/* what came by email is typed in here; it counts as received, the
+              clock starts, and the client is told to check it */}
+          <a
+            href={`/checkout/intake/${orderId}/?by=studio`}
+            target="_blank"
+            rel="noopener"
+            className="justify-self-start rounded-[8px] border border-gold/50 px-3 py-1.5 font-mono text-label uppercase text-gold transition-colors hover:bg-gold hover:text-canvas"
+          >
+            Enter it for them
+          </a>
+        </div>
       ) : (
         <div className="mt-2 grid gap-2 text-body-sm">
+          {brief.enteredBy === "studio" || brief.kitUpdatedAt ? (
+            <p className="font-mono text-label uppercase tracking-[0.08em] text-gold/80">
+              {brief.enteredBy === "studio" ? "Entered by the studio from the client's email" : ""}
+              {brief.enteredBy === "studio" && brief.kitUpdatedAt ? " / " : ""}
+              {brief.kitUpdatedAt ? `Brand kit change taken ${new Date(brief.kitUpdatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}` : ""}
+            </p>
+          ) : null}
           <div className="flex gap-2">
             <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Brand:</span>
             <span className="text-muted">{brief.brandName}</span>
           </div>
+          {brief.website ? (
+            <div className="flex gap-2">
+              <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Website:</span>
+              <a href={brief.website} target="_blank" rel="noopener" className="break-all text-gold hover:underline">
+                {brief.website.replace(/^https?:\/\//, "")}
+              </a>
+            </div>
+          ) : null}
+          {brief.voiceAccent ? (
+            <div className="flex gap-2">
+              <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Voiceover:</span>
+              <span className="text-muted">{brief.voiceAccent}</span>
+            </div>
+          ) : null}
+          {brief.niche ? (
+            <div className="flex gap-2">
+              <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Niche:</span>
+              <span className="whitespace-pre-wrap text-muted">{brief.niche}</span>
+            </div>
+          ) : null}
           <div className="flex flex-wrap items-center gap-5">
             <span className="inline-flex items-center gap-2">
               <span className="font-mono text-label uppercase tracking-[0.08em] text-muted">Primary</span>

@@ -120,6 +120,13 @@ export const COMM_ACTIONS: CommAction[] = [
     emails: [{ key: "brief_received", to: "client" }],
     notifications: [{ kind: "brief_received", audience: "customer", to: "client" }, { kind: "brief_received", audience: "admin", to: "owner" }],
   },
+  {
+    key: "brief_updated", group: "brief", label: "Brand Kit changed while an order is open",
+    when: "The client edits their Brand Kit, or uploads a logo, while a paid order is still being worked. The brief on that order takes the change, an update is posted on the order, and the producer is told.",
+    mode: "automatic",
+    emails: [],
+    notifications: [{ kind: "brief_updated", audience: "admin", to: "owner" }],
+  },
 
   /* ---- pre-made ---- */
   {
