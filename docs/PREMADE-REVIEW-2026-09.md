@@ -231,16 +231,17 @@ our board.
 3. **One revision round per order.** A studio move never spends it.
 4. **Quiet clients are approved on their behalf** after two nudges and a
    week, and told why.
-5. **Briefs by email:** still to decide whether the producer may enter a
-   brief the client sent by email and treat it as received.
+5. **Briefs by email: yes.** The producer may enter a brief the client
+   sent by email; it counts as received and the clock starts.
 
 ## 7. Order of work, once decided
 
-- **First, the defects (a day):** the brief flag read from the record, with
-  the speedmobi order corrected; the delivery card, WhatsApp link, Intake
-  pip and missing buttons on the client side; one "ready" email per batch;
-  the round counted per order and never spent by a studio move; the pack's
-  14 day promise.
+- **First, the defects (a day), built 16 September and proven on staging:**
+  the brief flag read from the record, with the speedmobi order corrected;
+  the delivery card, WhatsApp link, Intake pip and missing buttons on the
+  client side; one "ready" email per batch; the round counted per order and
+  never spent by a studio move; the pack's 14 day promise. Live when the
+  owner says so.
 - **Second, the brief (one to two days):** website, accent and niche
   fields; enter it for them; Brand Kit edits reaching open orders;
   screenshots viewable one by one.
